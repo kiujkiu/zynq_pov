@@ -1,0 +1,22 @@
+<AutoPilot:solution xmlns:AutoPilot="com.autoesl.autopilot.solution">
+    <clockList>
+        <clock name="default" period="6.67" default="false"/>
+    </clockList>
+    <config>
+        <config_export description="POV 3D projection engine" display_name="POV Project Engine" format="ip_catalog" library="user" output="pov_project_ip.zip" vendor="povlab" version="1.0"/>
+    </config>
+    <name>
+        <value string="solution1"/>
+    </name>
+    <project>
+        <value string="proj_pov"/>
+    </project>
+    <flowTarget value="vivado"/>
+    <targetInfo>
+        <TargetInfo value="xc7z020:-clg484:-2"/>
+    </targetInfo>
+    <libraryList>
+        <library value="xilinx/zynq/zynq" name="DefaultPlatform"/>
+    </libraryList>
+</AutoPilot:solution>
+

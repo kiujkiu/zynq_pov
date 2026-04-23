@@ -1,0 +1,93 @@
+# === Vivado generated / intermediate ===
+02_hello_zynq/02_hello_zynq.runs/
+02_hello_zynq/02_hello_zynq.cache/
+02_hello_zynq/02_hello_zynq.gen/
+02_hello_zynq/02_hello_zynq.hw/
+02_hello_zynq/02_hello_zynq.ip_user_files/
+02_hello_zynq/02_hello_zynq.sim/
+02_hello_zynq/02_hello_zynq.srcs/utils_1/
+02_hello_zynq/**/.Xil/
+02_hello_zynq/**/*.dcp
+02_hello_zynq/**/*.backup.*
+02_hello_zynq/**/*.str
+02_hello_zynq/**/*.jou
+vivado_pid*.str
+webtalk*.jou
+webtalk*.backup.jou
+hbs/
+tools/logs/
+
+# Vivado IP repo zips we don't want tracked (they're regenerated from HLS)
+vivado-library/
+vivado-library-master.zip
+
+# === HLS generated ===
+hls_proj/proj_pov/solution1/.autopilot/
+hls_proj/proj_pov/solution1/impl/
+hls_proj/proj_pov/solution1/sim/
+hls_proj/proj_pov/solution1/syn/
+hls_proj/proj_pov/solution1/csim/
+hls_proj/proj_pov/solution1/solution1_data.json
+hls_proj/proj_pov/solution1/*.log
+hls_proj/proj_pov/hls.app
+hls_proj/proj_pov/*.log
+hls_proj/*.log
+hls_proj/*.str
+hls_proj/*.jou
+hls_proj/vitis_hls*.str
+hls_proj/pov_project_ip.zip
+
+# === Vitis generated ===
+02_hello_zynq/vitis_ws/hello_plat/export/
+02_hello_zynq/vitis_ws/hello_plat/hw/
+02_hello_zynq/vitis_ws/hello_plat/logs/
+02_hello_zynq/vitis_ws/hello_plat/ps7_cortexa9_0/
+02_hello_zynq/vitis_ws/hello_plat/zynq_fsbl/
+02_hello_zynq/vitis_ws/hello_world/build/
+02_hello_zynq/vitis_ws/hello_world/_ide/bitstream/
+02_hello_zynq/vitis_ws/hello_world/_ide/psinit/
+02_hello_zynq/vitis_ws/hello_world/_ide/scripts/
+02_hello_zynq/vitis_ws/hello_world/.cproject
+02_hello_zynq/vitis_ws/hello_world/.project
+02_hello_zynq/vitis_ws/lwip_echo_server/
+02_hello_zynq/vitis_ws/_ide/
+02_hello_zynq/vitis_ws/.analytics
+02_hello_zynq/vitis_ws/.metadata/
+02_hello_zynq/vitis_ws/.sdk/
+02_hello_zynq/hello_zynq_wrapper.xsa
+02_hello_zynq/*.log
+
+# === Old hello_zynq scratch project ===
+01_hello_zynq/
+
+# === Videos / binary assets ===
+*.mp4
+vid_frames/
+vid_frames_cmp/
+vid_frames_db/
+
+# === Temp / logs ===
+*.log
+*.tmp
+add_pov_ip*.log
+synth*.log
+app_rebuild*.log
+vitis_rebuild*.log
+pnp.txt
+
+# === OS / editor ===
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# === Exception: keep specific important files even if above would match ===
+!tools/*.tcl
+!tools/*.sh
+!tools/*.ps1
+!hls_proj/*.cpp
+!hls_proj/*.h
+!hls_proj/*.tcl
+!hls_proj/*.bat
+!02_hello_zynq/vitis_ws/hello_world/src/*.c
+!02_hello_zynq/vitis_ws/hello_world/src/*.h

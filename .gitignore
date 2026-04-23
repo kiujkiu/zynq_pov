@@ -81,6 +81,10 @@ Thumbs.db
 *.swp
 *~
 
+# === Downloaded installers ===
+*.msi
+*.exe
+
 # === Exception: keep specific important files even if above would match ===
 !tools/*.tcl
 !tools/*.sh

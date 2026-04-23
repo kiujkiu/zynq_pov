@@ -1145,7 +1145,7 @@
             "value": "0"
           },
           "c_mm2s_linebuffer_depth": {
-            "value": "1024"
+            "value": "512"
           },
           "c_mm2s_max_burst_length": {
             "value": "16"

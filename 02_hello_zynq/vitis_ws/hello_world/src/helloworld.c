@@ -30,9 +30,9 @@
 
 #define USE_PL 1
 
-/* 1080p30 HDMI: pixel clock stays 74.25 MHz (same as 720p60). */
-#define WIDTH   1920
-#define HEIGHT  1080
+/* Keep 720p60 for stable HDMI preview. 1080p upgrade needs rgb2dvi verification. */
+#define WIDTH   1280
+#define HEIGHT  720
 #define BPP     3
 #define STRIDE  (WIDTH * BPP)
 #define FRAME_BYTES (STRIDE * HEIGHT)
@@ -291,8 +291,9 @@ static void build_model(void)
 /* ---------------------------------------------------------------------- */
 /* PL path: direct register bang on pov_project HLS IP */
 
-/* 4 parallel pov IP instances; base addrs set by bd_4pov_and_1080p.tcl */
-#define N_POV_IPS  4
+/* 4 parallel pov IP instances; base addrs set by bd_4pov_and_1080p.tcl
+ * DIAGNOSTIC: set to 1 to use only IP 0 (isolate if HP2 path breaks HDMI) */
+#define N_POV_IPS  1
 static const u32 pov_bases[N_POV_IPS] = {
     0x43C20000UL, 0x43C30000UL, 0x43C40000UL, 0x43C50000UL
 };
@@ -531,16 +532,13 @@ int main(void)
     setup.VertSizeInput = HEIGHT;
     setup.HoriSizeInput = STRIDE;
     setup.Stride        = STRIDE;
-    /* Park mode from the start: EnableCircularBuf=0 means VDMA keeps
-     * reading ONE framestore (selected by PARK_PTR register).
-     * ARM renders into the OTHER one then writes PARK_PTR to swap. */
-    setup.EnableCircularBuf = 0;
+    /* Circular mode (originally working HDMI). Both framestores point to FB_A
+     * → VDMA cycles but always reads same buffer, effectively single-buffer.
+     * Double-buffer with park swap is blocking HDMI for some reason, revisit. */
+    setup.EnableCircularBuf = 1;
     XAxiVdma_DmaConfig(&Vdma, XAXIVDMA_READ, &setup);
-    UINTPTR fbs[2] = { FB_A_ADDR, FB_B_ADDR };
+    UINTPTR fbs[2] = { FB_A_ADDR, FB_A_ADDR };
     XAxiVdma_DmaSetBufferAddr(&Vdma, XAXIVDMA_READ, fbs);
-    /* StartParking BEFORE DmaStart: driver sets DMACR.Circular_Park=0,
-     * PARK_PTR to our index, and only then starts the pixel pump. */
-    XAxiVdma_StartParking(&Vdma, 0, XAXIVDMA_READ);
     XAxiVdma_DmaStart(&Vdma, XAXIVDMA_READ);
     xil_printf("VDMA DMACR=0x%x PARK_PTR=0x%x\r\n",
                (unsigned)vdma_dmacr(),
@@ -622,8 +620,8 @@ int main(void)
     u32 phase = 0;
 
     u32 stream_frames = 0;
-    UINTPTR fb_bufs[2] = { FB_A_ADDR, FB_B_ADDR };
-    u32 write_idx = 1;    /* VDMA parked on 0, we write to 1 first */
+    UINTPTR fb_bufs[2] = { FB_A_ADDR, FB_A_ADDR };
+    u32 write_idx = 0;   /* single-buffer for now; always write FB_A */
 
     while (1) {
         if (uart_poll_frame()) {
@@ -657,10 +655,9 @@ int main(void)
         Xil_DCacheFlushRange(fb_write, FRAME_BYTES);
 #endif
 
-        /* Seamless swap: write PARK_PTR directly (no stop/restart).
-         * VDMA picks up the new index at its next frame boundary. */
-        vdma_park(write_idx);
-        write_idx ^= 1;
+        /* Park swap disabled for now; single-buffer to restore HDMI baseline. */
+        /* vdma_park(write_idx); */
+        /* write_idx ^= 1; */
 
         frame++;
         phase++;

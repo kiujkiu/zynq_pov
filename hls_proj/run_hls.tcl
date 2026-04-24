@@ -9,7 +9,7 @@
 #   proj_pov/solution1/impl/ip/*.zip                       IP 打包 (拿去 Vivado IP Repo)
 
 open_project proj_pov
-set_top pov_project
+set_top pov_project_batch
 add_files pov_project.cpp   -cflags "-std=c++11"
 add_files pov_project.h     -cflags "-std=c++11"
 add_files cos_sin_lut.h     -cflags "-std=c++11"

@@ -352,38 +352,48 @@ static inline u64 gt_read(void) {
 /* Global Timer ticks @ half the CPU clock = 333 MHz → 1 us = 333 ticks */
 #define GT_TICKS_PER_US 333U
 
-/* Ring buffer render: 72 slices rendered as TIGHT slices into slot[0..71].
- * stride=SLICE_W*3 (no grid). Each slot is independent slice image.
- * LED driver IP will consume from here. */
+/* Ring buffer render via BATCH IP: one ap_start renders all 72 slices.
+ * IP reads model once into internal BRAM, loops internally.
+ *
+ * Register map (pov_project_batch HLS-generated):
+ *   0x00 AP_CTRL
+ *   0x10 model[31:0]
+ *   0x14 model[63:32]
+ *   0x1c num_points
+ *   0x24 ring_base[31:0]
+ *   0x28 ring_base[63:32]
+ *   0x30 slot_bytes
+ *   0x38 slot_stride
+ *   0x40 phase
+ *   0x48 n_slots
+ */
+#define BATCH_MODEL_LO     0x10
+#define BATCH_MODEL_HI     0x14
+#define BATCH_NUM_POINTS   0x1c
+#define BATCH_RING_LO      0x24
+#define BATCH_RING_HI      0x28
+#define BATCH_SLOT_BYTES   0x30
+#define BATCH_SLOT_STRIDE  0x38
+#define BATCH_PHASE        0x40
+#define BATCH_N_SLOTS      0x48
+
 static void pov_render_frame_to_ring(u32 phase)
 {
-    u32 stride = SLICE_W * 3;
-    /* NOTE: No ARM memset + flush of ring buffer.
-     * A9 Xil_DCacheFlushRange is line-by-line MCR and costs ~13ms for 2.7MB,
-     * dominating frame time. IP writes via m_axi_gmem1 go direct to DDR,
-     * bypass ARM cache, so we don't need coherency. Downside: previous
-     * frame's point pixels stay as "trails" until IP overwrites. Acceptable
-     * for fast-animated point clouds; will replace with IP-side clear later. */
+    pov_w(BATCH_MODEL_LO,    (u32)MODEL_ADDR);
+    pov_w(BATCH_MODEL_HI,    0);
+    pov_w(BATCH_NUM_POINTS,  model_n);
+    pov_w(BATCH_RING_LO,     (u32)RING_BUFFER_ADDR);
+    pov_w(BATCH_RING_HI,     0);
+    pov_w(BATCH_SLOT_BYTES,  SLOT_BYTES);
+    pov_w(BATCH_SLOT_STRIDE, SLICE_W * 3);
+    pov_w(BATCH_PHASE,       phase);
+    pov_w(BATCH_N_SLOTS,     N_SLOTS);
 
-    for (int s = 0; s < N_SLOTS; s++) {
-        int ang = (s + phase) % NUM_SLICES;
-        UINTPTR slot = RING_BUFFER_ADDR + s * SLOT_BYTES;
-        /* Tell IP to render with fb=slot, stride=SLICE_W*3, dst_x=dst_y=0 */
-        pov_w(POV_MODEL_LO,   (u32)MODEL_ADDR);
-        pov_w(POV_MODEL_HI,   0);
-        pov_w(POV_NUM_POINTS, model_n);
-        pov_w(POV_ANGLE_IDX,  ang);
-        pov_w(POV_FB_LO,      (u32)slot);
-        pov_w(POV_FB_HI,      0);
-        pov_w(POV_FB_STRIDE,  stride);
-        pov_w(POV_DST_X,      0);
-        pov_w(POV_DST_Y,      0);
-        pov_w(POV_AP_CTRL,    0x1);
-        u32 to = 0;
-        while (!(pov_r(POV_AP_CTRL) & 0x2)) {
-            if (++to > 0x10000000) { xil_printf("ring slot %d timeout\r\n", s); return; }
-            uart_poll_frame();
-        }
+    pov_w(POV_AP_CTRL, 0x1);
+    u32 to = 0;
+    while (!(pov_r(POV_AP_CTRL) & 0x2)) {
+        if (++to > 0x10000000) { xil_printf("batch timeout\r\n"); return; }
+        uart_poll_frame();
     }
 }
 

@@ -43,4 +43,22 @@ void pov_project(
     int dst_y
 );
 
+/* Batch 版: 一次调用渲染 N 个 slice 到 ring buffer 的连续 slot.
+ * 关键优化: model 在开头 DMA 到 BRAM 一次, 内部 72 次循环复用,
+ *           省掉 72× m_axi gmem0 读的协议开销.
+ * ARM 一次 AXI-Lite 设置参数 + ap_start, IP 自己跑 72 slice 再 ap_done.
+ *
+ * Slot 布局: ring[s] = ring_base + s * slot_bytes, 每 slot 是 SLICE_W*SLICE_H*3 byte.
+ * Angle: 第 s 个 slice 的角度 = (s + phase) % NUM_ANGLES.
+ */
+void pov_project_batch(
+    const struct point_t *model,
+    int num_points,
+    uint8_t *ring_base,     /* 72 个 slot 的起始地址 (DDR) */
+    int slot_bytes,         /* SLICE_W * SLICE_H * 3 */
+    int slot_stride,        /* 单 slot 内每行字节 = SLICE_W * 3 */
+    int phase,              /* 动画相位, 第 0 个 slot 的 angle_idx */
+    int n_slots             /* 72 for 72-slice frame */
+);
+
 #endif

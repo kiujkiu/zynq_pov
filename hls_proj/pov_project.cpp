@@ -78,3 +78,93 @@ POINTS_LOOP:
         }
     }
 }
+
+
+/* ============================================================ */
+/* Batch 版: 一次 ap_start 渲染 N 个 slice.                      */
+/* 省掉 72× AXI-Lite 协议 + 72× ap_done 握手 + 72× model DMA.    */
+
+/* 每点 16 byte, MAX_POINTS 太大放 BRAM 塞不下; 限制 batch 最大支持的点数. */
+#define MAX_BATCH_POINTS  1024
+
+void pov_project_batch(
+    const struct point_t *model,
+    int num_points,
+    uint8_t *ring_base,
+    int slot_bytes,
+    int slot_stride,
+    int phase,
+    int n_slots
+) {
+#pragma HLS INTERFACE m_axi      port=model      offset=slave bundle=gmem0 depth=1024 \
+    max_read_burst_length=64 num_read_outstanding=8
+#pragma HLS INTERFACE m_axi      port=ring_base  offset=slave bundle=gmem1 depth=3000000 \
+    max_write_burst_length=256 num_write_outstanding=8
+#pragma HLS INTERFACE s_axilite  port=model       bundle=control
+#pragma HLS INTERFACE s_axilite  port=num_points  bundle=control
+#pragma HLS INTERFACE s_axilite  port=ring_base   bundle=control
+#pragma HLS INTERFACE s_axilite  port=slot_bytes  bundle=control
+#pragma HLS INTERFACE s_axilite  port=slot_stride bundle=control
+#pragma HLS INTERFACE s_axilite  port=phase       bundle=control
+#pragma HLS INTERFACE s_axilite  port=n_slots     bundle=control
+#pragma HLS INTERFACE s_axilite  port=return      bundle=control
+
+    if (num_points < 0) num_points = 0;
+    if (num_points > MAX_BATCH_POINTS) num_points = MAX_BATCH_POINTS;
+    if (n_slots < 0) n_slots = 0;
+    if (n_slots > NUM_ANGLES) n_slots = NUM_ANGLES;
+
+    /* Local copy of model in BRAM (1024 × 16 = 16KB, fits easily).
+     * Read once from DDR, reuse for n_slots × num_points iterations. */
+    struct point_t local_model[MAX_BATCH_POINTS];
+#pragma HLS BIND_STORAGE variable=local_model type=ram_1wnr impl=bram
+
+LOAD_MODEL:
+    for (int i = 0; i < num_points; i++) {
+#pragma HLS LOOP_TRIPCOUNT min=100 max=MAX_BATCH_POINTS
+#pragma HLS PIPELINE II=1
+        local_model[i] = model[i];
+    }
+
+    const int cx = SLICE_W / 2;
+    const int cy = SLICE_H / 2;
+
+SLICES_LOOP:
+    for (int s = 0; s < n_slots; s++) {
+#pragma HLS LOOP_TRIPCOUNT min=72 max=72
+        int angle = phase + s;
+        while (angle >= NUM_ANGLES) angle -= NUM_ANGLES;
+        const int16_t cs = POV_COS8[angle];
+        const int16_t sn = POV_SIN8[angle];
+        uint8_t *slot = ring_base + s * slot_bytes;
+
+POINTS_IN_SLICE:
+        for (int i = 0; i < num_points; i++) {
+#pragma HLS LOOP_TRIPCOUNT min=100 max=MAX_BATCH_POINTS
+#pragma HLS PIPELINE II=1
+            struct point_t p = local_model[i];
+
+            int32_t rx_q = (int32_t)p.x * (int32_t)cs + (int32_t)p.z * (int32_t)sn;
+            int32_t rx = rx_q >> 8;
+
+            int sx = cx + (int)rx;
+            int sy = cy - (int)p.y;
+
+            if (sx >= 0 && sx < SLICE_W && sy >= 0 && sy < SLICE_H) {
+                for (int dy = 0; dy < 2; dy++) {
+                    for (int dx = 0; dx < 2; dx++) {
+#pragma HLS UNROLL
+                        int px = sx + dx;
+                        int py = sy + dy;
+                        if (px < SLICE_W && py < SLICE_H) {
+                            int off = py * slot_stride + px * 3;
+                            slot[off + 0] = p.b;
+                            slot[off + 1] = p.g;
+                            slot[off + 2] = p.r;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

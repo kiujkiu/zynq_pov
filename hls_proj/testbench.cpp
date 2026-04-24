@@ -77,31 +77,50 @@ int main(void)
     gen_test_model(model, &n);
     printf("[TB] generated %d test points\n", n);
 
-    int total_diffs = 0;
+    /* Batch test: 72-slot ring buffer, each slot 106×120×3 bytes tight. */
+    const int SLOT_BYTES = SLICE_W * SLICE_H * 3;
+    const int SLOT_STRIDE = SLICE_W * 3;
+    const int N_SLOTS = 72;
+    const int RING_BYTES = SLOT_BYTES * N_SLOTS;
+    static uint8_t ref_ring[SLOT_BYTES * 72];
+    static uint8_t dut_ring[SLOT_BYTES * 72];
+    memset(ref_ring, 0, RING_BYTES);
+    memset(dut_ring, 0, RING_BYTES);
 
-    /* 测 3 个角度 × 不同位置 */
-    int tests[][3] = {
-        { 0,   0,    0},    /* angle 0°, pos (0,0) */
-        {18,  500,  400},   /* angle 90°, mid screen */
-        {36,  100,  100},   /* angle 180° */
-    };
-    for (size_t t = 0; t < sizeof(tests)/sizeof(tests[0]); t++) {
-        int ang = tests[t][0], dx = tests[t][1], dy = tests[t][2];
-        memset(ref_fb, 0, FB_BYTES);
-        memset(dut_fb, 0, FB_BYTES);
-        ref_project(model, n, ang, ref_fb, FB_STRIDE, dx, dy);
-        pov_project(model, n, ang, dut_fb, FB_STRIDE, dx, dy);
-        int d = compare_fb(ref_fb, dut_fb, FB_BYTES);
-        printf("[TB] test angle_idx=%d pos=(%d,%d): %d byte diffs\n",
-               ang, dx, dy, d);
-        total_diffs += d;
+    /* Reference: call ref_project for each of 72 slots independently. */
+    int phase = 0;
+    for (int s = 0; s < N_SLOTS; s++) {
+        int ang = (phase + s) % NUM_ANGLES;
+        ref_project(model, n, ang,
+                    ref_ring + s * SLOT_BYTES,
+                    SLOT_STRIDE, 0, 0);
+    }
+
+    /* DUT: single batch call. */
+    pov_project_batch(model, n, dut_ring, SLOT_BYTES, SLOT_STRIDE, phase, N_SLOTS);
+
+    int total_diffs = compare_fb(ref_ring, dut_ring, RING_BYTES);
+    printf("[TB] batch 72-slot: %d byte diffs\n", total_diffs);
+
+    /* Also print per-slot diff for the first few that mismatch */
+    if (total_diffs) {
+        int shown = 0;
+        for (int s = 0; s < N_SLOTS && shown < 5; s++) {
+            int d = compare_fb(ref_ring + s*SLOT_BYTES,
+                               dut_ring + s*SLOT_BYTES,
+                               SLOT_BYTES);
+            if (d) {
+                printf("  slot %2d: %d diffs\n", s, d);
+                shown++;
+            }
+        }
     }
 
     if (total_diffs == 0) {
-        printf("[TB] PASS: all tests match reference.\n");
+        printf("[TB] PASS: batch matches per-slot reference.\n");
         return 0;
     } else {
-        printf("[TB] FAIL: %d total byte diffs\n", total_diffs);
+        printf("[TB] FAIL\n");
         return 1;
     }
 }

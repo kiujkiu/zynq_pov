@@ -358,13 +358,16 @@ static inline u64 gt_read(void) {
 static void pov_render_frame_to_ring(u32 phase)
 {
     u32 stride = SLICE_W * 3;
+    /* NOTE: No ARM memset + flush of ring buffer.
+     * A9 Xil_DCacheFlushRange is line-by-line MCR and costs ~13ms for 2.7MB,
+     * dominating frame time. IP writes via m_axi_gmem1 go direct to DDR,
+     * bypass ARM cache, so we don't need coherency. Downside: previous
+     * frame's point pixels stay as "trails" until IP overwrites. Acceptable
+     * for fast-animated point clouds; will replace with IP-side clear later. */
+
     for (int s = 0; s < N_SLOTS; s++) {
         int ang = (s + phase) % NUM_SLICES;
         UINTPTR slot = RING_BUFFER_ADDR + s * SLOT_BYTES;
-        /* Clear this slot (no borders — LED board doesn't need them).
-         * Clearing first so points overlay cleanly. */
-        memset((void *)slot, 0, SLOT_BYTES);
-        Xil_DCacheFlushRange(slot, SLOT_BYTES);
         /* Tell IP to render with fb=slot, stride=SLICE_W*3, dst_x=dst_y=0 */
         pov_w(POV_MODEL_LO,   (u32)MODEL_ADDR);
         pov_w(POV_MODEL_HI,   0);
@@ -706,12 +709,11 @@ int main(void)
         /* No pre-clear needed: we full-blit from ring buffer below, covers entire grid. */
 #endif
 #if USE_PL
-        /* Ring buffer is the primary render target (feeds LED driver).
-         * HDMI preview reuses the ring slots: we composite them onto fb grid
-         * once per frame with a fast ARM memcpy, so IP only renders once. */
+        /* Ring buffer is the primary render target (feeds LED driver). */
         pov_render_frame_to_ring(phase);
-        /* Blit 72 ring slots onto HDMI framebuffer grid. Fast memcpy-per-row. */
-        {
+        /* HDMI preview: blit ring slots to fb only every 3rd frame to boost
+         * ring throughput. Reducing visual smoothness is fine for debug preview. */
+        if ((frame % 3) == 0) {
             for (int s = 0; s < N_SLOTS; s++) {
                 u32 col = s % GRID_COLS;
                 u32 row = s / GRID_COLS;

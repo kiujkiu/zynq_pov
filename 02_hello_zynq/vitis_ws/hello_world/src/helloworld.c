@@ -42,6 +42,16 @@
 #define FB_B_ADDR 0x14000000UL
 #define FRAMEBUF_ADDR FB_A_ADDR  /* kept for any legacy refs */
 
+/* Ring buffer for LED driver consumption (Phase 5a).
+ * N_SLOTS of tightly-packed slice images, each SLICE_W × SLICE_H × 3 bytes.
+ * LED driver IP will eventually pick a slot by angle and blast it to the
+ * serial RGB chains. For now ARM writes, nobody reads except debug dumps. */
+#define N_SLOTS          72
+#define SLOT_BYTES       (SLICE_W * SLICE_H * 3)   /* 106×120×3 = 38160 */
+#define RING_BUFFER_ADDR 0x12000000UL              /* separate from model, fb */
+#define RING_BUFFER_END  (RING_BUFFER_ADDR + N_SLOTS * SLOT_BYTES)
+/* = 0x12000000 + 2.62MB = 0x1229E200, well before FB_B_ADDR=0x14000000 */
+
 /* VDMA MM2S PARK_PTR register: bits [4:0] = MM2S park frame index.
  * When DMACR.Circular_Park=0 (park mode), VDMA reads from this framestore.
  * Writing it takes effect at the NEXT VDMA frame boundary (seamless). */
@@ -291,13 +301,13 @@ static void build_model(void)
 /* ---------------------------------------------------------------------- */
 /* PL path: direct register bang on pov_project HLS IP */
 
-/* 4 parallel pov IP instances; base addrs set by bd_4pov_and_1080p.tcl
- * DIAGNOSTIC: set to 1 to use only IP 0 (isolate if HP2 path breaks HDMI) */
+/* Single pov IP only (BD reverted to remove pov_project_1/2/3).
+ * Dispatcher code kept for future re-enable when 4-IP doesn't break HDMI. */
 #define N_POV_IPS  1
-static const u32 pov_bases[N_POV_IPS] = {
+static const u32 pov_bases[4] = {
     0x43C20000UL, 0x43C30000UL, 0x43C40000UL, 0x43C50000UL
 };
-#define POV_BASE          0x43C20000UL   /* legacy single-IP refs */
+#define POV_BASE          0x43C20000UL
 #define POV_AP_CTRL       0x00
 #define POV_GIE           0x04
 #define POV_IER           0x08
@@ -341,6 +351,59 @@ static inline u64 gt_read(void) {
 }
 /* Global Timer ticks @ half the CPU clock = 333 MHz → 1 us = 333 ticks */
 #define GT_TICKS_PER_US 333U
+
+/* Ring buffer render: 72 slices rendered as TIGHT slices into slot[0..71].
+ * stride=SLICE_W*3 (no grid). Each slot is independent slice image.
+ * LED driver IP will consume from here. */
+static void pov_render_frame_to_ring(u32 phase)
+{
+    u32 stride = SLICE_W * 3;
+    for (int s = 0; s < N_SLOTS; s++) {
+        int ang = (s + phase) % NUM_SLICES;
+        UINTPTR slot = RING_BUFFER_ADDR + s * SLOT_BYTES;
+        /* Clear this slot (no borders — LED board doesn't need them).
+         * Clearing first so points overlay cleanly. */
+        memset((void *)slot, 0, SLOT_BYTES);
+        Xil_DCacheFlushRange(slot, SLOT_BYTES);
+        /* Tell IP to render with fb=slot, stride=SLICE_W*3, dst_x=dst_y=0 */
+        pov_w(POV_MODEL_LO,   (u32)MODEL_ADDR);
+        pov_w(POV_MODEL_HI,   0);
+        pov_w(POV_NUM_POINTS, model_n);
+        pov_w(POV_ANGLE_IDX,  ang);
+        pov_w(POV_FB_LO,      (u32)slot);
+        pov_w(POV_FB_HI,      0);
+        pov_w(POV_FB_STRIDE,  stride);
+        pov_w(POV_DST_X,      0);
+        pov_w(POV_DST_Y,      0);
+        pov_w(POV_AP_CTRL,    0x1);
+        u32 to = 0;
+        while (!(pov_r(POV_AP_CTRL) & 0x2)) {
+            if (++to > 0x10000000) { xil_printf("ring slot %d timeout\r\n", s); return; }
+            uart_poll_frame();
+        }
+    }
+}
+
+/* Compute simple XOR-checksum over 1 slot to verify data is there.
+ * Each call dumps checksums for slots 0, 18 (90°), 36 (180°), 54 (270°), 71. */
+static void ring_verify(void)
+{
+    int probes[5] = {0, 18, 36, 54, 71};
+    for (int i = 0; i < 5; i++) {
+        int s = probes[i];
+        const u8 *p = (const u8 *)(RING_BUFFER_ADDR + s * SLOT_BYTES);
+        Xil_DCacheInvalidateRange((UINTPTR)p, SLOT_BYTES);
+        u32 xor_sum = 0;
+        u32 nonzero = 0;
+        for (u32 b = 0; b < SLOT_BYTES; b++) {
+            xor_sum ^= (u32)p[b] << ((b & 3) * 8);
+            if (p[b]) nonzero++;
+        }
+        xil_printf("ring slot %2d  xor=0x%08x  nonzero=%u  first6=%02x%02x%02x %02x%02x%02x\r\n",
+                   s, (unsigned)xor_sum, (unsigned)nonzero,
+                   p[0], p[1], p[2], p[3], p[4], p[5]);
+    }
+}
 
 /* Set one IP's parameters and fire it. Caller waits elsewhere. */
 static void povi_fire(int ip, UINTPTR fb_base, int angle_idx, int col, int row)
@@ -528,18 +591,25 @@ int main(void)
     XAxiVdma Vdma;
     XAxiVdma_Config *vdmaCfg = XAxiVdma_LookupConfig(XPAR_AXI_VDMA_0_BASEADDR);
     XAxiVdma_CfgInitialize(&Vdma, vdmaCfg, vdmaCfg->BaseAddress);
+    /* VDMA init per Digilent Zybo-Z7-HDMI reference (display_ctrl.c):
+     *   1) EnableCircularBuf = 1
+     *   2) XAxiVdma_DmaConfig
+     *   3) XAxiVdma_DmaSetBufferAddr (all N framestores)
+     *   4) XAxiVdma_DmaStart  — start FIRST
+     *   5) XAxiVdma_StartParking on initial frame — park SECOND
+     * Swap is another call to StartParking with the new index.
+     * Wrong order (park before start) causes HDMI black (seen 2026-04-23). */
     XAxiVdma_DmaSetup setup = {0};
     setup.VertSizeInput = HEIGHT;
     setup.HoriSizeInput = STRIDE;
     setup.Stride        = STRIDE;
-    /* Circular mode (originally working HDMI). Both framestores point to FB_A
-     * → VDMA cycles but always reads same buffer, effectively single-buffer.
-     * Double-buffer with park swap is blocking HDMI for some reason, revisit. */
     setup.EnableCircularBuf = 1;
+    setup.FixedFrameStoreAddr = 0;
     XAxiVdma_DmaConfig(&Vdma, XAXIVDMA_READ, &setup);
-    UINTPTR fbs[2] = { FB_A_ADDR, FB_A_ADDR };
+    UINTPTR fbs[2] = { FB_A_ADDR, FB_B_ADDR };
     XAxiVdma_DmaSetBufferAddr(&Vdma, XAXIVDMA_READ, fbs);
     XAxiVdma_DmaStart(&Vdma, XAXIVDMA_READ);
+    XAxiVdma_StartParking(&Vdma, 0, XAXIVDMA_READ);
     xil_printf("VDMA DMACR=0x%x PARK_PTR=0x%x\r\n",
                (unsigned)vdma_dmacr(),
                (unsigned)Xil_In32(VDMA_BASE + VDMA_PARK_PTR_OFF));
@@ -620,8 +690,8 @@ int main(void)
     u32 phase = 0;
 
     u32 stream_frames = 0;
-    UINTPTR fb_bufs[2] = { FB_A_ADDR, FB_A_ADDR };
-    u32 write_idx = 0;   /* single-buffer for now; always write FB_A */
+    UINTPTR fb_bufs[2] = { FB_A_ADDR, FB_B_ADDR };
+    u32 write_idx = 1;   /* VDMA reads 0 first, we write to 1 */
 
     while (1) {
         if (uart_poll_frame()) {
@@ -633,13 +703,28 @@ int main(void)
         UINTPTR fb_write = fb_bufs[write_idx];
 
 #if USE_PL
-        arm_clear_grid(fb_write);
-        arm_draw_borders(fb_write);
-        Xil_DCacheFlushRange(fb_write, FRAME_BYTES);
+        /* No pre-clear needed: we full-blit from ring buffer below, covers entire grid. */
 #endif
 #if USE_PL
-        /* Parallel dispatch: 4 IPs render simultaneously, each on different slice. */
-        pov_render_frame_parallel(fb_write, phase);
+        /* Ring buffer is the primary render target (feeds LED driver).
+         * HDMI preview reuses the ring slots: we composite them onto fb grid
+         * once per frame with a fast ARM memcpy, so IP only renders once. */
+        pov_render_frame_to_ring(phase);
+        /* Blit 72 ring slots onto HDMI framebuffer grid. Fast memcpy-per-row. */
+        {
+            for (int s = 0; s < N_SLOTS; s++) {
+                u32 col = s % GRID_COLS;
+                u32 row = s / GRID_COLS;
+                u32 x0 = col * SLICE_W;
+                u32 y0 = row * SLICE_H;
+                const u8 *src = (const u8 *)(RING_BUFFER_ADDR + s * SLOT_BYTES);
+                u8 *dst = (u8 *)fb_write + y0 * STRIDE + x0 * 3;
+                for (int yy = 0; yy < SLICE_H; yy++) {
+                    memcpy(dst + yy * STRIDE, src + yy * (SLICE_W * 3), SLICE_W * 3);
+                }
+            }
+            Xil_DCacheFlushRange(fb_write, FRAME_BYTES);
+        }
 #else
         for (int n = 0; n < NUM_SLICES; n++) {
             uart_poll_frame();
@@ -655,9 +740,11 @@ int main(void)
         Xil_DCacheFlushRange(fb_write, FRAME_BYTES);
 #endif
 
-        /* Park swap disabled for now; single-buffer to restore HDMI baseline. */
-        /* vdma_park(write_idx); */
-        /* write_idx ^= 1; */
+        /* Double-buffer swap: use Xilinx driver API (per Digilent pattern).
+         * StartParking on a running, circular-mode VDMA just rewrites PARK_PTR
+         * and flips Circular_Park bit — no stop/restart, no visible glitch. */
+        XAxiVdma_StartParking(&Vdma, write_idx, XAXIVDMA_READ);
+        write_idx ^= 1;
 
         frame++;
         phase++;
@@ -665,7 +752,10 @@ int main(void)
         if ((frame & 0x1F) == 0) {
             XTime_GetTime(&t1);
             gt1 = gt_read();
-            /* Sanity: DMACR should have Circular_Park=0 and park ptr cycling. */
+            /* Sanity: dump ring buffer snapshot once per 32 frames. */
+            if ((frame & 0x7F) == 0) {
+                ring_verify();
+            }
             xil_printf("  VDMA DMACR=0x%x parkW=%u curR=%u\r\n",
                        (unsigned)vdma_dmacr(),
                        (unsigned)(Xil_In32(VDMA_BASE + VDMA_PARK_PTR_OFF) & 0x1F),

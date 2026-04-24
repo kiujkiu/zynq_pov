@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>POV3D — 通信带宽 & LED 分辨率扩展分析</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+         max-width: 980px; margin: 32px auto; padding: 0 24px; color: #222;
+         line-height: 1.6; }
+  h1 { border-bottom: 2px solid #444; padding-bottom: 6px; }
+  h2 { border-left: 4px solid #3a7; padding-left: 10px; margin-top: 36px; color: #246; }
+  h3 { color: #444; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; }
+  th { background: #f0f4f8; }
+  .ok  { color: #0a5; font-weight: bold; }
+  .warn{ color: #c70; font-weight: bold; }
+  .bad { color: #c22; font-weight: bold; }
+  code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-size: 0.95em; }
+  .note { background: #fffbe6; border-left: 3px solid #e4a700; padding: 10px 14px;
+          margin: 10px 0; font-size: 0.92em; }
+  .good { background: #eefdf1; border-left: 3px solid #2a9d54; padding: 10px 14px;
+          margin: 10px 0; font-size: 0.92em; }
+  .caution { background: #fbeaea; border-left: 3px solid #c22; padding: 10px 14px;
+          margin: 10px 0; font-size: 0.92em; }
+  hr { border: none; border-top: 1px dashed #aaa; margin: 32px 0; }
+  footer { color: #888; font-size: 0.85em; margin-top: 40px; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>POV3D — 通信带宽 & LED 分辨率扩展分析</h1>
+<p><em>生成日期:2026-04-24.本文的"分辨率"一律指 <strong>LED 屏(切片)分辨率</strong>,不是 HDMI 预览分辨率.</em></p>
+
+<!-- ============================================================ -->
+<h2>1. 基础参数</h2>
+
+<table>
+  <tr><th>参数</th><th>当前值</th><th>LED 板目标</th></tr>
+  <tr><td>每圈 slice 数</td><td>72</td><td>720</td></tr>
+  <tr><td>体刷新率</td><td>28 FPS(单 IP)</td><td>30 Hz</td></tr>
+  <tr><td>单 slice 分辨率</td><td>106 × 120</td><td>160 × 180(目标)</td></tr>
+  <tr><td>单 slice 字节数</td><td>38,160 (~38 KB)</td><td>86,400 (~86 KB)</td></tr>
+  <tr><td>每圈(1 帧)数据量</td><td>2.75 MB</td><td><strong>62 MB</strong></td></tr>
+  <tr><td>目标 slice 吞吐</td><td>~2000 /秒</td><td><strong>21,600 /秒</strong>(720 × 30)</td></tr>
+  <tr><td>单 slice 时间预算</td><td>~500 μs</td><td><strong>46 μs</strong></td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2>2. 主机 → 板子通信带宽需求</h2>
+
+<p>前端是 <strong>点云数据</strong>(不是三角面,Host 已做 mesh→point 采样).每点 16 byte.</p>
+
+<table>
+  <tr><th>场景</th><th>点数</th><th>单帧字节</th><th>30 FPS 带宽</th></tr>
+  <tr><td>小模型(动画立方体)</td><td>300</td><td>4.8 KB</td><td>144 KB/s</td></tr>
+  <tr><td>中模型(简单 mesh)</td><td>3,000</td><td>48 KB</td><td>1.4 MB/s</td></tr>
+  <tr><td>大模型(复杂 mesh)</td><td>30,000</td><td>480 KB</td><td>14 MB/s</td></tr>
+  <tr><td>极限(MAX_POINTS)</td><td>32,768</td><td>512 KB</td><td>15.4 MB/s</td></tr>
+</table>
+
+<h3>2.1 接口带宽能力对比</h3>
+<table>
+  <tr><th>接口</th><th>实际可用带宽</th><th>能跑的场景</th><th>工作量</th></tr>
+  <tr><td>UART 115200 baud</td><td>11.5 KB/s</td><td class="bad">只够 2.4 FPS @ 300 点 或 稀疏 30 FPS</td><td>已接</td></tr>
+  <tr><td>UART 921600 baud</td><td>92 KB/s</td><td class="warn">30 FPS @ 小点云(500-1000 点)</td><td>改配置即可</td></tr>
+  <tr><td><strong>ESP32 WiFi 桥 → Zynq UART</strong></td><td>2-5 MB/s (TCP 稳态)</td><td class="ok">30 FPS @ 中模型(几千点)</td><td>中等(加硬件)</td></tr>
+  <tr><td><strong>Zynq PS ETH (gigabit)</strong></td><td>50-100 MB/s</td><td class="ok">全部场景</td><td>大(硬件 PHY + 软件栈调试)</td></tr>
+  <tr><td>USB WiFi(PL 实现)</td><td>—</td><td class="bad">不推荐</td><td>极大</td></tr>
+</table>
+
+<div class="good">
+<strong>推荐:ESP32 WiFi 桥做产品方案</strong><br>
+开发期继续用 UART 够用;量产时加一颗 ESP32(¥10-20),跑 TCP server → 转串口给 Zynq.
+用户用手机 App 连 ESP32 Wi-Fi,无感切换.覆盖绝大多数点云应用.
+</div>
+
+
+<!-- ============================================================ -->
+<h2>3. LED 屏分辨率扩展 — 芯片资源限制分析</h2>
+
+<p>关键限制来自 <strong>DDR 带宽</strong> 和 <strong>HLS IP 吞吐</strong>.</p>
+
+<h3>3.1 不同 LED 规格的数据量</h3>
+<table>
+  <tr><th>单 slice 尺寸</th><th>单 slot 字节</th><th>1 圈(720 slot) DDR</th><th>30 Hz 所需 DDR 带宽</th><th>XC7Z020 能扛?</th></tr>
+  <tr><td>160 × 180 (目标)</td><td>86 KB</td><td>62 MB</td><td>1.86 GB/s</td><td class="warn">紧(peak 3 GB/s)</td></tr>
+  <tr><td>160 × 480</td><td>230 KB</td><td>166 MB</td><td>5.0 GB/s</td><td class="bad">超带宽</td></tr>
+  <tr><td>160 × 720</td><td>345 KB</td><td>248 MB</td><td>7.4 GB/s</td><td class="bad">远超</td></tr>
+  <tr><td>240 × 720</td><td>518 KB</td><td>373 MB</td><td>11.2 GB/s</td><td class="bad">远超</td></tr>
+</table>
+
+<p><em>(上表 DDR 带宽 = LED 读 + pov IP 写 + VDMA 读 HDMI,合计.XC7Z020 配 DDR3-1066 peak 4.2 GB/s,实际可用约 2.5-3 GB/s)</em></p>
+
+
+<h3>3.2 HLS IP 渲染时间预算</h3>
+<table>
+  <tr><th>slice 尺寸</th><th>估计单 slice 渲染</th><th>单 IP 最大 slice/s</th><th>30 Hz × 720 是否可达</th></tr>
+  <tr><td>106 × 120(现状)</td><td>~500 μs</td><td>2,000</td><td class="bad">差 10.8×</td></tr>
+  <tr><td>160 × 180(目标)</td><td>~1 ms(预估)</td><td>1,000</td><td class="bad">差 21×</td></tr>
+  <tr><td>160 × 480</td><td>~2.5 ms</td><td>400</td><td class="bad">差 54×</td></tr>
+</table>
+
+<p>通过 <strong>4 路并行 IP</strong> + <strong>AXI 数据宽度优化</strong> 可以提升 8-12×.对 160×180 目标可行;对 160×480 必须升级芯片.</p>
+
+
+<!-- ============================================================ -->
+<h2>4. 扩分辨率的可行路径</h2>
+
+<h3>4.1 XC7Z020 上限估算</h3>
+<table>
+  <tr><th>组合</th><th>总数据/秒</th><th>DDR 占用</th><th>芯片可达?</th></tr>
+  <tr><td>160 × 180 × 360 slice × 15 Hz</td><td>0.5 GB/s</td><td>16%</td><td class="ok">轻松</td></tr>
+  <tr><td>160 × 180 × 720 × 30 Hz(目标)</td><td>1.86 GB/s</td><td>62%</td><td class="warn">紧但能跑,需 4 路 IP</td></tr>
+  <tr><td>160 × 360 × 720 × 30 Hz</td><td>3.73 GB/s</td><td class="bad">125%</td><td class="bad">超</td></tr>
+  <tr><td>160 × 480 × 720 × 30 Hz</td><td>5.0 GB/s</td><td class="bad">167%</td><td class="bad">超</td></tr>
+</table>
+
+<h3>4.2 扩分辨率的方案</h3>
+<table>
+  <tr><th>方案</th><th>成本</th><th>能支持的 LED 规格</th></tr>
+  <tr><td>当前 XC7Z020 + 优化</td><td>0</td><td>160 × 180 × 720 × 30 Hz(目标)</td></tr>
+  <tr><td>降帧率(15 Hz)</td><td>0</td><td>160 × 360 × 720 × 15 Hz</td></tr>
+  <tr><td><strong>升级 XC7Z035</strong>(DDR3-1866)</td><td>芯片 ¥800-1200</td><td>160 × 480 × 720 × 30 Hz</td></tr>
+  <tr><td><strong>升级 ZynqMP XCZU2CG</strong>(DDR4-2400)</td><td>¥1500-2000</td><td>240 × 720 × 720 × 30 Hz 或 1080p 等效</td></tr>
+  <tr><td>多芯片方案(2× XC7Z020 分区负载)</td><td>¥500 + 复杂</td><td>算力倍增但调试量大</td></tr>
+</table>
+
+<div class="note">
+<strong>观察:</strong> LED 物理尺寸会自然限制分辨率.比如一个直径 40 cm 的 POV 球,
+单 LED 柱 360 灯已经让相邻灯角间距 &lt; 2 mm,再密视觉意义不大.
+对应大多数消费产品,<strong>160 × 180</strong>(或 160 × 360 降帧率)是合理目标.
+</div>
+
+<div class="caution">
+<strong>注意:</strong> 720 根 LED 柱物理上需要 720 × 15/30 路 RGB 驱动芯片 =
+~2.4 万个 LED,功耗和发热会是机械和电源挑战,与 FPGA 关系不大.
+</div>
+
+
+<!-- ============================================================ -->
+<h2>5. 总结</h2>
+
+<h3>主机通信</h3>
+<ul>
+  <li>开发阶段 UART 够用(300-500 点动画)</li>
+  <li>产品化加 <strong>ESP32 WiFi 桥</strong> ≈ 2-5 MB/s,覆盖大多数点云应用</li>
+  <li>真要流 30K+ 点大模型,启用 Zynq PS ETH(需要重调硬件层)</li>
+</ul>
+
+<h3>LED 分辨率</h3>
+<ul>
+  <li>当前 XC7Z020 能做到 <strong>160 × 180 × 720 × 30 Hz</strong> (目标配置),已评估可行</li>
+  <li>再大(480p/720p LED 柱高)需要升芯片到 Zynq-7035 或 ZynqMP 系列</li>
+  <li><strong>物理上 720 LED 柱 高度已很难做小</strong>,分辨率的瓶颈大概率不在 FPGA 而在 LED 板本身</li>
+</ul>
+
+<h3>风险点(按优先级)</h3>
+<ol>
+  <li>DDR 带宽在 160×180×720×30Hz 时用 62%,边缘,需 QoS 配置保证 VDMA/LED</li>
+  <li>单 IP 差 10-20×,必须 4 路并行 + AXI 宽化才能达标</li>
+  <li>LED 机械 + 电源散热 — 不是 FPGA 问题,但量产时最大坑</li>
+</ol>
+
+<footer>
+本文档基于 Zynq-7000 SoC(XC7Z020-CLG484-2)@ DDR3-1066.
+数据来自 Xilinx PG020 + UG585 + 2026-04-23 实测.
+</footer>
+
+</body>
+</html>

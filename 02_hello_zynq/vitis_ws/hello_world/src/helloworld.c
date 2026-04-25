@@ -28,7 +28,10 @@
 #include "xil_io.h"
 #include "xiltimer.h"
 
-#define USE_PL 0
+#define USE_PL 1
+/* Test mode: each frame copy model to alternate address to defeat any
+ * potential read-buffer/address-cache effect in IP/smc/HP path. */
+#define DEFEAT_ADDR_CACHE 1
 
 /* Keep 720p60 for stable HDMI preview. 1080p upgrade needs rgb2dvi verification. */
 #define WIDTH   1280
@@ -470,11 +473,30 @@ static inline u64 gt_read(void) {
 #define BATCH_PHASE        0x40
 #define BATCH_N_SLOTS      0x48
 
+/* Alternate model copy address — to test if HP/smc has read-cache stale issue */
+#define MODEL_ADDR_B  0x11400000UL   /* 4 MB after primary, well aligned */
+
 static void pov_render_frame_to_ring(u32 phase)
 {
     /* Force phase to heavy test values so different output must occur. */
     u32 test_phase = phase & 0x3F;   /* 0..63 */
+
+#if DEFEAT_ADDR_CACHE
+    /* Each call: copy MODEL_ADDR → MODEL_ADDR_B (alternating each frame),
+     * point IP at the copied address. Forces IP to read from a different
+     * DDR location each ap_start, defeating any address-keyed stale cache. */
+    static int alt = 0;
+    UINTPTR src = MODEL_ADDR;
+    UINTPTR dst = alt ? MODEL_ADDR_B : MODEL_ADDR;
+    if (alt) {
+        memcpy((void *)MODEL_ADDR_B, (void *)MODEL_ADDR, model_n * sizeof(PovPoint));
+        Xil_DCacheFlushRange(MODEL_ADDR_B, model_n * sizeof(PovPoint));
+    }
+    alt ^= 1;
+    pov_w(BATCH_MODEL_LO,    (u32)dst);
+#else
     pov_w(BATCH_MODEL_LO,    (u32)MODEL_ADDR);
+#endif
     pov_w(BATCH_MODEL_HI,    0);
     pov_w(BATCH_NUM_POINTS,  model_n);
     pov_w(BATCH_RING_LO,     (u32)RING_BUFFER_ADDR);

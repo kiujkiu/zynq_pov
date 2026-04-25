@@ -1262,7 +1262,7 @@
       },
       "pov_project_batch_0": {
         "vlnv": "povlab:user:pov_project_batch:1.0",
-        "ip_revision": "2114579690",
+        "ip_revision": "2114579840",
         "xci_name": "hello_zynq_pov_project_batch_0_0",
         "xci_path": "ip\\hello_zynq_pov_project_batch_0_0\\hello_zynq_pov_project_batch_0_0.xci",
         "inst_hier_path": "pov_project_batch_0",

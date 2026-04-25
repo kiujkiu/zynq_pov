@@ -17,6 +17,14 @@ if {[lsearch -exact $existing_repos $ip_repo] < 0} {
 update_ip_catalog
 open_bd_design [get_files ${bd_name}.bd]
 
+# --- 升级已被锁的 IP (HLS IP 重综合后) ---
+set locked_ips [get_ips -filter "IS_LOCKED==1"]
+if {[llength $locked_ips] > 0} {
+    puts "=== Upgrading locked IPs: $locked_ips ==="
+    upgrade_ip $locked_ips
+    export_ip_user_files -of_objects $locked_ips -no_script -sync -force -quiet
+}
+
 # --- 删除老 pov_project_0 ---
 puts "=== Delete old pov_project_0 ==="
 foreach seg {/processing_system7_0/Data/SEG_pov_project_0_Reg} {
@@ -27,21 +35,23 @@ if {[llength [get_bd_cells -quiet pov_project_0]]} {
     delete_bd_objs [get_bd_cells pov_project_0]
 }
 
-# --- 实例化 pov_project_batch IP ---
-puts "=== Add pov_project_batch_0 ==="
-create_bd_cell -type ip -vlnv povlab:user:pov_project_batch:1.0 pov_project_batch_0
+# --- 实例化 pov_project_batch IP (如果不存在) ---
+if {![llength [get_bd_cells -quiet pov_project_batch_0]]} {
+    puts "=== Add pov_project_batch_0 ==="
+    create_bd_cell -type ip -vlnv povlab:user:pov_project_batch:1.0 pov_project_batch_0
+} else {
+    puts "=== pov_project_batch_0 already exists, reusing ==="
+}
 
-# --- 接控制 axi_smc M03 → pov_project_batch_0/s_axi_control ---
-puts "=== Wire control bus ==="
-connect_bd_intf_net [get_bd_intf_pins axi_smc/M03_AXI] \
-                    [get_bd_intf_pins pov_project_batch_0/s_axi_control]
-
-# --- 接数据 m_axi_gmem0/gmem1 → axi_smc_pov_hp → HP1 ---
-puts "=== Wire data buses ==="
-connect_bd_intf_net [get_bd_intf_pins pov_project_batch_0/m_axi_gmem0] \
-                    [get_bd_intf_pins axi_smc_pov_hp/S00_AXI]
-connect_bd_intf_net [get_bd_intf_pins pov_project_batch_0/m_axi_gmem1] \
-                    [get_bd_intf_pins axi_smc_pov_hp/S01_AXI]
+# --- 接控制/数据 (跳过已连的) ---
+proc safe_intf_connect {src dst} {
+    if {![llength [get_bd_intf_nets -of_objects [get_bd_intf_pins $dst]]]} {
+        connect_bd_intf_net [get_bd_intf_pins $src] [get_bd_intf_pins $dst]
+    }
+}
+safe_intf_connect axi_smc/M03_AXI pov_project_batch_0/s_axi_control
+safe_intf_connect pov_project_batch_0/m_axi_gmem0 axi_smc_pov_hp/S00_AXI
+safe_intf_connect pov_project_batch_0/m_axi_gmem1 axi_smc_pov_hp/S01_AXI
 
 # --- 时钟 FCLK_CLK3 (150 MHz) ---
 set fclk3 [get_bd_pins processing_system7_0/FCLK_CLK3]

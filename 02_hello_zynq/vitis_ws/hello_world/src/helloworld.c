@@ -28,7 +28,7 @@
 #include "xil_io.h"
 #include "xiltimer.h"
 
-#define USE_PL 1
+#define USE_PL 0
 
 /* Keep 720p60 for stable HDMI preview. 1080p upgrade needs rgb2dvi verification. */
 #define WIDTH   1280
@@ -105,7 +105,7 @@ typedef struct __attribute__((aligned(16))) {
 
 /* Model lives at a fixed high DDR address, away from framebuffer. */
 #define MODEL_ADDR      0x11000000UL
-#define MAX_POINTS      1024
+#define MAX_POINTS      16384
 static PovPoint * const model = (PovPoint *)MODEL_ADDR;
 static int model_n = 0;
 
@@ -146,14 +146,25 @@ typedef struct __attribute__((packed)) {
 
 /* Receiver state machine: keep pulling bytes until a full valid frame lands,
  * or no more bytes available. On success, copies into `model[]`, sets
- * model_n, and returns 1. Returns 0 if still waiting / nothing arrived. */
+ * model_n, and returns 1. Returns 0 if still waiting / nothing arrived.
+ *
+ * Protocol supports raw (16B/point) and compressed (5B/point RGB565) formats,
+ * selected by flags bit 0. Compressed points are decoded into 16-byte model[]
+ * on the fly so the IP sees a consistent 16-byte array regardless of wire format. */
+#define PC_FLAG_COMPRESSED   0x0001u
+#define PC_POINT_LEN_RAW     16
+#define PC_POINT_LEN_COMP    5
 typedef enum { RX_HDR, RX_PTS } rx_state_t;
 static rx_state_t rx_state = RX_HDR;
 static u8          rx_hdr_buf[sizeof(pc_hdr_t)];
 static u32         rx_hdr_got = 0;
 static u32         rx_expected_pts = 0;
-static u32         rx_pts_got = 0;
-static u32         rx_magic_sync = 0;   /* rolling 4-byte window hunting magic */
+static u32         rx_pts_got = 0;         /* bytes received so far in current point */
+static u32         rx_pts_done = 0;        /* points fully decoded */
+static u32         rx_magic_sync = 0;
+static u32         rx_flags = 0;
+static u32         rx_pt_len = PC_POINT_LEN_RAW;
+static u8          rx_pt_buf[PC_POINT_LEN_RAW];
 
 static int uart_poll_frame(void)
 {
@@ -178,17 +189,19 @@ static int uart_poll_frame(void)
                 if (rx_hdr_got == sizeof(pc_hdr_t)) {
                     pc_hdr_t *h = (pc_hdr_t *)rx_hdr_buf;
                     if (h->num_points > MAX_POINTS) {
-                        /* invalid — resync */
                         xil_printf("[rx] bad num_points=%u, resync\r\n",
                                    (unsigned)h->num_points);
                         rx_hdr_got = 0;
                         rx_magic_sync = 0;
                     } else {
                         rx_expected_pts = h->num_points;
+                        rx_flags = h->flags;
+                        rx_pt_len = (rx_flags & PC_FLAG_COMPRESSED)
+                                        ? PC_POINT_LEN_COMP : PC_POINT_LEN_RAW;
                         rx_pts_got = 0;
+                        rx_pts_done = 0;
                         rx_state = RX_PTS;
                         if (rx_expected_pts == 0) {
-                            /* Empty frame — accept immediately */
                             model_n = 0;
                             rx_state = RX_HDR;
                             rx_hdr_got = 0;
@@ -200,37 +213,117 @@ static int uart_poll_frame(void)
                 }
             }
         } else { /* RX_PTS */
-            ((u8 *)model)[rx_pts_got++] = b;
-            if (rx_pts_got == rx_expected_pts * sizeof(PovPoint)) {
-                model_n = rx_expected_pts;
-                Xil_DCacheFlushRange(MODEL_ADDR, model_n * sizeof(PovPoint));
-                rx_state = RX_HDR;
-                rx_hdr_got = 0;
-                rx_magic_sync = 0;
-                frame_ready = 1;
-                /* On first received frame, dump the header + first 3 points
-                 * so we can compare against what Host sent. */
-                static int dumped = 0;
-                if (!dumped) {
-                    dumped = 1;
-                    pc_hdr_t *h = (pc_hdr_t *)rx_hdr_buf;
-                    xil_printf("[rx-dump] magic=0x%08x fid=%u N=%u flags=0x%x\r\n",
-                               (unsigned)h->magic, (unsigned)h->frame_id,
-                               (unsigned)h->num_points, (unsigned)h->flags);
-                    for (int i = 0; i < 3 && i < model_n; i++) {
-                        xil_printf("[rx-dump] p%d  x=%d y=%d z=%d  r=%u g=%u b=%u\r\n",
-                                   i,
-                                   (int)model[i].x, (int)model[i].y, (int)model[i].z,
-                                   (unsigned)model[i].r, (unsigned)model[i].g,
-                                   (unsigned)model[i].b);
+            rx_pt_buf[rx_pts_got++] = b;
+            if (rx_pts_got == rx_pt_len) {
+                /* One point fully received; decode into model[rx_pts_done] */
+                if (rx_flags & PC_FLAG_COMPRESSED) {
+                    /* 5B: int8 x, y, z; u16 rgb565 little-endian */
+                    int8_t xs = (int8_t)rx_pt_buf[0];
+                    int8_t ys = (int8_t)rx_pt_buf[1];
+                    int8_t zs = (int8_t)rx_pt_buf[2];
+                    u16 rgb = rx_pt_buf[3] | (rx_pt_buf[4] << 8);
+                    /* One-time dump of first decoded point for verification */
+                    static int rgb_dumped = 0;
+                    if (!rgb_dumped && rx_pts_done == 0) {
+                        rgb_dumped = 1;
+                        xil_printf("[comp] wire bytes[3,4]=0x%02x 0x%02x rgb=0x%04x\r\n",
+                                   rx_pt_buf[3], rx_pt_buf[4], (unsigned)rgb);
                     }
+                    /* expand RGB565 → RGB888 */
+                    u8 r5 = (rgb >> 11) & 0x1F;
+                    u8 g6 = (rgb >> 5)  & 0x3F;
+                    u8 b5 = rgb         & 0x1F;
+                    u8 r = (r5 << 3) | (r5 >> 2);
+                    u8 g = (g6 << 2) | (g6 >> 4);
+                    u8 b = (b5 << 3) | (b5 >> 2);
+                    model[rx_pts_done].x = xs;
+                    model[rx_pts_done].y = ys;
+                    model[rx_pts_done].z = zs;
+                    model[rx_pts_done]._pad0 = 0;
+                    model[rx_pts_done].r = r;
+                    model[rx_pts_done].g = g;
+                    model[rx_pts_done].b = b;
+                    model[rx_pts_done]._pad1 = 0;
+                    model[rx_pts_done]._pad2 = 0;
+                } else {
+                    /* 16B raw: direct memcpy from buffer into PovPoint struct */
+                    memcpy(&model[rx_pts_done], rx_pt_buf, PC_POINT_LEN_RAW);
                 }
-                break;
+                rx_pts_done++;
+                rx_pts_got = 0;
+                if (rx_pts_done == rx_expected_pts) {
+                    model_n = rx_expected_pts;
+                    Xil_DCacheFlushRange(MODEL_ADDR, model_n * sizeof(PovPoint));
+                    rx_state = RX_HDR;
+                    rx_hdr_got = 0;
+                    rx_magic_sync = 0;
+                    frame_ready = 1;
+                    /* First-frame dump to compare with Host */
+                    static int dumped = 0;
+                    if (!dumped) {
+                        dumped = 1;
+                        pc_hdr_t *h = (pc_hdr_t *)rx_hdr_buf;
+                        xil_printf("[rx-dump] magic=0x%08x fid=%u N=%u flags=0x%x\r\n",
+                                   (unsigned)h->magic, (unsigned)h->frame_id,
+                                   (unsigned)h->num_points, (unsigned)h->flags);
+                        for (int i = 0; i < 3 && i < model_n; i++) {
+                            xil_printf("[rx-dump] p%d  x=%d y=%d z=%d  r=%u g=%u b=%u\r\n",
+                                       i,
+                                       (int)model[i].x, (int)model[i].y, (int)model[i].z,
+                                       (unsigned)model[i].r, (unsigned)model[i].g,
+                                       (unsigned)model[i].b);
+                        }
+                    }
+                    break;
+                }
             }
         }
     }
     return frame_ready;
 }
+
+/* 360 entry tables for 1° resolution (used by slice panel).
+ * Full table to avoid runtime sin/cos. */
+static const int16_t cos360_table[360] = {
+     256,256,256,256,255,255,255,254,254,253, 252,251,250,249,248,247,246,245,243,242,
+     241,239,237,236,234,232,230,228,226,224, 222,219,217,215,212,210,207,204,202,199,
+     196,193,190,187,184,181,178,175,171,168, 165,161,158,154,150,147,143,139,136,132,
+     128,124,120,116,112,108,104,100, 96, 92,  88, 83, 79, 75, 71, 66, 62, 58, 53, 49,
+      44, 40, 36, 31, 27, 22, 18, 13,  9,  4,   0, -4, -9,-13,-18,-22,-27,-31,-36,-40,
+     -44,-49,-53,-58,-62,-66,-71,-75,-79,-83, -88,-92,-96,-100,-104,-108,-112,-116,-120,-124,
+    -128,-132,-136,-139,-143,-147,-150,-154,-158,-161, -165,-168,-171,-175,-178,-181,-184,-187,-190,-193,
+    -196,-199,-202,-204,-207,-210,-212,-215,-217,-219, -222,-224,-226,-228,-230,-232,-234,-236,-237,-239,
+    -241,-242,-243,-245,-246,-247,-248,-249,-250,-251, -252,-253,-254,-254,-255,-255,-255,-256,-256,-256,
+    -256,-256,-256,-256,-255,-255,-255,-254,-254,-253, -252,-251,-250,-249,-248,-247,-246,-245,-243,-242,
+    -241,-239,-237,-236,-234,-232,-230,-228,-226,-224, -222,-219,-217,-215,-212,-210,-207,-204,-202,-199,
+    -196,-193,-190,-187,-184,-181,-178,-175,-171,-168, -165,-161,-158,-154,-150,-147,-143,-139,-136,-132,
+    -128,-124,-120,-116,-112,-108,-104,-100,-96,-92, -88,-83,-79,-75,-71,-66,-62,-58,-53,-49,
+     -44,-40,-36,-31,-27,-22,-18,-13, -9, -4,   0,  4,  9, 13, 18, 22, 27, 31, 36, 40,
+      44, 49, 53, 58, 62, 66, 71, 75, 79, 83,  88, 92, 96,100,104,108,112,116,120,124,
+     128,132,136,139,143,147,150,154,158,161, 165,168,171,175,178,181,184,187,190,193,
+     196,199,202,204,207,210,212,215,217,219, 222,224,226,228,230,232,234,236,237,239,
+     241,242,243,245,246,247,248,249,250,251, 252,253,254,254,255,255,255,256,256,256,
+};
+static const int16_t sin360_table[360] = {
+       0,  4,  9, 13, 18, 22, 27, 31, 36, 40,  44, 49, 53, 58, 62, 66, 71, 75, 79, 83,
+      88, 92, 96,100,104,108,112,116,120,124, 128,132,136,139,143,147,150,154,158,161,
+     165,168,171,175,178,181,184,187,190,193, 196,199,202,204,207,210,212,215,217,219,
+     222,224,226,228,230,232,234,236,237,239, 241,242,243,245,246,247,248,249,250,251,
+     252,253,254,254,255,255,255,256,256,256, 256,256,256,256,255,255,255,254,254,253,
+     252,251,250,249,248,247,246,245,243,242, 241,239,237,236,234,232,230,228,226,224,
+     222,219,217,215,212,210,207,204,202,199, 196,193,190,187,184,181,178,175,171,168,
+     165,161,158,154,150,147,143,139,136,132, 128,124,120,116,112,108,104,100, 96, 92,
+      88, 83, 79, 75, 71, 66, 62, 58, 53, 49,  44, 40, 36, 31, 27, 22, 18, 13,  9,  4,
+       0, -4, -9,-13,-18,-22,-27,-31,-36,-40, -44,-49,-53,-58,-62,-66,-71,-75,-79,-83,
+     -88,-92,-96,-100,-104,-108,-112,-116,-120,-124, -128,-132,-136,-139,-143,-147,-150,-154,-158,-161,
+    -165,-168,-171,-175,-178,-181,-184,-187,-190,-193, -196,-199,-202,-204,-207,-210,-212,-215,-217,-219,
+    -222,-224,-226,-228,-230,-232,-234,-236,-237,-239, -241,-242,-243,-245,-246,-247,-248,-249,-250,-251,
+    -252,-253,-254,-254,-255,-255,-255,-256,-256,-256, -256,-256,-256,-256,-255,-255,-255,-254,-254,-253,
+    -252,-251,-250,-249,-248,-247,-246,-245,-243,-242, -241,-239,-237,-236,-234,-232,-230,-228,-226,-224,
+    -222,-219,-217,-215,-212,-210,-207,-204,-202,-199, -196,-193,-190,-187,-184,-181,-178,-175,-171,-168,
+    -165,-161,-158,-154,-150,-147,-143,-139,-136,-132, -128,-124,-120,-116,-112,-108,-104,-100,-96,-92,
+     -88,-83,-79,-75,-71,-66,-62,-58,-53,-49, -44,-40,-36,-31,-27,-22,-18,-13, -9, -4,
+};
 
 static const int16_t cos8_table[72] = {
     256, 255, 252, 247, 241, 232, 222, 210,
@@ -379,6 +472,8 @@ static inline u64 gt_read(void) {
 
 static void pov_render_frame_to_ring(u32 phase)
 {
+    /* Force phase to heavy test values so different output must occur. */
+    u32 test_phase = phase & 0x3F;   /* 0..63 */
     pov_w(BATCH_MODEL_LO,    (u32)MODEL_ADDR);
     pov_w(BATCH_MODEL_HI,    0);
     pov_w(BATCH_NUM_POINTS,  model_n);
@@ -386,8 +481,18 @@ static void pov_render_frame_to_ring(u32 phase)
     pov_w(BATCH_RING_HI,     0);
     pov_w(BATCH_SLOT_BYTES,  SLOT_BYTES);
     pov_w(BATCH_SLOT_STRIDE, SLICE_W * 3);
-    pov_w(BATCH_PHASE,       phase);
+    pov_w(BATCH_PHASE,       test_phase);
     pov_w(BATCH_N_SLOTS,     N_SLOTS);
+
+    /* Diagnostic every 128 frames: print what IP actually sees */
+    static u32 dbg = 0;
+    if ((dbg++ & 0x7F) == 0) {
+        xil_printf("batch fire phase=%u rb_phase=%u rb_np=%u model_addr=0x%x\r\n",
+                   (unsigned)test_phase,
+                   (unsigned)pov_r(BATCH_PHASE),
+                   (unsigned)pov_r(BATCH_NUM_POINTS),
+                   (unsigned)pov_r(BATCH_MODEL_LO));
+    }
 
     pov_w(POV_AP_CTRL, 0x1);
     u32 to = 0;
@@ -397,24 +502,21 @@ static void pov_render_frame_to_ring(u32 phase)
     }
 }
 
-/* Compute simple XOR-checksum over 1 slot to verify data is there.
- * Each call dumps checksums for slots 0, 18 (90°), 36 (180°), 54 (270°), 71. */
+/* Dump center pixel + a few sample locations of slot 0, and nonzero count.
+ * If model changes cause slot content change, center pixel or nonzero count will shift. */
 static void ring_verify(void)
 {
-    int probes[5] = {0, 18, 36, 54, 71};
-    for (int i = 0; i < 5; i++) {
-        int s = probes[i];
+    for (int s = 0; s <= 36; s += 18) {
         const u8 *p = (const u8 *)(RING_BUFFER_ADDR + s * SLOT_BYTES);
         Xil_DCacheInvalidateRange((UINTPTR)p, SLOT_BYTES);
-        u32 xor_sum = 0;
         u32 nonzero = 0;
-        for (u32 b = 0; b < SLOT_BYTES; b++) {
-            xor_sum ^= (u32)p[b] << ((b & 3) * 8);
-            if (p[b]) nonzero++;
-        }
-        xil_printf("ring slot %2d  xor=0x%08x  nonzero=%u  first6=%02x%02x%02x %02x%02x%02x\r\n",
-                   s, (unsigned)xor_sum, (unsigned)nonzero,
-                   p[0], p[1], p[2], p[3], p[4], p[5]);
+        for (u32 b = 0; b < SLOT_BYTES; b++) if (p[b]) nonzero++;
+        int cx = SLICE_W / 2, cy = SLICE_H / 2;
+        const u8 *cen = p + cy * (SLICE_W * 3) + cx * 3;
+        xil_printf("slot %2d  nonzero=%u  cen_px=%02x%02x%02x  near=%02x%02x%02x\r\n",
+                   s, (unsigned)nonzero,
+                   cen[0], cen[1], cen[2],
+                   p[4000], p[4001], p[4002]);
     }
 }
 
@@ -544,7 +646,13 @@ static inline void put_pixel_fb(u32 x, u32 y, u8 r, u8 g, u8 b)
     p[0] = b; p[1] = g; p[2] = r;
 }
 
-static void cpu_render_slice(int angle_idx, int col, int row)
+/* Slice thickness: points whose rotated-Z is within ±SLICE_HALF_THICK are in-slice.
+ * Thicker slices = more points per slice, better visual continuity. */
+#define SLICE_HALF_THICK  8
+
+/* Render one slice cell. If `slice_mode` is 0, do full projection (old, for
+ * left half of screen); if 1, do real z-slice (clip by rotated-Z).          */
+static void cpu_render_slice_mode(int angle_idx, int col, int row, int slice_mode)
 {
     int16_t c = cos8_table[angle_idx];
     int16_t s = sin8_table[angle_idx];
@@ -555,13 +663,17 @@ static void cpu_render_slice(int angle_idx, int col, int row)
     for (int yy = 0; yy < SLICE_H; yy++) {
         memset(fb + (y0 + yy) * STRIDE + x0 * 3, 0, SLICE_W * 3);
     }
+    /* Border: left half = gray, right half = cyan (visual split marker) */
+    u8 bR = slice_mode ? 0 : 30;
+    u8 bG = slice_mode ? 80 : 30;
+    u8 bB = slice_mode ? 80 : 30;
     for (int xx = 0; xx < SLICE_W; xx++) {
-        put_pixel_fb(x0 + xx, y0, 30, 30, 30);
-        put_pixel_fb(x0 + xx, y0 + SLICE_H - 1, 30, 30, 30);
+        put_pixel_fb(x0 + xx, y0, bR, bG, bB);
+        put_pixel_fb(x0 + xx, y0 + SLICE_H - 1, bR, bG, bB);
     }
     for (int yy = 0; yy < SLICE_H; yy++) {
-        put_pixel_fb(x0, y0 + yy, 30, 30, 30);
-        put_pixel_fb(x0 + SLICE_W - 1, y0 + yy, 30, 30, 30);
+        put_pixel_fb(x0, y0 + yy, bR, bG, bB);
+        put_pixel_fb(x0 + SLICE_W - 1, y0 + yy, bR, bG, bB);
     }
 
     int cx = SLICE_W / 2;
@@ -570,7 +682,15 @@ static void cpu_render_slice(int angle_idx, int col, int row)
         int16_t px = model[i].x;
         int16_t py = model[i].y;
         int16_t pz = model[i].z;
+        /* rotated coords */
         int32_t rx = ((int32_t)px * c + (int32_t)pz * s) >> 8;
+        int32_t rz = ((int32_t)-px * s + (int32_t)pz * c) >> 8;
+
+        if (slice_mode) {
+            /* true slice: keep only points within thin z band */
+            if (rz > SLICE_HALF_THICK || rz < -SLICE_HALF_THICK) continue;
+        }
+
         int sx = cx + rx;
         int sy = cy - py;
         if (sx >= 0 && sx < SLICE_W && sy >= 0 && sy < SLICE_H) {
@@ -579,6 +699,78 @@ static void cpu_render_slice(int angle_idx, int col, int row)
             put_pixel_fb(x0 + sx + 1, y0 + sy,     r_, g_, b_);
             put_pixel_fb(x0 + sx,     y0 + sy + 1, r_, g_, b_);
             put_pixel_fb(x0 + sx + 1, y0 + sy + 1, r_, g_, b_);
+        }
+    }
+}
+
+/* Legacy helper: used by main loop. Decides mode per-column. */
+static void cpu_render_slice(int angle_idx, int col, int row)
+{
+    int slice_mode = (col >= GRID_COLS / 2) ? 1 : 0;
+    cpu_render_slice_mode(angle_idx, col, row, slice_mode);
+}
+
+/* Big-panel render: panel_w × panel_h region at (origin_x, origin_y).
+ * `angle_deg` is 0..359; uses 360-entry LUT for 1° resolution.
+ * slice_mode 0 = full 3D projection; 1 = z-slice cut. */
+static void cpu_render_panel(UINTPTR fb_base, int angle_deg,
+                             int origin_x, int origin_y,
+                             int panel_w, int panel_h,
+                             int slice_mode, int scale_pct)
+{
+    if (angle_deg < 0) angle_deg = 0;
+    if (angle_deg >= 360) angle_deg %= 360;
+    int16_t c = cos360_table[angle_deg];
+    int16_t s = sin360_table[angle_deg];
+    u8 *fb = (u8 *)fb_base;
+
+    /* Clear panel */
+    for (int yy = 0; yy < panel_h; yy++) {
+        memset(fb + (origin_y + yy) * STRIDE + origin_x * 3, 0, panel_w * 3);
+    }
+    /* Colored border to label the mode */
+    u8 bR = slice_mode ? 0  : 80;
+    u8 bG = slice_mode ? 80 : 80;
+    u8 bB = slice_mode ? 80 : 80;
+    for (int xx = 0; xx < panel_w; xx++) {
+        u8 *p = fb + origin_y * STRIDE + (origin_x + xx) * 3;
+        p[0]=bB; p[1]=bG; p[2]=bR;
+        p = fb + (origin_y + panel_h - 1) * STRIDE + (origin_x + xx) * 3;
+        p[0]=bB; p[1]=bG; p[2]=bR;
+    }
+    for (int yy = 0; yy < panel_h; yy++) {
+        u8 *p = fb + (origin_y + yy) * STRIDE + origin_x * 3;
+        p[0]=bB; p[1]=bG; p[2]=bR;
+        p = fb + (origin_y + yy) * STRIDE + (origin_x + panel_w - 1) * 3;
+        p[0]=bB; p[1]=bG; p[2]=bR;
+    }
+
+    int cx = panel_w / 2;
+    int cy = panel_h / 2;
+    /* scale_pct = 100 means 1:1 (model ±60 fits in ±300 panel space). Use
+     * larger scale for the big panel so model fills it. 500 ~= 5x. */
+    for (int i = 0; i < model_n; i++) {
+        /* Drain UART RX every 100 points to prevent FIFO overflow during long
+         * renders. FIFO is only 64 bytes @ 11.5 KB/s = ~5ms drain budget. */
+        if ((i & 0x7F) == 0) uart_poll_frame();
+        int16_t px = model[i].x;
+        int16_t py = model[i].y;
+        int16_t pz = model[i].z;
+        int32_t rx = ((int32_t)px * c + (int32_t)pz * s) >> 8;
+        int32_t rz = ((int32_t)-px * s + (int32_t)pz * c) >> 8;
+        if (slice_mode) {
+            if (rz > SLICE_HALF_THICK || rz < -SLICE_HALF_THICK) continue;
+        }
+        int sx = cx + (rx * scale_pct) / 100;
+        int sy = cy - (py * scale_pct) / 100;
+        if (sx >= 0 && sx < panel_w - 1 && sy >= 0 && sy < panel_h - 1) {
+            u8 r_ = model[i].r, g_ = model[i].g, b_ = model[i].b;
+            for (int dy = 0; dy < 2; dy++) {
+                for (int dx = 0; dx < 2; dx++) {
+                    u8 *p = fb + (origin_y + sy + dy) * STRIDE + (origin_x + sx + dx) * 3;
+                    p[0] = b_; p[1] = g_; p[2] = r_;
+                }
+            }
         }
     }
 }
@@ -709,8 +901,15 @@ int main(void)
     while (1) {
         if (uart_poll_frame()) {
             stream_frames++;
-            xil_printf("[rx] stream_frame=%u model_n=%d\r\n",
-                       (unsigned)stream_frames, model_n);
+            /* Verify ARM wrote the new model to DDR + first byte reads back */
+            Xil_DCacheInvalidateRange(MODEL_ADDR, 16);
+            volatile u8 *mbyte = (volatile u8 *)MODEL_ADDR;
+            xil_printf("[rx] stream_frame=%u model_n=%d p0={x=%d y=%d z=%d rgb=%u,%u,%u}\r\n",
+                       (unsigned)stream_frames, model_n,
+                       (int16_t)((mbyte[1] << 8) | mbyte[0]),
+                       (int16_t)((mbyte[3] << 8) | mbyte[2]),
+                       (int16_t)((mbyte[5] << 8) | mbyte[4]),
+                       mbyte[8], mbyte[9], mbyte[10]);
         }
 
         UINTPTR fb_write = fb_bufs[write_idx];
@@ -738,13 +937,22 @@ int main(void)
             Xil_DCacheFlushRange(fb_write, FRAME_BYTES);
         }
 #else
-        for (int n = 0; n < NUM_SLICES; n++) {
+        /* Two big panels 640×720:
+         *   LEFT: 3D projection rotating 10s/cycle (36°/s)
+         *   RIGHT: z-slice rotating 5s/cycle (72°/s)
+         * Both use wall-clock time via Global Timer — independent of CPU FPS. */
+        {
+            const int PW = WIDTH / 2;
+            const int PH = HEIGHT;
+            const int SCALE = 400;
+            u64 now = gt_read();
+            u64 us  = (now - gt0) / GT_TICKS_PER_US;
+            int left_angle  = (int)((us * 36ULL  / 1000000ULL) % 360ULL);  /* 10s */
+            int right_angle = (int)((us * 72ULL  / 1000000ULL) % 360ULL);  /* 5s  */
             uart_poll_frame();
-            int col = n % GRID_COLS;
-            int row = n / GRID_COLS;
-            int angle_idx = (n + phase) % NUM_SLICES;
-            (void)fb_write;
-            cpu_render_slice(angle_idx, col, row);
+            cpu_render_panel(fb_write, left_angle,  0,  0, PW, PH, 0, SCALE);
+            uart_poll_frame();
+            cpu_render_panel(fb_write, right_angle, PW, 0, PW, PH, 1, SCALE);
         }
 #endif
 
@@ -759,7 +967,8 @@ int main(void)
         write_idx ^= 1;
 
         frame++;
-        phase++;
+        /* Slow rotation: advance phase only every 3 frames. */
+        if ((frame % 3) == 0) phase++;
 
         if ((frame & 0x1F) == 0) {
             XTime_GetTime(&t1);

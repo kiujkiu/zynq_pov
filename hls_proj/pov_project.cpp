@@ -114,10 +114,9 @@ void pov_project_batch(
     if (n_slots < 0) n_slots = 0;
     if (n_slots > NUM_ANGLES) n_slots = NUM_ANGLES;
 
-    /* Local copy of model in BRAM (1024 × 16 = 16KB, fits easily).
-     * Read once from DDR, reuse for n_slots × num_points iterations. */
+    /* Local copy of model in BRAM (1024 × 16 = 16KB).
+     * HLS auto-chooses storage; removed BIND_STORAGE to avoid persistence bug. */
     struct point_t local_model[MAX_BATCH_POINTS];
-#pragma HLS BIND_STORAGE variable=local_model type=ram_1wnr impl=bram
 
 LOAD_MODEL:
     for (int i = 0; i < num_points; i++) {
@@ -132,8 +131,10 @@ LOAD_MODEL:
 SLICES_LOOP:
     for (int s = 0; s < n_slots; s++) {
 #pragma HLS LOOP_TRIPCOUNT min=72 max=72
-        int angle = phase + s;
-        while (angle >= NUM_ANGLES) angle -= NUM_ANGLES;
+        /* Use explicit modulo — HLS synthesis of while-loop reduction has
+         * been seen to compile weirdly on hardware. */
+        int angle = (phase + s) % NUM_ANGLES;
+        if (angle < 0) angle += NUM_ANGLES;
         const int16_t cs = POV_COS8[angle];
         const int16_t sn = POV_SIN8[angle];
         uint8_t *slot = ring_base + s * slot_bytes;

@@ -28,10 +28,9 @@
 #include "xil_io.h"
 #include "xiltimer.h"
 
-#define USE_PL 1
-/* Test mode: each frame copy model to alternate address to defeat any
- * potential read-buffer/address-cache effect in IP/smc/HP path. */
-#define DEFEAT_ADDR_CACHE 1
+#define USE_PL 0
+/* Address-cache defeat experiment kept off — PL IP bug deferred. */
+#define DEFEAT_ADDR_CACHE 0
 
 /* Keep 720p60 for stable HDMI preview. 1080p upgrade needs rgb2dvi verification. */
 #define WIDTH   1280
@@ -959,22 +958,36 @@ int main(void)
             Xil_DCacheFlushRange(fb_write, FRAME_BYTES);
         }
 #else
-        /* Two big panels 640×720:
-         *   LEFT: 3D projection rotating 10s/cycle (36°/s)
-         *   RIGHT: z-slice rotating 5s/cycle (72°/s)
-         * Both use wall-clock time via Global Timer — independent of CPU FPS. */
+        /* Layout:
+         *   LEFT 640×720: full 3D projection rotating 10s/cycle.
+         *   RIGHT 640×720: static 6×6 grid of 36 z-slices, every 10° (0..350).
+         *     Each grid cell ≈ 106×120 px (640/6 ≈ 106, 720/6 = 120).
+         * Both update from Global Timer (independent of FPS). */
         {
             const int PW = WIDTH / 2;
             const int PH = HEIGHT;
-            const int SCALE = 400;
+            const int LEFT_SCALE = 400;
             u64 now = gt_read();
             u64 us  = (now - gt0) / GT_TICKS_PER_US;
-            int left_angle  = (int)((us * 36ULL  / 1000000ULL) % 360ULL);  /* 10s */
-            int right_angle = (int)((us * 72ULL  / 1000000ULL) % 360ULL);  /* 5s  */
+            int left_angle = (int)((us * 36ULL / 1000000ULL) % 360ULL);
             uart_poll_frame();
-            cpu_render_panel(fb_write, left_angle,  0,  0, PW, PH, 0, SCALE);
+            cpu_render_panel(fb_write, left_angle, 0, 0, PW, PH, 0, LEFT_SCALE);
+
+            /* Right half: 6×6 = 36 slice cells. Cell size ~106×120, 10°/cell. */
             uart_poll_frame();
-            cpu_render_panel(fb_write, right_angle, PW, 0, PW, PH, 1, SCALE);
+            const int GCOLS = 6;
+            const int GROWS = 6;
+            const int CW = PW / GCOLS;        /* 106 */
+            const int CH = PH / GROWS;        /* 120 */
+            const int CELL_SCALE = 100;       /* model fits in tiny cell */
+            for (int gi = 0; gi < GCOLS * GROWS; gi++) {
+                int gc = gi % GCOLS;
+                int gr = gi / GCOLS;
+                int ox = PW + gc * CW;
+                int oy = gr * CH;
+                int ang = (gi * 10) % 360;
+                cpu_render_panel(fb_write, ang, ox, oy, CW, CH, 1, CELL_SCALE);
+            }
         }
 #endif
 

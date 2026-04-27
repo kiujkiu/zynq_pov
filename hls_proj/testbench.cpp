@@ -74,6 +74,62 @@ static void gen_test_model(struct point_t *m, int *n_out)
     *n_out = n;
 }
 
+/* Run one batch test with the given slice_mode + slice_half_thick.
+ * Returns 0 on PASS, 1 on FAIL. */
+static int run_case(const char *label,
+                    const struct point_t *model, int n_pts,
+                    int slice_mode, int slice_half_thick)
+{
+    const int SLOT_BYTES  = SLICE_W * SLICE_H * 3;
+    const int SLOT_STRIDE = SLICE_W * 3;
+    const int N_SLOTS     = 72;
+    const int RING_BYTES  = SLOT_BYTES * N_SLOTS;
+    static uint8_t ref_ring[SLOT_BYTES * 72];
+    static uint8_t dut_ring[SLOT_BYTES * 72];
+    memset(ref_ring, 0, RING_BYTES);
+    memset(dut_ring, 0, RING_BYTES);
+
+    int phase = 0;
+    for (int s = 0; s < N_SLOTS; s++) {
+        int ang = (phase + s) % NUM_ANGLES;
+        ref_project(model, n_pts, ang,
+                    ref_ring + s * SLOT_BYTES,
+                    SLOT_STRIDE, 0, 0,
+                    slice_mode, slice_half_thick);
+    }
+
+    pov_project_batch(model, n_pts, dut_ring, SLOT_BYTES, SLOT_STRIDE,
+                      phase, N_SLOTS, slice_mode, slice_half_thick);
+
+    int total_diffs = compare_fb(ref_ring, dut_ring, RING_BYTES);
+    printf("[TB] %s: slice_mode=%d half_thick=%d → %d byte diffs\n",
+           label, slice_mode, slice_half_thick, total_diffs);
+
+    /* Also count nonzero pixels in slice_mode=1 case to confirm it actually
+     * filters something out vs slice_mode=0. */
+    int ref_nonzero = 0;
+    for (int i = 0; i < RING_BYTES; i++) if (ref_ring[i]) ref_nonzero++;
+    printf("[TB]   ref_ring nonzero bytes: %d\n", ref_nonzero);
+
+    if (total_diffs) {
+        int shown = 0;
+        for (int s = 0; s < N_SLOTS && shown < 3; s++) {
+            int d = compare_fb(ref_ring + s*SLOT_BYTES,
+                               dut_ring + s*SLOT_BYTES,
+                               SLOT_BYTES);
+            if (d) {
+                printf("    slot %2d: %d diffs\n", s, d);
+                shown++;
+            }
+        }
+        printf("[TB] %s FAIL\n", label);
+        return 1;
+    }
+    printf("[TB] %s PASS\n", label);
+    return 0;
+}
+
+
 int main(void)
 {
     struct point_t model[MAX_POINTS];
@@ -81,50 +137,16 @@ int main(void)
     gen_test_model(model, &n);
     printf("[TB] generated %d test points\n", n);
 
-    /* Batch test: 72-slot ring buffer, each slot 106×120×3 bytes tight. */
-    const int SLOT_BYTES = SLICE_W * SLICE_H * 3;
-    const int SLOT_STRIDE = SLICE_W * 3;
-    const int N_SLOTS = 72;
-    const int RING_BYTES = SLOT_BYTES * N_SLOTS;
-    static uint8_t ref_ring[SLOT_BYTES * 72];
-    static uint8_t dut_ring[SLOT_BYTES * 72];
-    memset(ref_ring, 0, RING_BYTES);
-    memset(dut_ring, 0, RING_BYTES);
+    int fails = 0;
+    fails += run_case("projection (slice_mode=0)", model, n, 0, 0);
+    fails += run_case("z-slice thick=8",            model, n, 1, 8);
+    fails += run_case("z-slice thick=16",           model, n, 1, 16);
+    fails += run_case("z-slice thick=2 (very thin)", model, n, 1, 2);
 
-    /* Reference: call ref_project for each of 72 slots independently. */
-    int phase = 0;
-    for (int s = 0; s < N_SLOTS; s++) {
-        int ang = (phase + s) % NUM_ANGLES;
-        ref_project(model, n, ang,
-                    ref_ring + s * SLOT_BYTES,
-                    SLOT_STRIDE, 0, 0);
-    }
-
-    /* DUT: single batch call. */
-    pov_project_batch(model, n, dut_ring, SLOT_BYTES, SLOT_STRIDE, phase, N_SLOTS);
-
-    int total_diffs = compare_fb(ref_ring, dut_ring, RING_BYTES);
-    printf("[TB] batch 72-slot: %d byte diffs\n", total_diffs);
-
-    /* Also print per-slot diff for the first few that mismatch */
-    if (total_diffs) {
-        int shown = 0;
-        for (int s = 0; s < N_SLOTS && shown < 5; s++) {
-            int d = compare_fb(ref_ring + s*SLOT_BYTES,
-                               dut_ring + s*SLOT_BYTES,
-                               SLOT_BYTES);
-            if (d) {
-                printf("  slot %2d: %d diffs\n", s, d);
-                shown++;
-            }
-        }
-    }
-
-    if (total_diffs == 0) {
-        printf("[TB] PASS: batch matches per-slot reference.\n");
+    if (fails == 0) {
+        printf("[TB] ALL PASS\n");
         return 0;
-    } else {
-        printf("[TB] FAIL\n");
-        return 1;
     }
+    printf("[TB] %d cases FAILED\n", fails);
+    return 1;
 }

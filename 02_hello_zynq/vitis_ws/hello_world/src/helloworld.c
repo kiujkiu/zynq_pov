@@ -134,7 +134,7 @@ static int voxel_n_occupied = 0;
 /* Compact list of occupied voxels for fast render iteration (vs scanning
  * 256K cells). Each entry packs (vx, vy, vz, rgb565). MAX_OCCUPIED chosen
  * generously: 5000 points × 1 voxel-each-best-case = 5000 max. */
-#define MAX_OCCUPIED   16384   /* worst case all input pts unique cells */
+#define MAX_OCCUPIED   65536   /* 12000 points × 6 邻 halo ≈ 60K worst case */
 typedef struct {
     int8_t  vx, vy, vz;   /* 0..63 fits in i8 */
     int8_t  _pad;
@@ -147,7 +147,7 @@ static inline u16 pack_rgb565(u8 r, u8 g, u8 b) {
 }
 
 static void voxelize_model(void) {
-    /* Clear */
+    /* Pass 1: write each model point to its primary voxel cell. */
     memset(voxel_grid, 0, VOXEL_BYTES);
     int occ = 0;
     for (int i = 0; i < model_n; i++) {
@@ -167,6 +167,37 @@ static void voxelize_model(void) {
             occupied_list[occ].vz = (int8_t)vz;
             occupied_list[occ].rgb565 = col;
             occ++;
+        }
+    }
+
+    /* Pass 2: 6-邻域 halo. 每个 pass-1 占用 cell 把 ±x/y/z 邻居也填上,
+     * 仅当邻居为空时. 5000 点 → ~5000 occupied cells → ~30000 after halo
+     * (密度 6×). 不更新 occupied_list (render 仍用 pass-1 的列表, halo
+     * cells 通过 voxel_grid 直接采样到, 不需在列表里重复迭代). */
+    int primary_count = occ;  /* iterate only original cells, not halo cells */
+    for (int i = 0; i < primary_count; i++) {
+        VoxOcc v = occupied_list[i];
+        int dx_arr[6] = { 1, -1, 0,  0, 0,  0};
+        int dy_arr[6] = { 0,  0, 1, -1, 0,  0};
+        int dz_arr[6] = { 0,  0, 0,  0, 1, -1};
+        for (int n = 0; n < 6; n++) {
+            int nx = v.vx + dx_arr[n];
+            int ny = v.vy + dy_arr[n];
+            int nz = v.vz + dz_arr[n];
+            if (nx < 0 || nx >= VOXEL_RES) continue;
+            if (ny < 0 || ny >= VOXEL_RES) continue;
+            if (nz < 0 || nz >= VOXEL_RES) continue;
+            int nidx = (nz * VOXEL_RES + ny) * VOXEL_RES + nx;
+            if (voxel_grid[nidx] == 0) {
+                voxel_grid[nidx] = v.rgb565;
+                if (occ < MAX_OCCUPIED) {
+                    occupied_list[occ].vx = (int8_t)nx;
+                    occupied_list[occ].vy = (int8_t)ny;
+                    occupied_list[occ].vz = (int8_t)nz;
+                    occupied_list[occ].rgb565 = v.rgb565;
+                    occ++;
+                }
+            }
         }
     }
     voxel_n_occupied = occ;

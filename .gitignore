@@ -106,3 +106,10 @@ Thumbs.db
 !02_hello_zynq/vitis_ws/hello_world/src/*.h
 reference_digilent_hdmi/
 tools/BOOT.bin
+
+# === HLS proj_voxel_slice (synth output) ===
+hls_proj/proj_voxel_slice/
+hls_proj/pov_voxel_slice_ip.zip
+
+# === Generated voxel files ===
+*.vxg

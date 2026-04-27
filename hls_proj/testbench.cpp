@@ -130,6 +130,106 @@ static int run_case(const char *label,
 }
 
 
+/* ============================================================ */
+/* Voxel slicer test                                             */
+/* ============================================================ */
+
+#define VRES 128
+#define VHALF 64
+
+/* Software reference identical to HLS pov_voxel_slice_batch */
+static void ref_voxel_slice(
+    const uint16_t *vg, uint8_t *slot,
+    int slot_stride, int angle_idx)
+{
+    int16_t cs = POV_COS8[angle_idx];
+    int16_t sn = POV_SIN8[angle_idx];
+    const int cx = SLICE_W/2, cy = SLICE_H/2;
+    for (int py = 0; py < SLICE_H; py++) {
+        for (int px = 0; px < SLICE_W; px++) {
+            int rx = px - cx;
+            int ry = cy - py;
+            int mx = (rx * cs) >> 8;
+            int mz = (rx * sn) >> 8;
+            int my = ry;
+            int vx = mx + VHALF;
+            int vy = my + VHALF;
+            int vz = mz + VHALF;
+            uint16_t rgb = 0;
+            if (vx>=0 && vx<VRES && vy>=0 && vy<VRES && vz>=0 && vz<VRES) {
+                rgb = vg[(vz*VRES + vy)*VRES + vx];
+            }
+            int off = py*slot_stride + px*3;
+            if (rgb) {
+                uint8_t r5 = (rgb>>11)&0x1F, g6=(rgb>>5)&0x3F, b5=rgb&0x1F;
+                slot[off]   = (b5<<3)|(b5>>2);
+                slot[off+1] = (g6<<2)|(g6>>4);
+                slot[off+2] = (r5<<3)|(r5>>2);
+            } else {
+                slot[off] = slot[off+1] = slot[off+2] = 0;
+            }
+        }
+    }
+}
+
+static int run_voxel_case(const uint16_t *vg, int phase, int n_slots)
+{
+    const int SLOT_BYTES = SLICE_W * SLICE_H * 3;
+    const int SLOT_STRIDE = SLICE_W * 3;
+    const int RING_BYTES = SLOT_BYTES * n_slots;
+    static uint8_t ref_ring[SLOT_BYTES * 72];
+    static uint8_t dut_ring[SLOT_BYTES * 72];
+    memset(ref_ring, 0, RING_BYTES);
+    memset(dut_ring, 0, RING_BYTES);
+
+    for (int s = 0; s < n_slots; s++) {
+        int ang = (phase + s) % NUM_ANGLES;
+        ref_voxel_slice(vg, ref_ring + s*SLOT_BYTES, SLOT_STRIDE, ang);
+    }
+    pov_voxel_slice_batch(vg, dut_ring, SLOT_BYTES, SLOT_STRIDE, phase, n_slots);
+
+    int diffs = compare_fb(ref_ring, dut_ring, RING_BYTES);
+    int ref_nz = 0;
+    for (int i = 0; i < RING_BYTES; i++) if (ref_ring[i]) ref_nz++;
+    printf("[TB] voxel slice batch (n_slots=%d, phase=%d): %d diffs, "
+           "ref nonzero %d bytes\n", n_slots, phase, diffs, ref_nz);
+    if (diffs) {
+        for (int s = 0; s < n_slots; s++) {
+            int d = compare_fb(ref_ring + s*SLOT_BYTES,
+                               dut_ring + s*SLOT_BYTES, SLOT_BYTES);
+            if (d) { printf("    slot %d: %d diffs\n", s, d); break; }
+        }
+        printf("[TB] voxel slice FAIL\n");
+        return 1;
+    }
+    printf("[TB] voxel slice PASS\n");
+    return 0;
+}
+
+static void make_test_voxels(uint16_t *vg)
+{
+    /* Sparse test scene: place voxels at distinctive positions */
+    memset(vg, 0, VRES*VRES*VRES*sizeof(uint16_t));
+    /* Center point: red */
+    vg[(VHALF*VRES + VHALF)*VRES + VHALF] = 0xF800;       /* RGB565 red */
+    /* Y axis: vertical green line at center */
+    for (int y = VHALF-30; y < VHALF+30; y++) {
+        vg[(VHALF*VRES + y)*VRES + VHALF] = 0x07E0;       /* green */
+    }
+    /* X axis: horizontal blue at y=center */
+    for (int x = VHALF-25; x < VHALF+25; x++) {
+        vg[(VHALF*VRES + VHALF)*VRES + x] = 0x001F;       /* blue */
+    }
+    /* Cube corner pixels */
+    int s = 20;
+    for (int dy=-s; dy<=s; dy+=s*2) for (int dx=-s; dx<=s; dx+=s*2)
+        for (int dz=-s; dz<=s; dz+=s*2) {
+            int xc = VHALF+dx, yc = VHALF+dy, zc = VHALF+dz;
+            vg[(zc*VRES + yc)*VRES + xc] = 0xFFE0;        /* yellow */
+        }
+}
+
+
 int main(void)
 {
     struct point_t model[MAX_POINTS];
@@ -142,6 +242,13 @@ int main(void)
     fails += run_case("z-slice thick=8",            model, n, 1, 8);
     fails += run_case("z-slice thick=16",           model, n, 1, 16);
     fails += run_case("z-slice thick=2 (very thin)", model, n, 1, 2);
+
+    /* Voxel slicer tests */
+    static uint16_t vg[VRES*VRES*VRES];
+    make_test_voxels(vg);
+    fails += run_voxel_case(vg, 0, 4);
+    fails += run_voxel_case(vg, 18, 4);
+    fails += run_voxel_case(vg, 0, 12);
 
     if (fails == 0) {
         printf("[TB] ALL PASS\n");

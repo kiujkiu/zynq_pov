@@ -190,3 +190,89 @@ POINTS_IN_SLICE:
         }
     }
 }
+
+
+/* ============================================================ */
+/* Voxel slicer batch                                            */
+/* ============================================================ */
+
+void pov_voxel_slice_batch(
+    const uint16_t *voxel_grid,
+    uint8_t *ring_base,
+    int slot_bytes,
+    int slot_stride,
+    int phase,
+    int n_slots
+) {
+#pragma HLS INTERFACE m_axi      port=voxel_grid offset=slave bundle=gmem0 \
+    depth=2097152 max_read_burst_length=64 num_read_outstanding=8
+#pragma HLS INTERFACE m_axi      port=ring_base  offset=slave bundle=gmem1 \
+    depth=3000000 max_write_burst_length=256 num_write_outstanding=8
+#pragma HLS INTERFACE s_axilite  port=voxel_grid bundle=control
+#pragma HLS INTERFACE s_axilite  port=ring_base  bundle=control
+#pragma HLS INTERFACE s_axilite  port=slot_bytes bundle=control
+#pragma HLS INTERFACE s_axilite  port=slot_stride bundle=control
+#pragma HLS INTERFACE s_axilite  port=phase      bundle=control
+#pragma HLS INTERFACE s_axilite  port=n_slots    bundle=control
+#pragma HLS INTERFACE s_axilite  port=return     bundle=control
+
+    if (n_slots < 0) n_slots = 0;
+    if (n_slots > NUM_ANGLES) n_slots = NUM_ANGLES;
+
+    const int cx = SLICE_W / 2;
+    const int cy = SLICE_H / 2;
+
+SLICES_LOOP:
+    for (int s = 0; s < n_slots; s++) {
+#pragma HLS LOOP_TRIPCOUNT min=72 max=72
+        int angle = (phase + s) % NUM_ANGLES;
+        if (angle < 0) angle += NUM_ANGLES;
+        const int16_t cs = POV_COS8[angle];
+        const int16_t sn = POV_SIN8[angle];
+        uint8_t *slot = ring_base + s * slot_bytes;
+
+YY_LOOP:
+        for (int py = 0; py < SLICE_H; py++) {
+#pragma HLS LOOP_TRIPCOUNT min=120 max=120
+XX_LOOP:
+            for (int px = 0; px < SLICE_W; px++) {
+#pragma HLS LOOP_TRIPCOUNT min=106 max=106
+#pragma HLS PIPELINE II=1
+                int rx_panel = px - cx;
+                int ry_panel = cy - py;
+
+                /* slab center: rotate (rx_panel, ?, 0) → (mx, my, mz) */
+                int mx = (rx_panel * (int)cs) >> 8;
+                int mz = (rx_panel * (int)sn) >> 8;
+                int my = ry_panel;
+
+                int vx = mx + VOXEL_HALF_HLS;
+                int vy = my + VOXEL_HALF_HLS;
+                int vz = mz + VOXEL_HALF_HLS;
+
+                uint16_t rgb = 0;
+                bool in = (vx >= 0 && vx < VOXEL_RES_HLS &&
+                           vy >= 0 && vy < VOXEL_RES_HLS &&
+                           vz >= 0 && vz < VOXEL_RES_HLS);
+                if (in) {
+                    int idx = (vz * VOXEL_RES_HLS + vy) * VOXEL_RES_HLS + vx;
+                    rgb = voxel_grid[idx];
+                }
+
+                int off = py * slot_stride + px * 3;
+                if (rgb != 0) {
+                    uint8_t r5 = (uint8_t)((rgb >> 11) & 0x1F);
+                    uint8_t g6 = (uint8_t)((rgb >> 5)  & 0x3F);
+                    uint8_t b5 = (uint8_t)( rgb        & 0x1F);
+                    slot[off + 0] = (uint8_t)((b5 << 3) | (b5 >> 2));
+                    slot[off + 1] = (uint8_t)((g6 << 2) | (g6 >> 4));
+                    slot[off + 2] = (uint8_t)((r5 << 3) | (r5 >> 2));
+                } else {
+                    slot[off + 0] = 0;
+                    slot[off + 1] = 0;
+                    slot[off + 2] = 0;
+                }
+            }
+        }
+    }
+}

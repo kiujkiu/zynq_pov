@@ -71,4 +71,29 @@ void pov_project_batch(
     int slice_half_thick    /* 仅 slice_mode=1 用; 典型 4..16 */
 );
 
+
+/* === Voxel slicer ===
+ * 输入: 128³ voxel grid (RGB565, 4 MB), 由 ARM 端从点云 voxelize 得到.
+ * 输出: 同 pov_project_batch 写 ring buffer 各 slot.
+ * 算法: 对每个 panel pixel (px, py), 反推到 model 坐标 (slab 中心, 即
+ *       rotated_z = 0), 查 voxel grid, 非空则写颜色, 否则黑.
+ *
+ * 与 pov_project_batch 区别:
+ *   - 输入是已 voxelize 的体素(每 cell 1 模型单位), 不再迭代 5000 点
+ *   - 每个 panel pixel 一次 voxel lookup, 计算量 = panel_w*panel_h
+ *   - 适合 LED 板 high-density slice rendering(720 slice × 30 Hz)
+ *
+ * VOXEL_RES 假设 = 128, cell size = 1 模型单位, world coord 范围 ±64. */
+#define VOXEL_RES_HLS    128
+#define VOXEL_HALF_HLS   64
+
+void pov_voxel_slice_batch(
+    const uint16_t *voxel_grid,   /* m_axi:gmem0  128³ RGB565 (4 MB) */
+    uint8_t *ring_base,           /* m_axi:gmem1  写 72 slot 各 panel */
+    int slot_bytes,
+    int slot_stride,
+    int phase,
+    int n_slots
+);
+
 #endif

@@ -16,26 +16,31 @@ void pov_project(
     uint8_t *fb,
     int fb_stride,
     int dst_x,
-    int dst_y
+    int dst_y,
+    int slice_mode,
+    int slice_half_thick
 ) {
 #pragma HLS INTERFACE m_axi      port=model   offset=slave bundle=gmem0 depth=32768 \
     max_read_burst_length=64 num_read_outstanding=8
 #pragma HLS INTERFACE m_axi      port=fb      offset=slave bundle=gmem1 depth=3000000 \
     max_write_burst_length=256 num_write_outstanding=8
-#pragma HLS INTERFACE s_axilite  port=model            bundle=control
-#pragma HLS INTERFACE s_axilite  port=num_points       bundle=control
-#pragma HLS INTERFACE s_axilite  port=angle_idx        bundle=control
-#pragma HLS INTERFACE s_axilite  port=fb                bundle=control
-#pragma HLS INTERFACE s_axilite  port=fb_stride        bundle=control
-#pragma HLS INTERFACE s_axilite  port=dst_x            bundle=control
-#pragma HLS INTERFACE s_axilite  port=dst_y            bundle=control
-#pragma HLS INTERFACE s_axilite  port=return           bundle=control
+#pragma HLS INTERFACE s_axilite  port=model              bundle=control
+#pragma HLS INTERFACE s_axilite  port=num_points         bundle=control
+#pragma HLS INTERFACE s_axilite  port=angle_idx          bundle=control
+#pragma HLS INTERFACE s_axilite  port=fb                 bundle=control
+#pragma HLS INTERFACE s_axilite  port=fb_stride          bundle=control
+#pragma HLS INTERFACE s_axilite  port=dst_x              bundle=control
+#pragma HLS INTERFACE s_axilite  port=dst_y              bundle=control
+#pragma HLS INTERFACE s_axilite  port=slice_mode         bundle=control
+#pragma HLS INTERFACE s_axilite  port=slice_half_thick   bundle=control
+#pragma HLS INTERFACE s_axilite  port=return             bundle=control
 
     /* 边界保护 */
     if (angle_idx < 0) angle_idx = 0;
     if (angle_idx >= NUM_ANGLES) angle_idx = NUM_ANGLES - 1;
     if (num_points < 0) num_points = 0;
     if (num_points > MAX_POINTS) num_points = MAX_POINTS;
+    if (slice_half_thick < 0) slice_half_thick = 0;
 
     const int16_t c = POV_COS8[angle_idx];
     const int16_t s = POV_SIN8[angle_idx];
@@ -53,14 +58,21 @@ POINTS_LOOP:
 #pragma HLS PIPELINE II=1
         struct point_t p = model[i];
 
-        /* 绕 Y 轴旋转: x' = x*c + z*s (>> 8), y' = y */
+        /* 绕 Y 轴旋转:
+         *   rx = (x*c + z*s) >> 8
+         *   rz = (-x*s + z*c) >> 8   (only needed in slice_mode) */
         int32_t rx_q = (int32_t)p.x * (int32_t)c + (int32_t)p.z * (int32_t)s;
+        int32_t rz_q = -(int32_t)p.x * (int32_t)s + (int32_t)p.z * (int32_t)c;
         int32_t rx   = rx_q >> 8;
+        int32_t rz   = rz_q >> 8;
+
+        /* z-slice clipping: only render thin slab around current rotation plane. */
+        bool in_slab = !slice_mode || (rz <= slice_half_thick && rz >= -slice_half_thick);
 
         int sx = cx + (int)rx;
         int sy = cy - (int)p.y;
 
-        if (sx >= 0 && sx < SLICE_W && sy >= 0 && sy < SLICE_H) {
+        if (in_slab && sx >= 0 && sx < SLICE_W && sy >= 0 && sy < SLICE_H) {
             /* 2×2 点 — 每像素 3 byte 独立写, HLS 流水 II=12, 实测最优. */
             for (int dy = 0; dy < 2; dy++) {
                 for (int dx = 0; dx < 2; dx++) {
@@ -94,25 +106,30 @@ void pov_project_batch(
     int slot_bytes,
     int slot_stride,
     int phase,
-    int n_slots
+    int n_slots,
+    int slice_mode,
+    int slice_half_thick
 ) {
 #pragma HLS INTERFACE m_axi      port=model      offset=slave bundle=gmem0 depth=1024 \
     max_read_burst_length=64 num_read_outstanding=8
 #pragma HLS INTERFACE m_axi      port=ring_base  offset=slave bundle=gmem1 depth=3000000 \
     max_write_burst_length=256 num_write_outstanding=8
-#pragma HLS INTERFACE s_axilite  port=model       bundle=control
-#pragma HLS INTERFACE s_axilite  port=num_points  bundle=control
-#pragma HLS INTERFACE s_axilite  port=ring_base   bundle=control
-#pragma HLS INTERFACE s_axilite  port=slot_bytes  bundle=control
-#pragma HLS INTERFACE s_axilite  port=slot_stride bundle=control
-#pragma HLS INTERFACE s_axilite  port=phase       bundle=control
-#pragma HLS INTERFACE s_axilite  port=n_slots     bundle=control
-#pragma HLS INTERFACE s_axilite  port=return      bundle=control
+#pragma HLS INTERFACE s_axilite  port=model              bundle=control
+#pragma HLS INTERFACE s_axilite  port=num_points         bundle=control
+#pragma HLS INTERFACE s_axilite  port=ring_base          bundle=control
+#pragma HLS INTERFACE s_axilite  port=slot_bytes         bundle=control
+#pragma HLS INTERFACE s_axilite  port=slot_stride        bundle=control
+#pragma HLS INTERFACE s_axilite  port=phase              bundle=control
+#pragma HLS INTERFACE s_axilite  port=n_slots            bundle=control
+#pragma HLS INTERFACE s_axilite  port=slice_mode         bundle=control
+#pragma HLS INTERFACE s_axilite  port=slice_half_thick   bundle=control
+#pragma HLS INTERFACE s_axilite  port=return             bundle=control
 
     if (num_points < 0) num_points = 0;
     if (num_points > MAX_BATCH_POINTS) num_points = MAX_BATCH_POINTS;
     if (n_slots < 0) n_slots = 0;
     if (n_slots > NUM_ANGLES) n_slots = NUM_ANGLES;
+    if (slice_half_thick < 0) slice_half_thick = 0;
 
     /* Local copy of model in BRAM (1024 × 16 = 16KB).
      * HLS auto-chooses storage; removed BIND_STORAGE to avoid persistence bug. */
@@ -146,12 +163,16 @@ POINTS_IN_SLICE:
             struct point_t p = local_model[i];
 
             int32_t rx_q = (int32_t)p.x * (int32_t)cs + (int32_t)p.z * (int32_t)sn;
+            int32_t rz_q = -(int32_t)p.x * (int32_t)sn + (int32_t)p.z * (int32_t)cs;
             int32_t rx = rx_q >> 8;
+            int32_t rz = rz_q >> 8;
+
+            bool in_slab = !slice_mode || (rz <= slice_half_thick && rz >= -slice_half_thick);
 
             int sx = cx + (int)rx;
             int sy = cy - (int)p.y;
 
-            if (sx >= 0 && sx < SLICE_W && sy >= 0 && sy < SLICE_H) {
+            if (in_slab && sx >= 0 && sx < SLICE_W && sy >= 0 && sy < SLICE_H) {
                 for (int dy = 0; dy < 2; dy++) {
                     for (int dx = 0; dx < 2; dx++) {
 #pragma HLS UNROLL

@@ -32,7 +32,13 @@ struct point_t {
 };  /* sizeof = 16 */
 
 /* HLS top function.
- * (不用 volatile: HLS AXI master 自己管内存一致性, 且 C++ 会跟默认拷贝构造冲突) */
+ * (不用 volatile: HLS AXI master 自己管内存一致性, 且 C++ 会跟默认拷贝构造冲突)
+ *
+ * slice_mode:
+ *   0 = full projection (所有点都渲染, 适合 HDMI 大画面)
+ *   1 = z-slice clipping (只渲染 |rotated_z| <= slice_half_thick 的点,
+ *        适合 LED 板的真切片或 36 格小预览)
+ * slice_half_thick: only used when slice_mode==1; typical 4..16. */
 void pov_project(
     const struct point_t *model,      /* m_axi:gmem0 读模型 */
     int num_points,                   /* s_axilite 控制寄存器 */
@@ -40,7 +46,9 @@ void pov_project(
     uint8_t *fb,                      /* m_axi:gmem1 写帧缓冲 */
     int fb_stride,
     int dst_x,
-    int dst_y
+    int dst_y,
+    int slice_mode,
+    int slice_half_thick
 );
 
 /* Batch 版: 一次调用渲染 N 个 slice 到 ring buffer 的连续 slot.
@@ -58,7 +66,9 @@ void pov_project_batch(
     int slot_bytes,         /* SLICE_W * SLICE_H * 3 */
     int slot_stride,        /* 单 slot 内每行字节 = SLICE_W * 3 */
     int phase,              /* 动画相位, 第 0 个 slot 的 angle_idx */
-    int n_slots             /* 72 for 72-slice frame */
+    int n_slots,            /* 72 for 72-slice frame */
+    int slice_mode,         /* 0 = projection, 1 = z-slice clipping */
+    int slice_half_thick    /* 仅 slice_mode=1 用; 典型 4..16 */
 );
 
 #endif

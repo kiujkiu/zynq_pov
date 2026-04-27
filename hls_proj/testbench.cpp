@@ -20,7 +20,8 @@ static uint8_t dut_fb[FB_BYTES];
 /* 参考实现: 和 HLS 相同算法的纯软件版本. */
 static void ref_project(
     const struct point_t *model, int num_points, int angle_idx,
-    uint8_t *fb, int fb_stride, int dst_x, int dst_y)
+    uint8_t *fb, int fb_stride, int dst_x, int dst_y,
+    int slice_mode, int slice_half_thick)
 {
     int16_t c = POV_COS8[angle_idx];
     int16_t s = POV_SIN8[angle_idx];
@@ -29,9 +30,12 @@ static void ref_project(
     for (int i = 0; i < num_points; i++) {
         const struct point_t &p = model[i];
         int32_t rx = ((int32_t)p.x * c + (int32_t)p.z * s) >> 8;
+        int32_t rz = (-(int32_t)p.x * s + (int32_t)p.z * c) >> 8;
+        bool in_slab = !slice_mode ||
+                       (rz <= slice_half_thick && rz >= -slice_half_thick);
         int sx = cx + rx;
         int sy = cy - p.y;
-        if (sx>=0 && sx<SLICE_W && sy>=0 && sy<SLICE_H) {
+        if (in_slab && sx>=0 && sx<SLICE_W && sy>=0 && sy<SLICE_H) {
             for (int dy=0; dy<2; dy++) for (int dx=0; dx<2; dx++) {
                 int px=sx+dx, py=sy+dy;
                 if (px<SLICE_W && py<SLICE_H) {

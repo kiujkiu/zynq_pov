@@ -898,7 +898,7 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
      * 2 * scale_pct / 100. Min 1 to ensure something gets drawn. */
     int block = (VOXEL_CELL_SIZE * scale_pct) / 100;
     if (block < 1) block = 1;
-    if (block > 16) block = 16;
+    if (block > 4) block = 4;   /* cap so big-zoom panel doesn't look Minecraft */
 
     for (int i = 0; i < voxel_n_occupied; i++) {
         VoxOcc v = occupied_list[i];

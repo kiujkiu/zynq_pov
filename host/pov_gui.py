@@ -227,7 +227,7 @@ class POVGUI:
         self.color_var = tk.StringVar(value="keep")
         self.lighting_var = tk.StringVar(value="none")
         self.ambient_var = tk.DoubleVar(value=0.35)
-        self.zstretch_var = tk.DoubleVar(value=1.0)
+        self.zstretch_var = tk.DoubleVar(value=1.5)
         ttk.Label(f2, text="Points:").grid(row=0, column=0, sticky=tk.W)
         ttk.Spinbox(f2, from_=100, to=20000, increment=500, textvariable=self.points_var, width=8).grid(row=0, column=1)
         ttk.Label(f2, text="Scale:").grid(row=0, column=2, sticky=tk.W, padx=(12, 0))

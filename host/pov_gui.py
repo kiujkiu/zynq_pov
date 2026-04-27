@@ -353,37 +353,48 @@ class POVGUI:
         if not self.glb_path:
             messagebox.showinfo("Info", "Pick a model first")
             return
-        try:
-            self._log(f"sampling {self.points_var.get()} pts from {os.path.basename(self.glb_path)}…")
-            ext = os.path.splitext(self.glb_path)[1].lower()
-            if ext in (".glb", ".gltf"):
-                self.points = sample_glb(
-                    self.glb_path, n_points=self.points_var.get(),
-                    target_scale=self.scale_var.get(),
-                    color_mode=self.color_var.get(),
-                    brighten=self.brighten_var.get(),
-                    gamma=self.gamma_var.get(),
-                    lighting=self.lighting_var.get(),
-                    ambient=self.ambient_var.get(),
-                    verbose=False)
-            else:
-                self.points = sample_mesh(
-                    self.glb_path, n_points=self.points_var.get(),
-                    target_scale=self.scale_var.get())
-            # Build animator (handles glb anim or falls back to procedural)
-            self.animator = build_animator(
-                self.glb_path,
-                n_points=self.points_var.get(),
-                target_scale=self.scale_var.get(),
-                color_mode=self.color_var.get(),
-                brighten=self.brighten_var.get(),
-                gamma=self.gamma_var.get(),
-                lighting=self.lighting_var.get(),
-                ambient=self.ambient_var.get(),
-                fallback_period_y=10.0)
-            self._log(f"  → {len(self.points)} points sampled, animator ready")
-        except Exception as e:
-            messagebox.showerror("Sampling failed", str(e))
+        if getattr(self, "_sampling", False):
+            self._log("sampling already in progress; ignored")
+            return
+        # Snapshot params now (UI vars may change during background work).
+        path = self.glb_path
+        n = self.points_var.get()
+        scale = self.scale_var.get()
+        color = self.color_var.get()
+        brighten = self.brighten_var.get()
+        gamma = self.gamma_var.get()
+        lighting = self.lighting_var.get()
+        ambient = self.ambient_var.get()
+        self._sampling = True
+        self._log(f"sampling {n} pts from {os.path.basename(path)}…")
+
+        def work():
+            try:
+                ext = os.path.splitext(path)[1].lower()
+                # Build animator first; for static-only models its t=0 sample
+                # is a fine source of `self.points`, so we avoid sampling twice.
+                animator = build_animator(
+                    path, n_points=n, target_scale=scale,
+                    color_mode=color, brighten=brighten, gamma=gamma,
+                    lighting=lighting, ambient=ambient,
+                    fallback_period_y=10.0)
+                pts = animator(0.0)
+
+                def done():
+                    self.points = pts
+                    self.animator = animator
+                    self._log(f"  → {len(pts)} points sampled, animator ready")
+                    self._sampling = False
+                self.root.after(0, done)
+            except Exception as e:
+                msg = str(e)
+                def fail():
+                    self._sampling = False
+                    self._log(f"[err] sampling: {msg}")
+                    messagebox.showerror("Sampling failed", msg)
+                self.root.after(0, fail)
+
+        threading.Thread(target=work, daemon=True).start()
 
     def _send_static(self):
         if not self.points:

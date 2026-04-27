@@ -87,12 +87,19 @@ void pov_project_batch(
 #define VOXEL_RES_HLS    128
 #define VOXEL_HALF_HLS   64
 
+/* slot_start: 起始 slot 索引 (4-IP 并行用 — 每个 IP 实例分 18 slot:
+ *   IP0: slot_start=0,  n_slots=18    →  slots [0..17]
+ *   IP1: slot_start=18, n_slots=18    →  slots [18..35]
+ *   IP2: slot_start=36, n_slots=18    →  slots [36..53]
+ *   IP3: slot_start=54, n_slots=18    →  slots [54..71]
+ * 4 IP 并行可达 ~4× 单 IP 吞吐, 适配 LED panel 720 slice × 30 Hz. */
 void pov_voxel_slice_batch(
     const uint16_t *voxel_grid,   /* m_axi:gmem0  128³ RGB565 (4 MB) */
     uint8_t *ring_base,           /* m_axi:gmem1  写 72 slot 各 panel */
     int slot_bytes,
     int slot_stride,
     int phase,
+    int slot_start,
     int n_slots
 );
 

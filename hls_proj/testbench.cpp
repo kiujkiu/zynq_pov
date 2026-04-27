@@ -137,7 +137,8 @@ static int run_case(const char *label,
 #define VRES 128
 #define VHALF 64
 
-/* Software reference identical to HLS pov_voxel_slice_batch */
+/* Software reference identical to HLS pov_voxel_slice_batch.
+ * Render single slot at given angle. Caller passes already-offset slot ptr. */
 static void ref_voxel_slice(
     const uint16_t *vg, uint8_t *slot,
     int slot_stride, int angle_idx)
@@ -186,7 +187,8 @@ static int run_voxel_case(const uint16_t *vg, int phase, int n_slots)
         int ang = (phase + s) % NUM_ANGLES;
         ref_voxel_slice(vg, ref_ring + s*SLOT_BYTES, SLOT_STRIDE, ang);
     }
-    pov_voxel_slice_batch(vg, dut_ring, SLOT_BYTES, SLOT_STRIDE, phase, n_slots);
+    pov_voxel_slice_batch(vg, dut_ring, SLOT_BYTES, SLOT_STRIDE, phase,
+                          0 /*slot_start*/, n_slots);
 
     int diffs = compare_fb(ref_ring, dut_ring, RING_BYTES);
     int ref_nz = 0;
@@ -203,6 +205,38 @@ static int run_voxel_case(const uint16_t *vg, int phase, int n_slots)
         return 1;
     }
     printf("[TB] voxel slice PASS\n");
+    return 0;
+}
+
+/* 4-IP 并行模拟: 4 个 invocation 各 18 slot. 总输出应等价于 1 个 72-slot 调用. */
+static int run_voxel_4ip_case(const uint16_t *vg, int phase)
+{
+    const int SLOT_BYTES = SLICE_W * SLICE_H * 3;
+    const int SLOT_STRIDE = SLICE_W * 3;
+    const int N_SLOTS = 72;
+    const int RING_BYTES = SLOT_BYTES * N_SLOTS;
+    static uint8_t ref_ring[SLOT_BYTES * 72];
+    static uint8_t dut_ring[SLOT_BYTES * 72];
+    memset(ref_ring, 0, RING_BYTES);
+    memset(dut_ring, 0, RING_BYTES);
+
+    /* Reference: single full call. */
+    for (int s = 0; s < N_SLOTS; s++) {
+        int ang = (phase + s) % NUM_ANGLES;
+        ref_voxel_slice(vg, ref_ring + s*SLOT_BYTES, SLOT_STRIDE, ang);
+    }
+    /* DUT: simulate 4 IPs each rendering 18 slots into the SAME ring. */
+    for (int ip = 0; ip < 4; ip++) {
+        pov_voxel_slice_batch(vg, dut_ring, SLOT_BYTES, SLOT_STRIDE, phase,
+                              ip * 18 /*slot_start*/, 18 /*n_slots*/);
+    }
+    int diffs = compare_fb(ref_ring, dut_ring, RING_BYTES);
+    printf("[TB] 4-IP split (phase=%d): %d diffs\n", phase, diffs);
+    if (diffs) {
+        printf("[TB] 4-IP FAIL\n");
+        return 1;
+    }
+    printf("[TB] 4-IP PASS\n");
     return 0;
 }
 
@@ -249,6 +283,10 @@ int main(void)
     fails += run_voxel_case(vg, 0, 4);
     fails += run_voxel_case(vg, 18, 4);
     fails += run_voxel_case(vg, 0, 12);
+
+    /* 4-IP parallel split test (#12) — split 72 slots across 4 IPs */
+    fails += run_voxel_4ip_case(vg, 0);
+    fails += run_voxel_4ip_case(vg, 18);
 
     if (fails == 0) {
         printf("[TB] ALL PASS\n");

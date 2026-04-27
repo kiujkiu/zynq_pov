@@ -202,34 +202,41 @@ void pov_voxel_slice_batch(
     int slot_bytes,
     int slot_stride,
     int phase,
+    int slot_start,
     int n_slots
 ) {
 #pragma HLS INTERFACE m_axi      port=voxel_grid offset=slave bundle=gmem0 \
     depth=2097152 max_read_burst_length=64 num_read_outstanding=8
 #pragma HLS INTERFACE m_axi      port=ring_base  offset=slave bundle=gmem1 \
     depth=3000000 max_write_burst_length=256 num_write_outstanding=8
-#pragma HLS INTERFACE s_axilite  port=voxel_grid bundle=control
-#pragma HLS INTERFACE s_axilite  port=ring_base  bundle=control
-#pragma HLS INTERFACE s_axilite  port=slot_bytes bundle=control
+#pragma HLS INTERFACE s_axilite  port=voxel_grid  bundle=control
+#pragma HLS INTERFACE s_axilite  port=ring_base   bundle=control
+#pragma HLS INTERFACE s_axilite  port=slot_bytes  bundle=control
 #pragma HLS INTERFACE s_axilite  port=slot_stride bundle=control
-#pragma HLS INTERFACE s_axilite  port=phase      bundle=control
-#pragma HLS INTERFACE s_axilite  port=n_slots    bundle=control
-#pragma HLS INTERFACE s_axilite  port=return     bundle=control
+#pragma HLS INTERFACE s_axilite  port=phase       bundle=control
+#pragma HLS INTERFACE s_axilite  port=slot_start  bundle=control
+#pragma HLS INTERFACE s_axilite  port=n_slots     bundle=control
+#pragma HLS INTERFACE s_axilite  port=return      bundle=control
 
     if (n_slots < 0) n_slots = 0;
     if (n_slots > NUM_ANGLES) n_slots = NUM_ANGLES;
+    if (slot_start < 0) slot_start = 0;
 
     const int cx = SLICE_W / 2;
     const int cy = SLICE_H / 2;
 
 SLICES_LOOP:
     for (int s = 0; s < n_slots; s++) {
-#pragma HLS LOOP_TRIPCOUNT min=72 max=72
-        int angle = (phase + s) % NUM_ANGLES;
+#pragma HLS LOOP_TRIPCOUNT min=18 max=72
+        /* 4-IP parallel: each instance fed unique (slot_start, n_slots) so
+         * IP0 = slots [0..18), IP1 = [18..36), IP2 = [36..54), IP3 = [54..72).
+         * angle still derived from (phase + global slot index). */
+        int global_s = slot_start + s;
+        int angle = (phase + global_s) % NUM_ANGLES;
         if (angle < 0) angle += NUM_ANGLES;
         const int16_t cs = POV_COS8[angle];
         const int16_t sn = POV_SIN8[angle];
-        uint8_t *slot = ring_base + s * slot_bytes;
+        uint8_t *slot = ring_base + global_s * slot_bytes;
 
 YY_LOOP:
         for (int py = 0; py < SLICE_H; py++) {

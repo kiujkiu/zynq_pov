@@ -213,7 +213,7 @@ if __name__ == "__main__":
     sys.path.insert(0, HERE)
     from glb_to_points import sample_glb
 
-    glb = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "anime_34.glb")
+    glb = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "anime_62459.glb")
     n_pts = int(sys.argv[2]) if len(sys.argv) > 2 else 5000
     res = int(sys.argv[3]) if len(sys.argv) > 3 else 64
 

@@ -53,7 +53,7 @@ def host_voxelize(points):
 def main():
     zs = float(sys.argv[1]) if len(sys.argv) > 1 else 1.5
     n = int(sys.argv[2])   if len(sys.argv) > 2 else 100000
-    glb = os.path.join(HERE, "anime_34.glb")
+    glb = os.path.join(HERE, "anime_62459.glb")
     port, baud = "COM10", 921600
 
     print(f"sampling {n} pts from {os.path.basename(glb)} (z_stretch={zs})...")

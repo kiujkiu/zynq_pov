@@ -1,7 +1,7 @@
 """One-shot test: sample anime glb, send one PPCL frame to COM10.
 
 Usage:
-    python test_send_one.py [z_stretch=5.0] [points=5000] [glb=anime_34.glb]
+    python test_send_one.py [z_stretch=5.0] [points=5000] [glb=anime_62459.glb]
 """
 import os
 import sys
@@ -17,16 +17,16 @@ from pointcloud_proto import pack_frame
 # Args
 zs = float(sys.argv[1]) if len(sys.argv) > 1 else 5.0
 n  = int(sys.argv[2])   if len(sys.argv) > 2 else 5000
-glb = sys.argv[3]       if len(sys.argv) > 3 else os.path.join(HERE, "anime_34.glb")
+glb = sys.argv[3]       if len(sys.argv) > 3 else os.path.join(HERE, "anime_62459.glb")
 port = "COM10"
 baud = 921600
 
 print(f"sampling {n} pts from {os.path.basename(glb)}, z_stretch={zs}...")
-pts = sample_glb(glb, n_points=n, target_scale=60,
-                 color_mode="keep", brighten=1.5, gamma=0.8,
+pts = sample_glb(glb, n_points=n, target_scale=40,
+                 color_mode="keep", brighten=1.0, gamma=1.0,
                  lighting="studio", ambient=0.3,
                  z_stretch=zs, verbose=False,
-                 crop_top_frac=0.25)
+                 crop_top_frac=0.0)
 print(f"  sampled {len(pts)} pts; sample p0={pts[0]}")
 
 z_vals = [p[2] for p in pts]

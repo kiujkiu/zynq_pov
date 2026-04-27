@@ -20,7 +20,7 @@ from pointcloud_proto import pack_frame
 
 PORT = "COM10"
 BAUD = 115200
-GLB = os.path.join(HERE, "anime_34.glb")
+GLB = os.path.join(HERE, "anime_62459.glb")
 N_FRAMES = 10
 DRAIN_SEC = 6
 

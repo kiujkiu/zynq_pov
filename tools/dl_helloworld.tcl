@@ -17,6 +17,12 @@ puts "DL: psinit"
 source $psinit
 ps7_init
 ps7_post_config
+# Override PS UART0 baud: ps7_init sets 115200 (BAUDGEN=0x7C), bump to 460800
+# (BAUDGEN=0x1F, BAUDDIV=6 @ 100MHz UART_REF_CLK). 4x wire speed for streaming.
+# Done at JTAG level so ARM code can't accidentally revert.
+puts "DL: setting UART baud=460800"
+mwr 0xE0000018 0x1F
+mwr 0xE0000034 0x06
 puts "DL: targets ARM#0"
 targets -set -nocase -filter {name =~ "ARM*#0"}
 puts "DL: dow"

@@ -880,9 +880,11 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
     int16_t s = sin360_table[angle_deg];
     u8 *fb = (u8 *)fb_base;
 
-    /* Clear panel */
+    /* Clear panel — poll UART every 16 rows so RX FIFO doesn't overflow at
+     * 460800 baud during this 2-3 ms memset block. */
     for (int yy = 0; yy < panel_h; yy++) {
         memset(fb + (origin_y + yy) * STRIDE + origin_x * 3, 0, panel_w * 3);
+        if ((yy & 0x0F) == 0) uart_poll_frame();
     }
     int cx = panel_w / 2;
     int cy = panel_h / 2;
@@ -939,7 +941,11 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
 int main(void)
 {
     init_platform();
-    xil_printf("\r\n=== POV-3D Render Phase 4b (USE_PL=%d) ===\r\n", USE_PL);
+    /* PS UART0 baud is set by ps7_init.tcl (BAUDGEN=0x1F BAUDDIV=6 → 460800
+     * @ 100 MHz UART_REF_CLK). Cannot reliably override from ARM code:
+     * BSP/lwip/whatever resets BAUDGEN to default mid-execution. So change
+     * is baked into ps7_init instead. */
+    xil_printf("\r\n=== POV-3D Render Phase 4b (USE_PL=%d) baud=460800 ===\r\n", USE_PL);
 
     XGpio Led;
     XGpio_Initialize(&Led, XPAR_AXI_GPIO_0_BASEADDR);

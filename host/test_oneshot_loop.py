@@ -11,7 +11,7 @@ import serial
 from glb_to_points import sample_glb
 from pointcloud_proto import pack_frame
 
-ser = serial.Serial("COM10", 115200, timeout=0)
+ser = serial.Serial("COM10", 460800, timeout=0)
 pts = sample_glb(os.path.join(HERE, "anime_34.glb"),
                  n_points=5000, target_scale=40,
                  color_mode="keep", brighten=1.5, gamma=0.8,
@@ -60,8 +60,10 @@ for i in range(1, ATTEMPTS + 1):
         print(f"  frame {i:2d} OK  ack=stream_frame={got_new}  "
               f"send={send_dt:.2f}s  wait={wait_dt:.2f}s")
     else:
-        print(f"  frame {i:2d} FAIL  no ack in {ACK_TIMEOUT}s  "
-              f"(captured {len(accum)} B)")
+        # show first 80 bytes of captured to see if it's ASCII or garbage
+        sample = accum[:80]
+        ascii_str = "".join(chr(b) if 32 <= b < 127 else "." for b in sample)
+        print(f"  frame {i:2d} FAIL  no ack ({len(accum)} B): {ascii_str}")
 
 ser.close()
 print(f"\nresult: {success}/{ATTEMPTS} = {100*success/ATTEMPTS:.0f}%")

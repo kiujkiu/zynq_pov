@@ -258,7 +258,7 @@ class POVGUI:
         self.port_combo = ttk.Combobox(f3, textvariable=self.port_var, width=12, state="readonly")
         self.port_combo.pack(side=tk.LEFT, padx=4)
         ttk.Button(f3, text="↻ Detect", command=self._refresh_ports).pack(side=tk.LEFT)
-        self.baud_var = tk.IntVar(value=115200)
+        self.baud_var = tk.IntVar(value=460800)
         ttk.Label(f3, text="Baud:").pack(side=tk.LEFT, padx=(12, 4))
         ttk.Combobox(f3, textvariable=self.baud_var, width=8, state="readonly",
                      values=[9600, 115200, 230400, 460800, 921600]).pack(side=tk.LEFT)

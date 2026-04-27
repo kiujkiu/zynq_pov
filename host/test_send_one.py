@@ -23,7 +23,7 @@ baud = 921600
 
 print(f"sampling {n} pts from {os.path.basename(glb)}, z_stretch={zs}...")
 pts = sample_glb(glb, n_points=n, target_scale=40,
-                 color_mode="keep", brighten=1.8, gamma=0.6,
+                 color_mode="height", brighten=1.0, gamma=1.0,
                  lighting="none",
                  z_stretch=zs, verbose=False)
 print(f"  sampled {len(pts)} pts; sample p0={pts[0]}")

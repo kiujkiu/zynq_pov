@@ -1,0 +1,7 @@
+//arch=zynq; split=false; format=BIN
+the_ROM_image:
+{
+    [bootloader]D:/workspace/zynq_pov/02_hello_zynq/vitis_ws/hello_plat/export/hello_plat/sw/boot/fsbl.elf
+    D:/workspace/zynq_pov/02_hello_zynq/vitis_ws/hello_world/_ide/bitstream/hello_zynq_wrapper.bit
+    D:/workspace/zynq_pov/02_hello_zynq/vitis_ws/hello_world/build/hello_world.elf
+}

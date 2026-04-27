@@ -230,9 +230,10 @@ typedef struct __attribute__((packed)) {
  * Protocol supports raw (16B/point) and compressed (5B/point RGB565) formats,
  * selected by flags bit 0. Compressed points are decoded into 16-byte model[]
  * on the fly so the IP sees a consistent 16-byte array regardless of wire format. */
-#define PC_FLAG_COMPRESSED   0x0001u
-#define PC_POINT_LEN_RAW     16
-#define PC_POINT_LEN_COMP    5
+#define PC_FLAG_COMPRESSED    0x0001u
+#define PC_FLAG_SPARSE_VOXEL  0x0002u  /* body = (idx24 + rgb16) * N, 5 byte/cell */
+#define PC_POINT_LEN_RAW      16
+#define PC_POINT_LEN_COMP     5
 typedef enum { RX_HDR, RX_PTS } rx_state_t;
 static rx_state_t rx_state = RX_HDR;
 static u8          rx_hdr_buf[sizeof(pc_hdr_t)];
@@ -275,8 +276,17 @@ static int uart_poll_frame(void)
                     } else {
                         rx_expected_pts = h->num_points;
                         rx_flags = h->flags;
-                        rx_pt_len = (rx_flags & PC_FLAG_COMPRESSED)
-                                        ? PC_POINT_LEN_COMP : PC_POINT_LEN_RAW;
+                        if (rx_flags & PC_FLAG_SPARSE_VOXEL) {
+                            /* Sparse voxel: 5 bytes per cell (idx24 + rgb16).
+                             * No model[] involvement — write straight to grid. */
+                            rx_pt_len = 5;
+                            /* Clear voxel grid + occupied count for fresh load. */
+                            memset(voxel_grid, 0, VOXEL_BYTES);
+                            voxel_n_occupied = 0;
+                        } else {
+                            rx_pt_len = (rx_flags & PC_FLAG_COMPRESSED)
+                                            ? PC_POINT_LEN_COMP : PC_POINT_LEN_RAW;
+                        }
                         rx_pts_got = 0;
                         rx_pts_done = 0;
                         rx_state = RX_PTS;
@@ -295,7 +305,26 @@ static int uart_poll_frame(void)
             rx_pt_buf[rx_pts_got++] = b;
             if (rx_pts_got == rx_pt_len) {
                 /* One point fully received; decode into model[rx_pts_done] */
-                if (rx_flags & PC_FLAG_COMPRESSED) {
+                if (rx_flags & PC_FLAG_SPARSE_VOXEL) {
+                    /* idx24 + rgb16 directly into voxel_grid + occupied_list */
+                    u32 idx = (u32)rx_pt_buf[0] |
+                              ((u32)rx_pt_buf[1] << 8) |
+                              ((u32)rx_pt_buf[2] << 16);
+                    u16 rgb = rx_pt_buf[3] | (rx_pt_buf[4] << 8);
+                    if (idx < (u32)(VOXEL_RES * VOXEL_RES * VOXEL_RES)) {
+                        voxel_grid[idx] = rgb;
+                        if (voxel_n_occupied < MAX_OCCUPIED) {
+                            u32 vx = idx % VOXEL_RES;
+                            u32 vy = (idx / VOXEL_RES) % VOXEL_RES;
+                            u32 vz = idx / (VOXEL_RES * VOXEL_RES);
+                            occupied_list[voxel_n_occupied].vx = (uint8_t)vx;
+                            occupied_list[voxel_n_occupied].vy = (uint8_t)vy;
+                            occupied_list[voxel_n_occupied].vz = (uint8_t)vz;
+                            occupied_list[voxel_n_occupied].rgb565 = rgb;
+                            voxel_n_occupied++;
+                        }
+                    }
+                } else if (rx_flags & PC_FLAG_COMPRESSED) {
                     /* 5B: int8 x, y, z; u16 rgb565 little-endian */
                     int8_t xs = (int8_t)rx_pt_buf[0];
                     int8_t ys = (int8_t)rx_pt_buf[1];
@@ -331,11 +360,15 @@ static int uart_poll_frame(void)
                 rx_pts_done++;
                 rx_pts_got = 0;
                 if (rx_pts_done == rx_expected_pts) {
-                    model_n = rx_expected_pts;
-                    Xil_DCacheFlushRange(MODEL_ADDR, model_n * sizeof(PovPoint));
-                    /* Build voxel grid for slice rendering. ~75us at 5000 pts,
-                     * cheap relative to per-frame render cost. */
-                    voxelize_model();
+                    if (rx_flags & PC_FLAG_SPARSE_VOXEL) {
+                        /* Sparse voxel cells: voxel_grid + occupied_list filled
+                         * directly per-byte above. Just flush cache. */
+                        Xil_DCacheFlushRange(VOXEL_GRID_ADDR, VOXEL_BYTES);
+                    } else {
+                        model_n = rx_expected_pts;
+                        Xil_DCacheFlushRange(MODEL_ADDR, model_n * sizeof(PovPoint));
+                        voxelize_model();
+                    }
                     rx_state = RX_HDR;
                     rx_hdr_got = 0;
                     rx_magic_sync = 0;

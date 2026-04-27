@@ -31,6 +31,7 @@ POINT_LEN_COMPRESSED = struct.calcsize(POINT_FMT_COMPRESSED)
 assert POINT_LEN_COMPRESSED == 5
 
 FLAG_COMPRESSED = 0x0001
+FLAG_SPARSE_VOXEL = 0x0002    # body = (idx24 + rgb565)×N, idx packed into 3 bytes
 
 
 def _rgb565(r, g, b):
@@ -53,3 +54,24 @@ def pack_frame(frame_id, points, compressed=False):
         for x, y, z, r, g, b in points:
             buf += struct.pack(POINT_FMT_RAW, x, y, z, 0, r, g, b, 0, 0)
     return buf
+
+
+def pack_voxel_frame(frame_id, voxel_cells):
+    """voxel_cells: iterable of (idx24, rgb565). idx24 = vz*256² + vy*256 + vx
+    (assumes 256³ voxel grid). Each cell = 5 bytes on wire.
+
+    Wire size: 16 (header) + 5 × N (cells). Typical 30K cells → 150 KB
+    (vs 100K 点云 500 KB), 3× wire 提速."""
+    cells = list(voxel_cells)
+    n = len(cells)
+    flags = FLAG_SPARSE_VOXEL
+    buf = struct.pack(HDR_FMT, MAGIC, frame_id & 0xFFFFFFFF, n & 0xFFFFFFFF, flags, 0)
+    body = bytearray(n * 5)
+    for i, (idx, rgb) in enumerate(cells):
+        off = i * 5
+        body[off]     = idx & 0xFF
+        body[off + 1] = (idx >> 8) & 0xFF
+        body[off + 2] = (idx >> 16) & 0xFF
+        body[off + 3] = rgb & 0xFF
+        body[off + 4] = (rgb >> 8) & 0xFF
+    return buf + bytes(body)

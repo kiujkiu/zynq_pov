@@ -248,6 +248,9 @@ class POVGUI:
         ttk.Spinbox(f2, from_=0.0, to=1.0, increment=0.05, textvariable=self.ambient_var, width=6).grid(row=2, column=4, sticky=tk.W, pady=(4, 0))
         ttk.Label(f2, text="Z-stretch:").grid(row=3, column=0, sticky=tk.W, pady=(4, 0))
         ttk.Spinbox(f2, from_=1.0, to=8.0, increment=0.5, textvariable=self.zstretch_var, width=6).grid(row=3, column=1, sticky=tk.W, pady=(4, 0))
+        self.crop_var = tk.DoubleVar(value=0.0)
+        ttk.Label(f2, text="Crop top:").grid(row=3, column=2, sticky=tk.E, padx=(12, 0), pady=(4, 0))
+        ttk.Spinbox(f2, from_=0.0, to=1.0, increment=0.05, textvariable=self.crop_var, width=6).grid(row=3, column=3, sticky=tk.W, pady=(4, 0))
         ttk.Button(f2, text="Re-sample", command=self._resample).grid(row=3, column=5, padx=(12, 0), pady=(4, 0))
 
         # Serial port
@@ -369,6 +372,7 @@ class POVGUI:
         lighting = self.lighting_var.get()
         ambient = self.ambient_var.get()
         z_stretch = self.zstretch_var.get()
+        crop_top_frac = self.crop_var.get()
         self._sampling = True
         self._log(f"sampling {n} pts from {os.path.basename(path)}…")
 
@@ -382,6 +386,7 @@ class POVGUI:
                     color_mode=color, brighten=brighten, gamma=gamma,
                     lighting=lighting, ambient=ambient,
                     z_stretch=z_stretch,
+                    crop_top_frac=crop_top_frac,
                     fallback_period_y=10.0)
                 pts = animator(0.0)
 

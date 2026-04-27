@@ -297,7 +297,7 @@ def sample_triangles(triangles, n_total,
 
 
 def normalize_and_quantize(points, target_scale=40, color_mode="height", brighten=1.0, gamma=1.0,
-                            z_stretch=1.0):
+                            z_stretch=1.0, crop_top_frac=0.0):
     """color_mode:
       'height'  : Y-axis gradient (default, anime palette)
       'uniform' : all points pink  — avoids weird segmentation
@@ -305,12 +305,26 @@ def normalize_and_quantize(points, target_scale=40, color_mode="height", brighte
       'keep'    : don't touch colors (from glb texture/material)
     brighten: multiplier for rgb values, clipped to 255 (1.0=no change, 2.0=double).
     z_stretch: multiply quantized z by this factor (clamped to [-127,127]) so
-      thin anime models don't look squished at 90°/270° rotation. 1.0 = original,
-      3.0 = looks 3× deeper. Slight texture/color stretch is a side-effect.
+      thin anime models don't look squished at 90°/270° rotation.
+    crop_top_frac: 0.0 = no crop (whole model). 0.25 = keep top 25% of Y range
+      (head only for upright character). After crop, points are re-normalized
+      so the cropped region fills the ±target_scale voxel space → voxel
+      resolution effectively concentrated on visible region.
     """
     if not points:
         return []
     arr = np.array([[p[0], p[1], p[2]] for p in points], dtype=np.float32)
+
+    # Optional Y-crop: keep only top fraction of Y range (head for upright models).
+    if crop_top_frac > 0.0:
+        y_min, y_max = arr[:, 1].min(), arr[:, 1].max()
+        y_threshold = y_max - (y_max - y_min) * crop_top_frac
+        keep_mask = arr[:, 1] >= y_threshold
+        arr = arr[keep_mask]
+        points = [points[i] for i, k in enumerate(keep_mask) if k]
+        if not points:
+            return []
+
     cmin = arr.min(axis=0)
     cmax = arr.max(axis=0)
     center = (cmin + cmax) / 2
@@ -373,14 +387,15 @@ def sample_glb(path, n_points=500, target_scale=40, verbose=True,
                color_mode="height", brighten=1.0, gamma=1.0,
                lighting="none", ambient=0.35,
                light_dir=(0.3, 0.7, 0.6),
-               z_stretch=1.0):
+               z_stretch=1.0, crop_top_frac=0.0):
     triangles = load_glb(path, verbose=verbose)
     points = sample_triangles(triangles, n_points,
                               lighting=lighting, ambient=ambient,
                               light_dir=light_dir)
     return normalize_and_quantize(points, target_scale, color_mode=color_mode,
                                   brighten=brighten, gamma=gamma,
-                                  z_stretch=z_stretch)
+                                  z_stretch=z_stretch,
+                                  crop_top_frac=crop_top_frac)
 
 
 if __name__ == "__main__":

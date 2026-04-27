@@ -107,7 +107,7 @@ typedef struct __attribute__((aligned(16))) {
 
 /* Model lives at a fixed high DDR address, away from framebuffer. */
 #define MODEL_ADDR      0x11000000UL
-#define MAX_POINTS      65536
+#define MAX_POINTS      131072
 static PovPoint * const model = (PovPoint *)MODEL_ADDR;
 static int model_n = 0;
 
@@ -122,22 +122,22 @@ static int model_n = 0;
  * rotation when model has small z extent. Voxel representation gives
  * each cell intrinsic 3D extent (2 model units cubed), so slabs at any
  * rotation always sample some non-empty cells. */
-#define VOXEL_RES        128
+#define VOXEL_RES        256
 #define VOXEL_HALF       (VOXEL_RES / 2)
-#define WORLD_HALF       64                    /* model coords assumed ±64 */
+#define WORLD_HALF       128                   /* model coords [-127, 127] all fit */
 #define VOXEL_CELL_SIZE  1                     /* = 2*WORLD_HALF/VOXEL_RES */
-#define VOXEL_GRID_ADDR  0x11800000UL
-#define VOXEL_BYTES      (VOXEL_RES * VOXEL_RES * VOXEL_RES * 2)   /* 4 MB */
+#define VOXEL_GRID_ADDR  0x18000000UL          /* 32 MB grid moved past FB_B */
+#define VOXEL_BYTES      (VOXEL_RES * VOXEL_RES * VOXEL_RES * 2)   /* 32 MB */
 static u16 * const voxel_grid = (u16 *)VOXEL_GRID_ADDR;
 static int voxel_n_occupied = 0;
 
 /* Compact list of occupied voxels for fast render iteration (vs scanning
  * 256K cells). Each entry packs (vx, vy, vz, rgb565). MAX_OCCUPIED chosen
  * generously: 5000 points × 1 voxel-each-best-case = 5000 max. */
-#define MAX_OCCUPIED   65536   /* 12000 points × 6 邻 halo ≈ 60K worst case */
+#define MAX_OCCUPIED   131072  /* 100K points → ~80K voxel occupied (256³ grid) */
 typedef struct {
-    int8_t  vx, vy, vz;   /* 0..63 fits in i8 */
-    int8_t  _pad;
+    uint8_t vx, vy, vz;   /* 0..255 (VOXEL_RES=256) needs unsigned */
+    uint8_t _pad;
     u16     rgb565;
 } VoxOcc;
 static VoxOcc occupied_list[MAX_OCCUPIED];
@@ -162,9 +162,9 @@ static void voxelize_model(void) {
         u16 col = pack_rgb565(model[i].r, model[i].g, model[i].b);
         voxel_grid[idx] = col;
         if (prev == 0 && occ < MAX_OCCUPIED) {
-            occupied_list[occ].vx = (int8_t)vx;
-            occupied_list[occ].vy = (int8_t)vy;
-            occupied_list[occ].vz = (int8_t)vz;
+            occupied_list[occ].vx = (uint8_t)vx;
+            occupied_list[occ].vy = (uint8_t)vy;
+            occupied_list[occ].vz = (uint8_t)vz;
             occupied_list[occ].rgb565 = col;
             occ++;
         }
@@ -197,9 +197,9 @@ static inline u8 uart_rx_byte(void) {
 /* Wire protocol (little-endian, matches host/pointcloud_proto.py):
  *   0   4  magic 0x4C435050 ("PPCL")
  *   4   4  frame_id
- *   8   2  num_points
- *   10  2  flags
- *   12  4  reserved
+ *   8   4  num_points  (u32: supports >65535 for high-detail one-shots)
+ *   12  2  flags
+ *   14  2  reserved
  *   16  N*16  point_t array
  */
 #define PC_MAGIC  0x4C435050U
@@ -207,9 +207,9 @@ static inline u8 uart_rx_byte(void) {
 typedef struct __attribute__((packed)) {
     uint32_t magic;
     uint32_t frame_id;
-    uint16_t num_points;
+    uint32_t num_points;
     uint16_t flags;
-    uint32_t reserved;
+    uint16_t reserved;
 } pc_hdr_t;
 
 /* Receiver state machine: keep pulling bytes until a full valid frame lands,

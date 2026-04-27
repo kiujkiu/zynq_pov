@@ -4,9 +4,9 @@ Wire format, little-endian:
   offset  size  field
   0       4     magic = 0x50 0x50 0x43 0x4C  ('PPCL')
   4       4     frame_id
-  8       2     num_points
-  10      2     flags — bit 0: 1=compressed(5B), 0=raw(16B); others reserved
-  12      4     reserved
+  8       4     num_points  (u32: supports >65535 for high-detail one-shots)
+  12      2     flags — bit 0: 1=compressed(5B), 0=raw(16B); others reserved
+  14      2     reserved
   16      N*pt  points
 
 Raw point (16B): int16 x, y, z, pad0;  u8 r,g,b, pad1;  int32 pad2
@@ -18,7 +18,7 @@ import struct
 
 MAGIC = 0x4C435050
 
-HDR_FMT = "<IIHHI"
+HDR_FMT = "<IIIHH"   # magic, fid, num_points (u32), flags (u16), reserved (u16)
 HDR_LEN = struct.calcsize(HDR_FMT)
 assert HDR_LEN == 16
 
@@ -42,7 +42,7 @@ def pack_frame(frame_id, points, compressed=False):
     """points: list of (x, y, z, r, g, b). Returns bytes."""
     n = len(points)
     flags = FLAG_COMPRESSED if compressed else 0
-    buf = struct.pack(HDR_FMT, MAGIC, frame_id & 0xFFFFFFFF, n, flags, 0)
+    buf = struct.pack(HDR_FMT, MAGIC, frame_id & 0xFFFFFFFF, n & 0xFFFFFFFF, flags, 0)
     if compressed:
         for x, y, z, r, g, b in points:
             xi = max(-128, min(127, int(x)))

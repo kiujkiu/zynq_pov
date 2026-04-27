@@ -152,19 +152,28 @@ class SerialWorker(threading.Thread):
                 elif op == "quit":
                     break
 
-            # Drain RX so it doesn't fill in OS buffer
+            # Drain RX so it doesn't fill in OS buffer.
+            # Board fires ~90 FPS of telemetry — drop chatty lines to keep UI alive.
             if self.ser:
                 try:
-                    data = self.ser.read(1024)
+                    data = self.ser.read(4096)
                     if data:
-                        # filter to printable lines
                         try:
                             text = data.decode("ascii", errors="replace")
                             for line in text.split("\n"):
                                 line = line.strip()
-                                if line:
-                                    self.ui_log(f"[board] {line}")
-                        except:
+                                if not line:
+                                    continue
+                                # filter out high-rate telemetry; surface errors/tx
+                                low = line.lower()
+                                if (low.startswith("slot ") or
+                                    low.startswith("frame=") or
+                                    low.startswith("vdma ") or
+                                    low.startswith("r=") or
+                                    "park" in low and "curr" in low):
+                                    continue
+                                self.ui_log(f"[board] {line}")
+                        except Exception:
                             pass
                 except Exception:
                     pass
@@ -284,6 +293,10 @@ class POVGUI:
     def _log(self, msg):
         self.log_text.config(state=tk.NORMAL)
         self.log_text.insert(tk.END, msg + "\n")
+        # Cap at ~500 lines so years-long sessions don't bloat Text widget
+        line_count = int(self.log_text.index("end-1c").split(".")[0])
+        if line_count > 500:
+            self.log_text.delete("1.0", f"{line_count - 500}.0")
         self.log_text.see(tk.END)
         self.log_text.config(state=tk.DISABLED)
 

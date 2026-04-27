@@ -74,10 +74,11 @@ class SerialWorker(threading.Thread):
         if not self.ser or not self.ser.is_open:
             return
         try:
-            # Use sparse voxel format for static frames if many points (>20K) —
-            # 3-5x wire speedup since dedup happens host-side.
-            use_voxel = len(points) > 20000 and getattr(self, "use_voxel_wire", True)
-            if use_voxel:
+            # Default: point cloud (wire bit-error robust, slight noise on errors).
+            # Set self.use_voxel_wire=True to opt into 5× faster sparse voxel
+            # (但 wire 字节错会让 voxel 落到完全错的格子 → 明显散点).
+            use_voxel = getattr(self, "use_voxel_wire", False)
+            if use_voxel and len(points) > 20000:
                 cells = host_voxelize(points)
                 buf = pack_voxel_frame(fid, cells)
                 self.ser.write(buf)
@@ -231,7 +232,7 @@ class POVGUI:
         # Sampling parameters
         f2 = ttk.LabelFrame(root, text="Sampling", padding=8)
         f2.pack(fill=tk.X, padx=8, pady=4)
-        self.points_var = tk.IntVar(value=100000)
+        self.points_var = tk.IntVar(value=30000)
         self.scale_var = tk.IntVar(value=40)
         self.brighten_var = tk.DoubleVar(value=1.0)
         self.gamma_var = tk.DoubleVar(value=1.0)

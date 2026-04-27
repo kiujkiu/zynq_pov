@@ -962,8 +962,18 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
         int rz = (-(int)mx * s + (int)mz * c) >> 8;
         if (slice_mode && (rz > SLAB_HALF || rz < -SLAB_HALF)) continue;
 
+        /* Camera tilt 15° down (only for full projection — slice_mode keeps top-down).
+         * Breaks bilateral symmetry: 0°/180° look different even for symmetric models.
+         * Q8.8: cos(15°)≈247, sin(15°)≈66 */
+        int tilt_y;
+        if (!slice_mode) {
+            tilt_y = ((int)my * 247 - (int)rz * 66) >> 8;
+        } else {
+            tilt_y = my;
+        }
+
         int sx = cx + (rx * scale_pct) / 100;
-        int sy = cy - (my * scale_pct) / 100;
+        int sy = cy - (tilt_y * scale_pct) / 100;
         if (sx < 0 || sx + block > panel_w) continue;
         if (sy < 0 || sy + block > panel_h) continue;
 
@@ -1189,10 +1199,12 @@ int main(void)
             /* Voxel renderer naturally produces slabs; no slice_mode arg. */
             cpu_render_voxel_panel(fb_write, left_angle, 0, 0, PW, PH, 0, LEFT_SCALE);
 
-            /* Right half: 6×6 = 36 slice cells. Cell size ~106×120, 10°/cell. */
+            /* Right half: 4×4 = 16 slice cells. Cell size ~160×180, 22.5°/cell.
+             * 6×6=36 太重 (3.7M iter/帧 高密度模型 → 8 FPS); 16 cells 恢复
+             * ~25 FPS @ 100K voxels. 角度仍覆盖 360°. */
             uart_poll_frame();
-            const int GCOLS = 6;
-            const int GROWS = 6;
+            const int GCOLS = 4;
+            const int GROWS = 4;
             const int CW = PW / GCOLS;        /* 106 */
             const int CH = PH / GROWS;        /* 120 */
             const int CELL_SCALE = 100;       /* model fits in tiny cell */

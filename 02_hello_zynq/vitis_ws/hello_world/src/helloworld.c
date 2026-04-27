@@ -112,6 +112,68 @@ static PovPoint * const model = (PovPoint *)MODEL_ADDR;
 static int model_n = 0;
 
 /* ---------------------------------------------------------------------- */
+/* Voxel grid                                                             */
+/* ---------------------------------------------------------------------- */
+/* Voxelize model[] into a 3D grid in DDR. Each voxel = RGB565 (16 bit).
+ * Slot for grid: 0x11800000 (between MODEL_ADDR_B 0x11400000 + 4MB
+ * and RING_BUFFER_ADDR 0x12000000). Size 64^3 * 2 = 512 KB.
+ *
+ * Why voxels: original point-cloud render leaves "thin profile" at 90°
+ * rotation when model has small z extent. Voxel representation gives
+ * each cell intrinsic 3D extent (2 model units cubed), so slabs at any
+ * rotation always sample some non-empty cells. */
+#define VOXEL_RES        64
+#define VOXEL_HALF       (VOXEL_RES / 2)
+#define WORLD_HALF       64                    /* model coords assumed ±64 */
+#define VOXEL_CELL_SIZE  (2 * WORLD_HALF / VOXEL_RES)   /* = 2 model units */
+#define VOXEL_GRID_ADDR  0x11800000UL
+#define VOXEL_BYTES      (VOXEL_RES * VOXEL_RES * VOXEL_RES * 2)
+static u16 * const voxel_grid = (u16 *)VOXEL_GRID_ADDR;
+static int voxel_n_occupied = 0;
+
+/* Compact list of occupied voxels for fast render iteration (vs scanning
+ * 256K cells). Each entry packs (vx, vy, vz, rgb565). MAX_OCCUPIED chosen
+ * generously: 5000 points × 1 voxel-each-best-case = 5000 max. */
+#define MAX_OCCUPIED   8192
+typedef struct {
+    int8_t  vx, vy, vz;   /* 0..63 fits in i8 */
+    int8_t  _pad;
+    u16     rgb565;
+} VoxOcc;
+static VoxOcc occupied_list[MAX_OCCUPIED];
+
+static inline u16 pack_rgb565(u8 r, u8 g, u8 b) {
+    return ((u16)(r >> 3) << 11) | ((u16)(g >> 2) << 5) | (u16)(b >> 3);
+}
+
+static void voxelize_model(void) {
+    /* Clear */
+    memset(voxel_grid, 0, VOXEL_BYTES);
+    int occ = 0;
+    for (int i = 0; i < model_n; i++) {
+        int vx = (model[i].x + WORLD_HALF) / VOXEL_CELL_SIZE;
+        int vy = (model[i].y + WORLD_HALF) / VOXEL_CELL_SIZE;
+        int vz = (model[i].z + WORLD_HALF) / VOXEL_CELL_SIZE;
+        if (vx < 0 || vx >= VOXEL_RES) continue;
+        if (vy < 0 || vy >= VOXEL_RES) continue;
+        if (vz < 0 || vz >= VOXEL_RES) continue;
+        int idx = (vz * VOXEL_RES + vy) * VOXEL_RES + vx;
+        u16 prev = voxel_grid[idx];
+        u16 col = pack_rgb565(model[i].r, model[i].g, model[i].b);
+        voxel_grid[idx] = col;
+        if (prev == 0 && occ < MAX_OCCUPIED) {
+            occupied_list[occ].vx = (int8_t)vx;
+            occupied_list[occ].vy = (int8_t)vy;
+            occupied_list[occ].vz = (int8_t)vz;
+            occupied_list[occ].rgb565 = col;
+            occ++;
+        }
+    }
+    voxel_n_occupied = occ;
+    Xil_DCacheFlushRange(VOXEL_GRID_ADDR, VOXEL_BYTES);
+}
+
+/* ---------------------------------------------------------------------- */
 /* UART point-cloud receiver                                              */
 
 /* PS UART0 = console (STDOUT_BASEADDRESS = 0xE0000000 on this BSP).
@@ -256,6 +318,9 @@ static int uart_poll_frame(void)
                 if (rx_pts_done == rx_expected_pts) {
                     model_n = rx_expected_pts;
                     Xil_DCacheFlushRange(MODEL_ADDR, model_n * sizeof(PovPoint));
+                    /* Build voxel grid for slice rendering. ~75us at 5000 pts,
+                     * cheap relative to per-frame render cost. */
+                    voxelize_model();
                     rx_state = RX_HDR;
                     rx_hdr_got = 0;
                     rx_magic_sync = 0;
@@ -795,6 +860,80 @@ static void cpu_render_panel(UINTPTR fb_base, int angle_deg,
         }
     }
 }
+
+/* Voxel-grid renderer. Iterates the occupied-voxel list and projects each
+ * voxel as a small filled rectangle on the panel. Voxel cells are 2 model
+ * units cubed so they intrinsically have 3D extent — even at 90°/270°
+ * rotation a flat anime model still shows visible body width because the
+ * voxel grid's z-axis cells span 2 units regardless of input z range.
+ *
+ * slice_mode: 0 = full projection (all voxels)
+ *             1 = thin radial slab (only voxels with |rotated_z| <= half) */
+static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
+                                    int origin_x, int origin_y,
+                                    int panel_w, int panel_h,
+                                    int slice_mode, int scale_pct)
+{
+    if (angle_deg < 0) angle_deg = 0;
+    if (angle_deg >= 360) angle_deg %= 360;
+    int16_t c = cos360_table[angle_deg];
+    int16_t s = sin360_table[angle_deg];
+    u8 *fb = (u8 *)fb_base;
+
+    /* Clear panel */
+    for (int yy = 0; yy < panel_h; yy++) {
+        memset(fb + (origin_y + yy) * STRIDE + origin_x * 3, 0, panel_w * 3);
+    }
+    int cx = panel_w / 2;
+    int cy = panel_h / 2;
+
+    /* Slab thickness for slice_mode=1: 1 voxel cell (= 2 model units). */
+    const int SLAB_HALF = VOXEL_CELL_SIZE / 2 + 1;
+
+    uart_poll_frame();
+
+    /* Each voxel renders as a `block_size`-pixel block, sized to roughly
+     * match the cell's true panel footprint at scale_pct. cell = 2 model
+     * units; panel pixels per model unit = scale_pct/100; so block size =
+     * 2 * scale_pct / 100. Min 1 to ensure something gets drawn. */
+    int block = (VOXEL_CELL_SIZE * scale_pct) / 100;
+    if (block < 1) block = 1;
+    if (block > 16) block = 16;
+
+    for (int i = 0; i < voxel_n_occupied; i++) {
+        VoxOcc v = occupied_list[i];
+        /* Voxel center in model coords: voxel index → cell center */
+        int mx = (int)v.vx * VOXEL_CELL_SIZE - WORLD_HALF + VOXEL_CELL_SIZE / 2;
+        int my = (int)v.vy * VOXEL_CELL_SIZE - WORLD_HALF + VOXEL_CELL_SIZE / 2;
+        int mz = (int)v.vz * VOXEL_CELL_SIZE - WORLD_HALF + VOXEL_CELL_SIZE / 2;
+
+        /* Y-axis rotation: rx = mx*c + mz*s,  rz = -mx*s + mz*c  (Q8.8 → div 256) */
+        int rx = ((int)mx * c + (int)mz * s) >> 8;
+        int rz = (-(int)mx * s + (int)mz * c) >> 8;
+        if (slice_mode && (rz > SLAB_HALF || rz < -SLAB_HALF)) continue;
+
+        int sx = cx + (rx * scale_pct) / 100;
+        int sy = cy - (my * scale_pct) / 100;
+        if (sx < 0 || sx + block > panel_w) continue;
+        if (sy < 0 || sy + block > panel_h) continue;
+
+        u8 r5 = (v.rgb565 >> 11) & 0x1F;
+        u8 g6 = (v.rgb565 >> 5)  & 0x3F;
+        u8 b5 =  v.rgb565        & 0x1F;
+        u8 r = (r5 << 3) | (r5 >> 2);
+        u8 g = (g6 << 2) | (g6 >> 4);
+        u8 b = (b5 << 3) | (b5 >> 2);
+        for (int dy = 0; dy < block; dy++) {
+            u8 *p = fb + (origin_y + sy + dy) * STRIDE + (origin_x + sx) * 3;
+            for (int dx = 0; dx < block; dx++) {
+                p[0] = b; p[1] = g; p[2] = r;
+                p += 3;
+            }
+        }
+        /* Drain UART every 128 voxels — same cadence as point cloud render */
+        if ((i & 0x7F) == 0) uart_poll_frame();
+    }
+}
 #endif
 
 int main(void)
@@ -849,6 +988,11 @@ int main(void)
     build_model();
     /* Model lives in DDR; flush once so IP sees it via HP1 (not cache-coherent) */
     Xil_DCacheFlushRange(MODEL_ADDR, MAX_POINTS * sizeof(PovPoint));
+    /* Voxelize boot-time cube model so render path has valid data before
+     * any PPCL frame arrives. */
+    voxelize_model();
+    xil_printf("Voxel grid: %d/%d cells occupied\r\n",
+               voxel_n_occupied, VOXEL_RES*VOXEL_RES*VOXEL_RES);
 
 #if USE_PL
     xil_printf("PL IP path: pov_project @ 0x%x, FCLK_CLK1\r\n",
@@ -974,7 +1118,8 @@ int main(void)
             u64 us  = (now - gt_anchor) / GT_TICKS_PER_US;
             int left_angle = (int)((us * 36ULL / 1000000ULL) % 360ULL);
             uart_poll_frame();
-            cpu_render_panel(fb_write, left_angle, 0, 0, PW, PH, 0, LEFT_SCALE);
+            /* Voxel renderer naturally produces slabs; no slice_mode arg. */
+            cpu_render_voxel_panel(fb_write, left_angle, 0, 0, PW, PH, 0, LEFT_SCALE);
 
             /* Right half: 6×6 = 36 slice cells. Cell size ~106×120, 10°/cell. */
             uart_poll_frame();
@@ -989,7 +1134,7 @@ int main(void)
                 int ox = PW + gc * CW;
                 int oy = gr * CH;
                 int ang = (gi * 10) % 360;
-                cpu_render_panel(fb_write, ang, ox, oy, CW, CH, 1, CELL_SCALE);
+                cpu_render_voxel_panel(fb_write, ang, ox, oy, CW, CH, 1, CELL_SCALE);
             }
         }
 #endif

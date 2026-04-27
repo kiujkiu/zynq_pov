@@ -170,36 +170,9 @@ static void voxelize_model(void) {
         }
     }
 
-    /* Pass 2: 6-邻域 halo. 每个 pass-1 占用 cell 把 ±x/y/z 邻居也填上,
-     * 仅当邻居为空时. 5000 点 → ~5000 occupied cells → ~30000 after halo
-     * (密度 6×). 不更新 occupied_list (render 仍用 pass-1 的列表, halo
-     * cells 通过 voxel_grid 直接采样到, 不需在列表里重复迭代). */
-    int primary_count = occ;  /* iterate only original cells, not halo cells */
-    for (int i = 0; i < primary_count; i++) {
-        VoxOcc v = occupied_list[i];
-        int dx_arr[6] = { 1, -1, 0,  0, 0,  0};
-        int dy_arr[6] = { 0,  0, 1, -1, 0,  0};
-        int dz_arr[6] = { 0,  0, 0,  0, 1, -1};
-        for (int n = 0; n < 6; n++) {
-            int nx = v.vx + dx_arr[n];
-            int ny = v.vy + dy_arr[n];
-            int nz = v.vz + dz_arr[n];
-            if (nx < 0 || nx >= VOXEL_RES) continue;
-            if (ny < 0 || ny >= VOXEL_RES) continue;
-            if (nz < 0 || nz >= VOXEL_RES) continue;
-            int nidx = (nz * VOXEL_RES + ny) * VOXEL_RES + nx;
-            if (voxel_grid[nidx] == 0) {
-                voxel_grid[nidx] = v.rgb565;
-                if (occ < MAX_OCCUPIED) {
-                    occupied_list[occ].vx = (int8_t)nx;
-                    occupied_list[occ].vy = (int8_t)ny;
-                    occupied_list[occ].vz = (int8_t)nz;
-                    occupied_list[occ].rgb565 = v.rgb565;
-                    occ++;
-                }
-            }
-        }
-    }
+    /* Halo disabled to keep render fast. With 12000 raw points the
+     * voxelized density (~10K cells) is enough for visible figure
+     * without 4-5x render cost from halo cells. */
     voxel_n_occupied = occ;
     Xil_DCacheFlushRange(VOXEL_GRID_ADDR, VOXEL_BYTES);
 }

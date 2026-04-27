@@ -7,7 +7,7 @@ ser = serial.Serial("COM10", baud, timeout=0)
 print(f"opened COM10 @ {baud}, draining 3 sec...")
 acc = b""
 t0 = time.time()
-while time.time() - t0 < 3:
+while time.time() - t0 < 12:
     chunk = ser.read(8192)
     if chunk:
         acc += chunk

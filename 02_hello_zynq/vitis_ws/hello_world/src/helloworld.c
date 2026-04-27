@@ -1008,28 +1008,21 @@ int main(void)
         /* Slow rotation: advance phase only every 3 frames. */
         if ((frame % 3) == 0) phase++;
 
-        if ((frame & 0x1F) == 0) {
+        /* Telemetry every 32 frames (was prior cadence) created sustained
+         * UART TX bursts that block the CPU in xil_printf, causing RX FIFO
+         * overflow during host stream upload. Throttle to every 256 frames
+         * (~2.8 sec at 91 FPS) and skip the VDMA + ring_verify lines unless
+         * specifically debugging. */
+        if ((frame & 0xFF) == 0) {
             XTime_GetTime(&t1);
             gt1 = gt_read();
-            /* Sanity: dump ring buffer snapshot once per 32 frames. */
-            if ((frame & 0x7F) == 0) {
-                ring_verify();
-            }
-            xil_printf("  VDMA DMACR=0x%x parkW=%u curR=%u\r\n",
-                       (unsigned)vdma_dmacr(),
-                       (unsigned)(Xil_In32(VDMA_BASE + VDMA_PARK_PTR_OFF) & 0x1F),
-                       (unsigned)vdma_current_read_idx());
-            /* Primary: global timer direct read */
             u64 gt_dt = gt1 - gt0;
             u32 us = (u32)(gt_dt / GT_TICKS_PER_US);
             u32 ms = us / 1000;
-            u32 fps100 = ms ? (u32)((32ULL * 100 * 1000) / ms) : 0;
-            /* Secondary: XTime for comparison */
-            u64 xt = t1 - t0;
-            xil_printf("frame=%u  GT dT=%u us (%u.%02u FPS)  XT dT=%u ticks\r\n",
+            u32 fps100 = ms ? (u32)((256ULL * 100 * 1000) / ms) : 0;
+            xil_printf("frame=%u dT=%u us (%u.%02u FPS)\r\n",
                        (unsigned)frame, us,
-                       fps100 / 100, fps100 % 100,
-                       (unsigned)xt);
+                       fps100 / 100, fps100 % 100);
             gt0 = gt1;
             t0 = t1;
             XGpio_DiscreteWrite(&Led, 1, (frame >> 5) & 1 ? 0x1 : 0x2);

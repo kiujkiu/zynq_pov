@@ -122,19 +122,19 @@ static int model_n = 0;
  * rotation when model has small z extent. Voxel representation gives
  * each cell intrinsic 3D extent (2 model units cubed), so slabs at any
  * rotation always sample some non-empty cells. */
-#define VOXEL_RES        64
+#define VOXEL_RES        128
 #define VOXEL_HALF       (VOXEL_RES / 2)
 #define WORLD_HALF       64                    /* model coords assumed ±64 */
-#define VOXEL_CELL_SIZE  (2 * WORLD_HALF / VOXEL_RES)   /* = 2 model units */
+#define VOXEL_CELL_SIZE  1                     /* = 2*WORLD_HALF/VOXEL_RES */
 #define VOXEL_GRID_ADDR  0x11800000UL
-#define VOXEL_BYTES      (VOXEL_RES * VOXEL_RES * VOXEL_RES * 2)
+#define VOXEL_BYTES      (VOXEL_RES * VOXEL_RES * VOXEL_RES * 2)   /* 4 MB */
 static u16 * const voxel_grid = (u16 *)VOXEL_GRID_ADDR;
 static int voxel_n_occupied = 0;
 
 /* Compact list of occupied voxels for fast render iteration (vs scanning
  * 256K cells). Each entry packs (vx, vy, vz, rgb565). MAX_OCCUPIED chosen
  * generously: 5000 points × 1 voxel-each-best-case = 5000 max. */
-#define MAX_OCCUPIED   8192
+#define MAX_OCCUPIED   16384   /* worst case all input pts unique cells */
 typedef struct {
     int8_t  vx, vy, vz;   /* 0..63 fits in i8 */
     int8_t  _pad;
@@ -898,7 +898,7 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
      * 2 * scale_pct / 100. Min 1 to ensure something gets drawn. */
     int block = (VOXEL_CELL_SIZE * scale_pct) / 100;
     if (block < 1) block = 1;
-    if (block > 4) block = 4;   /* cap so big-zoom panel doesn't look Minecraft */
+    if (block > 1) block = 1;   /* user request: 1px voxels (vs 4px before) */
 
     for (int i = 0; i < voxel_n_occupied; i++) {
         VoxOcc v = occupied_list[i];

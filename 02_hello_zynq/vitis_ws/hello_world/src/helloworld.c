@@ -105,9 +105,10 @@ typedef struct __attribute__((aligned(16))) {
     int32_t  _pad2;
 } PovPoint;
 
-/* Model lives at a fixed high DDR address, away from framebuffer. */
-#define MODEL_ADDR      0x11000000UL
-#define MAX_POINTS      131072
+/* Model lives at a fixed high DDR address, away from framebuffer + voxel grid.
+ * DDR ends at 0x20000000 (512MB). Voxel grid 0x18-0x1A. Model after. */
+#define MODEL_ADDR      0x1A000000UL    /* 1M points × 16B = 16 MB */
+#define MAX_POINTS      1048576          /* 1M */
 static PovPoint * const model = (PovPoint *)MODEL_ADDR;
 static int model_n = 0;
 
@@ -134,13 +135,14 @@ static int voxel_n_occupied = 0;
 /* Compact list of occupied voxels for fast render iteration (vs scanning
  * 256K cells). Each entry packs (vx, vy, vz, rgb565). MAX_OCCUPIED chosen
  * generously: 5000 points × 1 voxel-each-best-case = 5000 max. */
-#define MAX_OCCUPIED   131072  /* 100K points → ~80K voxel occupied (256³ grid) */
+#define MAX_OCCUPIED       1048576 /* 1M points */
+#define OCCUPIED_LIST_ADDR 0x1B000000UL  /* fixed DDR (1M*6B=6MB) — after MODEL */
 typedef struct {
     uint8_t vx, vy, vz;   /* 0..255 (VOXEL_RES=256) needs unsigned */
     uint8_t _pad;
     u16     rgb565;
 } VoxOcc;
-static VoxOcc occupied_list[MAX_OCCUPIED];
+static VoxOcc * const occupied_list = (VoxOcc *)OCCUPIED_LIST_ADDR;
 
 static inline u16 pack_rgb565(u8 r, u8 g, u8 b) {
     return ((u16)(r >> 3) << 11) | ((u16)(g >> 2) << 5) | (u16)(b >> 3);

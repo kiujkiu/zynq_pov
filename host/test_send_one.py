@@ -35,18 +35,26 @@ print(f"opening {port}@{baud}...")
 ser = serial.Serial(port, baud, timeout=0)
 buf = pack_frame(0, pts, compressed=True)
 print(f"sending {len(buf)} bytes (header + 5×{len(pts)} pts compressed)...")
+# Drain RX during long send to keep PC USB buffer alive
 t0 = time.time()
-ser.write(buf)
+CHUNK = 32768
+written = 0
+while written < len(buf):
+    end = min(written + CHUNK, len(buf))
+    written += ser.write(buf[written:end])
+    # opportunistic read to keep PC RX buffer drained
+    ser.read(8192)
 ser.flush()
 dt = time.time() - t0
 print(f"  write+flush took {dt:.2f}s")
 
-# Drain board log briefly to catch [rx-dump] confirmation
-print("waiting 4 sec for board to ack...")
-deadline = time.time() + 4.0
+# Drain board log to catch ack (proportional to send time)
+ack_wait = max(4.0, dt * 0.2 + 6.0)
+print(f"waiting {ack_wait:.1f} sec for board to ack...")
+deadline = time.time() + ack_wait
 acc = b""
 while time.time() < deadline:
-    chunk = ser.read(2048)
+    chunk = ser.read(8192)
     if chunk:
         acc += chunk
     else:

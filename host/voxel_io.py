@@ -74,6 +74,7 @@ if __name__ == "__main__":
         print("Usage:")
         print("  python voxel_io.py bake <glb> <out.vxg> [n_pts=100000] [z=1.5]")
         print("  python voxel_io.py info <file.vxg>")
+        print("  python voxel_io.py send <file.vxg> [port=COM10] [baud=921600]")
         sys.exit(0)
 
     cmd = sys.argv[1]
@@ -105,6 +106,26 @@ if __name__ == "__main__":
             zs = [i // (res*res) for i in indices]
             print(f"  bbox: x[{min(xs)}..{max(xs)}] y[{min(ys)}..{max(ys)}] z[{min(zs)}..{max(zs)}]")
             print(f"  density: {100*len(cells)/(res**3):.3f}% of grid")
+    elif cmd == "send":
+        import time, serial
+        from pointcloud_proto import pack_voxel_frame
+        path = sys.argv[2]
+        port = sys.argv[3] if len(sys.argv) > 3 else "COM10"
+        baud = int(sys.argv[4]) if len(sys.argv) > 4 else 921600
+        cells, _res = load(path)
+        buf = pack_voxel_frame(0, cells)
+        print(f"opening {port}@{baud}...")
+        ser = serial.Serial(port, baud, timeout=0)
+        t0 = time.time()
+        written = 0
+        CHUNK = 32768
+        while written < len(buf):
+            end = min(written + CHUNK, len(buf))
+            written += ser.write(buf[written:end])
+            ser.read(8192)
+        ser.flush()
+        print(f"sent {len(buf)} B in {time.time()-t0:.2f}s")
+        ser.close()
     else:
         print(f"Unknown command: {cmd}")
         sys.exit(1)

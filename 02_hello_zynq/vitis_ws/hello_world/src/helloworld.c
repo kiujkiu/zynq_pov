@@ -33,8 +33,18 @@
 #define DEFEAT_ADDR_CACHE 0
 
 /* Keep 720p60 for stable HDMI preview. 1080p upgrade needs rgb2dvi verification. */
+/* HDMI resolution: define USE_1080P30 to switch to 1920×1080 @ 30Hz.
+ * Both modes use same 74.25 MHz pixel clock. 720p60 is the demo default
+ * (USB capture cards often only accept 720p input). 1080p30 verified
+ * working on real 1080p monitor; capture chain limit on 720p cards. */
+/* #define USE_1080P30 1 */
+#ifdef USE_1080P30
+#define WIDTH   1920
+#define HEIGHT  1080
+#else
 #define WIDTH   1280
 #define HEIGHT  720
+#endif
 #define BPP     3
 #define STRIDE  (WIDTH * BPP)
 #define FRAME_BYTES (STRIDE * HEIGHT)
@@ -958,7 +968,22 @@ int main(void)
     XVtc Vtc;
     XVtc_Config *vtcCfg = XVtc_LookupConfig(XPAR_V_TC_0_BASEADDR);
     XVtc_CfgInitialize(&Vtc, vtcCfg, vtcCfg->BaseAddress);
+#ifdef USE_1080P30
+    /* 1080p30 timing (CTA-861, 74.25 MHz pixel clock — same as 720p60).
+     * 2200 × 1125 = 2,475,000 pixels/frame × 30 = 74.25 MHz ✓ */
+    XVtc_Timing t = {
+        .HActiveVideo  = 1920, .HFrontPorch   = 88,
+        .HSyncWidth    = 44,   .HBackPorch    = 148,
+        .HSyncPolarity = 1,
+        .VActiveVideo  = 1080,
+        .V0FrontPorch  = 4,    .V0SyncWidth   = 5,    .V0BackPorch  = 36,
+        .V1FrontPorch  = 4,    .V1SyncWidth   = 5,    .V1BackPorch  = 36,
+        .VSyncPolarity = 1,    .Interlaced    = 0,
+    };
+    XVtc_SetGeneratorTiming(&Vtc, &t);
+#else
     XVtc_SetGeneratorVideoMode(&Vtc, XVTC_VMODE_720P);
+#endif
     XVtc_EnableGenerator(&Vtc);
     XVtc_Enable(&Vtc);
 

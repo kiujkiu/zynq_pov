@@ -26,6 +26,7 @@ if HERE not in sys.path:
 from pointcloud_proto import pack_frame
 from glb_to_points import sample_glb
 from mesh_to_points import sample_mesh
+from anim_loader import build_animator
 
 
 # ---------------------------------------------------------------------- #
@@ -53,8 +54,13 @@ class SerialWorker(threading.Thread):
         self.cmd_q.put(("static", points))
 
     def stream_animated(self, points, fps):
-        """Start streaming with breathing/rotation animation."""
+        """Legacy: stream with built-in breathing/rotation animation."""
         self.cmd_q.put(("stream", points, fps))
+
+    def stream_animator(self, animator_fn, fps):
+        """Stream using a generic f(t)→points animator (covers procedural,
+        OBJ sequence, and glb keyframe modes)."""
+        self.cmd_q.put(("stream2", animator_fn, fps))
 
     def stop_stream(self):
         self.cmd_q.put(("stop",))
@@ -123,11 +129,23 @@ class SerialWorker(threading.Thread):
                     fps = cmd[2]
                     self.stream_state = {
                         "base": points,
+                        "animator": None,
                         "period": 1.0 / fps,
                         "t0": time.time(),
                         "fid": 0,
                     }
                     self.ui_log(f"[stream] start  N={len(points)}  {fps:.2f} FPS")
+                elif op == "stream2":
+                    fn = cmd[1]
+                    fps = cmd[2]
+                    self.stream_state = {
+                        "base": None,
+                        "animator": fn,
+                        "period": 1.0 / fps,
+                        "t0": time.time(),
+                        "fid": 0,
+                    }
+                    self.ui_log(f"[stream] animator-mode  {fps:.2f} FPS")
                 elif op == "stop":
                     self.stream_state = None
                     self.ui_log("[stream] stopped")
@@ -156,7 +174,11 @@ class SerialWorker(threading.Thread):
                 now = time.time()
                 ss = self.stream_state
                 if (now - ss["t0"]) - ss["fid"] * ss["period"] >= ss["period"]:
-                    pts = self._animate_pts(ss["base"], now - ss["t0"])
+                    t_elapsed = now - ss["t0"]
+                    if ss.get("animator"):
+                        pts = ss["animator"](t_elapsed)
+                    else:
+                        pts = self._animate_pts(ss["base"], t_elapsed)
                     ss["fid"] += 1
                     self._send_one(pts, ss["fid"])
         if self.ser:
@@ -174,7 +196,8 @@ class POVGUI:
         root.title("POV3D Streamer")
         root.geometry("760x560")
 
-        self.points = None     # current sampled point list
+        self.points = None     # current sampled point list (used by static send)
+        self.animator = None   # f(t)→points (used by animated stream)
         self.glb_path = None
 
         # Top: file pick
@@ -308,7 +331,16 @@ class POVGUI:
                 self.points = sample_mesh(
                     self.glb_path, n_points=self.points_var.get(),
                     target_scale=self.scale_var.get())
-            self._log(f"  → {len(self.points)} points sampled")
+            # Build animator (handles glb anim or falls back to procedural)
+            self.animator = build_animator(
+                self.glb_path,
+                n_points=self.points_var.get(),
+                target_scale=self.scale_var.get(),
+                color_mode=self.color_var.get(),
+                brighten=self.brighten_var.get(),
+                gamma=self.gamma_var.get(),
+                fallback_period_y=10.0)
+            self._log(f"  → {len(self.points)} points sampled, animator ready")
         except Exception as e:
             messagebox.showerror("Sampling failed", str(e))
 
@@ -319,10 +351,11 @@ class POVGUI:
         self.worker.send_static(self.points)
 
     def _start_stream(self):
-        if not self.points:
+        if not self.animator:
             messagebox.showinfo("Info", "Sample model first")
             return
-        self.worker.stream_animated(self.points, self.fps_var.get())
+        # Pass the animator function to the worker
+        self.worker.stream_animator(self.animator, self.fps_var.get())
 
     def _stop_stream(self):
         self.worker.stop_stream()

@@ -282,13 +282,17 @@ def sample_triangles(triangles, n_total,
     return out
 
 
-def normalize_and_quantize(points, target_scale=40, color_mode="height", brighten=1.0, gamma=1.0):
+def normalize_and_quantize(points, target_scale=40, color_mode="height", brighten=1.0, gamma=1.0,
+                            z_stretch=1.0):
     """color_mode:
       'height'  : Y-axis gradient (default, anime palette)
       'uniform' : all points pink  — avoids weird segmentation
       'random'  : random palette (more visual life)
       'keep'    : don't touch colors (from glb texture/material)
     brighten: multiplier for rgb values, clipped to 255 (1.0=no change, 2.0=double).
+    z_stretch: multiply quantized z by this factor (clamped to [-127,127]) so
+      thin anime models don't look squished at 90°/270° rotation. 1.0 = original,
+      3.0 = looks 3× deeper. Slight texture/color stretch is a side-effect.
     """
     if not points:
         return []
@@ -321,7 +325,7 @@ def normalize_and_quantize(points, target_scale=40, color_mode="height", brighte
     for (x, y, z, r, g, b) in points:
         ix = int(round((x - center[0]) * scale))
         iy = int(round((y - center[1]) * scale))
-        iz = int(round((z - center[2]) * scale))
+        iz = int(round((z - center[2]) * scale * z_stretch))
         ix = max(-127, min(127, ix))
         iy = max(-127, min(127, iy))
         iz = max(-127, min(127, iz))
@@ -354,13 +358,15 @@ def normalize_and_quantize(points, target_scale=40, color_mode="height", brighte
 def sample_glb(path, n_points=500, target_scale=40, verbose=True,
                color_mode="height", brighten=1.0, gamma=1.0,
                lighting="none", ambient=0.35,
-               light_dir=(0.3, 0.7, 0.6)):
+               light_dir=(0.3, 0.7, 0.6),
+               z_stretch=1.0):
     triangles = load_glb(path, verbose=verbose)
     points = sample_triangles(triangles, n_points,
                               lighting=lighting, ambient=ambient,
                               light_dir=light_dir)
     return normalize_and_quantize(points, target_scale, color_mode=color_mode,
-                                  brighten=brighten, gamma=gamma)
+                                  brighten=brighten, gamma=gamma,
+                                  z_stretch=z_stretch)
 
 
 if __name__ == "__main__":

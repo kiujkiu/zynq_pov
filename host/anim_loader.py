@@ -119,6 +119,7 @@ def build_animator_glb(path, n_points=5000, target_scale=40,
                        color_mode="height", brighten=1.0, gamma=1.0,
                        lighting="none", ambient=0.35,
                        light_dir=(0.3, 0.7, 0.6),
+                       z_stretch=1.0,
                        fallback_period_y=10.0):
     """If glb has animation, apply node TRS at time t (root only). Otherwise
     fall back to procedural Y-rotation animator."""
@@ -129,6 +130,7 @@ def build_animator_glb(path, n_points=5000, target_scale=40,
         base = sample_glb(path, n_points=n_points, target_scale=target_scale,
                           color_mode=color_mode, brighten=brighten, gamma=gamma,
                           lighting=lighting, ambient=ambient, light_dir=light_dir,
+                          z_stretch=z_stretch,
                           verbose=False)
         return build_animator_static(base, period_y_sec=fallback_period_y)
 
@@ -139,7 +141,7 @@ def build_animator_glb(path, n_points=5000, target_scale=40,
                             lighting=lighting, ambient=ambient, light_dir=light_dir)
     quantized = normalize_and_quantize(
         base, target_scale=target_scale, color_mode=color_mode,
-        brighten=brighten, gamma=gamma)
+        brighten=brighten, gamma=gamma, z_stretch=z_stretch)
 
     print(f"[anim] glb has {len(g.animations)} animation(s); using #0")
     # We only apply node-0 (root) translation/rotation as a coarse approximation.

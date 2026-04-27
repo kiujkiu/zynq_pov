@@ -227,6 +227,7 @@ class POVGUI:
         self.color_var = tk.StringVar(value="keep")
         self.lighting_var = tk.StringVar(value="none")
         self.ambient_var = tk.DoubleVar(value=0.35)
+        self.zstretch_var = tk.DoubleVar(value=3.0)
         ttk.Label(f2, text="Points:").grid(row=0, column=0, sticky=tk.W)
         ttk.Spinbox(f2, from_=100, to=20000, increment=500, textvariable=self.points_var, width=8).grid(row=0, column=1)
         ttk.Label(f2, text="Scale:").grid(row=0, column=2, sticky=tk.W, padx=(12, 0))
@@ -245,7 +246,9 @@ class POVGUI:
                      width=12, state="readonly").grid(row=2, column=1, columnspan=2, sticky=tk.W, pady=(4, 0))
         ttk.Label(f2, text="Ambient:").grid(row=2, column=3, sticky=tk.E, padx=(12, 0), pady=(4, 0))
         ttk.Spinbox(f2, from_=0.0, to=1.0, increment=0.05, textvariable=self.ambient_var, width=6).grid(row=2, column=4, sticky=tk.W, pady=(4, 0))
-        ttk.Button(f2, text="Re-sample", command=self._resample).grid(row=2, column=5, padx=(12, 0), pady=(4, 0))
+        ttk.Label(f2, text="Z-stretch:").grid(row=3, column=0, sticky=tk.W, pady=(4, 0))
+        ttk.Spinbox(f2, from_=1.0, to=8.0, increment=0.5, textvariable=self.zstretch_var, width=6).grid(row=3, column=1, sticky=tk.W, pady=(4, 0))
+        ttk.Button(f2, text="Re-sample", command=self._resample).grid(row=3, column=5, padx=(12, 0), pady=(4, 0))
 
         # Serial port
         f3 = ttk.LabelFrame(root, text="Serial", padding=8)
@@ -365,6 +368,7 @@ class POVGUI:
         gamma = self.gamma_var.get()
         lighting = self.lighting_var.get()
         ambient = self.ambient_var.get()
+        z_stretch = self.zstretch_var.get()
         self._sampling = True
         self._log(f"sampling {n} pts from {os.path.basename(path)}…")
 
@@ -377,6 +381,7 @@ class POVGUI:
                     path, n_points=n, target_scale=scale,
                     color_mode=color, brighten=brighten, gamma=gamma,
                     lighting=lighting, ambient=ambient,
+                    z_stretch=z_stretch,
                     fallback_period_y=10.0)
                 pts = animator(0.0)
 

@@ -220,7 +220,7 @@ class POVGUI:
         # Sampling parameters
         f2 = ttk.LabelFrame(root, text="Sampling", padding=8)
         f2.pack(fill=tk.X, padx=8, pady=4)
-        self.points_var = tk.IntVar(value=8000)
+        self.points_var = tk.IntVar(value=32000)
         self.scale_var = tk.IntVar(value=40)
         self.brighten_var = tk.DoubleVar(value=1.0)
         self.gamma_var = tk.DoubleVar(value=1.0)

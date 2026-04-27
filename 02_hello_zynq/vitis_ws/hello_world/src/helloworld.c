@@ -107,7 +107,7 @@ typedef struct __attribute__((aligned(16))) {
 
 /* Model lives at a fixed high DDR address, away from framebuffer. */
 #define MODEL_ADDR      0x11000000UL
-#define MAX_POINTS      16384
+#define MAX_POINTS      65536
 static PovPoint * const model = (PovPoint *)MODEL_ADDR;
 static int model_n = 0;
 
@@ -904,7 +904,7 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
      * 2 * scale_pct / 100. Min 1 to ensure something gets drawn. */
     int block = (VOXEL_CELL_SIZE * scale_pct) / 100;
     if (block < 1) block = 1;
-    if (block > 2) block = 2;   /* 2px keeps color fidelity at high zoom */
+    if (block > 3) block = 3;   /* 3px = 9 px per voxel, fills high-detail render */
 
     for (int i = 0; i < voxel_n_occupied; i++) {
         VoxOcc v = occupied_list[i];

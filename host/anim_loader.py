@@ -117,6 +117,8 @@ def _evaluate_animation(gltf, anim_idx, t):
 
 def build_animator_glb(path, n_points=5000, target_scale=40,
                        color_mode="height", brighten=1.0, gamma=1.0,
+                       lighting="none", ambient=0.35,
+                       light_dir=(0.3, 0.7, 0.6),
                        fallback_period_y=10.0):
     """If glb has animation, apply node TRS at time t (root only). Otherwise
     fall back to procedural Y-rotation animator."""
@@ -126,13 +128,15 @@ def build_animator_glb(path, n_points=5000, target_scale=40,
         # static — use procedural animator
         base = sample_glb(path, n_points=n_points, target_scale=target_scale,
                           color_mode=color_mode, brighten=brighten, gamma=gamma,
+                          lighting=lighting, ambient=ambient, light_dir=light_dir,
                           verbose=False)
         return build_animator_static(base, period_y_sec=fallback_period_y)
 
     # glb has animation — pre-load triangles, store untransformed positions
     triangles = load_glb(path, verbose=False)
     # base sample (positions in original local coords)
-    base = sample_triangles(triangles, n_points)
+    base = sample_triangles(triangles, n_points,
+                            lighting=lighting, ambient=ambient, light_dir=light_dir)
     quantized = normalize_and_quantize(
         base, target_scale=target_scale, color_mode=color_mode,
         brighten=brighten, gamma=gamma)
@@ -175,13 +179,21 @@ def build_animator_glb(path, n_points=5000, target_scale=40,
 
 # ---------------------------------------------------------------------- #
 def build_animator(path_or_folder, n_points=5000, **kw):
-    """Top-level: pick mode by extension/dir."""
+    """Top-level: pick mode by extension/dir.
+
+    Accepted kwargs (all optional, ignored when not relevant for the path):
+      target_scale, color_mode, brighten, gamma,
+      lighting, ambient, light_dir, fallback_period_y, fps
+    """
     if os.path.isdir(path_or_folder):
-        return build_animator_obj_sequence(path_or_folder, n_points=n_points, **kw)
+        # obj sequence: only accepts a small subset
+        seq_kw = {k: v for k, v in kw.items()
+                  if k in ("target_scale", "fps", "color_mode")}
+        return build_animator_obj_sequence(path_or_folder, n_points=n_points, **seq_kw)
     ext = os.path.splitext(path_or_folder)[1].lower()
     if ext in (".glb", ".gltf"):
         return build_animator_glb(path_or_folder, n_points=n_points, **kw)
-    # static obj/ply: just procedural
+    # static obj/ply: just procedural — mesh_to_points has no shading hook
     base = sample_mesh(path_or_folder, n_points=n_points,
                        target_scale=kw.get("target_scale", 40))
     return build_animator_static(base, period_y_sec=kw.get("fallback_period_y", 10.0))

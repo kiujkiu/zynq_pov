@@ -196,8 +196,19 @@ def load_glb(path, verbose=False):
     return triangles
 
 
-def sample_triangles(triangles, n_total):
-    """Area-weighted uniform sampling. Handles textured + flat triangles."""
+def sample_triangles(triangles, n_total,
+                     lighting="none", ambient=0.35,
+                     light_dir=(0.3, 0.7, 0.6)):
+    """Area-weighted uniform sampling. Handles textured + flat triangles.
+
+    lighting:
+      'none'         — raw albedo (default, keeps prior behavior)
+      'lambert'      — intensity = ambient + (1-ambient) * max(0, n·l)
+      'half-lambert' — intensity = ambient + (1-ambient) * (0.5 + 0.5*n·l)^2
+                       (Valve-style, prevents pure black on grazing faces)
+    ambient: floor brightness 0..1 — even back-faces get this fraction.
+    light_dir: world-space light direction (will be normalized).
+    """
     if not triangles:
         return []
     areas = np.zeros(len(triangles), dtype=np.float32)
@@ -220,7 +231,10 @@ def sample_triangles(triangles, n_total):
     v = np.where(mask, 1 - v, v)
     w = 1 - u - v
 
-    # precompute face normals for fake lighting
+    # Face normals for shading. n_dot_l is precomputed per-face since we sample
+    # flat-shaded points (per-vertex normals would smooth this out, but POV
+    # display is too low-res to notice and area-weighted samples don't carry
+    # vertex normal interpolation — this is good enough as a "pre-bake").
     normals = np.zeros((len(triangles), 3), dtype=np.float32)
     for i, (p0, p1, p2, _c) in enumerate(triangles):
         e1 = p1 - p0; e2 = p2 - p0
@@ -229,9 +243,19 @@ def sample_triangles(triangles, n_total):
         if nl > 0:
             normals[i] = n / nl
 
-    # light from top-front direction (0.3, 0.7, 0.6 normalized)
-    light = np.array([0.3, 0.7, 0.6], dtype=np.float32)
-    light = light / np.linalg.norm(light)
+    light = np.array(light_dir, dtype=np.float32)
+    lnorm = np.linalg.norm(light)
+    if lnorm > 0:
+        light = light / lnorm
+    ndl_face = np.clip(normals @ light, -1.0, 1.0)  # per-face cosine
+
+    if lighting == "lambert":
+        intensity_face = ambient + (1.0 - ambient) * np.maximum(ndl_face, 0.0)
+    elif lighting == "half-lambert":
+        hl = (0.5 + 0.5 * ndl_face) ** 2
+        intensity_face = ambient + (1.0 - ambient) * hl
+    else:  # 'none'
+        intensity_face = np.ones(len(triangles), dtype=np.float32)
 
     out = []
     for k in range(n_total):
@@ -249,9 +273,11 @@ def sample_triangles(triangles, n_total):
         else:
             _, c = color_info
             r_, g_, b_ = c
-        # No Lambertian — keep raw texture albedo (brighten later in normalize)
-        # Could do: ndl = max(0.0, float(np.dot(normals[ti], light)))
-        #           intensity = 0.5 + 0.5 * ndl  (NL-weighted)
+        intens = float(intensity_face[ti])
+        if intens != 1.0:
+            r_ = max(0, min(255, int(r_ * intens)))
+            g_ = max(0, min(255, int(g_ * intens)))
+            b_ = max(0, min(255, int(b_ * intens)))
         out.append((float(p[0]), float(p[1]), float(p[2]), r_, g_, b_))
     return out
 
@@ -326,9 +352,13 @@ def normalize_and_quantize(points, target_scale=40, color_mode="height", brighte
 
 
 def sample_glb(path, n_points=500, target_scale=40, verbose=True,
-               color_mode="height", brighten=1.0, gamma=1.0):
+               color_mode="height", brighten=1.0, gamma=1.0,
+               lighting="none", ambient=0.35,
+               light_dir=(0.3, 0.7, 0.6)):
     triangles = load_glb(path, verbose=verbose)
-    points = sample_triangles(triangles, n_points)
+    points = sample_triangles(triangles, n_points,
+                              lighting=lighting, ambient=ambient,
+                              light_dir=light_dir)
     return normalize_and_quantize(points, target_scale, color_mode=color_mode,
                                   brighten=brighten, gamma=gamma)
 

@@ -216,6 +216,8 @@ class POVGUI:
         self.brighten_var = tk.DoubleVar(value=1.5)
         self.gamma_var = tk.DoubleVar(value=0.8)
         self.color_var = tk.StringVar(value="keep")
+        self.lighting_var = tk.StringVar(value="none")
+        self.ambient_var = tk.DoubleVar(value=0.35)
         ttk.Label(f2, text="Points:").grid(row=0, column=0, sticky=tk.W)
         ttk.Spinbox(f2, from_=100, to=20000, increment=500, textvariable=self.points_var, width=8).grid(row=0, column=1)
         ttk.Label(f2, text="Scale:").grid(row=0, column=2, sticky=tk.W, padx=(12, 0))
@@ -228,7 +230,13 @@ class POVGUI:
         ttk.Spinbox(f2, from_=0.5, to=4.0, increment=0.1, textvariable=self.brighten_var, width=6).grid(row=1, column=1, pady=(4, 0))
         ttk.Label(f2, text="Gamma:").grid(row=1, column=2, sticky=tk.W, padx=(12, 0), pady=(4, 0))
         ttk.Spinbox(f2, from_=0.3, to=2.0, increment=0.05, textvariable=self.gamma_var, width=6).grid(row=1, column=3, pady=(4, 0))
-        ttk.Button(f2, text="Re-sample", command=self._resample).grid(row=1, column=4, columnspan=2, padx=(12, 0), pady=(4, 0))
+        ttk.Label(f2, text="Lighting:").grid(row=2, column=0, sticky=tk.W, pady=(4, 0))
+        ttk.Combobox(f2, textvariable=self.lighting_var,
+                     values=["none", "lambert", "half-lambert"],
+                     width=12, state="readonly").grid(row=2, column=1, columnspan=2, sticky=tk.W, pady=(4, 0))
+        ttk.Label(f2, text="Ambient:").grid(row=2, column=3, sticky=tk.E, padx=(12, 0), pady=(4, 0))
+        ttk.Spinbox(f2, from_=0.0, to=1.0, increment=0.05, textvariable=self.ambient_var, width=6).grid(row=2, column=4, sticky=tk.W, pady=(4, 0))
+        ttk.Button(f2, text="Re-sample", command=self._resample).grid(row=2, column=5, padx=(12, 0), pady=(4, 0))
 
         # Serial port
         f3 = ttk.LabelFrame(root, text="Serial", padding=8)
@@ -326,6 +334,8 @@ class POVGUI:
                     color_mode=self.color_var.get(),
                     brighten=self.brighten_var.get(),
                     gamma=self.gamma_var.get(),
+                    lighting=self.lighting_var.get(),
+                    ambient=self.ambient_var.get(),
                     verbose=False)
             else:
                 self.points = sample_mesh(
@@ -339,6 +349,8 @@ class POVGUI:
                 color_mode=self.color_var.get(),
                 brighten=self.brighten_var.get(),
                 gamma=self.gamma_var.get(),
+                lighting=self.lighting_var.get(),
+                ambient=self.ambient_var.get(),
                 fallback_period_y=10.0)
             self._log(f"  → {len(self.points)} points sampled, animator ready")
         except Exception as e:

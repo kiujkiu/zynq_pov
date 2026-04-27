@@ -70,13 +70,19 @@ def main():
                     help="Use 5-byte/point compressed format (3.2x smaller)")
     ap.add_argument("--gamma", type=float, default=0.6,
                     help="Gamma correction (<1 brightens dark midtones)")
+    ap.add_argument("--lighting", default="none",
+                    choices=["none", "lambert", "half-lambert"],
+                    help="Pre-bake per-face lighting into vertex color")
+    ap.add_argument("--ambient", type=float, default=0.35,
+                    help="Ambient floor for shaded modes (0..1)")
     args = ap.parse_args()
 
     print(f"[anime] sampling {args.points} points from {args.mesh_path or 'builtin'}")
     if args.mesh_path and args.mesh_path.lower().endswith((".glb", ".gltf")):
         base_pts = sample_glb(args.mesh_path, n_points=args.points,
                               target_scale=args.scale, color_mode=args.color,
-                              brighten=args.brighten, gamma=args.gamma)
+                              brighten=args.brighten, gamma=args.gamma,
+                              lighting=args.lighting, ambient=args.ambient)
     else:
         base_pts = sample_mesh(args.mesh_path, n_points=args.points, target_scale=args.scale)
     if not base_pts:

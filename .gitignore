@@ -36,6 +36,15 @@ hls_proj/*.str
 hls_proj/*.jou
 hls_proj/vitis_hls*.str
 hls_proj/pov_project_ip.zip
+hls_proj/proj_pov_csim/
+
+# === Transient HDMI capture / render outputs ===
+hdmi_obs.jpg
+hdmi_ff.jpg
+hdmi_capture.jpg
+host/voxel_slice_*.png
+host/pov_gui.log
+host/__pycache__/
 
 # === Vitis generated ===
 02_hello_zynq/vitis_ws/hello_plat/export/

@@ -11,7 +11,7 @@ import serial
 from glb_to_points import sample_glb
 from pointcloud_proto import pack_frame
 
-ser = serial.Serial("COM10", 460800, timeout=0)
+ser = serial.Serial("COM10", 921600, timeout=0)
 pts = sample_glb(os.path.join(HERE, "anime_34.glb"),
                  n_points=5000, target_scale=40,
                  color_mode="keep", brighten=1.5, gamma=0.8,

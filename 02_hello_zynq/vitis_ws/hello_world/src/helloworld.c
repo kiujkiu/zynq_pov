@@ -941,11 +941,9 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
 int main(void)
 {
     init_platform();
-    /* PS UART0 baud is set by ps7_init.tcl (BAUDGEN=0x1F BAUDDIV=6 → 460800
-     * @ 100 MHz UART_REF_CLK). Cannot reliably override from ARM code:
-     * BSP/lwip/whatever resets BAUDGEN to default mid-execution. So change
-     * is baked into ps7_init instead. */
-    xil_printf("\r\n=== POV-3D Render Phase 4b (USE_PL=%d) baud=460800 ===\r\n", USE_PL);
+    /* PS UART0 baud is set by tools/dl_helloworld.tcl post-ps7_init mwr
+     * (BAUDGEN=0x1B=27 BAUDDIV=3 → 921600 @ 100 MHz UART_REF_CLK, 0.5% err). */
+    xil_printf("\r\n=== POV-3D Render Phase 4b (USE_PL=%d) baud=921600 ===\r\n", USE_PL);
 
     XGpio Led;
     XGpio_Initialize(&Led, XPAR_AXI_GPIO_0_BASEADDR);

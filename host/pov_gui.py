@@ -281,6 +281,16 @@ class POVGUI:
         sb.pack(side=tk.RIGHT, fill=tk.Y)
         self.log_text.config(yscrollcommand=sb.set, state=tk.DISABLED)
 
+        # File log mirror (overwrite on each session, so the file always
+        # holds the latest run — easy to read externally).
+        log_path = os.path.join(HERE, "pov_gui.log")
+        try:
+            self._log_file = open(log_path, "w", encoding="utf-8", buffering=1)
+            self._log_file.write(f"=== pov_gui session start, log: {log_path} ===\n")
+        except Exception as e:
+            print(f"[warn] could not open log file: {e}")
+            self._log_file = open(os.devnull, "w")
+
         # Worker
         self.worker = SerialWorker(self._log_threadsafe)
         self.worker.start()
@@ -299,6 +309,12 @@ class POVGUI:
             self.log_text.delete("1.0", f"{line_count - 500}.0")
         self.log_text.see(tk.END)
         self.log_text.config(state=tk.DISABLED)
+        # Mirror to file so external tools (or Claude) can tail the session log.
+        try:
+            self._log_file.write(msg + "\n")
+            self._log_file.flush()
+        except Exception:
+            pass
 
     def _log_threadsafe(self, msg):
         self.root.after(0, self._log, msg)
@@ -387,6 +403,8 @@ class POVGUI:
 
     def _on_close(self):
         self.worker.shutdown()
+        try: self._log_file.close()
+        except Exception: pass
         self.root.destroy()
 
 

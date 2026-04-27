@@ -135,14 +135,13 @@ static int voxel_n_occupied = 0;
 /* Compact list of occupied voxels for fast render iteration (vs scanning
  * 256K cells). Each entry packs (vx, vy, vz, rgb565). MAX_OCCUPIED chosen
  * generously: 5000 points × 1 voxel-each-best-case = 5000 max. */
-#define MAX_OCCUPIED       1048576 /* 1M points */
-#define OCCUPIED_LIST_ADDR 0x1B000000UL  /* fixed DDR (1M*6B=6MB) — after MODEL */
+#define MAX_OCCUPIED       262144  /* 256K — covers up to 256K unique voxels */
 typedef struct {
     uint8_t vx, vy, vz;   /* 0..255 (VOXEL_RES=256) needs unsigned */
     uint8_t _pad;
     u16     rgb565;
 } VoxOcc;
-static VoxOcc * const occupied_list = (VoxOcc *)OCCUPIED_LIST_ADDR;
+static VoxOcc occupied_list[MAX_OCCUPIED];   /* 256K * 6 = 1.5 MB BSS */
 
 static inline u16 pack_rgb565(u8 r, u8 g, u8 b) {
     return ((u16)(r >> 3) << 11) | ((u16)(g >> 2) << 5) | (u16)(b >> 3);
@@ -984,8 +983,9 @@ int main(void)
     UINTPTR fbs[2] = { FB_A_ADDR, FB_B_ADDR };
     XAxiVdma_DmaSetBufferAddr(&Vdma, XAXIVDMA_READ, fbs);
     XAxiVdma_DmaStart(&Vdma, XAXIVDMA_READ);
-    XAxiVdma_StartParking(&Vdma, 0, XAXIVDMA_READ);
-    xil_printf("VDMA DMACR=0x%x PARK_PTR=0x%x\r\n",
+    /* Stay in circular mode (no StartParking). VDMA auto-cycles through
+     * fbs[0]→fbs[1]→fbs[0]... at vsync. ARM polls curR to vsync-lock writes. */
+    xil_printf("VDMA DMACR=0x%x PARK_PTR=0x%x (pure circular)\r\n",
                (unsigned)vdma_dmacr(),
                (unsigned)Xil_In32(VDMA_BASE + VDMA_PARK_PTR_OFF));
 
@@ -1162,11 +1162,17 @@ int main(void)
         }
 #endif
 
-        /* Double-buffer swap: use Xilinx driver API (per Digilent pattern).
-         * StartParking on a running, circular-mode VDMA just rewrites PARK_PTR
-         * and flips Circular_Park bit — no stop/restart, no visible glitch. */
-        XAxiVdma_StartParking(&Vdma, write_idx, XAXIVDMA_READ);
-        write_idx ^= 1;
+        /* Pure circular VDMA: auto-cycles fbs[0] ↔ fbs[1] at vsync.
+         * Wait for VDMA to advance frame (curR change) before next write.
+         * IMPORTANT: drain UART inside wait loop or RX FIFO overflows during
+         * 16ms vsync wait at 921600 baud. */
+        u32 cur = vdma_current_read_idx();
+        for (u32 wait = 0; wait < 50000; wait++) {
+            u32 now = vdma_current_read_idx();
+            if (now != cur) { cur = now; break; }
+            if ((wait & 0xFF) == 0) uart_poll_frame();
+        }
+        write_idx = 1 - cur;
 
         frame++;
         /* Slow rotation: advance phase only every 3 frames. */

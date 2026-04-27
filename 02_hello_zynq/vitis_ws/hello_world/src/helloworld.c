@@ -158,18 +158,8 @@ static inline u16 pack_rgb565(u8 r, u8 g, u8 b) {
 }
 
 static void voxelize_model(void) {
-    /* Pass 0: incremental clear — zero only the cells written by previous
-     * voxelize call, NOT the whole 32 MB grid. Avoids:
-     *   - 30 ms memset blocking (RX FIFO overflow during animated stream)
-     *   - chunked memset crash (L2 controller race seen 04-27)
-     * For typical 5K-100K voxels, this clear is 5K-100K stores ≈ tens of μs,
-     * vs 32 MB memset ~30 ms. ~1000× faster. */
-    for (int i = 0; i < voxel_n_occupied; i++) {
-        VoxOcc v = occupied_list[i];
-        u32 idx = ((u32)v.vz * VOXEL_RES + (u32)v.vy) * VOXEL_RES + (u32)v.vx;
-        voxel_grid[idx] = 0;
-    }
     /* Pass 1: write each model point to its primary voxel cell. */
+    memset(voxel_grid, 0, VOXEL_BYTES);
     int occ = 0;
     for (int i = 0; i < model_n; i++) {
         int vx = (model[i].x + WORLD_HALF) / VOXEL_CELL_SIZE;

@@ -19,7 +19,7 @@ zs = float(sys.argv[1]) if len(sys.argv) > 1 else 5.0
 n  = int(sys.argv[2])   if len(sys.argv) > 2 else 5000
 glb = sys.argv[3]       if len(sys.argv) > 3 else os.path.join(HERE, "anime_34.glb")
 port = "COM10"
-baud = 115200
+baud = 921600
 
 print(f"sampling {n} pts from {os.path.basename(glb)}, z_stretch={zs}...")
 pts = sample_glb(glb, n_points=n, target_scale=40,

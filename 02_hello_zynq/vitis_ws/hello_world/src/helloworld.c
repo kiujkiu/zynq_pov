@@ -1144,7 +1144,16 @@ int main(void)
 #endif
 
 #if !USE_PL
-        Xil_DCacheFlushRange(fb_write, FRAME_BYTES);
+        /* Split cache flush of 2.76 MB framebuffer into chunks with UART poll.
+         * Whole-flush takes ~2.7ms; @ 921600 baud RX FIFO overflows in 0.69ms. */
+        {
+            const u32 CHUNK = 64 * 1024;          /* 64 KB ≈ 64us flush time */
+            for (u32 off = 0; off < FRAME_BYTES; off += CHUNK) {
+                u32 sz = (off + CHUNK > FRAME_BYTES) ? (FRAME_BYTES - off) : CHUNK;
+                Xil_DCacheFlushRange(fb_write + off, sz);
+                uart_poll_frame();
+            }
+        }
 #endif
 
         /* Double-buffer swap: use Xilinx driver API (per Digilent pattern).

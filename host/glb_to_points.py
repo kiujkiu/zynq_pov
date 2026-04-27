@@ -254,6 +254,20 @@ def sample_triangles(triangles, n_total,
     elif lighting == "half-lambert":
         hl = (0.5 + 0.5 * ndl_face) ** 2
         intensity_face = ambient + (1.0 - ambient) * hl
+    elif lighting == "studio":
+        # 3-light studio setup with HDR-style overexposure for dim PBR albedos.
+        # Front-facing surfaces get intensity > 2.0, back faces stay at ambient,
+        # gives clear color contrast. RGB > 255 clamp in quantize.
+        key_dir  = np.array([ 0.3,  0.7,  0.6], dtype=np.float32)
+        fill_dir = np.array([-0.5,  0.3,  0.4], dtype=np.float32)
+        rim_dir  = np.array([ 0.0,  1.0,  0.0], dtype=np.float32)
+        for d in (key_dir, fill_dir, rim_dir):
+            d /= np.linalg.norm(d)
+        # half-Lambert for back faces (avoid total black), boosted weights
+        hl_k = (0.5 + 0.5 * (normals @ key_dir))  ** 2
+        hl_f = (0.5 + 0.5 * (normals @ fill_dir)) ** 2
+        hl_r = np.maximum(normals @ rim_dir, 0.0)
+        intensity_face = ambient + 2.5 * hl_k + 1.0 * hl_f + 0.4 * hl_r
     else:  # 'none'
         intensity_face = np.ones(len(triangles), dtype=np.float32)
 

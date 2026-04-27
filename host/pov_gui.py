@@ -224,9 +224,9 @@ class POVGUI:
         self.scale_var = tk.IntVar(value=40)
         self.brighten_var = tk.DoubleVar(value=1.0)
         self.gamma_var = tk.DoubleVar(value=1.0)
-        self.color_var = tk.StringVar(value="height")
-        self.lighting_var = tk.StringVar(value="none")
-        self.ambient_var = tk.DoubleVar(value=0.4)
+        self.color_var = tk.StringVar(value="keep")
+        self.lighting_var = tk.StringVar(value="studio")
+        self.ambient_var = tk.DoubleVar(value=0.3)
         self.zstretch_var = tk.DoubleVar(value=1.5)
         ttk.Label(f2, text="Points:").grid(row=0, column=0, sticky=tk.W)
         ttk.Spinbox(f2, from_=100, to=20000, increment=500, textvariable=self.points_var, width=8).grid(row=0, column=1)
@@ -242,7 +242,7 @@ class POVGUI:
         ttk.Spinbox(f2, from_=0.3, to=2.0, increment=0.05, textvariable=self.gamma_var, width=6).grid(row=1, column=3, pady=(4, 0))
         ttk.Label(f2, text="Lighting:").grid(row=2, column=0, sticky=tk.W, pady=(4, 0))
         ttk.Combobox(f2, textvariable=self.lighting_var,
-                     values=["none", "lambert", "half-lambert"],
+                     values=["none", "lambert", "half-lambert", "studio"],
                      width=12, state="readonly").grid(row=2, column=1, columnspan=2, sticky=tk.W, pady=(4, 0))
         ttk.Label(f2, text="Ambient:").grid(row=2, column=3, sticky=tk.E, padx=(12, 0), pady=(4, 0))
         ttk.Spinbox(f2, from_=0.0, to=1.0, increment=0.05, textvariable=self.ambient_var, width=6).grid(row=2, column=4, sticky=tk.W, pady=(4, 0))

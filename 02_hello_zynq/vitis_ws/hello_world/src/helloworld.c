@@ -908,6 +908,9 @@ int main(void)
     gt_enable();
     u64 gt0 = gt_read();
     u64 gt1;
+    /* gt_anchor: 旋转角的起点参考, 只设一次. gt0 每 32 帧会被
+     * 重置为最新时间用于 FPS 计算, 不能拿来当旋转参考. */
+    u64 gt_anchor = gt0;
     XTime t0, t1;
     XTime_GetTime(&t0);
     xil_printf("Global Timer initial: 0x%08x%08x (after enable)\r\n",
@@ -968,7 +971,7 @@ int main(void)
             const int PH = HEIGHT;
             const int LEFT_SCALE = 400;
             u64 now = gt_read();
-            u64 us  = (now - gt0) / GT_TICKS_PER_US;
+            u64 us  = (now - gt_anchor) / GT_TICKS_PER_US;
             int left_angle = (int)((us * 36ULL / 1000000ULL) % 360ULL);
             uart_poll_frame();
             cpu_render_panel(fb_write, left_angle, 0, 0, PW, PH, 0, LEFT_SCALE);

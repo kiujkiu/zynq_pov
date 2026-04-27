@@ -105,3 +105,4 @@ Thumbs.db
 !02_hello_zynq/vitis_ws/hello_world/src/*.c
 !02_hello_zynq/vitis_ws/hello_world/src/*.h
 reference_digilent_hdmi/
+tools/BOOT.bin

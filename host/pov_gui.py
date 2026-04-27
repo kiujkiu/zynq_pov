@@ -23,10 +23,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
-from pointcloud_proto import pack_frame
+from pointcloud_proto import pack_frame, pack_voxel_frame
 from glb_to_points import sample_glb
 from mesh_to_points import sample_mesh
 from anim_loader import build_animator
+from test_send_voxel import host_voxelize
 
 
 # ---------------------------------------------------------------------- #
@@ -73,9 +74,19 @@ class SerialWorker(threading.Thread):
         if not self.ser or not self.ser.is_open:
             return
         try:
-            buf = pack_frame(fid, points, compressed=compressed)
-            self.ser.write(buf)
-            self.ui_log(f"[tx] frame {fid}  {len(points)} pts  {len(buf)} B")
+            # Use sparse voxel format for static frames if many points (>20K) —
+            # 3-5x wire speedup since dedup happens host-side.
+            use_voxel = len(points) > 20000 and getattr(self, "use_voxel_wire", True)
+            if use_voxel:
+                cells = host_voxelize(points)
+                buf = pack_voxel_frame(fid, cells)
+                self.ser.write(buf)
+                self.ui_log(f"[tx-vox] frame {fid}  {len(cells)} cells  {len(buf)} B "
+                            f"(vs ~{16+5*len(points)} pt-cloud)")
+            else:
+                buf = pack_frame(fid, points, compressed=compressed)
+                self.ser.write(buf)
+                self.ui_log(f"[tx] frame {fid}  {len(points)} pts  {len(buf)} B")
         except Exception as e:
             self.ui_log(f"[err] write: {e}")
 

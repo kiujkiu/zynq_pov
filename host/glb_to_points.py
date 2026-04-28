@@ -289,9 +289,20 @@ def sample_triangles(triangles, n_total,
             r_, g_, b_ = c
         intens = float(intensity_face[ti])
         if intens != 1.0:
-            r_ = max(0, min(255, int(r_ * intens)))
-            g_ = max(0, min(255, int(g_ * intens)))
-            b_ = max(0, min(255, int(b_ * intens)))
+            # Hue-preserving: apply intensity, then if any channel >255 scale
+            # all by ratio so max channel hits 255 (preserves color hue
+            # instead of saturating each channel independently to white).
+            fr = r_ * intens
+            fg = g_ * intens
+            fb = b_ * intens
+            mx = fr if fr > fg else fg
+            if fb > mx: mx = fb
+            if mx > 255.0:
+                k = 255.0 / mx
+                fr *= k; fg *= k; fb *= k
+            r_ = max(0, min(255, int(fr)))
+            g_ = max(0, min(255, int(fg)))
+            b_ = max(0, min(255, int(fb)))
         out.append((float(p[0]), float(p[1]), float(p[2]), r_, g_, b_))
     return out
 

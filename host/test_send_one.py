@@ -10,32 +10,33 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-import serial
-from glb_to_points import sample_glb
+import serial, numpy as np
+from glb_to_points import sample_glb, voxelize_mesh
 from pointcloud_proto import pack_frame
 
-# Args
-zs = float(sys.argv[1]) if len(sys.argv) > 1 else 5.0
-n  = int(sys.argv[2])   if len(sys.argv) > 2 else 5000
-glb = sys.argv[3]       if len(sys.argv) > 3 else os.path.join(HERE, "anime_62459.glb")
+# Args — defaults match pov_gui.py so HDMI matches the 3D viewer.
+zs = float(sys.argv[1]) if len(sys.argv) > 1 else 1.5
+n  = int(sys.argv[2])   if len(sys.argv) > 2 else 30000
+# 默认用 Blender baked 版本 (Option A): PBR + IBL 已 bake 到 texture, 颜色接近 3D Viewer
+glb_default = os.path.join(HERE, "anime_62459_baked.glb")
+if not os.path.exists(glb_default):
+    glb_default = os.path.join(HERE, "anime_62459.glb")
+glb = sys.argv[3] if len(sys.argv) > 3 else glb_default
 port = "COM10"
 baud = 921600
 
-print(f"sampling {n} pts from {os.path.basename(glb)}, z_stretch={zs}...")
-pts = sample_glb(glb, n_points=n, target_scale=40,
-                 color_mode="keep", brighten=1.0, gamma=1.0,
-                 lighting="studio", ambient=0.3,
-                 z_stretch=zs, verbose=False,
-                 crop_top_frac=0.0)
-print(f"  sampled {len(pts)} pts; sample p0={pts[0]}")
-
-z_vals = [p[2] for p in pts]
+print(f"voxelize_mesh (Option A: 3D triangle rasterization) {os.path.basename(glb)}, z_stretch={zs}...")
+new_pts = voxelize_mesh(glb, target_scale=40, z_stretch=zs, voxel_size=1.0, verbose=True,
+                        brighten=2.0, gamma=0.6, saturation=2.5,
+                        lighting="none", ambient=1.0)
+print(f"  → {len(new_pts)} mesh-aware voxel cells; sample p0={new_pts[0]}")
+z_vals = [p[2] for p in new_pts]
 print(f"  z range: [{min(z_vals)}..{max(z_vals)}]")
 
 print(f"opening {port}@{baud}...")
 ser = serial.Serial(port, baud, timeout=0)
-buf = pack_frame(0, pts, compressed=True)
-print(f"sending {len(buf)} bytes (header + 5×{len(pts)} pts compressed)...")
+buf = pack_frame(0, new_pts, compressed=True)
+print(f"sending {len(buf)} bytes (cloud format, host-averaged)...")
 # Drain RX during long send to keep PC USB buffer alive
 t0 = time.time()
 CHUNK = 32768

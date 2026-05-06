@@ -81,8 +81,9 @@ POINTS_LOOP:
                     int py = sy + dy;
                     if (px < SLICE_W && py < SLICE_H) {
                         int off = (dst_y + py) * fb_stride + (dst_x + px) * 3;
-                        fb[off + 0] = p.b;
-                        fb[off + 1] = p.g;
+                        /* HDMI fb 字节序 = GBR (verified 2026-04-27 anime test) */
+                        fb[off + 0] = p.g;
+                        fb[off + 1] = p.b;
                         fb[off + 2] = p.r;
                     }
                 }
@@ -180,8 +181,9 @@ POINTS_IN_SLICE:
                         int py = sy + dy;
                         if (px < SLICE_W && py < SLICE_H) {
                             int off = py * slot_stride + px * 3;
-                            slot[off + 0] = p.b;
-                            slot[off + 1] = p.g;
+                            /* HDMI fb 字节序 = GBR */
+                            slot[off + 0] = p.g;
+                            slot[off + 1] = p.b;
                             slot[off + 2] = p.r;
                         }
                     }
@@ -271,8 +273,9 @@ XX_LOOP:
                     uint8_t r5 = (uint8_t)((rgb >> 11) & 0x1F);
                     uint8_t g6 = (uint8_t)((rgb >> 5)  & 0x3F);
                     uint8_t b5 = (uint8_t)( rgb        & 0x1F);
-                    slot[off + 0] = (uint8_t)((b5 << 3) | (b5 >> 2));
-                    slot[off + 1] = (uint8_t)((g6 << 2) | (g6 >> 4));
+                    /* HDMI fb 字节序 = GBR */
+                    slot[off + 0] = (uint8_t)((g6 << 2) | (g6 >> 4));
+                    slot[off + 1] = (uint8_t)((b5 << 3) | (b5 >> 2));
                     slot[off + 2] = (uint8_t)((r5 << 3) | (r5 >> 2));
                 } else {
                     slot[off + 0] = 0;

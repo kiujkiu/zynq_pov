@@ -22,7 +22,8 @@ cmd = [
     "-video_size", "1280x720",
     "-framerate", "30",
     "-i", f"video={device}",
-    "-frames:v", "60",     # ~2 sec stream — drains stale buffered frames
+    "-frames:v", "15",     # ~0.5 sec — drains stale frames but minimizes
+                           # rotation motion blur (board rotates 36°/sec).
     "-update", "1",         # overwrite same file each frame
     out,
 ]

@@ -113,3 +113,14 @@ hls_proj/pov_voxel_slice_ip.zip
 
 # === Generated voxel files ===
 *.vxg
+
+# === Vivado journal files at repo root ===
+/vivado.jou
+/vivado_*.backup.jou
+/vivado_*.str
+
+# === Transient capture/comparison images ===
+/hdmi_fast.jpg
+/lighting_compare.png
+/pc_reference.png
+/pc_v2.png

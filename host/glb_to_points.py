@@ -308,7 +308,7 @@ def sample_triangles(triangles, n_total,
 
 
 def normalize_and_quantize(points, target_scale=40, color_mode="height", brighten=1.0, gamma=1.0,
-                            z_stretch=1.0, crop_top_frac=0.0):
+                            z_stretch=1.0, crop_top_frac=0.0, saturation=1.0):
     """color_mode:
       'height'  : Y-axis gradient (default, anime palette)
       'uniform' : all points pink  — avoids weird segmentation
@@ -317,11 +317,11 @@ def normalize_and_quantize(points, target_scale=40, color_mode="height", brighte
     brighten: multiplier for rgb values, clipped to 255 (1.0=no change, 2.0=double).
     z_stretch: multiply quantized z by this factor (clamped to [-127,127]) so
       thin anime models don't look squished at 90°/270° rotation.
-    crop_top_frac: 0.0 = no crop (whole model). 0.25 = keep top 25% of Y range
-      (head only for upright character). After crop, points are re-normalized
-      so the cropped region fills the ±target_scale voxel space → voxel
-      resolution effectively concentrated on visible region.
+    crop_top_frac: 0.0 = no crop (whole model). 0.25 = keep top 25% of Y range.
+    saturation: HSV S boost. 1.0=keep, 1.5=mild pop, 2.5=very vivid. Helps when
+      RGB565 quantization + downstream blur washes out hue distinction.
     """
+    import colorsys
     if not points:
         return []
     arr = np.array([[p[0], p[1], p[2]] for p in points], dtype=np.float32)
@@ -390,6 +390,13 @@ def normalize_and_quantize(points, target_scale=40, color_mode="height", brighte
                 r = min(255, int(r * ratio))
                 g = min(255, int(g * ratio))
                 b = min(255, int(b * ratio))
+        if saturation != 1.0:
+            # HSV saturation boost: helps recover hue distinction lost to
+            # RGB565 + voxel block + JPG downstream chain.
+            h, s, v = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
+            s = min(1.0, s * saturation)
+            r2, g2, b2 = colorsys.hsv_to_rgb(h, s, v)
+            r = int(r2 * 255); g = int(g2 * 255); b = int(b2 * 255)
         out.append((ix, iy, iz, int(r) & 0xFF, int(g) & 0xFF, int(b) & 0xFF))
     return out
 
@@ -398,7 +405,7 @@ def sample_glb(path, n_points=500, target_scale=40, verbose=True,
                color_mode="height", brighten=1.0, gamma=1.0,
                lighting="none", ambient=0.35,
                light_dir=(0.3, 0.7, 0.6),
-               z_stretch=1.0, crop_top_frac=0.0):
+               z_stretch=1.0, crop_top_frac=0.0, saturation=1.0):
     triangles = load_glb(path, verbose=verbose)
     points = sample_triangles(triangles, n_points,
                               lighting=lighting, ambient=ambient,
@@ -406,7 +413,164 @@ def sample_glb(path, n_points=500, target_scale=40, verbose=True,
     return normalize_and_quantize(points, target_scale, color_mode=color_mode,
                                   brighten=brighten, gamma=gamma,
                                   z_stretch=z_stretch,
-                                  crop_top_frac=crop_top_frac)
+                                  crop_top_frac=crop_top_frac,
+                                  saturation=saturation)
+
+
+def voxelize_mesh(path, target_scale=40, z_stretch=1.0, voxel_size=1.0, verbose=True,
+                  brighten=1.0, gamma=1.0, saturation=1.0,
+                  lighting="half-lambert", ambient=0.5,
+                  light_dir=(0.3, 0.7, 0.6)):
+    """Mesh-aware voxel rasterization (Option A) with optional lighting.
+
+    每 triangle 取 centroid 落入的 voxel cell, 写入该 triangle 的 baseColor
+    纹理颜色 (× lighting intensity). 多个 triangles 落同 cell 时累加平均.
+    相邻 voxel 共享同一 triangle 时颜色一致 → 大色块连续, 接近 3D Viewer.
+
+    Lighting: anime baseColor 平均亮度 47%, 不打 lighting 颜色偏灰. half-lambert
+    给 normal 朝光面 ~2x 提亮, 接近 IBL + tonemapping 视觉.
+
+    Returns: list of (x, y, z, r, g, b) tuples (model coords -128..127).
+    """
+    triangles = load_glb(path, verbose=verbose)
+
+    # 1) Compute AABB and normalization
+    all_pts = np.array([p for t in triangles for p in t[:3]], dtype=np.float32)
+    cmin, cmax = all_pts.min(axis=0), all_pts.max(axis=0)
+    center = (cmin + cmax) / 2
+    span = (cmax - cmin).max()
+    if span <= 0:
+        return []
+    scale = (2 * target_scale) / span
+
+    # 2) Pre-compute triangle areas (used for area-weighted color & filtering)
+    n_tri = len(triangles)
+    areas = np.zeros(n_tri, dtype=np.float32)
+    for i, (p0, p1, p2, _) in enumerate(triangles):
+        e1 = (p1 - p0).astype(np.float32)
+        e2 = (p2 - p0).astype(np.float32)
+        areas[i] = 0.5 * float(np.linalg.norm(np.cross(e1, e2)))
+    # 过滤掉最小的 30% triangles (减 cells 数 + 大色块更稳定)
+    area_thresh = float(np.percentile(areas, 30))
+    if verbose:
+        print(f"  filter: skip area < {area_thresh:.5f} (drop bottom 30%)")
+
+    # 3) For each (kept) triangle, compute centroid + texture color, mark voxel
+    voxel_acc = {}  # idx → [r_sum, g_sum, b_sum, area_sum]
+    print_every = max(1, n_tri // 20)
+
+    light = np.array(light_dir, dtype=np.float32)
+    light = light / np.linalg.norm(light)
+
+    import math
+    for ti, (p0, p1, p2, color_info) in enumerate(triangles):
+        if areas[ti] < area_thresh:
+            continue
+        if verbose and ti % print_every == 0:
+            print(f"  rasterize {ti}/{n_tri}...")
+        # Normalize triangle vertices
+        n0 = (p0 - center) * scale
+        n1 = (p1 - center) * scale
+        n2 = (p2 - center) * scale
+        n0 = n0.astype(np.float32); n1 = n1.astype(np.float32); n2 = n2.astype(np.float32)
+        n0[2] *= z_stretch; n1[2] *= z_stretch; n2[2] *= z_stretch
+
+        # Triangle centroid + UV centroid for texture sample
+        if color_info[0] == "tex":
+            _, tex, uv0, uv1, uv2 = color_info
+            uv = (uv0 + uv1 + uv2) / 3
+            tx = int((uv[0] % 1.0) * tex.shape[1]) % tex.shape[1]
+            ty = int((1.0 - (uv[1] % 1.0)) * tex.shape[0]) % tex.shape[0]
+            px = tex[ty, tx]
+            tri_r, tri_g, tri_b = float(px[0]), float(px[1]), float(px[2])
+        else:
+            tri_r, tri_g, tri_b = float(color_info[1][0]), float(color_info[1][1]), float(color_info[1][2])
+
+        # Simplified PBR with multi-direction IBL (Option B)
+        # 关键: 不 global brighten, 用 per-channel lighting intensity 模拟 IBL.
+        # 黑色 baseColor 保持黑 (剑), 亮色 baseColor 鲜艳 (头发金黄/披风蓝).
+        if lighting != "none":
+            e1_raw = (p1 - p0).astype(np.float32)
+            e2_raw = (p2 - p0).astype(np.float32)
+            normal_raw = np.cross(e1_raw, e2_raw)
+            nlen_raw = np.linalg.norm(normal_raw)
+            if nlen_raw > 1e-6:
+                normal_raw /= nlen_raw
+                # Multi-direction IBL: 4 light sources 模拟环境光
+                # Key (上前方暖光) + Fill (左下冷光) + Sky (上方冷光) + Ground (下方暖)
+                key_dir = np.array([0.3, 0.7, 0.6], dtype=np.float32)
+                key_dir /= np.linalg.norm(key_dir)
+                fill_dir = np.array([-0.5, 0.3, 0.4], dtype=np.float32)
+                fill_dir /= np.linalg.norm(fill_dir)
+                sky_dir = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+                ground_dir = np.array([0.0, -1.0, 0.0], dtype=np.float32)
+
+                ndl_k = max(0.0, float(np.dot(normal_raw, key_dir)))
+                ndl_f = max(0.0, float(np.dot(normal_raw, fill_dir)))
+                ndl_s = max(0.0, float(np.dot(normal_raw, sky_dir)))
+                ndl_g = max(0.0, float(np.dot(normal_raw, ground_dir)))
+
+                # Per-channel lighting (warm key, cool fill, cool sky, warm ground)
+                # 整体亮度范围 [ambient, ambient + 1.0]
+                li_r = ambient + 0.55 * ndl_k + 0.20 * ndl_f + 0.15 * ndl_s + 0.10 * ndl_g
+                li_g = ambient + 0.50 * ndl_k + 0.25 * ndl_f + 0.20 * ndl_s + 0.05 * ndl_g
+                li_b = ambient + 0.40 * ndl_k + 0.35 * ndl_f + 0.30 * ndl_s + 0.02 * ndl_g
+
+                # Per-channel apply (不做全局 brighten, 暗 baseColor 仍暗)
+                tri_r *= li_r
+                tri_g *= li_g
+                tri_b *= li_b
+        tri_r = max(0, min(255, int(tri_r)))
+        tri_g = max(0, min(255, int(tri_g)))
+        tri_b = max(0, min(255, int(tri_b)))
+
+        # 每 triangle 只标 centroid voxel. Max-area-wins: 每 voxel 取
+        # 落入它的最大 triangle 颜色 (小三角面不参与, 避免不同物体混色).
+        # 比如剑 (黑) 和 披风 (蓝) 的 triangle 都落到同一 voxel, 取面积大的
+        # 那个保留纯色 → 剑保持黑, 披风保持蓝, 不混合成灰紫.
+        p = (n0 + n1 + n2) / 3.0
+        vx = int(math.floor(p[0] / voxel_size)) * int(voxel_size)
+        vy = int(math.floor(p[1] / voxel_size)) * int(voxel_size)
+        vz = int(math.floor(p[2] / voxel_size)) * int(voxel_size)
+        if not (-128 <= vx < 128 and -128 <= vy < 128 and -128 <= vz < 128):
+            continue
+        idx = (vz + 128) * 65536 + (vy + 128) * 256 + (vx + 128)
+        w = float(areas[ti])
+        rec = voxel_acc.get(idx)
+        if rec is None or w > rec[3]:
+            voxel_acc[idx] = [float(tri_r), float(tri_g), float(tri_b), w]
+
+    # 4) Output (x, y, z, r, g, b) — max-area-wins, 颜色未平均
+    out = []
+    for idx, (rs, gs, bs, _w) in voxel_acc.items():
+        vx = (idx & 0xFF) - 128
+        vy = ((idx >> 8) & 0xFF) - 128
+        vz = ((idx >> 16) & 0xFF) - 128
+        r = int(rs)
+        g = int(gs)
+        b = int(bs)
+        # 统一应用 gamma/brighten/saturation, 不做 selective enhance (避免迷彩对比)
+        if gamma != 1.0:
+            r = int(255 * pow(max(0, r) / 255.0, gamma))
+            g = int(255 * pow(max(0, g) / 255.0, gamma))
+            b = int(255 * pow(max(0, b) / 255.0, gamma))
+        if brighten != 1.0:
+            mx = max(r, g, b)
+            if mx > 0:
+                target = min(255, int(mx * brighten))
+                k = target / mx
+                r = int(r * k); g = int(g * k); b = int(b * k)
+        if saturation != 1.0:
+            import colorsys
+            h, s, v = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
+            s = min(1.0, s * saturation)
+            r2, g2, b2 = colorsys.hsv_to_rgb(h, s, v)
+            r = int(r2 * 255); g = int(g2 * 255); b = int(b2 * 255)
+        r = max(0, min(255, r)); g = max(0, min(255, g)); b = max(0, min(255, b))
+        out.append((vx, vy, vz, r, g, b))
+    if verbose:
+        print(f"  voxelize_mesh → {len(out)} occupied cells from {n_tri} triangles")
+    return out
 
 
 if __name__ == "__main__":

@@ -22,32 +22,38 @@ VRES = 256
 WORLD_HALF = 128
 
 def host_voxelize(points):
-    """Quantize points → set of (idx24, rgb565). idx = vz*256² + vy*256 + vx."""
+    """Quantize points → set of (idx24, rgb565). idx = vz*256² + vy*256 + vx.
+    同 cell 多点取 RGB888 平均色 (vs last-write 随机覆盖) → 高密度区颜色更稳."""
     if not points:
         return []
     arr = np.array(points, dtype=np.int32)
     xs, ys, zs = arr[:, 0], arr[:, 1], arr[:, 2]
     rs, gs, bs = arr[:, 3], arr[:, 4], arr[:, 5]
-    # Map model coord [-WORLD_HALF, WORLD_HALF) → voxel index [0, VRES)
     vx = xs + WORLD_HALF
     vy = ys + WORLD_HALF
     vz = zs + WORLD_HALF
     in_range = (vx >= 0) & (vx < VRES) & (vy >= 0) & (vy < VRES) & (vz >= 0) & (vz < VRES)
     vx, vy, vz = vx[in_range], vy[in_range], vz[in_range]
     rs, gs, bs = rs[in_range], gs[in_range], bs[in_range]
-    # Pack RGB565
-    r5 = (rs.astype(np.uint16) >> 3) & 0x1F
-    g6 = (gs.astype(np.uint16) >> 2) & 0x3F
-    b5 = (bs.astype(np.uint16) >> 3) & 0x1F
-    rgb565 = (r5 << 11) | (g6 << 5) | b5
     # Linear voxel index
     idx = (vz.astype(np.uint32) * VRES + vy.astype(np.uint32)) * VRES + vx.astype(np.uint32)
-    # Dedup: last-write-wins by sorting + taking last duplicate's color.
-    # Simplest: dict idx→rgb (last wins implicitly if iterate in order).
-    cells = {}
-    for i in range(len(idx)):
-        cells[int(idx[i])] = int(rgb565[i])
-    return list(cells.items())
+    # Group by cell, average R/G/B (vectorized with np.add.at)
+    unique_idx, inverse = np.unique(idx, return_inverse=True)
+    n_cells = len(unique_idx)
+    r_sum = np.zeros(n_cells, dtype=np.int64)
+    g_sum = np.zeros(n_cells, dtype=np.int64)
+    b_sum = np.zeros(n_cells, dtype=np.int64)
+    counts = np.zeros(n_cells, dtype=np.int64)
+    np.add.at(r_sum, inverse, rs)
+    np.add.at(g_sum, inverse, gs)
+    np.add.at(b_sum, inverse, bs)
+    np.add.at(counts, inverse, 1)
+    r_avg = (r_sum // counts).clip(0, 255).astype(np.uint16)
+    g_avg = (g_sum // counts).clip(0, 255).astype(np.uint16)
+    b_avg = (b_sum // counts).clip(0, 255).astype(np.uint16)
+    # Pack RGB565 from averaged RGB888
+    rgb565 = ((r_avg >> 3) << 11) | ((g_avg >> 2) << 5) | (b_avg >> 3)
+    return list(zip(unique_idx.tolist(), rgb565.tolist()))
 
 
 def main():

@@ -13,7 +13,7 @@
 						"AP_START": { "actual": "ap_start"}
 					}
 				},
-				"grp_pov_project_batch_Pipeline_LOAD_MODEL_fu_188/grp_pov_project_batch_Pipeline_LOAD_MODEL_fu_188_activity": {
+				"grp_pov_project_batch_Pipeline_LOAD_MODEL_fu_210/grp_pov_project_batch_Pipeline_LOAD_MODEL_fu_210_activity": {
 					"interface": "xilinx.com:interface:internal_hls_dataflow:1.0",
 					"ports": {
 						"AP_CLK": { "actual": "ap_clk"},
@@ -23,7 +23,7 @@
 						"AP_START": { "actual": "ap_start"}
 					}
 				},
-				"grp_pov_project_batch_Pipeline_SLICES_LOOP_POINTS_IN_SLICE_fu_205/grp_pov_project_batch_Pipeline_SLICES_LOOP_POINTS_IN_SLICE_fu_205_activity": {
+				"grp_pov_project_batch_Pipeline_SLICES_LOOP_POINTS_IN_SLICE_fu_227/grp_pov_project_batch_Pipeline_SLICES_LOOP_POINTS_IN_SLICE_fu_227_activity": {
 					"interface": "xilinx.com:interface:internal_hls_dataflow:1.0",
 					"ports": {
 						"AP_CLK": { "actual": "ap_clk"},

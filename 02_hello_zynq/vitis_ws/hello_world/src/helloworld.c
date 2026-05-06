@@ -25,6 +25,7 @@
 #include "xgpio.h"
 #include "sleep.h"
 #include "xil_cache.h"
+#include "xil_mmu.h"   /* Xil_SetTlbAttributes for ring buffer non-cacheable */
 #include "xil_io.h"
 #include "xiltimer.h"
 
@@ -120,7 +121,14 @@ typedef struct __attribute__((aligned(16))) {
 #define MODEL_ADDR      0x1A000000UL    /* 1M points × 16B = 16 MB */
 #define MAX_POINTS      1048576          /* 1M */
 static PovPoint * const model = (PovPoint *)MODEL_ADDR;
-static int model_n = 0;
+static volatile int model_n = 0;   /* volatile: hybrid mode main loop 实时切换需要 */
+
+/* Helper: force ARM cache + register flush, return current model_n. compiler
+ * 不能 hoist 因为 it's a non-inline function with side effects. */
+__attribute__((noinline)) static int read_model_n(void) {
+    __asm__ __volatile__("dsb sy" ::: "memory");
+    return model_n;
+}
 
 /* ---------------------------------------------------------------------- */
 /* Voxel grid                                                             */
@@ -140,7 +148,10 @@ static int model_n = 0;
 #define VOXEL_GRID_ADDR  0x18000000UL          /* 32 MB grid moved past FB_B */
 #define VOXEL_BYTES      (VOXEL_RES * VOXEL_RES * VOXEL_RES * 2)   /* 32 MB */
 static u16 * const voxel_grid = (u16 *)VOXEL_GRID_ADDR;
-static int voxel_n_occupied = 0;
+static volatile int voxel_n_occupied = 0;
+/* 主循环 / uart_poll_frame 共享: 收到新点云后置 1, 让主循环重画右侧 grid.
+ * volatile: uart_poll_frame 在 cpu_render 内部被嵌套调用, 不希望编译器优化. */
+static volatile int right_dirty_g = 1;
 
 /* Compact list of occupied voxels for fast render iteration (vs scanning
  * 256K cells). Each entry packs (vx, vy, vz, rgb565). MAX_OCCUPIED chosen
@@ -222,6 +233,9 @@ typedef struct __attribute__((packed)) {
     uint16_t flags;
     uint16_t reserved;
 } pc_hdr_t;
+
+/* model_n: volatile 让 main loop 看到 uart_poll_frame 内部的更新 (hybrid mode 切换) */
+/* (defined in build_model area but forward-declare volatile here for use_pl path) */
 
 /* Receiver state machine: keep pulling bytes until a full valid frame lands,
  * or no more bytes available. On success, copies into `model[]`, sets
@@ -366,13 +380,20 @@ static int uart_poll_frame(void)
                         Xil_DCacheFlushRange(VOXEL_GRID_ADDR, VOXEL_BYTES);
                     } else {
                         model_n = rx_expected_pts;
+                        __asm__ __volatile__("dsb sy" ::: "memory");
+                        xil_printf("[rxdone] model_n set to %d\r\n", model_n);
                         Xil_DCacheFlushRange(MODEL_ADDR, model_n * sizeof(PovPoint));
+#if !USE_PL
+                        /* USE_PL=1 时 PL IP 直接用 model[], 不需 voxel_grid.
+                         * 跳过 voxelize_model 避免 32MB memset 阻塞 UART. */
                         voxelize_model();
+#endif
                     }
                     rx_state = RX_HDR;
                     rx_hdr_got = 0;
                     rx_magic_sync = 0;
                     frame_ready = 1;
+                    right_dirty_g = 1;   /* 触发主循环重画右侧 grid */
                     /* First-frame dump to compare with Host */
                     static int dumped = 0;
                     if (!dumped) {
@@ -484,9 +505,12 @@ static void add_line(int16_t x0, int16_t y0, int16_t z0,
 static void build_model(void)
 {
     model_n = 0;
-    add_line(-50, 0, 0, 50, 0, 0, 40, 255, 0, 0);
-    add_line(0, -50, 0, 0, 50, 0, 40, 0, 255, 0);
-    add_line(0, 0, -50, 0, 0, 50, 40, 0, 0, 255);
+    /* POV 物理坐标: X 水平左右, Y 水平前后(深度), Z 垂直上下 (LED 板旋转轴).
+     * 板内部 my 是屏幕垂直, mz 是深度旋转. 把 Y(深度)→GREEN, Z(垂直)→BLUE 让
+     * BLUE 沿屏幕垂直显示, 与 POV 物理意义对齐. */
+    add_line(-50, 0, 0, 50, 0, 0, 40, 255, 0, 0);   /* X: RED, 水平 */
+    add_line(0, 0, -50, 0, 0, 50, 40, 0, 255, 0);   /* Y: GREEN, 深度(旋转中) */
+    add_line(0, -50, 0, 0, 50, 0, 40, 0, 0, 255);   /* Z: BLUE, 垂直 */
 
     const int16_t S = 30;
     add_line(-S, -S, -S,  S, -S, -S, 15, 200, 200, 255);
@@ -770,14 +794,15 @@ static void arm_draw_borders(UINTPTR fb_base)
 }
 
 /* ---------------------------------------------------------------------- */
-/* CPU path (for A/B comparison) */
+/* CPU path (for A/B comparison + hybrid mode boot rendering) */
 
-#if !USE_PL
+#if 1   /* always-compile for hybrid: boot ARM render even with USE_PL=1 */
 static inline void put_pixel_fb(u32 x, u32 y, u8 r, u8 g, u8 b)
 {
     if (x >= WIDTH || y >= HEIGHT) return;
     u8 *p = (u8 *)FRAMEBUF_ADDR + y * STRIDE + x * 3;
-    p[0] = b; p[1] = g; p[2] = r;
+    /* HDMI VDMA reads bytes as (G,B,R) — verified by anime test 2026-04-27. */
+    p[0] = g; p[1] = b; p[2] = r;
 }
 
 /* Slice thickness: points whose rotated-Z is within ±SLICE_HALF_THICK are in-slice.
@@ -868,15 +893,15 @@ static void cpu_render_panel(UINTPTR fb_base, int angle_deg,
     u8 bB = slice_mode ? 80 : 80;
     for (int xx = 0; xx < panel_w; xx++) {
         u8 *p = fb + origin_y * STRIDE + (origin_x + xx) * 3;
-        p[0]=bB; p[1]=bG; p[2]=bR;
+        p[0]=bG; p[1]=bB; p[2]=bR;
         p = fb + (origin_y + panel_h - 1) * STRIDE + (origin_x + xx) * 3;
-        p[0]=bB; p[1]=bG; p[2]=bR;
+        p[0]=bG; p[1]=bB; p[2]=bR;
     }
     for (int yy = 0; yy < panel_h; yy++) {
         u8 *p = fb + (origin_y + yy) * STRIDE + origin_x * 3;
-        p[0]=bB; p[1]=bG; p[2]=bR;
+        p[0]=bG; p[1]=bB; p[2]=bR;
         p = fb + (origin_y + yy) * STRIDE + (origin_x + panel_w - 1) * 3;
-        p[0]=bB; p[1]=bG; p[2]=bR;
+        p[0]=bG; p[1]=bB; p[2]=bR;
     }
 
     int cx = panel_w / 2;
@@ -902,7 +927,7 @@ static void cpu_render_panel(UINTPTR fb_base, int angle_deg,
             for (int dy = 0; dy < 2; dy++) {
                 for (int dx = 0; dx < 2; dx++) {
                     u8 *p = fb + (origin_y + sy + dy) * STRIDE + (origin_x + sx + dx) * 3;
-                    p[0] = b_; p[1] = g_; p[2] = r_;
+                    p[0] = g_; p[1] = b_; p[2] = r_;
                 }
             }
         }
@@ -937,8 +962,11 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
     int cx = panel_w / 2;
     int cy = panel_h / 2;
 
-    /* Slab thickness for slice_mode=1: 1 voxel cell (= 2 model units). */
-    const int SLAB_HALF = VOXEL_CELL_SIZE / 2 + 1;
+    /* Slab thickness for slice_mode=1: 12 model units = 6 voxel cells.
+     * 原 2 unit 太薄, anime 30K 点切片只剩 3-4% voxel 显得空; 12 unit 大约
+     * 22% voxel 进入切片, 视觉密度足够辨认轮廓. POV 真实是 thin slice 但
+     * 平面显示需要可视化, 加厚是 trade-off. */
+    const int SLAB_HALF = 12;
 
     uart_poll_frame();
 
@@ -986,7 +1014,7 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
         for (int dy = 0; dy < block; dy++) {
             u8 *p = fb + (origin_y + sy + dy) * STRIDE + (origin_x + sx) * 3;
             for (int dx = 0; dx < block; dx++) {
-                p[0] = b; p[1] = g; p[2] = r;
+                p[0] = g; p[1] = b; p[2] = r;
                 p += 3;
             }
         }
@@ -1060,8 +1088,9 @@ int main(void)
     /* Clear BOTH framebuffers at boot so VDMA starts on known black. */
     memset((void *)FB_A_ADDR, 0, FRAME_BYTES);
     memset((void *)FB_B_ADDR, 0, FRAME_BYTES);
-    Xil_DCacheFlushRange(FB_A_ADDR, FRAME_BYTES);
-    Xil_DCacheFlushRange(FB_B_ADDR, FRAME_BYTES);
+    Xil_DCacheFlush();
+
+    /* DEBUG: 移除 MMU non-cacheable 配置, 验证 PL m_axi 是否还工作 */
 
     build_model();
     /* Model lives in DDR; flush once so IP sees it via HP1 (not cache-coherent) */
@@ -1143,9 +1172,11 @@ int main(void)
     u32 stream_frames = 0;
     UINTPTR fb_bufs[2] = { FB_A_ADDR, FB_B_ADDR };
     u32 write_idx = 1;   /* VDMA reads 0 first, we write to 1 */
+    /* right_dirty_g 是全局 volatile, 由 uart_poll_frame 内部置 1 (避免嵌套调用丢事件) */
 
     while (1) {
-        if (uart_poll_frame()) {
+        int got_frame = uart_poll_frame();
+        if (got_frame) {
             stream_frames++;
             /* Verify ARM wrote the new model to DDR + first byte reads back */
             Xil_DCacheInvalidateRange(MODEL_ADDR, 16);
@@ -1164,11 +1195,15 @@ int main(void)
         /* No pre-clear needed: we full-blit from ring buffer below, covers entire grid. */
 #endif
 #if USE_PL
-        /* Ring buffer is the primary render target (feeds LED driver). */
+        /* PL render 只在收到大数据集后启动. boot 时 model_n=315 (cube),
+         * anime 是 30K → 用 model_n > 1000 区分. 持续 PL render 会
+         * 干扰 UART (RX FIFO 64B, 32MB voxelize_model memset 阻塞 200ms),
+         * 让 ARM boot 阶段全心处理 UART, anime 接收完成 model_n 跳到
+         * 30K 后 PL 启动. */
+        /* Plain USE_PL=1: always PL render (regression test 看 PL m_axi 是否还工作) */
         pov_render_frame_to_ring(phase);
-        /* HDMI preview: blit ring slots to fb only every 3rd frame to boost
-         * ring throughput. Reducing visual smoothness is fine for debug preview. */
         if ((frame % 3) == 0) {
+            Xil_DCacheInvalidateRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
             for (int s = 0; s < N_SLOTS; s++) {
                 u32 col = s % GRID_COLS;
                 u32 row = s / GRID_COLS;
@@ -1181,53 +1216,76 @@ int main(void)
                 }
             }
             Xil_DCacheFlushRange(fb_write, FRAME_BYTES);
+            /* DEBUG: ring nonzero */
+            static u32 vd = 0;
+            if ((vd++ & 0x3F) == 0) {
+                volatile u8 *r = (volatile u8 *)RING_BUFFER_ADDR;
+                u32 nz = 0;
+                for (u32 b = 0; b < 100000; b++) if (r[b]) nz++;
+                xil_printf("[ringV] nz=%u/100K [0..3]=%02x%02x%02x%02x\r\n",
+                           (unsigned)nz, r[0],r[1],r[2],r[3]);
+            }
         }
 #else
         /* Layout:
-         *   LEFT 640×720: full 3D projection rotating 10s/cycle.
-         *   RIGHT 640×720: static 6×6 grid of 36 z-slices, every 10° (0..350).
-         *     Each grid cell ≈ 106×120 px (640/6 ≈ 106, 720/6 = 120).
-         * Both update from Global Timer (independent of FPS). */
+         *   LEFT 640×720: full 3D projection rotating 10s/cycle (每帧重画).
+         *   RIGHT 640×720: 2×2 = 4 切片 cell, 静态 (only on new pointcloud).
+         * Right grid 按需渲染: 收到新点云时同时写 fb_A + fb_B 一次, 平时
+         * 主循环只画 LEFT, 让 ARM 跑到 60 FPS 不与 VDMA vsync 冲突. */
         {
             const int PW = WIDTH / 2;
             const int PH = HEIGHT;
             const int LEFT_SCALE = 400;
+
+            /* (1) 右侧 grid: 仅 dirty 时一次性写两个 fb. 4×6 = 24 cells,
+             * 每 15°/cell 覆盖 360° (POV 切片预览, cell 大小适中能看细节). */
+            if (right_dirty_g) {
+                right_dirty_g = 0;
+                u64 rt0 = gt_read();
+                const int GCOLS = 4;
+                const int GROWS = 6;
+                const int CW = PW / GCOLS;        /* 160 */
+                const int CH = PH / GROWS;        /* 120 */
+                const int CELL_SCALE = 130;       /* 模型 ±54 → 屏幕 ±70 px, 占 cell 一半多 */
+                for (int fbi = 0; fbi < 2; fbi++) {
+                    UINTPTR addr = fb_bufs[fbi];
+                    for (int gi = 0; gi < GCOLS * GROWS; gi++) {
+                        int gc = gi % GCOLS;
+                        int gr = gi / GCOLS;
+                        int ox = PW + gc * CW;
+                        int oy = gr * CH;
+                        int ang = (gi * 15) % 360;
+                        cpu_render_voxel_panel(addr, ang, ox, oy, CW, CH, 1, CELL_SCALE);
+                    }
+                    /* flush 右半侧 cache */
+                    for (int yy = 0; yy < HEIGHT; yy++) {
+                        Xil_DCacheFlushRange(addr + yy * STRIDE + PW * BPP, PW * BPP);
+                        if ((yy & 0x1F) == 0) uart_poll_frame();
+                    }
+                }
+                u64 rt1 = gt_read();
+                u32 rt_us = (u32)((rt1 - rt0) / GT_TICKS_PER_US);
+                xil_printf("[right] 24 cells x 2 fb done, voxel_n=%d, dt=%u us (%u ms)\r\n",
+                           voxel_n_occupied, rt_us, rt_us / 1000);
+            }
+
+            /* (2) LEFT 全投影旋转, 每帧重画 */
             u64 now = gt_read();
             u64 us  = (now - gt_anchor) / GT_TICKS_PER_US;
-            int left_angle = (int)((us * 36ULL / 1000000ULL) % 360ULL);
+            /* 72°/sec → 5 秒一圈完整 360° (旋转更明显) */
+            int left_angle = (int)((us * 72ULL / 1000000ULL) % 360ULL);
             uart_poll_frame();
-            /* Voxel renderer naturally produces slabs; no slice_mode arg. */
             cpu_render_voxel_panel(fb_write, left_angle, 0, 0, PW, PH, 0, LEFT_SCALE);
-
-            /* Right half: 4×4 = 16 slice cells. Cell size ~160×180, 22.5°/cell.
-             * 6×6=36 太重 (3.7M iter/帧 高密度模型 → 8 FPS); 16 cells 恢复
-             * ~25 FPS @ 100K voxels. 角度仍覆盖 360°. */
-            uart_poll_frame();
-            const int GCOLS = 4;
-            const int GROWS = 4;
-            const int CW = PW / GCOLS;        /* 106 */
-            const int CH = PH / GROWS;        /* 120 */
-            const int CELL_SCALE = 100;       /* model fits in tiny cell */
-            for (int gi = 0; gi < GCOLS * GROWS; gi++) {
-                int gc = gi % GCOLS;
-                int gr = gi / GCOLS;
-                int ox = PW + gc * CW;
-                int oy = gr * CH;
-                int ang = (gi * 10) % 360;
-                cpu_render_voxel_panel(fb_write, ang, ox, oy, CW, CH, 1, CELL_SCALE);
-            }
         }
 #endif
 
 #if !USE_PL
-        /* Split cache flush of 2.76 MB framebuffer into chunks with UART poll.
-         * Whole-flush takes ~2.7ms; @ 921600 baud RX FIFO overflows in 0.69ms. */
+        /* Cache flush 仅 LEFT 半屏 (右侧由 dirty 路径自管). 1.38 MB / 帧. */
         {
-            const u32 CHUNK = 64 * 1024;          /* 64 KB ≈ 64us flush time */
-            for (u32 off = 0; off < FRAME_BYTES; off += CHUNK) {
-                u32 sz = (off + CHUNK > FRAME_BYTES) ? (FRAME_BYTES - off) : CHUNK;
-                Xil_DCacheFlushRange(fb_write + off, sz);
-                uart_poll_frame();
+            const u32 LEFT_W_BYTES = (WIDTH / 2) * BPP;
+            for (int yy = 0; yy < HEIGHT; yy++) {
+                Xil_DCacheFlushRange(fb_write + yy * STRIDE, LEFT_W_BYTES);
+                if ((yy & 0x1F) == 0) uart_poll_frame();
             }
         }
 #endif
@@ -1237,7 +1295,10 @@ int main(void)
          * IMPORTANT: drain UART inside wait loop or RX FIFO overflows during
          * 16ms vsync wait at 921600 baud. */
         u32 cur = vdma_current_read_idx();
-        for (u32 wait = 0; wait < 50000; wait++) {
+        /* USE_PL=1 boot 阶段 main loop 太快 (60 FPS), 单 uart_poll 不够,
+         * 放大 wait limit 让 vsync wait 期间多 poll UART. 200K iter ≈ 20ms,
+         * 足够等 16.67ms 一个 vsync, 期间 ~780 次 uart_poll = 200KB/s 处理能力. */
+        for (u32 wait = 0; wait < 200000; wait++) {
             u32 now = vdma_current_read_idx();
             if (now != cur) { cur = now; break; }
             if ((wait & 0xFF) == 0) uart_poll_frame();

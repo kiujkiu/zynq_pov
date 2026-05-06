@@ -82,6 +82,8 @@ generate_target all [get_files ${bd_name}.bd] -force
 puts "=== Build bitstream ==="
 reset_run synth_1
 reset_run impl_1
+# 禁用 incremental synth (先前 graph differ crash 过, full re-synth 安全)
+set_property INCREMENTAL_CHECKPOINT "" [get_runs synth_1]
 launch_runs synth_1 -jobs 8
 wait_on_run synth_1
 puts "synth: [get_property STATUS [get_runs synth_1]]"

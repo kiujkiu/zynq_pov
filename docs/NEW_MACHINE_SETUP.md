@@ -25,6 +25,13 @@ git status                       # 确认 working tree 干净
 git push origin master           # 推到 https://github.com/kiujkiu/zynq_pov
 ```
 
+> **重要**：在 Claude Code 的 WSL bash 里直接 `git push` 会因没 TTY / 无 credential helper 报
+> `fatal: could not read Username...`。改走 Windows 端 git（用 GCM 凭证）即可：
+> ```bash
+> cmd.exe /c "cd /d D:\workspace\zynq_pov && git push origin master"
+> ```
+> 详见 `docs/claude_memory/reference_git_push_via_cmd.md`。新机装完 Git for Windows 并配过一次 GCM 后即可永久使用。
+
 ### 1.2 备份不在 repo 里的产物
 | 文件 | 路径 | 说明 |
 |---|---|---|

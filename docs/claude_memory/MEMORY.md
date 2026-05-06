@@ -17,3 +17,4 @@
 - [鹿小班 demo 工程参考](reference_luxiaoban_demo_projects.md)
 - [refresh_bit.sh 说明](reference_refresh_bit_script.md)
 - [Vivado 批处理 Tcl 用法](reference_vivado_batch_tcl.md)
+- [WSL git push 走 cmd.exe](reference_git_push_via_cmd.md) — `cmd.exe /c "cd /d D:\... && git push"` 用 Windows GCM, 不要绕 SSH/PAT

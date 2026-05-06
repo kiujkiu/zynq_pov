@@ -1,0 +1,19 @@
+- [POV3D 最终目标参数](project_pov3d_final_target.md) — 720 slice × 30 Hz × 160×180，推出 46 μs/slice 硬预算
+- [Phase 4b HLS pov IP 已完成](project_pov3d_hls_ip_done.md) — 基址、性能、限制、优化方向
+- [点云流协议](project_pov3d_stream_protocol.md) — magic PPCL + 16B 头 + point_t 数组
+- [xil_printf 不支持 %lx](feedback_xil_printf_limits.md) — 用 %x + (unsigned)
+- [HLS estimate 乐观 14×](feedback_hls_cycle_estimate_optimistic.md) — m_axi 写 DDR 实测远超 HLS 报告
+- [鹿小班以太网](project_luxiaoban_ethernet.md)
+- [以太网 TX 硬件卡住](project_luxiaoban_ethernet_blocker.md)
+- [HDMI 时钟选择](project_luxiaoban_hdmi_clocking.md)
+- [ARM 本地渲染](project_luxiaoban_local_rendering.md)
+- [PL LED 闪烁验证](project_luxiaoban_pl_leds.md)
+- [VDMA framebuffer](project_luxiaoban_vdma_framebuffer.md)
+- [HDMI FB 字节序 = GBR](project_pov3d_hdmi_fb_byte_order.md) — 写 p[0]=g; p[1]=b; p[2]=r 才能显示正确颜色
+- [uart_poll_frame 嵌套丢事件](feedback_uart_poll_nested_dispatch.md) — frame_ready 在 cpu_render 内部 poll 时被消费, 主循环看不到
+- [HDMI 颜色调参](project_pov3d_color_tuning.md) — anime 接近 3D Viewer 的 brighten/gamma/saturation 配置 + 三个固有损失
+- [USE_PL=1 UART 不稳](feedback_use_pl1_uart_unreliable.md) — anime receive ~50% stuck @ 20K, 推荐 USE_PL=0 或 hybrid mode
+- [Zynq DDR 配置](project_luxiaoban_zynq_ddr_config.md)
+- [鹿小班 demo 工程参考](reference_luxiaoban_demo_projects.md)
+- [refresh_bit.sh 说明](reference_refresh_bit_script.md)
+- [Vivado 批处理 Tcl 用法](reference_vivado_batch_tcl.md)

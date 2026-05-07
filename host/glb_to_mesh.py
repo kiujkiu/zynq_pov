@@ -49,19 +49,25 @@ def build_simplified_mesh(glb_path, target_tris=4096, target_scale=40, z_stretch
         area = 0.5 * float(np.linalg.norm(np.cross(e1, e2)))
         if area <= 0:
             continue
-        # Triangle centroid color
+        # Per-vertex uv sample (not centroid), area-weighted: 让顶点颜色更贴近
+        # 该顶点真实纹理 sample, 而不是邻居 tri 平均色.
         if color_info[0] == "tex":
             _, tex, uv0, uv1, uv2 = color_info
-            uv = (uv0 + uv1 + uv2) / 3
-            tx = int((uv[0] % 1.0) * tex.shape[1]) % tex.shape[1]
-            ty = int((1.0 - (uv[1] % 1.0)) * tex.shape[0]) % tex.shape[0]
-            px = tex[ty, tx]
-            cr, cg, cb = float(px[0]), float(px[1]), float(px[2])
+            uvs_per_vert = (uv0, uv1, uv2)
+            cols_per_vert = []
+            for uv in uvs_per_vert:
+                tx = int((uv[0] % 1.0) * tex.shape[1]) % tex.shape[1]
+                ty = int((1.0 - (uv[1] % 1.0)) * tex.shape[0]) % tex.shape[0]
+                px = tex[ty, tx]
+                cols_per_vert.append((float(px[0]), float(px[1]), float(px[2])))
         else:
-            cr, cg, cb = float(color_info[1][0]), float(color_info[1][1]), float(color_info[1][2])
+            c_solid = (float(color_info[1][0]),
+                       float(color_info[1][1]),
+                       float(color_info[1][2]))
+            cols_per_vert = (c_solid, c_solid, c_solid)
 
         tri_idx = []
-        for p_raw in (p0, p1, p2):
+        for k_v, p_raw in enumerate((p0, p1, p2)):
             n = (p_raw - center) * scale
             n = n.astype(np.float32)
             n[2] *= z_stretch
@@ -74,6 +80,7 @@ def build_simplified_mesh(glb_path, target_tris=4096, target_scale=40, z_stretch
                 vert_map[qkey] = v_idx
                 verts_pos.append([float(n[0]), float(n[1]), float(n[2])])
                 verts_col.append([0.0, 0.0, 0.0, 0.0])
+            cr, cg, cb = cols_per_vert[k_v]
             verts_col[v_idx][0] += cr * area
             verts_col[v_idx][1] += cg * area
             verts_col[v_idx][2] += cb * area

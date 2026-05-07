@@ -58,10 +58,10 @@ set(USER_COMPILE_WARNINGS_INHIBIT_ALL )
 # -----------------------------------------
 
 # Optimization level   "-O0" [None], "-O1" [Optimize] , "-O2" [Optimize More], "-O3" [Optimize Most] or "-Os" [Optimize Size]
-set(USER_COMPILE_OPTIMIZATION_LEVEL -O0)
+set(USER_COMPILE_OPTIMIZATION_LEVEL -O3)
 
 # Other flags related to optimization
-set(USER_COMPILE_OPTIMIZATION_OTHER_FLAGS )
+set(USER_COMPILE_OPTIMIZATION_OTHER_FLAGS -funroll-loops)
 
 # -----------------------------------------
 

@@ -1194,6 +1194,18 @@ static void rasterize_tri(u8 *fb, int origin_x, int origin_y,
     int x1 = v1->sx, y1 = v1->sy, z1 = v1->sz;
     int x2 = v2->sx, y2 = v2->sy, z2 = v2->sz;
 
+    /* 面积负数 = 顶点 CW 顺序; swap v1<->v2 让 area>0, 内层循环不再乘 sign */
+    int area2 = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
+    if (area2 == 0) return;
+    screen_vert_t *vv0 = v0, *vv1 = v1, *vv2 = v2;
+    if (area2 < 0) {
+        screen_vert_t *tmp = vv1; vv1 = vv2; vv2 = tmp;
+        int tx = x1, ty = y1, tz = z1;
+        x1 = x2; y1 = y2; z1 = z2;
+        x2 = tx; y2 = ty; z2 = tz;
+        area2 = -area2;
+    }
+
     /* 2D bounding box clipped to panel */
     int minx = x0; if (x1 < minx) minx = x1; if (x2 < minx) minx = x2;
     int miny = y0; if (y1 < miny) miny = y1; if (y2 < miny) miny = y2;
@@ -1205,13 +1217,10 @@ static void rasterize_tri(u8 *fb, int origin_x, int origin_y,
     if (maxy > panel_h - 1) maxy = panel_h - 1;
     if (minx > maxx || miny > maxy) return;
 
-    int area2 = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
-    if (area2 == 0) return;
-    int sign = area2 < 0 ? -1 : 1;
-    int abs_area = sign > 0 ? area2 : -area2;
+    /* 预存 1/area2 为 Q24: inv = (1<<24) / area2.
+     * 之后 b0 = s0 * inv >> 16 给 Q8.8. 替代每像素 sdiv (~12 cyc → 1 mul). */
+    const int inv_q24 = (int)((1u << 24) / (unsigned)area2);
 
-    /* Edge function eN at (px,py) = (xN+1 - xN)*(py - yN) - (yN+1 - yN)*(px - xN)
-     * Use "next-after-self" indexing: e0 uses edge v1→v2, e1 uses v2→v0, e2 uses v0→v1. */
     int A12 = -(y2 - y1), B12 = (x2 - x1);
     int A20 = -(y0 - y2), B20 = (x0 - x2);
     int A01 = -(y1 - y0), B01 = (x1 - x0);
@@ -1220,28 +1229,34 @@ static void rasterize_tri(u8 *fb, int origin_x, int origin_y,
     int e1_row = (x0 - x2) * (miny - y2) - (y0 - y2) * (minx - x2);
     int e2_row = (x1 - x0) * (miny - y0) - (y1 - y0) * (minx - x0);
 
+    int v0r = vv0->r, v0g = vv0->g, v0b = vv0->b;
+    int v1r = vv1->r, v1g = vv1->g, v1b = vv1->b;
+    int v2r = vv2->r, v2g = vv2->g, v2b = vv2->b;
+
     for (int y = miny; y <= maxy; y++) {
         int e0 = e0_row, e1 = e1_row, e2 = e2_row;
-        u8 *row = fb + (origin_y + y) * STRIDE;
+        u8 *row = fb + (origin_y + y) * STRIDE + origin_x * 3;
         int8_t *zrow = zbuf + y * panel_w;
         for (int x = minx; x <= maxx; x++) {
-            int s0 = sign * e0, s1 = sign * e1, s2 = sign * e2;
-            if ((s0 | s1 | s2) >= 0) {
-                /* Inside. Q8.8 barycentric weights */
-                int b0 = (s0 << 8) / abs_area;   /* weight for v0 */
-                int b1 = (s1 << 8) / abs_area;
+            /* area2 已正, 无需再乘 sign */
+            if ((e0 | e1 | e2) >= 0) {
+                /* Q8.8 barycentric: b = e * inv_q24 >> 16. e 最大 ~640*640 ≤ 19 bits;
+                 * inv_q24 ≤ 24 bits → 乘积 43 bits, 32-bit signed 会溢出.
+                 * 用 long long 一次. */
+                int b0 = (int)(((long long)e0 * inv_q24) >> 16);
+                int b1 = (int)(((long long)e1 * inv_q24) >> 16);
                 int b2 = 256 - b0 - b1;
                 int z = (b0 * z0 + b1 * z1 + b2 * z2) >> 8;
                 int8_t zv = (int8_t)sat_int8(z);
                 if (zv > zrow[x]) {
                     zrow[x] = zv;
-                    int r  = (b0 * v0->r + b1 * v1->r + b2 * v2->r) >> 8;
-                    int g_ = (b0 * v0->g + b1 * v1->g + b2 * v2->g) >> 8;
-                    int b_ = (b0 * v0->b + b1 * v1->b + b2 * v2->b) >> 8;
-                    if (r > 255) r = 255; if (r < 0) r = 0;
-                    if (g_ > 255) g_ = 255; if (g_ < 0) g_ = 0;
-                    if (b_ > 255) b_ = 255; if (b_ < 0) b_ = 0;
-                    u8 *p = row + (origin_x + x) * 3;
+                    int r  = (b0 * v0r + b1 * v1r + b2 * v2r) >> 8;
+                    int g_ = (b0 * v0g + b1 * v1g + b2 * v2g) >> 8;
+                    int b_ = (b0 * v0b + b1 * v1b + b2 * v2b) >> 8;
+                    if (r > 255) r = 255; else if (r < 0) r = 0;
+                    if (g_ > 255) g_ = 255; else if (g_ < 0) g_ = 0;
+                    if (b_ > 255) b_ = 255; else if (b_ < 0) b_ = 0;
+                    u8 *p = row + x * 3;
                     /* GBR byte order on this BD */
                     p[0] = (u8)g_;
                     p[1] = (u8)b_;
@@ -1467,6 +1482,10 @@ int main(void)
     UINTPTR fb_bufs[2] = { FB_A_ADDR, FB_B_ADDR };
     u32 write_idx = 1;   /* VDMA reads 0 first, we write to 1 */
     /* right_dirty_g 是全局 volatile, 由 uart_poll_frame 内部置 1 (避免嵌套调用丢事件) */
+    /* 渲染耗时统计 (256 帧窗口): max + sum→avg. >16.6ms 意味着撕裂不可避免 (circular VDMA). */
+    u32 render_us_max  = 0;
+    u64 render_us_sum  = 0;
+    u32 render_count   = 0;
 
     while (1) {
         int got_frame = uart_poll_frame();
@@ -1579,40 +1598,44 @@ int main(void)
             /* 72°/sec → 5 秒一圈完整 360° (旋转更明显) */
             int left_angle = (int)((us * 72ULL / 1000000ULL) % 360ULL);
             uart_poll_frame();
+            u64 rt0 = gt_read();
             if (mesh_ready) {
                 /* mesh path: software triangle rasterizer + z-buffer */
                 cpu_render_mesh(fb_write, left_angle, 0, 0, PW, PH, LEFT_SCALE);
             } else {
                 cpu_render_voxel_panel(fb_write, left_angle, 0, 0, PW, PH, 0, LEFT_SCALE);
             }
-        }
-#endif
-
 #if !USE_PL
-        /* Cache flush 仅 LEFT 半屏 (右侧由 dirty 路径自管). 1.38 MB / 帧. */
-        {
-            const u32 LEFT_W_BYTES = (WIDTH / 2) * BPP;
-            for (int yy = 0; yy < HEIGHT; yy++) {
-                Xil_DCacheFlushRange(fb_write + yy * STRIDE, LEFT_W_BYTES);
-                if ((yy & 0x1F) == 0) uart_poll_frame();
+            /* Cache flush 仅 LEFT 半屏 (右侧由 dirty 路径自管). 1.38 MB / 帧. */
+            {
+                const u32 LEFT_W_BYTES = (WIDTH / 2) * BPP;
+                for (int yy = 0; yy < HEIGHT; yy++) {
+                    Xil_DCacheFlushRange(fb_write + yy * STRIDE, LEFT_W_BYTES);
+                    if ((yy & 0x1F) == 0) uart_poll_frame();
+                }
             }
+#endif
+            u64 rt1 = gt_read();
+            u32 rt_us = (u32)((rt1 - rt0) / GT_TICKS_PER_US);
+            if (rt_us > render_us_max) render_us_max = rt_us;
+            render_us_sum += rt_us;
+            render_count++;
         }
 #endif
 
         /* Pure circular VDMA: auto-cycles fbs[0] ↔ fbs[1] at vsync.
-         * Wait for VDMA to advance frame (curR change) before next write.
-         * IMPORTANT: drain UART inside wait loop or RX FIFO overflows during
-         * 16ms vsync wait at 921600 baud. */
-        u32 cur = vdma_current_read_idx();
-        /* 等一个 vsync 边界 (drain UART 顺便) */
-        for (u32 wait = 0; wait < 200000; wait++) {
-            u32 now = vdma_current_read_idx();
-            if (now != cur) { cur = now; break; }
+         * 撕裂修复: 等 VDMA 翻到我们刚写的 buffer (write_idx), 然后下一轮
+         * 写另一块. 这样保证 ARM 永远写的是 VDMA "不在读" 的 buffer.
+         * 当 render <16.6ms 时与原 ^=1 等价; render >16.6ms 时仍可能撕裂
+         * (单帧内 vsync 翻到我们半成品 fb), 但避免了 race 后选错 buffer. */
+        u32 target = write_idx;
+        for (u32 wait = 0; wait < 600000; wait++) {
+            if (vdma_current_read_idx() == target) break;
             if ((wait & 0xFF) == 0) uart_poll_frame();
         }
-        /* 强制翻转 write_idx (不靠 cur), 防 cur 卡死时单 fb 锁死.
-         * 两块 fb 每隔一帧都更新, 保证 VDMA 任何时候读到的都是最新 anime. */
-        write_idx ^= 1;
+        /* 直接按当前 cur 选下一块: 1 - cur 永远是 VDMA 不在读的那块.
+         * 即使 wait 超时 cur 卡住, 1-cur 仍是合法选择 (写入未被读的 buffer). */
+        write_idx = 1 - vdma_current_read_idx();
 
         frame++;
         /* Slow rotation: advance phase only every 3 frames. */
@@ -1630,9 +1653,14 @@ int main(void)
             u32 us = (u32)(gt_dt / GT_TICKS_PER_US);
             u32 ms = us / 1000;
             u32 fps100 = ms ? (u32)((256ULL * 100 * 1000) / ms) : 0;
-            xil_printf("frame=%u dT=%u us (%u.%02u FPS)\r\n",
+            u32 r_avg = render_count ? (u32)(render_us_sum / render_count) : 0;
+            xil_printf("frame=%u dT=%u us (%u.%02u FPS)  render avg=%u us max=%u us\r\n",
                        (unsigned)frame, us,
-                       fps100 / 100, fps100 % 100);
+                       fps100 / 100, fps100 % 100,
+                       r_avg, render_us_max);
+            render_us_max = 0;
+            render_us_sum = 0;
+            render_count  = 0;
             gt0 = gt1;
             t0 = t1;
             XGpio_DiscreteWrite(&Led, 1, (frame >> 5) & 1 ? 0x1 : 0x2);

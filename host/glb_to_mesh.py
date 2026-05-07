@@ -34,11 +34,13 @@ def build_simplified_mesh(glb_path, target_tris=4096, target_scale=40, z_stretch
         return [], []
     scale = (2 * target_scale) / span
 
-    # 2) Build full mesh with vertex dedup + per-vertex color accumulation.
-    DEDUP_QUANT = 0.05  # very fine: keep 几乎全 mesh 精度让 quadric 决定保留哪些
+    # 2) Build full mesh with vertex dedup + per-vertex color baking.
+    # Dominant-tri color: 每顶点保留接触它的"最大 area" tri 的 uv-sample 颜色,
+    # 而不是 area-weighted 平均. 防 area-weighted 把鲜艳颜色和邻居白色稀释.
+    DEDUP_QUANT = 0.05
     vert_map = {}
     verts_pos = []      # (x, y, z) float
-    verts_col = []      # [r_sum, g_sum, b_sum, area_sum]
+    verts_col = []      # [r, g, b, max_area_seen]
     faces_idx = []
     print_every = max(1, n_orig // 20)
     for i, (p0, p1, p2, color_info) in enumerate(triangles):
@@ -81,10 +83,12 @@ def build_simplified_mesh(glb_path, target_tris=4096, target_scale=40, z_stretch
                 verts_pos.append([float(n[0]), float(n[1]), float(n[2])])
                 verts_col.append([0.0, 0.0, 0.0, 0.0])
             cr, cg, cb = cols_per_vert[k_v]
-            verts_col[v_idx][0] += cr * area
-            verts_col[v_idx][1] += cg * area
-            verts_col[v_idx][2] += cb * area
-            verts_col[v_idx][3] += area
+            # Dominant tri: 当前 area 比之前最大 area 更大才覆盖颜色
+            if area > verts_col[v_idx][3]:
+                verts_col[v_idx][0] = cr
+                verts_col[v_idx][1] = cg
+                verts_col[v_idx][2] = cb
+                verts_col[v_idx][3] = area
             tri_idx.append(v_idx)
         if tri_idx[0] == tri_idx[1] or tri_idx[1] == tri_idx[2] or tri_idx[0] == tri_idx[2]:
             continue
@@ -123,7 +127,8 @@ def build_simplified_mesh(glb_path, target_tris=4096, target_scale=40, z_stretch
         if ws <= 0:
             r = g = b = 0
         else:
-            r = int(rs / ws); g = int(gs / ws); b = int(bs / ws)
+            # Dominant baking: rs/gs/bs 已是颜色不是 sum, ws 只标记是否有 tri 接触
+            r = int(rs); g = int(gs); b = int(bs)
         if gamma != 1.0 and gamma > 0:
             r = int(255 * pow(max(0, r) / 255.0, gamma))
             g = int(255 * pow(max(0, g) / 255.0, gamma))

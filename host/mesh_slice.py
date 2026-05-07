@@ -150,8 +150,8 @@ if __name__ == "__main__":
     print(f"build mesh {os.path.basename(glb)} target_tris={target_tris}...")
     verts, faces = build_simplified_mesh(glb, target_tris=target_tris,
                                           target_scale=40, z_stretch=1.0,
-                                          brighten=1.5, gamma=0.85,
-                                          saturation=1.5, verbose=False)
+                                          brighten=1.0, gamma=1.0,
+                                          saturation=2.0, verbose=False)
     print(f"  {len(verts)} verts, {len(faces)} tris")
 
     xs = [v[0] for v in verts]; ys = [v[1] for v in verts]; zs = [v[2] for v in verts]

@@ -252,16 +252,16 @@ typedef struct __attribute__((packed)) {
 } mesh_hdr_t;
 
 typedef struct __attribute__((packed)) {
-    int8_t   x, y, z;
+    int16_t  x, y, z;       /* Q8.4 fix-point: model unit = x / 16 */
     uint8_t  r, g, b;
-} mesh_vert_t;
+} mesh_vert_t;   /* 9 bytes */
 
 typedef struct __attribute__((packed)) {
     uint16_t i0, i1, i2;
 } mesh_tri_t;
 
-#define MAX_MESH_VERTS  4096
-#define MAX_MESH_TRIS   4096
+#define MAX_MESH_VERTS  16384
+#define MAX_MESH_TRIS   8192
 /* DDR layout: 借用 RING_BUFFER 段(0x12000000), 当前未使用 (USE_PL=0 走 ARM render) */
 #define MESH_VERTS_ADDR  0x12000000UL    /* 24 KB */
 #define MESH_TRIS_ADDR   0x12010000UL    /* 24 KB */
@@ -1277,17 +1277,24 @@ static void cpu_render_mesh(UINTPTR fb_base, int angle_deg,
         if ((yy & 0x0F) == 0) uart_poll_frame();
     }
 
-    /* 2) rotate + project all verts */
+    /* 2) rotate + project all verts.
+     * Vertex Q8.4 (mx = host coord * 16). Cos/sin Q8.8 (c ≈ 256).
+     * rx_q4 = (mx * c + mz * s) >> 8 → 仍是 Q8.4. */
     for (u32 i = 0; i < mesh_n_verts; i++) {
-        int mx = mesh_verts[i].x;
+        int mx = mesh_verts[i].x;   /* Q8.4 */
         int my = mesh_verts[i].y;
         int mz = mesh_verts[i].z;
-        int rx = (mx * c + mz * s) >> 8;
+        int rx = (mx * c + mz * s) >> 8;     /* Q8.4 */
         int rz = (-mx * s + mz * c) >> 8;
         /* Camera tilt 15° down (Q8.8: cos≈247, sin≈66) */
-        int tilt_y = (my * 247 - rz * 66) >> 8;
-        int sx = cx + (rx * scale_pct) / 100;
-        int sy = cy - (tilt_y * scale_pct) / 100;
+        int tilt_y = (my * 247 - rz * 66) >> 8;  /* Q8.4 */
+        /* Project: sx = cx + rx * scale_pct / 100. rx 是 Q8.4 (即 model*16),
+         * 我们想要 sx = cx + (rx_model * scale_pct / 100) px. 转换:
+         *   sx = cx + (rx_q4 * scale_pct) / (100*16) = cx + (rx_q4*scale_pct)>>4 / 100 */
+        int sx = cx + (rx * scale_pct) / (100 * 16);
+        int sy = cy - (tilt_y * scale_pct) / (100 * 16);
+        /* z 保持 model unit (用 Q8.4 / 16 → int 范围 ±2047, 缩到 int8 ±127 用 /16) */
+        rz = rz >> 4;
         mesh_screen_verts[i].sx = (int16_t)sx;
         mesh_screen_verts[i].sy = (int16_t)sy;
         mesh_screen_verts[i].sz = (int8_t)sat_int8(rz);

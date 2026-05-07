@@ -101,6 +101,9 @@ def build_simplified_mesh(glb_path, target_tris=1024, target_scale=40, z_stretch
             v[5] += col[2] * area
             v[6] += area
             tri_idx.append(v_idx)
+        # 跳过 degenerate triangle (任意两顶点 dedup 后落到同 idx)
+        if tri_idx[0] == tri_idx[1] or tri_idx[1] == tri_idx[2] or tri_idx[0] == tri_idx[2]:
+            continue
         faces.append(tuple(tri_idx))
 
     # 5) Finalize per-vertex colors + apply post (gamma/brighten/saturation)
@@ -131,11 +134,8 @@ def build_simplified_mesh(glb_path, target_tris=1024, target_scale=40, z_stretch
             r2, g2, b2 = colorsys.hsv_to_rgb(h, s, v_)
             r, g, b = int(r2*255), int(g2*255), int(b2*255)
         r = max(0, min(255, r)); g = max(0, min(255, g)); b = max(0, min(255, b))
-        # Clip coords to int8
-        ix = max(-128, min(127, int(round(x))))
-        iy = max(-128, min(127, int(round(y))))
-        iz = max(-128, min(127, int(round(z))))
-        out_verts.append((ix, iy, iz, r, g, b))
+        # 输出 float coords; pack_mesh 转 Q8.4 int16
+        out_verts.append((float(x), float(y), float(z), r, g, b))
 
     if verbose:
         print(f"[mesh] {len(out_verts)} unique verts (dedup quant {DEDUP_QUANT}u), "

@@ -14,7 +14,7 @@ import serial
 from glb_to_mesh import build_simplified_mesh
 from mesh_proto import pack_mesh
 
-target_tris = int(sys.argv[1]) if len(sys.argv) > 1 else 1024
+target_tris = int(sys.argv[1]) if len(sys.argv) > 1 else 4096
 glb_default = os.path.join(HERE, "anime_62459.glb")
 glb = sys.argv[2] if len(sys.argv) > 2 else glb_default
 port = "COM4"
@@ -22,7 +22,7 @@ baud = 921600
 
 print(f"build_simplified_mesh {os.path.basename(glb)} target_tris={target_tris}...")
 verts, faces = build_simplified_mesh(glb, target_tris=target_tris, target_scale=40,
-                                      z_stretch=1.0, brighten=1.5, gamma=0.85,
+                                      z_stretch=1.5, brighten=1.5, gamma=0.85,
                                       saturation=1.5, verbose=True)
 print(f"  → {len(verts)} verts, {len(faces)} tris")
 print(f"  v0={verts[0]}  tri0={faces[0]}")

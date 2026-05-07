@@ -1,13 +1,11 @@
-"""GLB → simplified triangle mesh + per-vertex colors.
+"""GLB → quadric-decimated mesh + per-vertex colors.
 
-策略 (不依赖 trimesh decimation):
+策略 (使用 fast_simplification 业界标准 quadric decimation):
 1. 复用 glb_to_points.load_glb 拿原始 triangles + texture
-2. 按 area 排序, 保留 top N 大三角 (~1024)
-3. 顶点 dedup (网格用相同坐标的顶点应该 share)
-4. 每三角 sample texture 重心拿 baseColor, 顶点颜色 = 入射三角颜色 area-weighted average
-5. 输出 (vertices: list of (x,y,z,r,g,b), faces: list of (i0,i1,i2))
-
-仅几何 + 顶点色, 没 normal/tangent/uv. 板端做 Gouraud shading: barycentric color interp.
+2. 构 全 mesh: 顶点 dedup, 顶点 area-weighted 累加 baseColor (texture 重心 sample)
+3. fast_simplification.simplify 做 quadric 简化到目标三角数
+4. 简化后的新顶点对原始顶点做 KDTree 最近邻, 转移颜色
+5. 后处理 gamma/brighten/saturation, 输出 (verts, faces)
 """
 import math
 import numpy as np
@@ -15,20 +13,19 @@ import numpy as np
 from glb_to_points import load_glb
 
 
-def build_simplified_mesh(glb_path, target_tris=1024, target_scale=40, z_stretch=1.0,
+def build_simplified_mesh(glb_path, target_tris=4096, target_scale=40, z_stretch=1.0,
                           brighten=1.0, gamma=1.0, saturation=1.0, verbose=True):
     """Return (vertices, faces).
 
-    vertices: list of (x, y, z, r, g, b) — coords ±target_scale (will fit int8 ±127),
-              colors u8.
-    faces: list of (i0, i1, i2) — indices into vertices.
+    vertices: list of (x, y, z, r, g, b) float coords + u8 colors.
+    faces: list of (i0, i1, i2) indices.
     """
     triangles = load_glb(glb_path, verbose=verbose)
     n_orig = len(triangles)
     if verbose:
         print(f"[mesh] {n_orig} original triangles")
 
-    # 1) Compute AABB and normalization
+    # 1) Compute AABB & normalization
     all_pts = np.array([p for t in triangles for p in t[:3]], dtype=np.float32)
     cmin, cmax = all_pts.min(axis=0), all_pts.max(axis=0)
     center = (cmin + cmax) / 2
@@ -37,50 +34,32 @@ def build_simplified_mesh(glb_path, target_tris=1024, target_scale=40, z_stretch
         return [], []
     scale = (2 * target_scale) / span
 
-    # 2) Pre-compute area + centroid color for every triangle
-    areas = np.zeros(n_orig, dtype=np.float32)
-    centroids = np.zeros((n_orig, 3), dtype=np.float32)
-    colors = np.zeros((n_orig, 3), dtype=np.float32)
+    # 2) Build full mesh with vertex dedup + per-vertex color accumulation.
+    DEDUP_QUANT = 0.05  # very fine: keep 几乎全 mesh 精度让 quadric 决定保留哪些
+    vert_map = {}
+    verts_pos = []      # (x, y, z) float
+    verts_col = []      # [r_sum, g_sum, b_sum, area_sum]
+    faces_idx = []
     print_every = max(1, n_orig // 20)
     for i, (p0, p1, p2, color_info) in enumerate(triangles):
         if verbose and i % print_every == 0:
-            print(f"  prep {i}/{n_orig}...")
+            print(f"  build {i}/{n_orig}...")
         e1 = (p1 - p0).astype(np.float32)
         e2 = (p2 - p0).astype(np.float32)
-        areas[i] = 0.5 * float(np.linalg.norm(np.cross(e1, e2)))
-        centroids[i] = (p0 + p1 + p2) / 3.0
+        area = 0.5 * float(np.linalg.norm(np.cross(e1, e2)))
+        if area <= 0:
+            continue
+        # Triangle centroid color
         if color_info[0] == "tex":
             _, tex, uv0, uv1, uv2 = color_info
             uv = (uv0 + uv1 + uv2) / 3
             tx = int((uv[0] % 1.0) * tex.shape[1]) % tex.shape[1]
             ty = int((1.0 - (uv[1] % 1.0)) * tex.shape[0]) % tex.shape[0]
             px = tex[ty, tx]
-            colors[i] = (float(px[0]), float(px[1]), float(px[2]))
+            cr, cg, cb = float(px[0]), float(px[1]), float(px[2])
         else:
-            c = color_info[1]
-            colors[i] = (float(c[0]), float(c[1]), float(c[2]))
+            cr, cg, cb = float(color_info[1][0]), float(color_info[1][1]), float(color_info[1][2])
 
-    # 3) Keep top N by area
-    if n_orig > target_tris:
-        # Sort indices by area desc
-        order = np.argsort(-areas)
-        keep_idx = order[:target_tris]
-    else:
-        keep_idx = np.arange(n_orig)
-    if verbose:
-        print(f"[mesh] keep top {len(keep_idx)} triangles by area "
-              f"(area_thresh={areas[keep_idx[-1]]:.5f})")
-
-    # 4) Build vertex list with dedup, accumulate per-vertex color (area-weighted)
-    #    Vertex key: rounded normalized coords (avoid float comparison issues)
-    DEDUP_QUANT = 0.25  # vertices within 0.25 model unit merge
-    vert_map = {}        # quantized_xyz tuple → vertex idx
-    vertices = []        # list of (x, y, z, accum_r, accum_g, accum_b, accum_w)
-    faces = []
-    for kidx in keep_idx:
-        p0, p1, p2, _ = triangles[kidx]
-        col = colors[kidx]
-        area = areas[kidx]
         tri_idx = []
         for p_raw in (p0, p1, p2):
             n = (p_raw - center) * scale
@@ -91,65 +70,81 @@ def build_simplified_mesh(glb_path, target_tris=1024, target_scale=40, z_stretch
                     int(round(n[2] / DEDUP_QUANT)))
             v_idx = vert_map.get(qkey)
             if v_idx is None:
-                v_idx = len(vertices)
+                v_idx = len(verts_pos)
                 vert_map[qkey] = v_idx
-                vertices.append([float(n[0]), float(n[1]), float(n[2]),
-                                 0.0, 0.0, 0.0, 0.0])
-            v = vertices[v_idx]
-            v[3] += col[0] * area
-            v[4] += col[1] * area
-            v[5] += col[2] * area
-            v[6] += area
+                verts_pos.append([float(n[0]), float(n[1]), float(n[2])])
+                verts_col.append([0.0, 0.0, 0.0, 0.0])
+            verts_col[v_idx][0] += cr * area
+            verts_col[v_idx][1] += cg * area
+            verts_col[v_idx][2] += cb * area
+            verts_col[v_idx][3] += area
             tri_idx.append(v_idx)
-        # 跳过 degenerate triangle (任意两顶点 dedup 后落到同 idx)
         if tri_idx[0] == tri_idx[1] or tri_idx[1] == tri_idx[2] or tri_idx[0] == tri_idx[2]:
             continue
-        faces.append(tuple(tri_idx))
+        faces_idx.append(tuple(tri_idx))
 
-    # 5) Finalize per-vertex colors + apply post (gamma/brighten/saturation)
+    if verbose:
+        print(f"[mesh] post-build: {len(verts_pos)} verts, {len(faces_idx)} faces")
+
+    # 3) Quadric decimation
+    import fast_simplification
+    verts_arr = np.array(verts_pos, dtype=np.float32)
+    faces_arr = np.array(faces_idx, dtype=np.uint32)
+    if len(faces_idx) > target_tris:
+        target_reduction = 1.0 - float(target_tris) / len(faces_idx)
+        if verbose:
+            print(f"[mesh] decimating: target_reduction={target_reduction:.4f} "
+                  f"({len(faces_idx)} → {target_tris})")
+        new_verts, new_faces = fast_simplification.simplify(
+            verts_arr, faces_arr, target_reduction=target_reduction)
+    else:
+        new_verts, new_faces = verts_arr, faces_arr
+    if verbose:
+        print(f"[mesh] post-decimate: {len(new_verts)} verts, {len(new_faces)} faces")
+
+    # 4) Color transfer: nearest-old-vertex KDTree
+    from scipy.spatial import cKDTree
+    tree = cKDTree(verts_arr)
+    _, nn_idx = tree.query(new_verts, k=1)
+
+    # 5) Output verts with post-process
     out_verts = []
     import colorsys
-    for v in vertices:
-        x, y, z, rs, gs, bs, ws = v
+    for i, (vx, vy, vz) in enumerate(new_verts):
+        old_i = int(nn_idx[i])
+        rs, gs, bs, ws = verts_col[old_i]
         if ws <= 0:
             r = g = b = 0
         else:
             r = int(rs / ws); g = int(gs / ws); b = int(bs / ws)
-        # gamma
         if gamma != 1.0 and gamma > 0:
             r = int(255 * pow(max(0, r) / 255.0, gamma))
             g = int(255 * pow(max(0, g) / 255.0, gamma))
             b = int(255 * pow(max(0, b) / 255.0, gamma))
-        # brighten (按 max-channel 等比放大不爆色相)
         if brighten != 1.0:
             mx = max(r, g, b)
             if mx > 0:
                 tgt = min(255, int(mx * brighten))
                 k = tgt / mx
                 r = int(r * k); g = int(g * k); b = int(b * k)
-        # saturation
         if saturation != 1.0:
             h, s, v_ = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
             s = min(1.0, s * saturation)
             r2, g2, b2 = colorsys.hsv_to_rgb(h, s, v_)
             r, g, b = int(r2*255), int(g2*255), int(b2*255)
         r = max(0, min(255, r)); g = max(0, min(255, g)); b = max(0, min(255, b))
-        # 输出 float coords; pack_mesh 转 Q8.4 int16
-        out_verts.append((float(x), float(y), float(z), r, g, b))
+        out_verts.append((float(vx), float(vy), float(vz), r, g, b))
 
-    if verbose:
-        print(f"[mesh] {len(out_verts)} unique verts (dedup quant {DEDUP_QUANT}u), "
-              f"{len(faces)} triangles")
-    return out_verts, faces
+    out_faces = [tuple(int(x) for x in f) for f in new_faces]
+    return out_verts, out_faces
 
 
 if __name__ == "__main__":
     import sys
     glb = sys.argv[1] if len(sys.argv) > 1 else "anime_62459.glb"
-    nt = int(sys.argv[2]) if len(sys.argv) > 2 else 1024
+    nt = int(sys.argv[2]) if len(sys.argv) > 2 else 4096
     verts, faces = build_simplified_mesh(glb, target_tris=nt, target_scale=40,
                                           z_stretch=1.0, brighten=1.5, gamma=0.85,
                                           saturation=1.5)
     print(f"verts={len(verts)} tris={len(faces)}")
     print(f"sample v0={verts[0]}")
-    print(f"sample tri0={faces[0]}")

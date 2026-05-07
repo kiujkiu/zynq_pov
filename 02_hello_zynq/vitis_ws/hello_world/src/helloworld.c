@@ -307,6 +307,7 @@ static u32         rx_mesh_n_verts_target = 0;
 static u32         rx_mesh_n_tris_target = 0;
 static u32         rx_mesh_bytes = 0;
 
+static void mesh_compute_aabb(void);   /* forward decl, def near main */
 static int uart_poll_frame(void)
 {
     /* Drain as much as is available without blocking render loop.
@@ -505,6 +506,7 @@ static int uart_poll_frame(void)
                 __asm__ __volatile__("dsb sy" ::: "memory");
                 mesh_ready = 1;
                 right_dirty_g = 1;
+                mesh_compute_aabb();
                 xil_printf("[mesh-rxdone] verts=%u tris=%u\r\n",
                            (unsigned)mesh_n_verts, (unsigned)mesh_n_tris);
                 /* dump first vert + first tri */
@@ -1333,6 +1335,208 @@ static void cpu_render_mesh(UINTPTR fb_base, int angle_deg,
     }
 }
 
+/* ---------- Mesh slice (B path: cross-section render) ----------
+ * 切平面 z' = 0 (rotated). 用 host/mesh_slice.py 同算法:
+ *   (1) 收集 segments: 每 tri 三顶点 z' = -x*sin + z*cos sign 检查,
+ *       cross 0 的边 lerp 得 (x', y, color)
+ *   (2) per pixel-row scanline: 找穿越该 y 的 segments, lerp x, 排序配对填充
+ * 适合 RIGHT panel preview (24 个 angle ≈ 100 ms 总, dirty 时一次).  */
+
+typedef struct {
+    int16_t  xa, ya;        /* Q8.4 model coord (x', y_height) */
+    int16_t  xb, yb;
+    uint8_t  ra, ga, ba;
+    uint8_t  rb, gb, bb;
+} mesh_seg_t;
+
+#define MAX_MESH_SEGS  8192
+static mesh_seg_t mesh_segs_buf[MAX_MESH_SEGS];
+
+static void cpu_render_mesh_slice_panel(UINTPTR fb_base, int angle_deg,
+                                        int origin_x, int origin_y,
+                                        int slice_w, int slice_h,
+                                        int x_half_q4,
+                                        int y_min_q4, int y_max_q4)
+{
+    if (angle_deg < 0) angle_deg = 0;
+    if (angle_deg >= 360) angle_deg %= 360;
+    int c_q8 = cos360_table[angle_deg];
+    int s_q8 = sin360_table[angle_deg];
+    u8 *fb = (u8 *)fb_base;
+
+    /* 清 panel 灰底 */
+    for (int yy = 0; yy < slice_h; yy++) {
+        memset(fb + (origin_y + yy) * STRIDE + origin_x * 3, 80, slice_w * 3);
+    }
+
+    /* Phase 1: collect segments. zp = -x*s + z*c (Q8.4 * Q8.8 = Q16.12).
+     * 只用 sign + lerp, 用 raw int 算. */
+    int n_segs = 0;
+    for (u32 t = 0; t < mesh_n_tris; t++) {
+        u16 i0 = mesh_tris[t].i0;
+        u16 i1 = mesh_tris[t].i1;
+        u16 i2 = mesh_tris[t].i2;
+        if (i0 >= mesh_n_verts || i1 >= mesh_n_verts || i2 >= mesh_n_verts) continue;
+        const mesh_vert_t *vs[3] = {&mesh_verts[i0], &mesh_verts[i1], &mesh_verts[i2]};
+        int zp[3];
+        for (int k = 0; k < 3; k++) {
+            zp[k] = -(int)vs[k]->x * s_q8 + (int)vs[k]->z * c_q8;
+        }
+        int n_pos = (zp[0] > 0) + (zp[1] > 0) + (zp[2] > 0);
+        if (n_pos == 0 || n_pos == 3) continue;
+
+        int cx[2], cy[2];
+        u8  cr[2], cg[2], cb[2];
+        int nc = 0;
+        const int edges[3][2] = {{0,1},{1,2},{2,0}};
+        for (int e = 0; e < 3 && nc < 2; e++) {
+            int a = edges[e][0], b = edges[e][1];
+            if ((zp[a] > 0) == (zp[b] > 0)) continue;
+            int denom = zp[a] - zp[b];
+            if (denom == 0) continue;
+            /* xp_q12 = xa*c + za*s + (zp[a]/denom) * delta. 用 64-bit. */
+            int xa_proj = (int)vs[a]->x * c_q8 + (int)vs[a]->z * s_q8;
+            int xb_proj = (int)vs[b]->x * c_q8 + (int)vs[b]->z * s_q8;
+            long long delta = ((long long)zp[a] * (long long)(xb_proj - xa_proj)) / denom;
+            int xp_q12 = xa_proj + (int)delta;
+            int xp_q4  = xp_q12 >> 8;   /* back to Q8.4 (model unit *16) */
+            /* y_height lerp Q8.4 直接 */
+            long long dy = ((long long)zp[a] * (long long)((int)vs[b]->y - (int)vs[a]->y)) / denom;
+            int yp_q4 = (int)vs[a]->y + (int)dy;
+            /* color lerp: t_q8 = zp[a] * 256 / denom (sign-preserving) */
+            int t_q8 = (int)(((long long)zp[a] * 256) / denom);
+            int rr = (int)vs[a]->r + (((int)vs[b]->r - (int)vs[a]->r) * t_q8 >> 8);
+            int gg = (int)vs[a]->g + (((int)vs[b]->g - (int)vs[a]->g) * t_q8 >> 8);
+            int bb = (int)vs[a]->b + (((int)vs[b]->b - (int)vs[a]->b) * t_q8 >> 8);
+            if (rr < 0) rr = 0; else if (rr > 255) rr = 255;
+            if (gg < 0) gg = 0; else if (gg > 255) gg = 255;
+            if (bb < 0) bb = 0; else if (bb > 255) bb = 255;
+            cx[nc] = xp_q4; cy[nc] = yp_q4;
+            cr[nc] = (u8)rr; cg[nc] = (u8)gg; cb[nc] = (u8)bb;
+            nc++;
+        }
+        if (nc == 2 && n_segs < MAX_MESH_SEGS) {
+            mesh_segs_buf[n_segs].xa = (int16_t)cx[0];
+            mesh_segs_buf[n_segs].ya = (int16_t)cy[0];
+            mesh_segs_buf[n_segs].ra = cr[0];
+            mesh_segs_buf[n_segs].ga = cg[0];
+            mesh_segs_buf[n_segs].ba = cb[0];
+            mesh_segs_buf[n_segs].xb = (int16_t)cx[1];
+            mesh_segs_buf[n_segs].yb = (int16_t)cy[1];
+            mesh_segs_buf[n_segs].rb = cr[1];
+            mesh_segs_buf[n_segs].gb = cg[1];
+            mesh_segs_buf[n_segs].bb = cb[1];
+            n_segs++;
+        }
+        if ((t & 0x3F) == 0) uart_poll_frame();
+    }
+
+    if (n_segs == 0) return;
+
+    /* Phase 2: scanline fill. yh_q4 at row py = y_max - py * span / slice_h */
+    int span_q4 = y_max_q4 - y_min_q4;
+    int two_xhalf = 2 * x_half_q4;
+    int x_cross[256];
+    u8  cr_arr[256], cg_arr[256], cb_arr[256];
+
+    for (int py = 0; py < slice_h; py++) {
+        int yh_q4 = y_max_q4 - (py * span_q4 / slice_h);
+        int nc = 0;
+        for (int s = 0; s < n_segs; s++) {
+            int ya = mesh_segs_buf[s].ya;
+            int yb = mesh_segs_buf[s].yb;
+            int da = ya - yh_q4;
+            int db = yb - yh_q4;
+            if ((da ^ db) >= 0) continue;   /* same sign or one zero on +side, skip */
+            if (ya == yb) continue;
+            int denom = yb - ya;
+            int t_q8 = ((yh_q4 - ya) * 256) / denom;
+            int dx = ((mesh_segs_buf[s].xb - mesh_segs_buf[s].xa) * t_q8) >> 8;
+            int x_q4 = mesh_segs_buf[s].xa + dx;
+            int dr = ((mesh_segs_buf[s].rb - mesh_segs_buf[s].ra) * t_q8) >> 8;
+            int dg = ((mesh_segs_buf[s].gb - mesh_segs_buf[s].ga) * t_q8) >> 8;
+            int dbi = ((mesh_segs_buf[s].bb - mesh_segs_buf[s].ba) * t_q8) >> 8;
+            int rr = mesh_segs_buf[s].ra + dr;
+            int gg = mesh_segs_buf[s].ga + dg;
+            int bb = mesh_segs_buf[s].ba + dbi;
+            if (rr < 0) rr = 0; else if (rr > 255) rr = 255;
+            if (gg < 0) gg = 0; else if (gg > 255) gg = 255;
+            if (bb < 0) bb = 0; else if (bb > 255) bb = 255;
+            if (nc < 256) {
+                x_cross[nc] = x_q4;
+                cr_arr[nc]  = (u8)rr;
+                cg_arr[nc]  = (u8)gg;
+                cb_arr[nc]  = (u8)bb;
+                nc++;
+            }
+        }
+        if (nc < 2) continue;
+        /* insertion sort by x */
+        for (int i = 1; i < nc; i++) {
+            int x = x_cross[i]; u8 r = cr_arr[i], g = cg_arr[i], bv = cb_arr[i];
+            int j = i - 1;
+            while (j >= 0 && x_cross[j] > x) {
+                x_cross[j+1] = x_cross[j];
+                cr_arr[j+1] = cr_arr[j];
+                cg_arr[j+1] = cg_arr[j];
+                cb_arr[j+1] = cb_arr[j];
+                j--;
+            }
+            x_cross[j+1] = x;
+            cr_arr[j+1] = r; cg_arr[j+1] = g; cb_arr[j+1] = bv;
+        }
+        u8 *row = fb + (origin_y + py) * STRIDE + origin_x * 3;
+        for (int i = 0; i + 1 < nc; i += 2) {
+            int xa_pix = ((x_cross[i]   + x_half_q4) * slice_w) / two_xhalf;
+            int xb_pix = ((x_cross[i+1] + x_half_q4) * slice_w) / two_xhalf;
+            u8 ra = cr_arr[i], ga = cg_arr[i], ba = cb_arr[i];
+            u8 rb = cr_arr[i+1], gb = cg_arr[i+1], bb = cb_arr[i+1];
+            if (xa_pix > xb_pix) { int tt = xa_pix; xa_pix = xb_pix; xb_pix = tt;
+                                   u8 t8; t8=ra;ra=rb;rb=t8; t8=ga;ga=gb;gb=t8; t8=ba;ba=bb;bb=t8; }
+            if (xa_pix < 0) xa_pix = 0;
+            if (xb_pix > slice_w - 1) xb_pix = slice_w - 1;
+            if (xa_pix > xb_pix) continue;
+            int span = xb_pix - xa_pix;
+            for (int x_pix = xa_pix; x_pix <= xb_pix; x_pix++) {
+                int t_q8 = span > 0 ? ((x_pix - xa_pix) * 256 / span) : 0;
+                int rr = ra + (((rb - ra) * t_q8) >> 8);
+                int gg = ga + (((gb - ga) * t_q8) >> 8);
+                int bbb = ba + (((bb - ba) * t_q8) >> 8);
+                u8 *p = row + x_pix * 3;
+                p[0] = (u8)gg; p[1] = (u8)bbb; p[2] = (u8)rr;   /* GBR */
+            }
+        }
+        if ((py & 0x07) == 0) uart_poll_frame();
+    }
+}
+
+/* 计算 mesh AABB (Q8.4) 用于 slice 范围. 在 mesh 收到后调用一次. */
+static int mesh_aabb_x_half_q4 = 0;
+static int mesh_aabb_y_min_q4  = 0;
+static int mesh_aabb_y_max_q4  = 0;
+static void mesh_compute_aabb(void)
+{
+    if (mesh_n_verts == 0) return;
+    int xmin = mesh_verts[0].x, xmax = mesh_verts[0].x;
+    int ymin = mesh_verts[0].y, ymax = mesh_verts[0].y;
+    int zmin = mesh_verts[0].z, zmax = mesh_verts[0].z;
+    for (u32 i = 1; i < mesh_n_verts; i++) {
+        if (mesh_verts[i].x < xmin) xmin = mesh_verts[i].x;
+        if (mesh_verts[i].x > xmax) xmax = mesh_verts[i].x;
+        if (mesh_verts[i].y < ymin) ymin = mesh_verts[i].y;
+        if (mesh_verts[i].y > ymax) ymax = mesh_verts[i].y;
+        if (mesh_verts[i].z < zmin) zmin = mesh_verts[i].z;
+        if (mesh_verts[i].z > zmax) zmax = mesh_verts[i].z;
+    }
+    int rx = xmax > -xmin ? xmax : -xmin;
+    int rz = zmax > -zmin ? zmax : -zmin;
+    mesh_aabb_x_half_q4 = (rx > rz ? rx : rz) * 11 / 10;   /* +10% pad */
+    mesh_aabb_y_min_q4  = ymin - 32;   /* 2 model unit pad */
+    mesh_aabb_y_max_q4  = ymax + 32;
+    xil_printf("[mesh-aabb] x_half=%d y=[%d,%d] (Q8.4)\r\n",
+               mesh_aabb_x_half_q4, mesh_aabb_y_min_q4, mesh_aabb_y_max_q4);
+}
+
 int main(void)
 {
     init_platform();
@@ -1568,7 +1772,14 @@ int main(void)
                         int ox = PW + gc * CW;
                         int oy = gr * CH;
                         int ang = (gi * 15) % 360;
-                        cpu_render_voxel_panel(addr, ang, ox, oy, CW, CH, 1, CELL_SCALE);
+                        if (mesh_ready) {
+                            cpu_render_mesh_slice_panel(addr, ang, ox, oy, CW, CH,
+                                                        mesh_aabb_x_half_q4,
+                                                        mesh_aabb_y_min_q4,
+                                                        mesh_aabb_y_max_q4);
+                        } else {
+                            cpu_render_voxel_panel(addr, ang, ox, oy, CW, CH, 1, CELL_SCALE);
+                        }
                     }
                     /* flush 右半侧 cache */
                     for (int yy = 0; yy < HEIGHT; yy++) {

@@ -14,7 +14,7 @@ import serial
 from glb_to_mesh import build_simplified_mesh
 from mesh_proto import pack_mesh
 
-target_tris = int(sys.argv[1]) if len(sys.argv) > 1 else 4096
+target_tris = int(sys.argv[1]) if len(sys.argv) > 1 else 3000
 glb_default = os.path.join(HERE, "anime_62459.glb")
 glb = sys.argv[2] if len(sys.argv) > 2 else glb_default
 port = "COM4"

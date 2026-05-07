@@ -524,10 +524,9 @@ def voxelize_mesh(path, target_scale=40, z_stretch=1.0, voxel_size=1.0, verbose=
         tri_g = max(0, min(255, int(tri_g)))
         tri_b = max(0, min(255, int(tri_b)))
 
-        # 每 triangle 只标 centroid voxel. Max-area-wins: 每 voxel 取
-        # 落入它的最大 triangle 颜色 (小三角面不参与, 避免不同物体混色).
-        # 比如剑 (黑) 和 披风 (蓝) 的 triangle 都落到同一 voxel, 取面积大的
-        # 那个保留纯色 → 剑保持黑, 披风保持蓝, 不混合成灰紫.
+        # Area-weighted average: 每 voxel 累加 (r*area, g*area, b*area, area_sum).
+        # 输出时 / area_sum. 比 max-area-wins 更稳: 小三角不会被丢, 边界 voxel
+        # 颜色按 area 比例混合, 不会"金发突然变蓝"那种突变.
         p = (n0 + n1 + n2) / 3.0
         vx = int(math.floor(p[0] / voxel_size)) * int(voxel_size)
         vy = int(math.floor(p[1] / voxel_size)) * int(voxel_size)
@@ -537,18 +536,25 @@ def voxelize_mesh(path, target_scale=40, z_stretch=1.0, voxel_size=1.0, verbose=
         idx = (vz + 128) * 65536 + (vy + 128) * 256 + (vx + 128)
         w = float(areas[ti])
         rec = voxel_acc.get(idx)
-        if rec is None or w > rec[3]:
-            voxel_acc[idx] = [float(tri_r), float(tri_g), float(tri_b), w]
+        if rec is None:
+            voxel_acc[idx] = [tri_r * w, tri_g * w, tri_b * w, w]
+        else:
+            rec[0] += tri_r * w
+            rec[1] += tri_g * w
+            rec[2] += tri_b * w
+            rec[3] += w
 
-    # 4) Output (x, y, z, r, g, b) — max-area-wins, 颜色未平均
+    # 4) Output (x, y, z, r, g, b) — area-weighted average
     out = []
-    for idx, (rs, gs, bs, _w) in voxel_acc.items():
+    for idx, (rs, gs, bs, w_sum) in voxel_acc.items():
         vx = (idx & 0xFF) - 128
         vy = ((idx >> 8) & 0xFF) - 128
         vz = ((idx >> 16) & 0xFF) - 128
-        r = int(rs)
-        g = int(gs)
-        b = int(bs)
+        if w_sum <= 0:
+            continue
+        r = int(rs / w_sum)
+        g = int(gs / w_sum)
+        b = int(bs / w_sum)
         # 统一应用 gamma/brighten/saturation, 不做 selective enhance (避免迷彩对比)
         if gamma != 1.0:
             r = int(255 * pow(max(0, r) / 255.0, gamma))

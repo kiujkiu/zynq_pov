@@ -43,6 +43,9 @@ hdmi_obs.jpg
 hdmi_ff.jpg
 hdmi_capture.jpg
 hdmi_direct.jpg
+sweep_*.jpg
+video_frames/
+user_video.mp4
 host/voxel_slice_*.png
 host/pov_gui.log
 host/__pycache__/

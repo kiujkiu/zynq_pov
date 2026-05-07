@@ -164,6 +164,11 @@ typedef struct {
 } VoxOcc;
 static VoxOcc occupied_list[MAX_OCCUPIED];   /* 256K * 6 = 1.5 MB BSS */
 
+/* Painter's algorithm bucket sort: 每帧按 rz 排序, 远到近绘制. */
+static int painter_count[256];
+static int painter_offset[256];
+static u32 painter_sorted[MAX_OCCUPIED];   /* 256K * 4 = 1 MB BSS */
+
 static inline u16 pack_rgb565(u8 r, u8 g, u8 b) {
     return ((u16)(r >> 3) << 11) | ((u16)(g >> 2) << 5) | (u16)(b >> 3);
 }
@@ -953,20 +958,20 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
     int16_t s = sin360_table[angle_deg];
     u8 *fb = (u8 *)fb_base;
 
-    /* Clear panel — poll UART every 16 rows so RX FIFO doesn't overflow at
-     * 460800 baud during this 2-3 ms memset block. */
+    /* Clear panel 用中性灰 80 替代纯黑: HDMI YCbCr 限制范围 (16-235) 让 30 看起来
+     * 跟黑底无差; 80 足够亮显灰. 黑色 voxel (黑发卡/内衣/靴) 跟黑底融合的问题靠
+     * 灰底反差解决. */
     for (int yy = 0; yy < panel_h; yy++) {
-        memset(fb + (origin_y + yy) * STRIDE + origin_x * 3, 0, panel_w * 3);
+        memset(fb + (origin_y + yy) * STRIDE + origin_x * 3, 80, panel_w * 3);
         if ((yy & 0x0F) == 0) uart_poll_frame();
     }
     int cx = panel_w / 2;
     int cy = panel_h / 2;
 
-    /* Slab thickness for slice_mode=1: 12 model units = 6 voxel cells.
-     * 原 2 unit 太薄, anime 30K 点切片只剩 3-4% voxel 显得空; 12 unit 大约
-     * 22% voxel 进入切片, 视觉密度足够辨认轮廓. POV 真实是 thin slice 但
-     * 平面显示需要可视化, 加厚是 trade-off. */
-    const int SLAB_HALF = 12;
+    /* Slab thickness for slice_mode=1: ±4 model units ≈ 8% 模型厚度.
+     * 之前 12 太厚, 几乎所有 voxel 都进切片, 视觉等同全身投影 — 不像 POV 切片.
+     * 4 是接近 LED panel 真实薄片的下限, 仍能看到主要 voxel 轮廓. */
+    const int SLAB_HALF = 4;
 
     uart_poll_frame();
 
@@ -976,9 +981,47 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
      * 2 * scale_pct / 100. Min 1 to ensure something gets drawn. */
     int block = (VOXEL_CELL_SIZE * scale_pct) / 100;
     if (block < 1) block = 1;
-    if (block > 3) block = 3;   /* 3px = 9 px per voxel, fills high-detail render */
+    if (block > 4) block = 4;
 
-    for (int i = 0; i < voxel_n_occupied; i++) {
+    /* Painter's algorithm: bucket-sort voxels by rz (rotated z), draw far-to-near.
+     * 消除 last-write-wins 的帧间抖动闪烁 (相同 (sx,sy) 处永远是最近的 voxel 赢). */
+    int painter_n = 0;
+    if (!slice_mode) {
+        memset(painter_count, 0, sizeof(painter_count));
+        /* Pass 1: count per bucket */
+        for (int i = 0; i < voxel_n_occupied; i++) {
+            VoxOcc v = occupied_list[i];
+            int mx = (int)v.vx * VOXEL_CELL_SIZE - WORLD_HALF + VOXEL_CELL_SIZE / 2;
+            int mz = (int)v.vz * VOXEL_CELL_SIZE - WORLD_HALF + VOXEL_CELL_SIZE / 2;
+            int rz = (-(int)mx * s + (int)mz * c) >> 8;
+            if (rz < -127) rz = -127;
+            if (rz > 127) rz = 127;
+            painter_count[rz + 128]++;
+        }
+        /* Prefix sum → bucket start offsets */
+        int total = 0;
+        for (int b = 0; b < 256; b++) {
+            painter_offset[b] = total;
+            total += painter_count[b];
+            painter_count[b] = 0;   /* reset for scatter */
+        }
+        /* Pass 2: scatter indices into sorted array */
+        for (int i = 0; i < voxel_n_occupied; i++) {
+            VoxOcc v = occupied_list[i];
+            int mx = (int)v.vx * VOXEL_CELL_SIZE - WORLD_HALF + VOXEL_CELL_SIZE / 2;
+            int mz = (int)v.vz * VOXEL_CELL_SIZE - WORLD_HALF + VOXEL_CELL_SIZE / 2;
+            int rz = (-(int)mx * s + (int)mz * c) >> 8;
+            if (rz < -127) rz = -127;
+            if (rz > 127) rz = 127;
+            int bk = rz + 128;
+            painter_sorted[painter_offset[bk] + painter_count[bk]++] = i;
+            if ((i & 0x7F) == 0) uart_poll_frame();
+        }
+        painter_n = total;
+    }
+
+    for (int rs = 0; rs < (slice_mode ? voxel_n_occupied : painter_n); rs++) {
+        int i = slice_mode ? rs : (int)painter_sorted[rs];
         VoxOcc v = occupied_list[i];
         /* Voxel center in model coords: voxel index → cell center */
         int mx = (int)v.vx * VOXEL_CELL_SIZE - WORLD_HALF + VOXEL_CELL_SIZE / 2;
@@ -1019,7 +1062,7 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
             }
         }
         /* Drain UART every 128 voxels — same cadence as point cloud render */
-        if ((i & 0x7F) == 0) uart_poll_frame();
+        if ((rs & 0x7F) == 0) uart_poll_frame();
     }
 }
 #endif
@@ -1262,6 +1305,16 @@ int main(void)
                         Xil_DCacheFlushRange(addr + yy * STRIDE + PW * BPP, PW * BPP);
                         if ((yy & 0x1F) == 0) uart_poll_frame();
                     }
+                    /* 同时清 LEFT 半屏到灰底, 杜绝 boot cube wireframe 残留在
+                     * 非当前 write_idx 的 fb 上, VDMA 交替读两块 fb 看到 cube/anime 闪烁. */
+                    for (int yy = 0; yy < HEIGHT; yy++) {
+                        memset((u8 *)addr + yy * STRIDE, 80, PW * BPP);
+                        if ((yy & 0x1F) == 0) uart_poll_frame();
+                    }
+                    for (int yy = 0; yy < HEIGHT; yy++) {
+                        Xil_DCacheFlushRange(addr + yy * STRIDE, PW * BPP);
+                        if ((yy & 0x1F) == 0) uart_poll_frame();
+                    }
                 }
                 u64 rt1 = gt_read();
                 u32 rt_us = (u32)((rt1 - rt0) / GT_TICKS_PER_US);
@@ -1295,15 +1348,15 @@ int main(void)
          * IMPORTANT: drain UART inside wait loop or RX FIFO overflows during
          * 16ms vsync wait at 921600 baud. */
         u32 cur = vdma_current_read_idx();
-        /* USE_PL=1 boot 阶段 main loop 太快 (60 FPS), 单 uart_poll 不够,
-         * 放大 wait limit 让 vsync wait 期间多 poll UART. 200K iter ≈ 20ms,
-         * 足够等 16.67ms 一个 vsync, 期间 ~780 次 uart_poll = 200KB/s 处理能力. */
+        /* 等一个 vsync 边界 (drain UART 顺便) */
         for (u32 wait = 0; wait < 200000; wait++) {
             u32 now = vdma_current_read_idx();
             if (now != cur) { cur = now; break; }
             if ((wait & 0xFF) == 0) uart_poll_frame();
         }
-        write_idx = 1 - cur;
+        /* 强制翻转 write_idx (不靠 cur), 防 cur 卡死时单 fb 锁死.
+         * 两块 fb 每隔一帧都更新, 保证 VDMA 任何时候读到的都是最新 anime. */
+        write_idx ^= 1;
 
         frame++;
         /* Slow rotation: advance phase only every 3 frames. */

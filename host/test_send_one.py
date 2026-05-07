@@ -17,18 +17,17 @@ from pointcloud_proto import pack_frame
 # Args — defaults match pov_gui.py so HDMI matches the 3D viewer.
 zs = float(sys.argv[1]) if len(sys.argv) > 1 else 1.5
 n  = int(sys.argv[2])   if len(sys.argv) > 2 else 30000
-# 默认用 Blender baked 版本 (Option A): PBR + IBL 已 bake 到 texture, 颜色接近 3D Viewer
-glb_default = os.path.join(HERE, "anime_62459_baked.glb")
-if not os.path.exists(glb_default):
-    glb_default = os.path.join(HERE, "anime_62459.glb")
+# Option B: raw glb + voxelize 内置 lambert + multi-dir IBL, 暖光让金发显眼.
+# Option A baked 版本 baked 时偏冷色 IBL, anime 金发被压成浅白. 改用 raw + lambert.
+glb_default = os.path.join(HERE, "anime_62459.glb")
 glb = sys.argv[3] if len(sys.argv) > 3 else glb_default
 port = "COM4"
 baud = 921600
 
 print(f"voxelize_mesh (Option A: 3D triangle rasterization) {os.path.basename(glb)}, z_stretch={zs}...")
 new_pts = voxelize_mesh(glb, target_scale=40, z_stretch=zs, voxel_size=1.0, verbose=True,
-                        brighten=2.0, gamma=0.6, saturation=2.5,
-                        lighting="none", ambient=1.0)
+                        brighten=1.5, gamma=0.9, saturation=2.0,
+                        lighting="lambert", ambient=0.7)
 print(f"  → {len(new_pts)} mesh-aware voxel cells; sample p0={new_pts[0]}")
 z_vals = [p[2] for p in new_pts]
 print(f"  z range: [{min(z_vals)}..{max(z_vals)}]")

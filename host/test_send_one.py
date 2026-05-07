@@ -22,7 +22,7 @@ glb_default = os.path.join(HERE, "anime_62459_baked.glb")
 if not os.path.exists(glb_default):
     glb_default = os.path.join(HERE, "anime_62459.glb")
 glb = sys.argv[3] if len(sys.argv) > 3 else glb_default
-port = "COM10"
+port = "COM4"
 baud = 921600
 
 print(f"voxelize_mesh (Option A: 3D triangle rasterization) {os.path.basename(glb)}, z_stretch={zs}...")

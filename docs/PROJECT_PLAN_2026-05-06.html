@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>POV-3D 项目计划 · 2026-05-06</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #161a22;
+    --card-hi: #1d2230;
+    --border: #2a3142;
+    --txt: #d8dde7;
+    --txt-dim: #93a0b6;
+    --accent: #4ea3ff;
+    --ok: #39c172;
+    --warn: #f0a945;
+    --bad: #ef5b5b;
+    --info: #6e7afe;
+    --done-bg: #143420;
+    --doing-bg: #3b2d12;
+    --block-bg: #3a1818;
+    --open-bg: #1a2236;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font: 14px/1.55 "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--txt);
+    background: var(--bg);
+    margin: 0;
+    padding: 28px 36px 80px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 28px; margin: 4px 0 6px; letter-spacing: .2px; }
+  h2 { font-size: 19px; margin: 36px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); color: #e6ecf6; }
+  h3 { font-size: 15.5px; margin: 22px 0 10px; color: #e6ecf6; }
+  h4 { font-size: 14px; margin: 14px 0 6px; color: var(--txt-dim); text-transform: uppercase; letter-spacing: .8px; }
+  .meta { color: var(--txt-dim); font-size: 12.5px; }
+  code, .mono {
+    font-family: "JetBrains Mono", "Consolas", "Cascadia Code", monospace;
+    background: var(--card-hi);
+    padding: 1.5px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+  }
+  pre {
+    background: #0c0e13;
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font: 12.5px/1.55 "JetBrains Mono","Consolas",monospace;
+    color: #c9d1e3;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 4px; font-size: 13px; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--card-hi); color: #e6ecf6; font-weight: 600; }
+  tr:nth-child(even) td { background: rgba(255,255,255,.012); }
+  ul, ol { padding-left: 22px; margin: 6px 0 12px; }
+  li { margin: 3px 0; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 14px 0;
+  }
+  .grid { display: grid; gap: 14px; }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 1100px) { .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 700px)  { .grid-3, .grid-4, .grid-2 { grid-template-columns: 1fr; } }
+
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat .label { color: var(--txt-dim); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
+  .stat .val { font-size: 22px; font-weight: 600; margin-top: 4px; color: #fff; }
+  .stat .sub { font-size: 12px; color: var(--txt-dim); margin-top: 4px; }
+
+  .badge {
+    display: inline-block;
+    padding: 1.5px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .3px;
+    vertical-align: middle;
+  }
+  .b-ok    { background: rgba(57,193,114,.16);  color: #79e0a2; border: 1px solid rgba(57,193,114,.4); }
+  .b-warn  { background: rgba(240,169,69,.16);  color: #f0bd66; border: 1px solid rgba(240,169,69,.4); }
+  .b-bad   { background: rgba(239,91,91,.18);   color: #ff8888; border: 1px solid rgba(239,91,91,.4); }
+  .b-info  { background: rgba(110,122,254,.16); color: #9aa3ff; border: 1px solid rgba(110,122,254,.4); }
+  .b-mute  { background: rgba(255,255,255,.04); color: var(--txt-dim); border: 1px solid var(--border); }
+
+  .pri  { font-size: 11px; padding: 1px 6px; border-radius: 4px; font-weight: 700; letter-spacing: .4px; }
+  .p-p0 { background: #5a1717; color: #ffb0b0; }
+  .p-p1 { background: #5a3d10; color: #ffd58a; }
+  .p-p2 { background: #1c3a5b; color: #9ec6ff; }
+  .p-p3 { background: #2c2f3a; color: #aab2c5; }
+
+  .kanban { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+  @media (max-width: 1100px) { .kanban { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 700px) { .kanban { grid-template-columns: 1fr; } }
+  .col { border-radius: 10px; padding: 12px 14px; min-height: 100px; }
+  .col h3 { margin-top: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--txt); }
+  .col-done    { background: var(--done-bg);  border: 1px solid #1c4a31; }
+  .col-doing   { background: var(--doing-bg); border: 1px solid #5a4017; }
+  .col-block   { background: var(--block-bg); border: 1px solid #5a1f1f; }
+  .col-open    { background: var(--open-bg);  border: 1px solid #2c3a5a; }
+  .ticket { background: rgba(0,0,0,.22); border: 1px solid rgba(255,255,255,.06); border-radius: 6px; padding: 8px 10px; margin: 6px 0; font-size: 12.5px; }
+  .ticket .id { color: var(--accent); font-weight: 600; font-family: "JetBrains Mono",monospace; }
+  .ticket .t  { color: #e6ecf6; }
+  .ticket .m  { color: var(--txt-dim); font-size: 11.5px; margin-top: 2px; }
+
+  .pipeline {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    align-items: stretch;
+    margin: 8px 0 4px;
+  }
+  .stage {
+    flex: 1; min-width: 150px;
+    background: var(--card-hi);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    position: relative;
+  }
+  .stage .h { font-weight: 600; color: #e6ecf6; }
+  .stage .b { font-size: 12px; color: var(--txt-dim); margin-top: 4px; }
+  .arrow { color: var(--txt-dim); align-self: center; font-size: 20px; }
+
+  .task {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px 8px 8px 6px;
+    padding: 12px 16px;
+    margin: 10px 0;
+  }
+  .task.p0 { border-left-color: var(--bad); }
+  .task.p1 { border-left-color: var(--warn); }
+  .task.p2 { border-left-color: var(--accent); }
+  .task.p3 { border-left-color: var(--txt-dim); }
+  .task .head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .task .head .title {
+    font-weight: 600;
+    color: #e6ecf6;
+    font-size: 14.5px;
+  }
+  .task .head .id { color: var(--accent); font-family: "JetBrains Mono",monospace; font-size: 12px; }
+  .task .row { display: flex; flex-wrap: wrap; gap: 12px 22px; font-size: 12.5px; color: var(--txt-dim); margin-top: 6px; }
+  .task .row span b { color: #c2cad8; font-weight: 500; }
+  .task .body { margin-top: 6px; font-size: 13px; }
+
+  .timeline { display: grid; grid-template-columns: 90px 1fr; gap: 8px 14px; align-items: start; margin-top: 8px; }
+  .tl-week { font-weight: 600; color: var(--accent); padding-top: 2px; }
+  .tl-items { color: #c9d1e3; font-size: 13px; }
+  .tl-items .badge { margin-right: 4px; }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 26px 0; }
+
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 13px;
+    columns: 2;
+    column-gap: 28px;
+  }
+  @media (max-width: 700px) { .toc { columns: 1; } }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .footer { color: var(--txt-dim); font-size: 12px; margin-top: 50px; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>POV-3D 项目计划与任务分配</h1>
+<div class="meta">
+  生成日期 <code>2026-05-06</code>
+  · Repo <code>github.com/kiujkiu/zynq_pov</code>
+  · 起点 commit <code>c82f764</code> · Phase 7+
+</div>
+
+<h2 id="toc">目录</h2>
+<div class="toc">
+  <a href="#summary">1 · 一页总览</a><br/>
+  <a href="#target">2 · 终极目标 &amp; 硬指标</a><br/>
+  <a href="#status">3 · 当前进度速览</a><br/>
+  <a href="#arch">4 · 系统架构 / 数据流</a><br/>
+  <a href="#perf">5 · 性能基线</a><br/>
+  <a href="#kanban">6 · 任务看板</a><br/>
+  <a href="#tasks">7 · 任务卡片（详细）</a><br/>
+  <a href="#risks">8 · 风险与已知问题</a><br/>
+  <a href="#timeline">9 · 推进时间线</a><br/>
+  <a href="#refs">10 · 关键路径速查</a><br/>
+</div>
+
+<!-- ============================================================== -->
+<h2 id="summary">1 · 一页总览</h2>
+<div class="card">
+  <p>
+    <b>POV-3D</b> 是一台旋转 LED 持久化显像（Persistence-of-Vision）3D 显示器。
+    主板：<b>Zynq-7020 (XC7Z020)</b>。Pipeline：
+    主机加载 <code>.glb</code> → 体素化（host or 设备） → ARM 渲染 / 未来 PL voxel slicer →
+    HDMI 预览（720p/1080p）→ 旋转 LED 面板（PCB 未到货）。
+  </p>
+
+  <div class="grid grid-4" style="margin-top: 12px;">
+    <div class="stat"><div class="label">稳定基线</div><div class="val">60.5 FPS</div><div class="sub">USE_PL=0 + ARM render + vsync-lock @ 720p60</div></div>
+    <div class="stat"><div class="label">高细节模式</div><div class="val">30.3 FPS</div><div class="sub">100K pts + 256³ voxel @ 720p60</div></div>
+    <div class="stat"><div class="label">主吞吐缺口</div><div class="val">8×</div><div class="sub">~2800 vs 21600 slice/sec 目标</div></div>
+    <div class="stat"><div class="label">主线阻塞</div><div class="val">2 项</div><div class="sub">USE_PL=1 m_axi 回归 + LED PCB 未到</div></div>
+  </div>
+
+  <h4 style="margin-top:18px;">本周一句话</h4>
+  <p>
+    展示路径已经稳了（颜色对齐 3D Viewer，HDMI 撕裂修了，UART 升级到 921600）。
+    瓶颈从"<b>能不能看见</b>"转到"<b>是否能上 LED 面板</b>"——
+    需要把 <span class="mono">pov_voxel_slice_batch</span> IP 4 路并行集成到 BD，并修复 USE_PL=1 的 m_axi 写 DDR 回归。
+  </p>
+</div>
+
+<!-- ============================================================== -->
+<h2 id="target">2 · 终极目标 &amp; 硬指标</h2>
+<div class="card">
+  <table>
+    <tr><th style="width: 30%;">指标</th><th>值</th><th>来源 / 备注</th></tr>
+    <tr><td>每圈切片数</td><td><b>720 slice</b> / 360°</td><td>0.5° 角分辨率</td></tr>
+    <tr><td>体刷新率</td><td><b>30 Hz</b> = 1800 RPM</td><td>1800 RPM 是机械上限，30 Hz 人眼融合下限</td></tr>
+    <tr><td>每 slice 像素</td><td><b>160 × 180</b></td><td>当前 LED panel 设计</td></tr>
+    <tr><td>并行 RGB 通道</td><td><b>15–30 路</b></td><td>ICND1069 驱动芯片级联</td></tr>
+    <tr><td>HDMI 预览分辨率</td><td><b>1920×1080</b></td><td>恰好 160×180 × 72 格（z 切片网格）</td></tr>
+    <tr><td>切片吞吐目标</td><td><b>21 600 slice/sec</b></td><td>720 × 30 = 21.6k；当前 ~2800/s（差 8×）</td></tr>
+    <tr><td>单 slice 时间预算</td><td><b>46 μs</b></td><td>架构 C 允许抖动缓冲；架构 B 是硬死线</td></tr>
+  </table>
+
+  <p class="meta" style="margin-top:8px;">
+    <b>路线确定</b>：4–8 路并行 IP + m_axi 优化。备选方案：升 Zynq-7035 或降到 15 Hz 体刷新。
+  </p>
+</div>
+
+<!-- ============================================================== -->
+<h2 id="status">3 · 当前进度速览</h2>
+
+<div class="grid grid-3">
+  <div class="card">
+    <h4>已完成（核心）</h4>
+    <ul>
+      <li><span class="badge b-ok">✓</span> 720p60 HDMI 输出 + vsync-lock</li>
+      <li><span class="badge b-ok">✓</span> 1080p30 模式（USE_1080P30 宏）</li>
+      <li><span class="badge b-ok">✓</span> UART 921600 baud（xsdb 写 BAUDGEN/BAUDDIV）</li>
+      <li><span class="badge b-ok">✓</span> 256³ voxel + 设备端体素化</li>
+      <li><span class="badge b-ok">✓</span> PPCL 协议 u32 num_points（支持 1M 点）</li>
+      <li><span class="badge b-ok">✓</span> HDMI fb 字节序统一为 GBR</li>
+      <li><span class="badge b-ok">✓</span> 颜色对齐 Windows 3D Viewer（baked GLB）</li>
+      <li><span class="badge b-ok">✓</span> Blender PBR bake (Option A)</li>
+      <li><span class="badge b-ok">✓</span> 简化 PBR + multi-dir IBL (Option B)</li>
+      <li><span class="badge b-ok">✓</span> QSPI 持久化（boot 不依赖 JTAG）</li>
+      <li><span class="badge b-ok">✓</span> 鹿小班板以太网 GEM0+RGMII 验证</li>
+      <li><span class="badge b-ok">✓</span> pov_voxel_slice_batch IP 综合（94fdd33）</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h4>进行中</h4>
+    <ul>
+      <li><span class="badge b-warn">…</span> hybrid mode（boot ARM → 收 anime 切 PL）框架已写</li>
+      <li><span class="badge b-warn">…</span> 4-IP voxel slicer Vivado BD 集成</li>
+      <li><span class="badge b-warn">…</span> 颜色调参（Option A vs B 视觉评估）</li>
+      <li><span class="badge b-warn">…</span> ESP32 WiFi 桥代码 stub（待硬件）</li>
+    </ul>
+
+    <h4>阻塞</h4>
+    <ul>
+      <li><span class="badge b-bad">⛔</span> USE_PL=1 m_axi 写 ring DDR 回归 (#38/#39)</li>
+      <li><span class="badge b-bad">⛔</span> LED PCB 未到货（#2 主架构）</li>
+      <li><span class="badge b-bad">⛔</span> ESP32 硬件未到（#16）</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h4>未开始</h4>
+    <ul>
+      <li><span class="badge b-info">○</span> 4-IP bitstream 实测吞吐验证</li>
+      <li><span class="badge b-info">○</span> Host 预渲染高清切片（绕开 voxel 天花板）</li>
+      <li><span class="badge b-info">○</span> Skeletal/keyframe 动画解码</li>
+      <li><span class="badge b-info">○</span> LED panel driver 板级驱动 / 同步信号</li>
+      <li><span class="badge b-info">○</span> 旋转编码器 / 角度同步</li>
+      <li><span class="badge b-info">○</span> 上电启动序 + brown-out 保护</li>
+    </ul>
+
+    <h4>已废弃 / 绕开</h4>
+    <ul>
+      <li><s>VDMA park 模式</s> → 改 pure circular</li>
+      <li><s>pov_project_batch BRAM 缓存路径</s> → voxel slicer 取代</li>
+      <li><s>SPARSE_VOXEL 协议</s> → 板上 32 MB memset 阻塞 RX</li>
+      <li><s>memcpy 合并 3-byte fb 写</s> → 实测全慢</li>
+      <li><s>occupied_list 放固定 DDR</s> → MMU 配置坑，回 BSS</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<h2 id="arch">4 · 系统架构 / 数据流</h2>
+
+<h3>主流水线</h3>
+<div class="pipeline">
+  <div class="stage">
+    <div class="h">Host (Win Python)</div>
+    <div class="b">
+      load .glb (优先 baked) →<br>
+      <code>voxelize_mesh()</code> →<br>
+      RGB888 + voxel 平均色 →<br>
+      <code>pack_frame()</code> PPCL
+    </div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="stage">
+    <div class="h">UART 921600</div>
+    <div class="b">8N1, ~92 KB/s 实速；25 KB 帧 0.27 s（含主机 chunked write + 板侧 cache flush 分块）</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="stage">
+    <div class="h">ARM (Zynq PS)</div>
+    <div class="b">
+      PPCL parse →<br>
+      <code>voxelize_model()</code> 256³ DDR @ 0x18000000 →<br>
+      <code>cpu_render_voxel_panel</code> 或 (未来) PL slicer
+    </div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="stage">
+    <div class="h">VDMA + HDMI</div>
+    <div class="b">
+      pure-circular dual buffer<br>
+      0x10000000 / 0x14000000 →<br>
+      rgb2dvi → HDMI 720p60 / 1080p30
+    </div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="stage">
+    <div class="h">显示</div>
+    <div class="b">
+      <i>now:</i> HDMI 显示器<br>
+      <i>未来:</i> 旋转 LED 面板（160×180 @ 720 slice × 30 Hz）
+    </div>
+  </div>
+</div>
+
+<h3>DDR 内存布局（Phase 7）</h3>
+<table>
+  <tr><th>区域</th><th>地址</th><th>大小</th><th>用途</th></tr>
+  <tr><td>FB_A</td><td><code>0x10000000</code></td><td>2.7 MB / 6 MB</td><td>HDMI framebuffer A（720p / 1080p）</td></tr>
+  <tr><td>RING</td><td><code>0x12000000</code></td><td>2.6 MB</td><td>72-slot slice ring（PL 写 / ARM blit）</td></tr>
+  <tr><td>FB_B</td><td><code>0x14000000</code></td><td>同 FB_A</td><td>HDMI framebuffer B</td></tr>
+  <tr><td>VOXEL_GRID</td><td><code>0x18000000</code></td><td><b>32 MB</b></td><td>256³ × RGB565 体素</td></tr>
+  <tr><td>MODEL</td><td><code>0x1A000000</code></td><td>16 MB</td><td>1M × 16 B point_t buffer</td></tr>
+  <tr><td>occupied_list</td><td>BSS</td><td>1.5 MB</td><td>256K × 6B；不放固定 DDR（MMU 坑）</td></tr>
+</table>
+<p class="meta">DDR 上限 0x20000000 (512 MB)，当前用量 ~60 MB（12%）。</p>
+
+<h3>HLS IP 现状</h3>
+<table>
+  <tr><th>IP</th><th>状态</th><th>用途 / 备注</th></tr>
+  <tr>
+    <td><code>pov_project_batch</code></td>
+    <td><span class="badge b-warn">已综合 / BD 在用</span></td>
+    <td>原始点云投影 IP，base <code>0x43C20000</code>。<b>有 model-update bug</b>，被 voxel slicer 绕开。</td>
+  </tr>
+  <tr>
+    <td><code>pov_voxel_slice_batch</code></td>
+    <td><span class="badge b-info">已综合，未 BD 集成</span></td>
+    <td>读 voxel 网格写 72-slot ring，无 BRAM 缓存（避开 #10 bug）。csim PASS（94fdd33）。</td>
+  </tr>
+  <tr>
+    <td>4-IP 并行版本</td>
+    <td><span class="badge b-info">BD tcl 已写</span></td>
+    <td><code>tools/bd_4ip_voxel_slicer.tcl</code> + <code>voxel_slicer_4ip.h</code>。bitstream 未跑。</td>
+  </tr>
+</table>
+
+<!-- ============================================================== -->
+<h2 id="perf">5 · 性能基线</h2>
+
+<h3>当前实测</h3>
+<table>
+  <tr>
+    <th>配置</th><th>FPS</th><th>说明</th>
+  </tr>
+  <tr><td>720p60 + 5K 点 + 单 voxel</td><td>91</td><td>Phase 7 早期</td></tr>
+  <tr><td>720p60 + 32K 点 + 256³ + 3px block</td><td>65</td><td>基线密度</td></tr>
+  <tr><td>720p60 + 100K 点（饱和）</td><td>30</td><td>高细节</td></tr>
+  <tr><td>720p60 + 1M 点（过饱和）</td><td>7.7</td><td>极限，不实用（视觉与 100K 几乎无差）</td></tr>
+  <tr style="background: rgba(57,193,114,.08);">
+    <td><b>720p60 vsync-locked（撕裂修后）</b></td>
+    <td><b>60.54</b></td>
+    <td><b>当前默认</b></td>
+  </tr>
+  <tr><td>1080p30 vsync-locked</td><td>30.27</td><td>USE_1080P30 宏；USB capture 卡多限 720p</td></tr>
+</table>
+
+<h3>切片吞吐</h3>
+<table>
+  <tr><th>路径</th><th>slice/sec</th><th>距 21 600 目标</th></tr>
+  <tr><td>单 IP <code>pov_project</code> 实测</td><td>~2 800</td><td>0.13×（差 8×）</td></tr>
+  <tr><td>HLS estimate 报告（不准）</td><td>~40 000</td><td>HLS 乐观 ~14× 偏离实测，<b>不可信</b></td></tr>
+  <tr><td>4-IP 并行预估</td><td>~11 200</td><td>0.52×（仍差 ~2×，需 m_axi 多 HP 端口）</td></tr>
+  <tr><td>8-IP 并行 + HP0/1 分流（预估）</td><td>~22 000</td><td>≥ 1×</td></tr>
+</table>
+
+<h3>UART 链路</h3>
+<table>
+  <tr><th>项</th><th>值</th></tr>
+  <tr><td>baud</td><td><b>921 600</b>（BAUDGEN=18, BAUDDIV=5）</td></tr>
+  <tr><td>有效净速</td><td>~92 KB/s</td></tr>
+  <tr><td>25 KB 单帧</td><td>0.27 s（旧 115200 是 2.17 s，<b>8× 提速</b>）</td></tr>
+  <tr><td>RX FIFO</td><td>64 byte（@921600 = 0.69 ms 溢出窗口）</td></tr>
+  <tr><td>cache flush 策略</td><td>64 KB 一块 + 块间 <code>uart_poll_frame()</code></td></tr>
+</table>
+
+<!-- ============================================================== -->
+<h2 id="kanban">6 · 任务看板</h2>
+
+<div class="kanban">
+  <div class="col col-done">
+    <h3>Done <span class="meta" style="float:right">12+</span></h3>
+    <div class="ticket"><span class="id">T-01</span> <span class="t">HDMI 撕裂修复</span><div class="m">pure-circular VDMA + ARM vsync poll</div></div>
+    <div class="ticket"><span class="id">T-02</span> <span class="t">UART 921600 升级</span><div class="m">xsdb 写 BAUDGEN/BAUDDIV，修 chunked cache flush</div></div>
+    <div class="ticket"><span class="id">T-03</span> <span class="t">256³ voxel 体素化</span><div class="m">DDR @ 0x18000000，cell-extent 解决扁模型 90° 视角</div></div>
+    <div class="ticket"><span class="id">T-04</span> <span class="t">PPCL u32 num_points</span><div class="m">HDR_FMT &lt;IIIHH，1M 点支持</div></div>
+    <div class="ticket"><span class="id">T-05</span> <span class="t">HDMI fb 字节序 GBR</span><div class="m">写 p[0]=g; p[1]=b; p[2]=r</div></div>
+    <div class="ticket"><span class="id">T-06</span> <span class="t">颜色对齐 3D Viewer</span><div class="m">brighten/gamma/saturation + Blender PBR bake (Option A/B)</div></div>
+    <div class="ticket"><span class="id">T-07</span> <span class="t">QSPI 持久化</span><div class="m">bootgen + flash_qspi 流程</div></div>
+    <div class="ticket"><span class="id">T-08</span> <span class="t">pov_voxel_slice_batch IP 综合</span><div class="m">commit 94fdd33，无 BRAM cache</div></div>
+  </div>
+
+  <div class="col col-doing">
+    <h3>In Progress <span class="meta" style="float:right">3</span></h3>
+    <div class="ticket"><span class="id">T-10</span> <span class="t">hybrid mode 软件框架</span><div class="m">boot ARM render → 收 anime 切 PL；被 USE_PL=1 m_axi bug 阻塞</div></div>
+    <div class="ticket"><span class="id">T-11</span> <span class="t">4-IP BD 集成准备</span><div class="m">bd_4ip_voxel_slicer.tcl + voxel_slicer_4ip.h 已写；未综合 bitstream</div></div>
+    <div class="ticket"><span class="id">T-12</span> <span class="t">color tuning 视觉评估</span><div class="m">Option A (PBR bake) vs Option B (simplified PBR + IBL)</div></div>
+  </div>
+
+  <div class="col col-block">
+    <h3>Blocked <span class="meta" style="float:right">3</span></h3>
+    <div class="ticket"><span class="id">T-20</span> <span class="t">USE_PL=1 m_axi 写 DDR 回归</span><div class="m">同 bitstream 之前 nz=20060 工作过；现在 ring nz=0/100K。怀疑 axi_smc_pov_hp 路由</div></div>
+    <div class="ticket"><span class="id">T-21</span> <span class="t">LED panel 上线</span><div class="m">PCB 未到货</div></div>
+    <div class="ticket"><span class="id">T-22</span> <span class="t">ESP32 WiFi 桥</span><div class="m">代码 stub 已写，等 ESP32 模块到货</div></div>
+  </div>
+
+  <div class="col col-open">
+    <h3>Open <span class="meta" style="float:right">8</span></h3>
+    <div class="ticket"><span class="id">T-30</span> <span class="t">4-IP bitstream 综合 + 实测</span><div class="m">~30 min，先解 T-20 再做</div></div>
+    <div class="ticket"><span class="id">T-31</span> <span class="t">HP0/HP1 多端口分流</span><div class="m">看 8 路并行能否打满 21.6k slice/s</div></div>
+    <div class="ticket"><span class="id">T-32</span> <span class="t">host 端预渲染高清切片</span><div class="m">绕开 voxel 天花板（脸部表情）</div></div>
+    <div class="ticket"><span class="id">T-33</span> <span class="t">动画 GLB 解码</span><div class="m">skeletal / keyframe</div></div>
+    <div class="ticket"><span class="id">T-34</span> <span class="t">LED panel driver 板级</span><div class="m">15-30 路并行 RGB + ICND1069 级联</div></div>
+    <div class="ticket"><span class="id">T-35</span> <span class="t">旋转编码器同步</span><div class="m">slice 与机械角度对齐</div></div>
+    <div class="ticket"><span class="id">T-36</span> <span class="t">brown-out 上电序</span><div class="m">机械启动期保护</div></div>
+    <div class="ticket"><span class="id">T-37</span> <span class="t">capacity_analysis 更新</span><div class="m">把 Phase 7 实测带宽数据加入 docs/capacity_analysis.html</div></div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<h2 id="tasks">7 · 任务卡片（详细）</h2>
+
+<h3>P0 — 阻塞主线，必须先解</h3>
+
+<div class="task p0">
+  <div class="head">
+    <span class="pri p-p0">P0</span>
+    <span class="id">T-20</span>
+    <span class="title">USE_PL=1 时 PL m_axi 写 ring DDR 失败</span>
+    <span class="badge b-bad">Blocked</span>
+  </div>
+  <div class="row">
+    <span><b>估时</b> 0.5–2 day</span>
+    <span><b>前置</b> 无</span>
+    <span><b>领域</b> Vivado BD / ChipScope</span>
+    <span><b>References</b> docs/claude_memory/feedback_use_pl1_uart_unreliable.md</span>
+  </div>
+  <div class="body">
+    <b>现象：</b><code>pov_project_batch_0</code> 触发后 ap_done 正常，但 ring buffer 区 nz=0。同一 bitstream 之前有 nz=20060 工作过，现在回归。
+    <br/><b>怀疑：</b><code>axi_smc_pov_hp/S00_AXI</code> / <code>S01_AXI</code> 路由问题；或 <code>pov_project_batch_0/m_axi_gmem*</code> 路由被改坏。
+    <br/><b>调试步骤：</b>
+    <ol>
+      <li>Vivado 打开 BD，目视确认 <code>axi_smc_pov_hp</code> → <code>processing_system7_0/S_AXI_HP1</code> 仍连通。</li>
+      <li>加 ChipScope ILA 抓 <code>pov_project_batch_0/m_axi_gmem0</code> 的 AWVALID/AWADDR/WVALID。</li>
+      <li>若 AW 不发，看 ap_start 触发时 <code>ap_idle</code> 是否复位异常。</li>
+      <li>实在搞不定退回 USE_PL=0（baseline 完美）；hybrid mode 推迟。</li>
+    </ol>
+    <b>验收：</b>USE_PL=1 时收到 anime 后 ring nz ≥ 18 000。
+  </div>
+</div>
+
+<h3>P1 — 性能扩展，影响 LED 上线节奏</h3>
+
+<div class="task p1">
+  <div class="head">
+    <span class="pri p-p1">P1</span>
+    <span class="id">T-30</span>
+    <span class="title">4-IP voxel slicer Vivado BD 集成 + bitstream</span>
+  </div>
+  <div class="row">
+    <span><b>估时</b> 1 day（30–50 min 综合 × 多次迭代）</span>
+    <span><b>前置</b> T-20 解决（确认 m_axi 路由健康）</span>
+    <span><b>领域</b> Vivado BD / Tcl</span>
+  </div>
+  <div class="body">
+    <b>已就绪：</b><code>tools/bd_4ip_voxel_slicer.tcl</code>、<code>voxel_slicer_4ip.h</code>、综合好的 <code>pov_voxel_slice_batch</code> IP。
+    <br/><b>关键风险：</b>4 路 m_axi 都接 HP1 会撞带宽；需要做 HP0 / HP1 分流。先单 IP 跑通 → 加 IP 数 → 加 HP 端口。
+    <br/><b>验收：</b>实测 slice/sec ≥ 8 000（4× 当前），FPS @ 720p ≥ 100，且模型颜色 / 几何与 ARM render 一致。
+  </div>
+</div>
+
+<div class="task p1">
+  <div class="head">
+    <span class="pri p-p1">P1</span>
+    <span class="id">T-10</span>
+    <span class="title">hybrid mode：boot ARM 渲染 → 收 anime 切 PL</span>
+    <span class="badge b-warn">In Progress</span>
+  </div>
+  <div class="row">
+    <span><b>估时</b> 0.5 day（依赖 T-20）</span>
+    <span><b>前置</b> T-20</span>
+    <span><b>领域</b> ARM C / cache 协议</span>
+  </div>
+  <div class="body">
+    <b>已就绪：</b>
+    <ul>
+      <li><code>read_model_n()</code> noinline + DSB barrier 解决 cache stale read。</li>
+      <li>MMU 把 ring buffer 0x12000000 的 3 MB 段标 non-cacheable（属性 0x11DE2）。</li>
+      <li>main loop 根据 <code>model_n &gt; 1000</code> 切 ARM ↔ PL 路径。</li>
+      <li>boot 期 ARM 渲染塞 100K busy poll 保证 anime UART 接收稳定。</li>
+    </ul>
+    <b>未做：</b>切到 PL 后 m_axi 写 DDR（被 T-20 阻）。
+    <br/><b>验收：</b>boot 时 60 FPS ARM 渲染 + UART 100% 收完 30K 点 → 切 PL 后 ≥ 100 FPS。
+  </div>
+</div>
+
+<h3>P2 — 主机 / 工具链</h3>
+
+<div class="task p2">
+  <div class="head">
+    <span class="pri p-p2">P2</span>
+    <span class="id">T-12</span>
+    <span class="title">color tuning：Option A vs B 视觉评估</span>
+    <span class="badge b-warn">In Progress</span>
+  </div>
+  <div class="row">
+    <span><b>估时</b> 0.5 day</span>
+    <span><b>前置</b> 无</span>
+    <span><b>领域</b> Host Python</span>
+  </div>
+  <div class="body">
+    <b>方案 A（PBR bake）</b>：Blender 4.2 LTS 离线烘焙 IBL → texture，<code>voxelize_mesh(lighting="none", saturation=2.5)</code>。柔和真实。
+    <br/><b>方案 B（simplified PBR）</b>：4 光源 IBL（key/fill/sky/ground）+ lambert + per-channel multiplier。<code>brighten=1.2, gamma=0.95, saturation=2.0, ambient=0.55</code>。色块更鲜艳。
+    <br/><b>验收：</b>选定一个作 GUI 默认；另一个保留为 <code>--option=b</code> 开关。
+  </div>
+</div>
+
+<div class="task p2">
+  <div class="head">
+    <span class="pri p-p2">P2</span>
+    <span class="id">T-37</span>
+    <span class="title">capacity_analysis.html 更新 Phase 7 数据</span>
+  </div>
+  <div class="row">
+    <span><b>估时</b> 0.25 day</span>
+    <span><b>前置</b> 无</span>
+    <span><b>领域</b> Docs</span>
+  </div>
+  <div class="body">
+    把 921600 baud + 60.54 FPS vsync-lock + 2800 slice/s 实测 + 4-IP / 8-IP 预估补回容量分析图。
+  </div>
+</div>
+
+<div class="task p2">
+  <div class="head">
+    <span class="pri p-p2">P2</span>
+    <span class="id">T-32</span>
+    <span class="title">host 端预渲染高清切片图</span>
+  </div>
+  <div class="row">
+    <span><b>估时</b> 1–2 day</span>
+    <span><b>前置</b> 无（与 T-30 并行）</span>
+    <span><b>领域</b> Host Python</span>
+  </div>
+  <div class="body">
+    绕开 256³ voxel 天花板（B7：脸部表情糊）。Host 端按 720 个角度直接渲染 160×180 RGB565 切片，wire 发完整切片图（每帧 720 × 160×180×2 = 41 MB，需 WiFi/ETH，UART 不够）。
+    <br/><b>依赖：</b>T-22 ESP32 桥或鹿小班 ETH 路径。
+  </div>
+</div>
+
+<h3>P3 — 等硬件 / 长尾</h3>
+
+<div class="task p3">
+  <div class="head">
+    <span class="pri p-p3">P3</span>
+    <span class="id">T-22</span>
+    <span class="title">ESP32 WiFi 桥</span>
+    <span class="badge b-bad">Blocked: 等硬件</span>
+  </div>
+  <div class="row">
+    <span><b>估时</b> 1 day（拿到模块后）</span>
+    <span><b>前置</b> ESP32 模块到货</span>
+    <span><b>领域</b> ESP-IDF / UART 桥</span>
+  </div>
+  <div class="body">
+    替换 UART 拿 ~100× 带宽（11 Mbit/s 常见 vs 921 Kbps）。代码 stub 已写。
+  </div>
+</div>
+
+<div class="task p3">
+  <div class="head">
+    <span class="pri p-p3">P3</span>
+    <span class="id">T-21 / T-34 / T-35 / T-36</span>
+    <span class="title">LED panel 板级（PCB / driver / 同步 / 上电序）</span>
+    <span class="badge b-bad">Blocked: PCB 未到</span>
+  </div>
+  <div class="row">
+    <span><b>估时</b> 待定</span>
+    <span><b>前置</b> PCB 制版交付</span>
+    <span><b>领域</b> Hardware / FPGA driver</span>
+  </div>
+  <div class="body">
+    包括：15–30 路 RGB 并行驱动（ICND1069）、旋转编码器对齐、机械启动 brown-out 保护、首次烧写流程。
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<h2 id="risks">8 · 风险与已知问题</h2>
+
+<table>
+  <tr>
+    <th>编号</th><th>问题</th><th>类型</th><th>影响</th><th>缓解</th>
+  </tr>
+  <tr>
+    <td>R1</td>
+    <td>USE_PL=1 m_axi 写 DDR 回归</td>
+    <td><span class="badge b-bad">Bug</span></td>
+    <td>P0：阻塞 hybrid mode 与 LED 上线</td>
+    <td>ChipScope ILA 排查；最差回退 USE_PL=0</td>
+  </tr>
+  <tr>
+    <td>R2</td>
+    <td>HLS estimate 报告偏乐观 ~14×</td>
+    <td><span class="badge b-warn">陷阱</span></td>
+    <td>不能拿来排程，要按实测算</td>
+    <td>每个 IP 必须 BD 集成 + 板上量；docs/claude_memory/feedback_hls_cycle_estimate_optimistic.md</td>
+  </tr>
+  <tr>
+    <td>R3</td>
+    <td>256³ + cell=1 voxel 表面饱和 ~30K</td>
+    <td><span class="badge b-warn">架构</span></td>
+    <td>P2：脸部表情等高细节糊</td>
+    <td>T-32 host 预渲染切片；512³（256 MB DDR，板撑不住）</td>
+  </tr>
+  <tr>
+    <td>R4</td>
+    <td>OBS Virtual Camera + USB capture 限 720p</td>
+    <td><span class="badge b-info">工具</span></td>
+    <td>1080p 抓帧返黑（板子能输出）</td>
+    <td>1080p 直连显示器；demo 默认 720p</td>
+  </tr>
+  <tr>
+    <td>R5</td>
+    <td>JTAG / COM 偶尔掉</td>
+    <td><span class="badge b-info">硬件</span></td>
+    <td>调试中断</td>
+    <td>物理拔插 USB；GUI ↻ Detect 重检测</td>
+  </tr>
+  <tr>
+    <td>R6</td>
+    <td>BAUDDIV ≥ 4 才合法（Zynq TRM）</td>
+    <td><span class="badge b-info">陷阱</span></td>
+    <td>不知则 baud 错</td>
+    <td>当前 921600 用 BGEN=18 / BDIV=5</td>
+  </tr>
+  <tr>
+    <td>R7</td>
+    <td>WSL <code>/usr/bin/git push</code> 报无 credential</td>
+    <td><span class="badge b-info">工具链</span></td>
+    <td>不知则推不上 GitHub</td>
+    <td>走 <code>cmd.exe /c "cd /d D:\... && git push"</code>，Windows GCM 已缓存 PAT</td>
+  </tr>
+  <tr>
+    <td>R8</td>
+    <td>本机 Xilinx 装在 <code>C:\Xilinx</code>，仓库脚本期待 <code>D:\</code></td>
+    <td><span class="badge b-info">工具链</span></td>
+    <td>本机已建符号链接 <code>D:\Vivado</code>/<code>D:\Vitis</code>/<code>D:\Vitis_HLS</code>；不影响</td>
+    <td>新机记得复制此符号链接动作（mklink 需 admin）</td>
+  </tr>
+  <tr>
+    <td>R9</td>
+    <td>Vitis_HLS 是独立目录（不在 Vitis\bin 下）</td>
+    <td><span class="badge b-info">陷阱</span></td>
+    <td>NEW_MACHINE_SETUP 里写法 <code>D:\Vitis\2024.2\bin\vitis_hls.bat</code> 错</td>
+    <td>实际是 <code>D:\Vitis_HLS\2024.2\bin\vitis_hls.bat</code></td>
+  </tr>
+  <tr>
+    <td>R10</td>
+    <td>Vitis workspace 多实例锁</td>
+    <td><span class="badge b-info">工具</span></td>
+    <td>build 失败</td>
+    <td>build 前 <code>taskkill /F /IM java.exe</code></td>
+  </tr>
+</table>
+
+<!-- ============================================================== -->
+<h2 id="timeline">9 · 推进时间线</h2>
+
+<div class="card">
+  <p class="meta">下面是建议节奏，按 LED PCB 到货前的 hardware-independent 工作排序。所有日期为相对（Day = 工作日）。</p>
+
+  <div class="timeline">
+    <div class="tl-week">Day 1–2</div>
+    <div class="tl-items">
+      <span class="badge b-bad">P0</span> T-20 USE_PL=1 m_axi 路由排查（Vivado BD + ChipScope ILA）<br/>
+      <span class="badge b-info">P2</span> T-12 颜色调参 A/B 评估并选默认（与 T-20 并行可做）
+    </div>
+
+    <div class="tl-week">Day 3–4</div>
+    <div class="tl-items">
+      <span class="badge b-warn">P1</span> T-10 hybrid mode 上线（依赖 T-20）<br/>
+      <span class="badge b-info">P2</span> T-37 capacity_analysis 更新
+    </div>
+
+    <div class="tl-week">Day 5–7</div>
+    <div class="tl-items">
+      <span class="badge b-warn">P1</span> T-30 4-IP BD 集成 + bitstream + 实测吞吐<br/>
+      <span class="badge b-info">P2</span> T-31 单 / 双 HP 端口分流对比测试
+    </div>
+
+    <div class="tl-week">Day 8–10</div>
+    <div class="tl-items">
+      <span class="badge b-info">P2</span> T-32 host 预渲染高清切片 prototype<br/>
+      <span class="badge b-info">P2</span> T-33 动画 GLB 解码（skeletal / keyframe）
+    </div>
+
+    <div class="tl-week">硬件到</div>
+    <div class="tl-items">
+      <span class="badge b-mute">P3</span> T-22 ESP32 桥（ESP32 模块到）<br/>
+      <span class="badge b-mute">P3</span> T-21/34/35/36 LED panel 上线（PCB 到）
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<h2 id="refs">10 · 关键路径速查</h2>
+
+<table>
+  <tr><th>想做什么</th><th>看哪</th></tr>
+  <tr><td>改 ARM 渲染 / hybrid 切换</td><td><code>02_hello_zynq/vitis_ws/hello_world/src/helloworld.c</code></td></tr>
+  <tr><td>改 HLS IP（fb 写、batch 流程）</td><td><code>hls_proj/pov_project.cpp</code></td></tr>
+  <tr><td>HLS 综合脚本</td><td><code>hls_proj/run_hls.tcl</code></td></tr>
+  <tr><td>BD + bitstream</td><td><code>tools/bd_use_batch_ip.tcl</code></td></tr>
+  <tr><td>4-IP BD（未跑）</td><td><code>tools/bd_4ip_voxel_slicer.tcl</code></td></tr>
+  <tr><td>主机端发送 anime（脚本）</td><td><code>host/test_send_one.py</code></td></tr>
+  <tr><td>GUI</td><td><code>host/pov_gui.py</code></td></tr>
+  <tr><td>体素化（mesh-aware）</td><td><code>host/glb_to_points.py</code> <code>voxelize_mesh()</code></td></tr>
+  <tr><td>Blender PBR bake</td><td><code>host/blender/bake_pbr.py</code></td></tr>
+  <tr><td>颜色调参参考</td><td><code>docs/claude_memory/project_pov3d_color_tuning.md</code></td></tr>
+  <tr><td>HDMI fb 字节序 = GBR</td><td><code>docs/claude_memory/project_pov3d_hdmi_fb_byte_order.md</code></td></tr>
+  <tr><td>协议格式 PPCL</td><td><code>docs/claude_memory/project_pov3d_stream_protocol.md</code></td></tr>
+  <tr><td>终极目标参数</td><td><code>docs/claude_memory/project_pov3d_final_target.md</code></td></tr>
+  <tr><td>WSL git push 套路</td><td><code>docs/claude_memory/reference_git_push_via_cmd.md</code></td></tr>
+  <tr><td>新机迁移</td><td><code>docs/NEW_MACHINE_SETUP.md</code></td></tr>
+  <tr><td>板级硬件 / Xilinx 工具路径</td><td>本机 Claude memory <code>reference_hardware.md</code></td></tr>
+</table>
+
+<h3>常用一行命令（本机 Win + WSL）</h3>
+<pre>
+# HLS 综合
+cmd.exe /c "cd /d D:\claude_workspace\pov3d\zynq_pov\hls_proj && D:\Vitis_HLS\2024.2\bin\vitis_hls.bat -f run_hls.tcl"
+
+# Vivado BD + bitstream（30–50 min）
+cmd.exe /c "cd /d D:\claude_workspace\pov3d\zynq_pov\tools && D:\Vivado\2024.2\bin\vivado.bat -mode batch -source bd_use_batch_ip.tcl"
+
+# 烧 BOOT.bin 到 QSPI
+cmd.exe /c "cd /d D:\claude_workspace\pov3d\zynq_pov\tools && persist_to_qspi.bat"
+
+# 主机端发一帧 anime（默认 baked GLB）
+cmd.exe /c "cd /d D:\claude_workspace\pov3d\zynq_pov\host && python test_send_one.py"
+
+# git push（必须走 Win GCM）
+cmd.exe /c "cd /d D:\claude_workspace\pov3d\zynq_pov && git push origin master"
+</pre>
+
+<div class="footer">
+  POV-3D · plan generated 2026-05-06 · base commit <code>c82f764</code><br/>
+  本文档可随项目推进 in-place 重写；上一份是 <code>docs/capacity_analysis.html</code>（带宽/分辨率分析）。
+</div>
+
+</body>
+</html>

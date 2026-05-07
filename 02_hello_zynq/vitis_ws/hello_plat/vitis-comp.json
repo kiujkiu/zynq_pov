@@ -16,20 +16,7 @@
       "ps7_cortexa9_1": "ps7_cortexa9"
     },
     "supportedFamily": "zynq",
-    "stdGenHookList": [
-      {
-        "key": "VITIS_SDT_REPO",
-        "value": ""
-      },
-      {
-        "key": "VITIS_SDT_BOARD_DTS",
-        "value": ""
-      },
-      {
-        "key": "VITIS_SDT_INCLUDE_DTS",
-        "value": ""
-      }
-    ],
+    "stdGenHookList": [],
     "componentType": "PLATFORM",
     "domains": [
       {

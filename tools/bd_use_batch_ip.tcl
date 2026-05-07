@@ -73,11 +73,41 @@ foreach pin {pov_project_batch_0/ap_rst_n} {
 assign_bd_address -offset 0x43C20000 -range 64K \
     [get_bd_addr_segs {pov_project_batch_0/s_axi_control/Reg}] -force
 
+# --- HDMI TMDS external interface ---
+# upgrade_ip rgb2dvi 后顶层 hdmi_tmds external interface + rgb2dvi_0_TMDS net 会被丢掉,
+# 不补回去, led_pins.xdc 的 hdmi_tmds_* port 全部 No ports matched -> HDMI 不接管脚 -> 黑屏.
+puts "=== Ensure hdmi_tmds external interface ==="
+set rgb_tmds [get_bd_intf_pins -quiet rgb2dvi_0/TMDS]
+if {[llength $rgb_tmds] == 0} {
+    puts "WARN: rgb2dvi_0/TMDS not found, skipping"
+} else {
+    set tmds_nets [get_bd_intf_nets -quiet -of_objects $rgb_tmds]
+    if {[llength $tmds_nets] == 0} {
+        puts "  rgb2dvi_0/TMDS unconnected — making external"
+        make_bd_intf_pins_external $rgb_tmds
+        # 默认名是 TMDS_0; 改成 hdmi_tmds 让 XDC 的 get_ports hdmi_tmds_* 命中
+        set new_port [get_bd_intf_ports -quiet TMDS_0]
+        if {[llength $new_port]} {
+            set_property name hdmi_tmds $new_port
+            puts "  renamed TMDS_0 -> hdmi_tmds"
+        }
+    } else {
+        puts "  rgb2dvi_0/TMDS already connected"
+    }
+}
+
 puts "=== Validate & save ==="
 catch {validate_bd_design} e
 puts "validate: $e"
 save_bd_design
 generate_target all [get_files ${bd_name}.bd] -force
+
+# 新机第一次重建时, srcs/ 里没有 wrapper, 需 Vivado 现场生成
+puts "=== Make BD wrapper (top module) ==="
+set wrapper [make_wrapper -files [get_files ${bd_name}.bd] -top -force]
+add_files -norecurse -force $wrapper
+set_property top ${bd_name}_wrapper [current_fileset]
+update_compile_order -fileset sources_1
 
 puts "=== Build bitstream ==="
 reset_run synth_1

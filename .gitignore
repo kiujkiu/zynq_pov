@@ -42,6 +42,7 @@ hls_proj/proj_pov_csim/
 hdmi_obs.jpg
 hdmi_ff.jpg
 hdmi_capture.jpg
+hdmi_direct.jpg
 host/voxel_slice_*.png
 host/pov_gui.log
 host/__pycache__/
@@ -63,8 +64,13 @@ host/__pycache__/
 02_hello_zynq/vitis_ws/.analytics
 02_hello_zynq/vitis_ws/.metadata/
 02_hello_zynq/vitis_ws/.sdk/
+02_hello_zynq/vitis_ws/.rigel_lopper/
 02_hello_zynq/hello_zynq_wrapper.xsa
 02_hello_zynq/*.log
+# Vitis Python shell journal
+vitis_journal.py
+# Vivado per-run side dirs
+tools/NA/
 
 # === Old hello_zynq scratch project ===
 01_hello_zynq/

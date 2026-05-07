@@ -230,6 +230,7 @@ static inline u8 uart_rx_byte(void) {
  *   16  N*16  point_t array
  */
 #define PC_MAGIC  0x4C435050U
+#define MESH_MAGIC 0x48534D50U   /* 'PMSH' little-endian — 三角面 mesh 协议 */
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -238,6 +239,41 @@ typedef struct __attribute__((packed)) {
     uint16_t flags;
     uint16_t reserved;
 } pc_hdr_t;
+
+/* Mesh 协议: header + verts(6B each) + tris(6B each).
+ * 见 host/mesh_proto.py. */
+typedef struct __attribute__((packed)) {
+    uint32_t magic;
+    uint32_t frame_id;
+    uint32_t n_verts;
+    uint32_t n_tris;
+    uint16_t flags;
+    uint16_t reserved;
+} mesh_hdr_t;
+
+typedef struct __attribute__((packed)) {
+    int8_t   x, y, z;
+    uint8_t  r, g, b;
+} mesh_vert_t;
+
+typedef struct __attribute__((packed)) {
+    uint16_t i0, i1, i2;
+} mesh_tri_t;
+
+#define MAX_MESH_VERTS  4096
+#define MAX_MESH_TRIS   4096
+/* DDR layout: 借用 RING_BUFFER 段(0x12000000), 当前未使用 (USE_PL=0 走 ARM render) */
+#define MESH_VERTS_ADDR  0x12000000UL    /* 24 KB */
+#define MESH_TRIS_ADDR   0x12010000UL    /* 24 KB */
+#define ZBUFFER_ADDR     0x12100000UL    /* 720*640 = 460 KB, allow pad */
+
+static mesh_vert_t * const mesh_verts = (mesh_vert_t *)MESH_VERTS_ADDR;
+static mesh_tri_t  * const mesh_tris  = (mesh_tri_t  *)MESH_TRIS_ADDR;
+static int8_t      * const mesh_zbuf  = (int8_t      *)ZBUFFER_ADDR;
+
+static volatile int  mesh_ready = 0;
+static volatile u32  mesh_n_verts = 0;
+static volatile u32  mesh_n_tris  = 0;
 
 /* model_n: volatile 让 main loop 看到 uart_poll_frame 内部的更新 (hybrid mode 切换) */
 /* (defined in build_model area but forward-declare volatile here for use_pl path) */
@@ -253,9 +289,9 @@ typedef struct __attribute__((packed)) {
 #define PC_FLAG_SPARSE_VOXEL  0x0002u  /* body = (idx24 + rgb16) * N, 5 byte/cell */
 #define PC_POINT_LEN_RAW      16
 #define PC_POINT_LEN_COMP     5
-typedef enum { RX_HDR, RX_PTS } rx_state_t;
+typedef enum { RX_HDR, RX_PTS, RX_MESH_VERTS, RX_MESH_TRIS } rx_state_t;
 static rx_state_t rx_state = RX_HDR;
-static u8          rx_hdr_buf[sizeof(pc_hdr_t)];
+static u8          rx_hdr_buf[sizeof(mesh_hdr_t)]; /* 20 B; PC 只用前 16 */
 static u32         rx_hdr_got = 0;
 static u32         rx_expected_pts = 0;
 static u32         rx_pts_got = 0;         /* bytes received so far in current point */
@@ -264,6 +300,12 @@ static u32         rx_magic_sync = 0;
 static u32         rx_flags = 0;
 static u32         rx_pt_len = PC_POINT_LEN_RAW;
 static u8          rx_pt_buf[PC_POINT_LEN_RAW];
+/* Mesh 接收状态 */
+static int         rx_is_mesh = 0;
+static u32         rx_hdr_size = sizeof(pc_hdr_t);
+static u32         rx_mesh_n_verts_target = 0;
+static u32         rx_mesh_n_tris_target = 0;
+static u32         rx_mesh_bytes = 0;
 
 static int uart_poll_frame(void)
 {
@@ -274,18 +316,43 @@ static int uart_poll_frame(void)
     while (guard-- > 0 && uart_rx_has()) {
         u8 b = uart_rx_byte();
         if (rx_state == RX_HDR) {
-            /* Sync on magic — slide a 4-byte window until it matches. */
+            /* Sync on magic — slide a 4-byte window. 接受 PC_MAGIC 或 MESH_MAGIC. */
             rx_magic_sync = (rx_magic_sync >> 8) | ((u32)b << 24);
             if (rx_hdr_got < 4) {
                 rx_hdr_buf[rx_hdr_got++] = b;
-                if (rx_hdr_got == 4 && rx_magic_sync != PC_MAGIC) {
-                    /* Not magic yet - rewind one position */
-                    rx_hdr_got--;
-                    memmove(rx_hdr_buf, rx_hdr_buf + 1, 3);
+                if (rx_hdr_got == 4) {
+                    if (rx_magic_sync == PC_MAGIC) {
+                        rx_is_mesh = 0;
+                        rx_hdr_size = sizeof(pc_hdr_t);
+                    } else if (rx_magic_sync == MESH_MAGIC) {
+                        rx_is_mesh = 1;
+                        rx_hdr_size = sizeof(mesh_hdr_t);
+                    } else {
+                        /* Not matched - rewind one position */
+                        rx_hdr_got--;
+                        memmove(rx_hdr_buf, rx_hdr_buf + 1, 3);
+                    }
                 }
             } else {
                 rx_hdr_buf[rx_hdr_got++] = b;
-                if (rx_hdr_got == sizeof(pc_hdr_t)) {
+                if (rx_hdr_got == rx_hdr_size) {
+                    if (rx_is_mesh) {
+                        mesh_hdr_t *mh = (mesh_hdr_t *)rx_hdr_buf;
+                        if (mh->n_verts > MAX_MESH_VERTS || mh->n_tris > MAX_MESH_TRIS) {
+                            xil_printf("[mesh-rx] bad sizes verts=%u tris=%u\r\n",
+                                       (unsigned)mh->n_verts, (unsigned)mh->n_tris);
+                            rx_hdr_got = 0;
+                            rx_magic_sync = 0;
+                        } else {
+                            rx_mesh_n_verts_target = mh->n_verts;
+                            rx_mesh_n_tris_target = mh->n_tris;
+                            rx_mesh_bytes = 0;
+                            rx_state = RX_MESH_VERTS;
+                            xil_printf("[mesh-rx] verts=%u tris=%u\r\n",
+                                       (unsigned)mh->n_verts, (unsigned)mh->n_tris);
+                        }
+                        continue;
+                    }
                     pc_hdr_t *h = (pc_hdr_t *)rx_hdr_buf;
                     if (h->num_points > MAX_POINTS) {
                         xil_printf("[rx] bad num_points=%u, resync\r\n",
@@ -320,7 +387,7 @@ static int uart_poll_frame(void)
                     }
                 }
             }
-        } else { /* RX_PTS */
+        } else if (rx_state == RX_PTS) {
             rx_pt_buf[rx_pts_got++] = b;
             if (rx_pts_got == rx_pt_len) {
                 /* One point fully received; decode into model[rx_pts_done] */
@@ -417,6 +484,41 @@ static int uart_poll_frame(void)
                     }
                     break;
                 }
+            }
+        } else if (rx_state == RX_MESH_VERTS) {
+            /* 把字节直接写到 mesh_verts buffer 里 (UART 顺序 = struct 布局) */
+            ((u8 *)mesh_verts)[rx_mesh_bytes++] = b;
+            if (rx_mesh_bytes == rx_mesh_n_verts_target * sizeof(mesh_vert_t)) {
+                rx_mesh_bytes = 0;
+                rx_state = RX_MESH_TRIS;
+            }
+        } else if (rx_state == RX_MESH_TRIS) {
+            ((u8 *)mesh_tris)[rx_mesh_bytes++] = b;
+            if (rx_mesh_bytes == rx_mesh_n_tris_target * sizeof(mesh_tri_t)) {
+                /* Mesh 收完, flush cache + 标 ready */
+                mesh_n_verts = rx_mesh_n_verts_target;
+                mesh_n_tris  = rx_mesh_n_tris_target;
+                Xil_DCacheFlushRange(MESH_VERTS_ADDR,
+                                     mesh_n_verts * sizeof(mesh_vert_t));
+                Xil_DCacheFlushRange(MESH_TRIS_ADDR,
+                                     mesh_n_tris * sizeof(mesh_tri_t));
+                __asm__ __volatile__("dsb sy" ::: "memory");
+                mesh_ready = 1;
+                right_dirty_g = 1;
+                xil_printf("[mesh-rxdone] verts=%u tris=%u\r\n",
+                           (unsigned)mesh_n_verts, (unsigned)mesh_n_tris);
+                /* dump first vert + first tri */
+                xil_printf("[mesh-dump] v0=(%d,%d,%d  r=%u g=%u b=%u)\r\n",
+                           (int)mesh_verts[0].x, (int)mesh_verts[0].y, (int)mesh_verts[0].z,
+                           (unsigned)mesh_verts[0].r, (unsigned)mesh_verts[0].g,
+                           (unsigned)mesh_verts[0].b);
+                xil_printf("[mesh-dump] tri0=(%u,%u,%u)\r\n",
+                           (unsigned)mesh_tris[0].i0, (unsigned)mesh_tris[0].i1,
+                           (unsigned)mesh_tris[0].i2);
+                rx_state = RX_HDR;
+                rx_hdr_got = 0;
+                rx_magic_sync = 0;
+                frame_ready = 1;
             }
         }
     }
@@ -1067,6 +1169,148 @@ static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
 }
 #endif
 
+/* ============================================================
+ * Mesh software triangle rasterizer
+ * 三角面 mesh 路径: 每帧 rotate verts 后用 edge function 光栅化, z-buffer
+ * 处理遮挡, 重心插值 r/g/b. 取代 voxel point-cloud render.
+ * ============================================================ */
+typedef struct {
+    int16_t sx, sy;
+    int8_t  sz;
+    uint8_t r, g, b;
+    uint8_t _pad;
+} screen_vert_t;
+
+static screen_vert_t mesh_screen_verts[MAX_MESH_VERTS];
+
+static inline int sat_int8(int v) { return v < -127 ? -127 : (v > 127 ? 127 : v); }
+
+static void rasterize_tri(u8 *fb, int origin_x, int origin_y,
+                          int panel_w, int panel_h,
+                          screen_vert_t *v0, screen_vert_t *v1, screen_vert_t *v2,
+                          int8_t *zbuf)
+{
+    int x0 = v0->sx, y0 = v0->sy, z0 = v0->sz;
+    int x1 = v1->sx, y1 = v1->sy, z1 = v1->sz;
+    int x2 = v2->sx, y2 = v2->sy, z2 = v2->sz;
+
+    /* 2D bounding box clipped to panel */
+    int minx = x0; if (x1 < minx) minx = x1; if (x2 < minx) minx = x2;
+    int miny = y0; if (y1 < miny) miny = y1; if (y2 < miny) miny = y2;
+    int maxx = x0; if (x1 > maxx) maxx = x1; if (x2 > maxx) maxx = x2;
+    int maxy = y0; if (y1 > maxy) maxy = y1; if (y2 > maxy) maxy = y2;
+    if (minx < 0) minx = 0;
+    if (miny < 0) miny = 0;
+    if (maxx > panel_w - 1) maxx = panel_w - 1;
+    if (maxy > panel_h - 1) maxy = panel_h - 1;
+    if (minx > maxx || miny > maxy) return;
+
+    int area2 = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
+    if (area2 == 0) return;
+    int sign = area2 < 0 ? -1 : 1;
+    int abs_area = sign > 0 ? area2 : -area2;
+
+    /* Edge function eN at (px,py) = (xN+1 - xN)*(py - yN) - (yN+1 - yN)*(px - xN)
+     * Use "next-after-self" indexing: e0 uses edge v1→v2, e1 uses v2→v0, e2 uses v0→v1. */
+    int A12 = -(y2 - y1), B12 = (x2 - x1);
+    int A20 = -(y0 - y2), B20 = (x0 - x2);
+    int A01 = -(y1 - y0), B01 = (x1 - x0);
+
+    int e0_row = (x2 - x1) * (miny - y1) - (y2 - y1) * (minx - x1);
+    int e1_row = (x0 - x2) * (miny - y2) - (y0 - y2) * (minx - x2);
+    int e2_row = (x1 - x0) * (miny - y0) - (y1 - y0) * (minx - x0);
+
+    for (int y = miny; y <= maxy; y++) {
+        int e0 = e0_row, e1 = e1_row, e2 = e2_row;
+        u8 *row = fb + (origin_y + y) * STRIDE;
+        int8_t *zrow = zbuf + y * panel_w;
+        for (int x = minx; x <= maxx; x++) {
+            int s0 = sign * e0, s1 = sign * e1, s2 = sign * e2;
+            if ((s0 | s1 | s2) >= 0) {
+                /* Inside. Q8.8 barycentric weights */
+                int b0 = (s0 << 8) / abs_area;   /* weight for v0 */
+                int b1 = (s1 << 8) / abs_area;
+                int b2 = 256 - b0 - b1;
+                int z = (b0 * z0 + b1 * z1 + b2 * z2) >> 8;
+                int8_t zv = (int8_t)sat_int8(z);
+                if (zv > zrow[x]) {
+                    zrow[x] = zv;
+                    int r  = (b0 * v0->r + b1 * v1->r + b2 * v2->r) >> 8;
+                    int g_ = (b0 * v0->g + b1 * v1->g + b2 * v2->g) >> 8;
+                    int b_ = (b0 * v0->b + b1 * v1->b + b2 * v2->b) >> 8;
+                    if (r > 255) r = 255; if (r < 0) r = 0;
+                    if (g_ > 255) g_ = 255; if (g_ < 0) g_ = 0;
+                    if (b_ > 255) b_ = 255; if (b_ < 0) b_ = 0;
+                    u8 *p = row + (origin_x + x) * 3;
+                    /* GBR byte order on this BD */
+                    p[0] = (u8)g_;
+                    p[1] = (u8)b_;
+                    p[2] = (u8)r;
+                }
+            }
+            e0 += A12;
+            e1 += A20;
+            e2 += A01;
+        }
+        e0_row += B12;
+        e1_row += B20;
+        e2_row += B01;
+    }
+}
+
+static void cpu_render_mesh(UINTPTR fb_base, int angle_deg,
+                            int origin_x, int origin_y,
+                            int panel_w, int panel_h, int scale_pct)
+{
+    if (angle_deg < 0) angle_deg = 0;
+    if (angle_deg >= 360) angle_deg %= 360;
+    int16_t c = cos360_table[angle_deg];
+    int16_t s = sin360_table[angle_deg];
+    int cx = panel_w / 2;
+    int cy = panel_h / 2;
+    u8 *fb = (u8 *)fb_base;
+
+    /* 1) clear panel 灰底 80 + zbuf -127 */
+    for (int yy = 0; yy < panel_h; yy++) {
+        memset(fb + (origin_y + yy) * STRIDE + origin_x * 3, 80, panel_w * 3);
+        memset(mesh_zbuf + yy * panel_w, -127, panel_w);
+        if ((yy & 0x0F) == 0) uart_poll_frame();
+    }
+
+    /* 2) rotate + project all verts */
+    for (u32 i = 0; i < mesh_n_verts; i++) {
+        int mx = mesh_verts[i].x;
+        int my = mesh_verts[i].y;
+        int mz = mesh_verts[i].z;
+        int rx = (mx * c + mz * s) >> 8;
+        int rz = (-mx * s + mz * c) >> 8;
+        /* Camera tilt 15° down (Q8.8: cos≈247, sin≈66) */
+        int tilt_y = (my * 247 - rz * 66) >> 8;
+        int sx = cx + (rx * scale_pct) / 100;
+        int sy = cy - (tilt_y * scale_pct) / 100;
+        mesh_screen_verts[i].sx = (int16_t)sx;
+        mesh_screen_verts[i].sy = (int16_t)sy;
+        mesh_screen_verts[i].sz = (int8_t)sat_int8(rz);
+        mesh_screen_verts[i].r  = mesh_verts[i].r;
+        mesh_screen_verts[i].g  = mesh_verts[i].g;
+        mesh_screen_verts[i].b  = mesh_verts[i].b;
+    }
+
+    /* 3) rasterize each triangle */
+    for (u32 t = 0; t < mesh_n_tris; t++) {
+        u16 i0 = mesh_tris[t].i0;
+        u16 i1 = mesh_tris[t].i1;
+        u16 i2 = mesh_tris[t].i2;
+        if (i0 >= mesh_n_verts || i1 >= mesh_n_verts || i2 >= mesh_n_verts) continue;
+        rasterize_tri(fb, origin_x, origin_y, panel_w, panel_h,
+                      &mesh_screen_verts[i0],
+                      &mesh_screen_verts[i1],
+                      &mesh_screen_verts[i2],
+                      mesh_zbuf);
+        if ((t & 0x3F) == 0) uart_poll_frame();
+    }
+}
+
 int main(void)
 {
     init_platform();
@@ -1328,7 +1572,12 @@ int main(void)
             /* 72°/sec → 5 秒一圈完整 360° (旋转更明显) */
             int left_angle = (int)((us * 72ULL / 1000000ULL) % 360ULL);
             uart_poll_frame();
-            cpu_render_voxel_panel(fb_write, left_angle, 0, 0, PW, PH, 0, LEFT_SCALE);
+            if (mesh_ready) {
+                /* mesh path: software triangle rasterizer + z-buffer */
+                cpu_render_mesh(fb_write, left_angle, 0, 0, PW, PH, LEFT_SCALE);
+            } else {
+                cpu_render_voxel_panel(fb_write, left_angle, 0, 0, PW, PH, 0, LEFT_SCALE);
+            }
         }
 #endif
 

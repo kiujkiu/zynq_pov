@@ -241,7 +241,10 @@ def build_simplified_mesh_per_tri(glb_path, target_tris=6000, target_scale=40,
             for (ld, lc) in lights:
                 ldn = np.array(ld, dtype=np.float32)
                 ldn = ldn / float(np.linalg.norm(ldn))
-                intensity = max(0.0, float(np.dot(n_face, ldn)))
+                # 双面 lighting: anime mesh winding 不一致, abs(dot) 防止内向
+                # normal 的 face 黑化看起来像"缺块". 失少量背面阴影立体感,
+                # 但保人物完整.
+                intensity = abs(float(np.dot(n_face, ldn)))
                 li_r += intensity * lc[0]
                 li_g += intensity * lc[1]
                 li_b += intensity * lc[2]

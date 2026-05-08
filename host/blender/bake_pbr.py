@@ -56,8 +56,19 @@ print("[bake] configuring Cycles + Filmic...")
 scn = bpy.context.scene
 scn.render.engine = 'CYCLES'
 scn.cycles.device = 'CPU'
-scn.cycles.samples = 32
+scn.cycles.samples = 512
+# Blender 4.x: bake operator 走 cycles.samples 但需 use_preview_adaptive_sampling=False
+scn.cycles.use_adaptive_sampling = False
 scn.cycles.use_denoising = True
+scn.cycles.denoiser = 'OPENIMAGEDENOISE'
+scn.cycles.denoising_input_passes = 'RGB_ALBEDO_NORMAL'
+# 确保 bake 有足够 sample. Blender 4.2 LTS: render.bake 子设置
+try:
+    scn.render.bake.use_pass_direct = True
+    scn.render.bake.use_pass_indirect = True
+    scn.render.bake.use_pass_color = True
+except AttributeError:
+    pass
 scn.view_settings.view_transform = 'Standard'   # 不做 Filmic, 保留 baseColor 鲜艳
 scn.view_settings.look = 'None'
 scn.view_settings.exposure = 0.0
@@ -118,13 +129,11 @@ for obj in mesh_objs:
         o.select_set(False)
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
-    print(f"[bake]   baking '{obj.name}' (DIFFUSE)...")
+    print(f"[bake]   baking '{obj.name}' (COMBINED, samples={scn.cycles.samples})...")
     try:
-        # DIFFUSE: 只保留 baseColor × diffuse lighting, 不含 specular 高光
-        # (specular 会让所有面发白丢失色彩)
-        bpy.ops.object.bake(type='DIFFUSE',
-                            pass_filter={'COLOR', 'DIRECT', 'INDIRECT'},
-                            use_clear=True, margin=4)
+        # COMBINED: 全 PBR shader 输出 (albedo × lighting + indirect + AO),
+        # Cycles 完整渲染. 用足够 sample 数 + denoising 防噪声.
+        bpy.ops.object.bake(type='COMBINED', use_clear=True, margin=4)
     except Exception as e:
         print(f"[bake]   failed: {e}")
 

@@ -139,3 +139,10 @@ host/out_slices/
 host/sent_mesh_preview.*
 host/sent_mesh_preview_render.png
 host/_lib_check.py
+
+# v3 capture frames
+/hdmi_v3_*.jpg
+host/_check_baked.py
+host/_v3_check.py
+host/_baked_tex_*.png
+host/anime_62459_baked_clean.glb

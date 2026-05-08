@@ -133,3 +133,9 @@ hls_proj/pov_voxel_slice_ip.zip
 /lighting_compare.png
 /pc_reference.png
 /pc_v2.png
+
+# === Mesh experiment transient output ===
+host/out_slices/
+host/sent_mesh_preview.*
+host/sent_mesh_preview_render.png
+host/_lib_check.py

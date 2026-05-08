@@ -209,11 +209,22 @@ def build_simplified_mesh_per_tri(glb_path, target_tris=6000, target_scale=40,
 
         if color_info[0] == "tex":
             _, tex, uv0, uv1, uv2 = color_info
-            uv = (uv0 + uv1 + uv2) / 3.0
-            tx = int((uv[0] % 1.0) * tex.shape[1]) % tex.shape[1]
-            ty = int((1.0 - (uv[1] % 1.0)) * tex.shape[0]) % tex.shape[0]
-            px = tex[ty, tx]
-            cr, cg, cb = float(px[0]), float(px[1]), float(px[2])
+            # Sample 多点 (barycentric grid) 取 median: 提取该 tri 的"主色",
+            # 避免 1px centroid 抓到 texture 高频细节 (头发亮丝 / 暗影 / 高光).
+            BARY = ((1/3, 1/3, 1/3),
+                    (0.5, 0.25, 0.25), (0.25, 0.5, 0.25), (0.25, 0.25, 0.5),
+                    (0.6, 0.2, 0.2),   (0.2, 0.6, 0.2),   (0.2, 0.2, 0.6))
+            samples = []
+            tex_h, tex_w = tex.shape[0], tex.shape[1]
+            for (w0, w1, w2) in BARY:
+                uv = w0 * uv0 + w1 * uv1 + w2 * uv2
+                tx = int((uv[0] % 1.0) * tex_w) % tex_w
+                ty = int((1.0 - (uv[1] % 1.0)) * tex_h) % tex_h
+                px = tex[ty, tx]
+                samples.append((float(px[0]), float(px[1]), float(px[2])))
+            samples_np = np.array(samples, dtype=np.float32)
+            med = np.median(samples_np, axis=0)
+            cr, cg, cb = float(med[0]), float(med[1]), float(med[2])
         else:
             cr, cg, cb = (float(color_info[1][0]),
                           float(color_info[1][1]),
@@ -295,20 +306,30 @@ def build_simplified_mesh_per_tri(glb_path, target_tris=6000, target_scale=40,
     if verbose:
         print(f"[mesh-v2] post-decimate: {len(new_verts)} verts, {len(new_faces)} faces")
 
-    # 3) Per-tri color transfer: 新 tri centroid → 最近原 tri centroid 颜色
+    # 3) Per-tri color transfer: 新 tri centroid → 最近 K 个原 tri 颜色 median.
+    # 单 NN centroid sample 在 anime 高频 texture (头发丝 / 铠甲花纹) 下丢大色块,
+    # top-K median 取邻居 dominant 色, 保留"金发/蓝衣/白甲"等大区域的本色.
     orig_centroids_arr = np.array(orig_tri_centroids, dtype=np.float32)
+    orig_colors_arr = np.array(orig_tri_colors, dtype=np.float32)  # (N, 3)
     tree = cKDTree(orig_centroids_arr)
     new_tri_centroids = np.zeros((len(new_faces), 3), dtype=np.float32)
     for i, f in enumerate(new_faces):
         v0 = new_verts[f[0]]; v1 = new_verts[f[1]]; v2 = new_verts[f[2]]
         new_tri_centroids[i] = (v0 + v1 + v2) / 3.0
-    _, nn_idx = tree.query(new_tri_centroids, k=1)
+    K = 32   # 每 simplified tri 平均覆盖 ~80 原 tri, K=32 足够代表
+    _, nn_idx_K = tree.query(new_tri_centroids, k=min(K, len(orig_centroids_arr)))
+    # nn_idx_K shape: (n_new, K). 取每行 median 颜色.
+    nn_colors = orig_colors_arr[nn_idx_K]   # (n_new, K, 3)
+    median_colors = np.median(nn_colors, axis=1)   # (n_new, 3)
+    # 兼容下方 orig_tri_colors[int(nn_idx[i])] 接口: 把 median_colors 当 lookup table
+    nn_idx = np.arange(len(new_faces))     # 直接 i 索引 median_colors
+    orig_tri_colors_for_output = median_colors
 
     # 4) Output: 顶点只 xyz, tri 自带 RGB (post-process gamma/brighten/sat)
     out_verts = [tuple(float(c) for c in v) for v in new_verts]
     out_tris = []
     for i, f in enumerate(new_faces):
-        cr, cg, cb = orig_tri_colors[int(nn_idx[i])]
+        cr, cg, cb = orig_tri_colors_for_output[int(nn_idx[i])]
         r = int(cr); g = int(cg); b = int(cb)
         if gamma != 1.0 and gamma > 0:
             r = int(255 * pow(max(0, r) / 255.0, gamma))

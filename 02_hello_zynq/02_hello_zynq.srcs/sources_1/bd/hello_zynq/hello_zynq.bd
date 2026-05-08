@@ -372,7 +372,7 @@
             "value": "200.000000"
           },
           "PCW_ACT_QSPI_PERIPHERAL_FREQMHZ": {
-            "value": "10.000000"
+            "value": "200.000000"
           },
           "PCW_ACT_SDIO_PERIPHERAL_FREQMHZ": {
             "value": "100.000000"
@@ -660,7 +660,7 @@
             "value": "0"
           },
           "PCW_EN_QSPI": {
-            "value": "0"
+            "value": "1"
           },
           "PCW_EN_RST0_PORT": {
             "value": "1"
@@ -871,7 +871,8 @@
           },
           "PCW_MIO_TREE_PERIPHERALS": {
             "value": [
-              "unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#SD",
+              "unassigned#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI",
+              "Flash#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#SD",
               "0#SD 0#SD 0#SD 0#SD 0#SD 0#unassigned#SD 0#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned"
             ]
           },
@@ -910,9 +911,6 @@
           },
           "PCW_NAND_CYCLES_T_WP": {
             "value": "1"
-          },
-          "PCW_NAND_PERIPHERAL_ENABLE": {
-            "value": "0"
           },
           "PCW_NOR_CS0_T_CEOE": {
             "value": "1"
@@ -954,9 +952,6 @@
             "value": "1"
           },
           "PCW_NOR_CS1_WE_TIME": {
-            "value": "0"
-          },
-          "PCW_NOR_PERIPHERAL_ENABLE": {
             "value": "0"
           },
           "PCW_NOR_SRAM_CS0_T_CEOE": {
@@ -1055,6 +1050,21 @@
           "PCW_PS7_SI_REV": {
             "value": "PRODUCTION"
           },
+          "PCW_QSPI_GRP_FBCLK_ENABLE": {
+            "value": "0"
+          },
+          "PCW_QSPI_GRP_IO1_ENABLE": {
+            "value": "0"
+          },
+          "PCW_QSPI_GRP_SINGLE_SS_ENABLE": {
+            "value": "1"
+          },
+          "PCW_QSPI_GRP_SINGLE_SS_IO": {
+            "value": "MIO 1"
+          },
+          "PCW_QSPI_GRP_SS1_ENABLE": {
+            "value": "0"
+          },
           "PCW_QSPI_INTERNAL_HIGHADDRESS": {
             "value": "0xFCFFFFFF"
           },
@@ -1062,7 +1072,13 @@
             "value": "IO PLL"
           },
           "PCW_QSPI_PERIPHERAL_ENABLE": {
-            "value": "0"
+            "value": "1"
+          },
+          "PCW_QSPI_PERIPHERAL_FREQMHZ": {
+            "value": "200"
+          },
+          "PCW_QSPI_QSPI_IO": {
+            "value": "MIO 1 .. 6"
           },
           "PCW_SD0_GRP_CD_ENABLE": {
             "value": "1"

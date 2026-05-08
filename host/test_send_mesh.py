@@ -22,8 +22,8 @@ baud = 921600
 
 print(f"build_simplified_mesh {os.path.basename(glb)} target_tris={target_tris}...")
 verts, faces = build_simplified_mesh(glb, target_tris=target_tris, target_scale=40,
-                                      z_stretch=1.5, brighten=1.2, gamma=0.95,
-                                      saturation=2.0, verbose=True)
+                                      z_stretch=1.5, brighten=1.0, gamma=1.0,
+                                      saturation=1.6, verbose=True)
 print(f"  → {len(verts)} verts, {len(faces)} tris")
 print(f"  v0={verts[0]}  tri0={faces[0]}")
 

@@ -83,12 +83,19 @@ def build_simplified_mesh(glb_path, target_tris=4096, target_scale=40, z_stretch
                 verts_pos.append([float(n[0]), float(n[1]), float(n[2])])
                 verts_col.append([0.0, 0.0, 0.0, 0.0])
             cr, cg, cb = cols_per_vert[k_v]
-            # Dominant tri: 当前 area 比之前最大 area 更大才覆盖颜色
-            if area > verts_col[v_idx][3]:
+            # Saturation-weighted dominant: weight = area * (1 + 5*sat), 让
+            # 鲜艳/中性两端 (黑帽 / 白领 / 蓝披风) 都能 win 邻居. 没有这个
+            # 加权时, 大 tri 总赢, 小 detail 区域 (帽/领) 颜色被衣服稀释.
+            mx = max(cr, cg, cb); mn = min(cr, cg, cb)
+            sat = (mx - mn) / 255.0 if mx > 0 else 0.0
+            # 极暗 (帽子) 或极亮 (领) 也 boost: deviation from mid-gray
+            mid_dev = abs((mx + mn) / 510.0 - 0.5) * 2.0
+            weight = area * (1.0 + 5.0 * sat + 2.0 * mid_dev)
+            if weight > verts_col[v_idx][3]:
                 verts_col[v_idx][0] = cr
                 verts_col[v_idx][1] = cg
                 verts_col[v_idx][2] = cb
-                verts_col[v_idx][3] = area
+                verts_col[v_idx][3] = weight
             tri_idx.append(v_idx)
         if tri_idx[0] == tri_idx[1] or tri_idx[1] == tri_idx[2] or tri_idx[0] == tri_idx[2]:
             continue

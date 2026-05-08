@@ -271,23 +271,32 @@ typedef struct __attribute__((packed)) {
 
 #define MAX_MESH_VERTS  16384
 #define MAX_MESH_TRIS   32768
+#define MESH_TEX_MAX_SIZE 512               /* up to 512×512×3 = 768KB */
 /* DDR layout: 借用 RING_BUFFER 段(0x12000000), 当前未使用 (USE_PL=0 走 ARM render) */
-#define MESH_VERTS_ADDR      0x12000000UL    /* 144 KB max (16K × 9B v1, 16K × 6B v2) */
-#define MESH_TRIS_ADDR       0x12030000UL    /* 288 KB max (32K × 9B v2) */
-#define MESH_TRI_COLORS_ADDR 0x12080000UL    /* 96 KB max (32K × 3B), per-tri RGB */
-#define ZBUFFER_ADDR         0x12100000UL    /* 720*640 = 460 KB, allow pad */
+#define MESH_VERTS_ADDR      0x12000000UL    /* 144 KB max (16K × 9B v1, 16K × 6B v2, 16K × 8B v3) */
+#define MESH_TRIS_ADDR       0x12030000UL    /* 288 KB max (32K × 9B v2, 32K × 6B v3) */
+#define MESH_TRI_COLORS_ADDR 0x12080000UL    /* 96 KB max (32K × 3B), per-tri RGB v2 */
+#define MESH_VERT_UV_ADDR    0x12098000UL    /* 32 KB max (16K × 2B), per-vert UV v3 */
+#define MESH_TEXTURE_ADDR    0x120A0000UL    /* 768 KB max (512×512×3) */
+#define ZBUFFER_ADDR         0x12180000UL    /* 720*640 = 460 KB, allow pad */
 
-static mesh_vert_t * const mesh_verts    = (mesh_vert_t *)MESH_VERTS_ADDR;
-static mesh_tri_t  * const mesh_tris     = (mesh_tri_t  *)MESH_TRIS_ADDR;
-static uint8_t     * const mesh_tri_colors = (uint8_t *)MESH_TRI_COLORS_ADDR; /* 3B/tri */
-static int8_t      * const mesh_zbuf     = (int8_t     *)ZBUFFER_ADDR;
+static mesh_vert_t * const mesh_verts      = (mesh_vert_t *)MESH_VERTS_ADDR;
+static mesh_tri_t  * const mesh_tris       = (mesh_tri_t  *)MESH_TRIS_ADDR;
+static uint8_t     * const mesh_tri_colors = (uint8_t *)MESH_TRI_COLORS_ADDR;  /* 3B/tri (v2) */
+static uint8_t     * const mesh_vert_uv    = (uint8_t *)MESH_VERT_UV_ADDR;     /* 2B/vert (v3) */
+static uint8_t     * const mesh_texture    = (uint8_t *)MESH_TEXTURE_ADDR;     /* tex_w*tex_h*3 */
+static int8_t      * const mesh_zbuf       = (int8_t     *)ZBUFFER_ADDR;
 
 #define MESH_FLAG_PER_TRI_COLOR  0x0001u   /* v2: vert 6B, tri 9B + RGB */
+#define MESH_FLAG_TEXTURED       0x0002u   /* v3: vert 8B (xyz+uv), tri 6B, +tex block */
 
 static volatile int  mesh_ready = 0;
 static volatile u32  mesh_n_verts = 0;
 static volatile u32  mesh_n_tris  = 0;
 static volatile int  mesh_per_tri_color = 0;   /* 1 = v2 protocol */
+static volatile int  mesh_textured = 0;        /* 1 = v3 protocol */
+static volatile u32  mesh_tex_w = 0;
+static volatile u32  mesh_tex_h = 0;
 
 /* model_n: volatile 让 main loop 看到 uart_poll_frame 内部的更新 (hybrid mode 切换) */
 /* (defined in build_model area but forward-declare volatile here for use_pl path) */
@@ -303,7 +312,7 @@ static volatile int  mesh_per_tri_color = 0;   /* 1 = v2 protocol */
 #define PC_FLAG_SPARSE_VOXEL  0x0002u  /* body = (idx24 + rgb16) * N, 5 byte/cell */
 #define PC_POINT_LEN_RAW      16
 #define PC_POINT_LEN_COMP     5
-typedef enum { RX_HDR, RX_PTS, RX_MESH_VERTS, RX_MESH_TRIS } rx_state_t;
+typedef enum { RX_HDR, RX_PTS, RX_MESH_VERTS, RX_MESH_TRIS, RX_MESH_TEX_HDR, RX_MESH_TEX_BODY } rx_state_t;
 static rx_state_t rx_state = RX_HDR;
 static u8          rx_hdr_buf[sizeof(mesh_hdr_t)]; /* 20 B; PC 只用前 16 */
 static u32         rx_hdr_got = 0;
@@ -320,6 +329,11 @@ static u32         rx_hdr_size = sizeof(pc_hdr_t);
 static u32         rx_mesh_n_verts_target = 0;
 static u32         rx_mesh_n_tris_target = 0;
 static u32         rx_mesh_bytes = 0;
+/* v3 textured: tex header (5B) + tex body */
+static u8          rx_tex_hdr_buf[5];
+static u32         rx_tex_hdr_got = 0;
+static u32         rx_tex_w = 0, rx_tex_h = 0;
+static u32         rx_tex_total = 0;
 
 static void mesh_compute_aabb(void);   /* forward decl, def near main */
 static int uart_poll_frame(void)
@@ -363,10 +377,12 @@ static int uart_poll_frame(void)
                             rx_mesh_n_tris_target = mh->n_tris;
                             rx_mesh_bytes = 0;
                             mesh_per_tri_color = (mh->flags & MESH_FLAG_PER_TRI_COLOR) ? 1 : 0;
+                            mesh_textured     = (mh->flags & MESH_FLAG_TEXTURED) ? 1 : 0;
                             rx_state = RX_MESH_VERTS;
+                            const char *mode = mesh_textured ? "v3(textured)" :
+                                               (mesh_per_tri_color ? "v2(per-tri)" : "v1(per-vert)");
                             xil_printf("[mesh-rx] verts=%u tris=%u %s\r\n",
-                                       (unsigned)mh->n_verts, (unsigned)mh->n_tris,
-                                       mesh_per_tri_color ? "v2(per-tri)" : "v1(per-vert)");
+                                       (unsigned)mh->n_verts, (unsigned)mh->n_tris, mode);
                         }
                         continue;
                     }
@@ -503,19 +519,31 @@ static int uart_poll_frame(void)
                 }
             }
         } else if (rx_state == RX_MESH_VERTS) {
-            if (mesh_per_tri_color) {
-                /* v2: 6 byte/vert. 拆到 mesh_vert_t (9B), rgb 字段不写. */
+            if (mesh_textured) {
+                /* v3: 8 byte/vert (xyz Q8.4 + u8 u + u8 v).
+                 * 拆: 6B 进 mesh_verts[vi] (xyz), 2B 进 mesh_vert_uv[vi*2..+1]. */
+                u32 vi = rx_mesh_bytes / 8;
+                u32 sub = rx_mesh_bytes % 8;
+                if (sub < 6) {
+                    ((u8 *)&mesh_verts[vi])[sub] = b;
+                } else {
+                    mesh_vert_uv[vi * 2 + (sub - 6)] = b;
+                }
+                rx_mesh_bytes++;
+                if (rx_mesh_bytes == rx_mesh_n_verts_target * 8) {
+                    rx_mesh_bytes = 0;
+                    rx_state = RX_MESH_TRIS;
+                }
+            } else if (mesh_per_tri_color) {
                 u32 vi = rx_mesh_bytes / 6;
                 u32 sub = rx_mesh_bytes % 6;
-                u8 *dst = ((u8 *)&mesh_verts[vi]) + sub;
-                *dst = b;
+                ((u8 *)&mesh_verts[vi])[sub] = b;
                 rx_mesh_bytes++;
                 if (rx_mesh_bytes == rx_mesh_n_verts_target * 6) {
                     rx_mesh_bytes = 0;
                     rx_state = RX_MESH_TRIS;
                 }
             } else {
-                /* v1: 9 byte/vert 直接 packed */
                 ((u8 *)mesh_verts)[rx_mesh_bytes++] = b;
                 if (rx_mesh_bytes == rx_mesh_n_verts_target * sizeof(mesh_vert_t)) {
                     rx_mesh_bytes = 0;
@@ -524,15 +552,15 @@ static int uart_poll_frame(void)
             }
         } else if (rx_state == RX_MESH_TRIS) {
             int done = 0;
-            if (mesh_per_tri_color) {
-                /* v2: 9 byte/tri = 6 byte index + 3 byte rgb. */
+            if (mesh_textured) {
+                /* v3: 6 byte/tri (no per-tri color) */
+                ((u8 *)mesh_tris)[rx_mesh_bytes++] = b;
+                if (rx_mesh_bytes == rx_mesh_n_tris_target * sizeof(mesh_tri_t)) done = 1;
+            } else if (mesh_per_tri_color) {
                 u32 ti = rx_mesh_bytes / 9;
                 u32 sub = rx_mesh_bytes % 9;
-                if (sub < 6) {
-                    ((u8 *)&mesh_tris[ti])[sub] = b;
-                } else {
-                    mesh_tri_colors[ti * 3 + (sub - 6)] = b;
-                }
+                if (sub < 6) ((u8 *)&mesh_tris[ti])[sub] = b;
+                else         mesh_tri_colors[ti * 3 + (sub - 6)] = b;
                 rx_mesh_bytes++;
                 if (rx_mesh_bytes == rx_mesh_n_tris_target * 9) done = 1;
             } else {
@@ -540,30 +568,69 @@ static int uart_poll_frame(void)
                 if (rx_mesh_bytes == rx_mesh_n_tris_target * sizeof(mesh_tri_t)) done = 1;
             }
             if (done) {
-                /* Mesh 收完, flush cache + 标 ready */
+                if (mesh_textured) {
+                    /* v3 还有 tex hdr (5B) + tex body, 不立即 mesh_ready. */
+                    rx_tex_hdr_got = 0;
+                    rx_state = RX_MESH_TEX_HDR;
+                } else {
+                    mesh_n_verts = rx_mesh_n_verts_target;
+                    mesh_n_tris  = rx_mesh_n_tris_target;
+                    Xil_DCacheFlushRange(MESH_VERTS_ADDR,
+                                         mesh_n_verts * sizeof(mesh_vert_t));
+                    Xil_DCacheFlushRange(MESH_TRIS_ADDR,
+                                         mesh_n_tris * sizeof(mesh_tri_t));
+                    if (mesh_per_tri_color)
+                        Xil_DCacheFlushRange(MESH_TRI_COLORS_ADDR, mesh_n_tris * 3);
+                    __asm__ __volatile__("dsb sy" ::: "memory");
+                    mesh_ready = 1;
+                    right_dirty_g = 1;
+                    mesh_compute_aabb();
+                    xil_printf("[mesh-rxdone] verts=%u tris=%u\r\n",
+                               (unsigned)mesh_n_verts, (unsigned)mesh_n_tris);
+                    rx_state = RX_HDR;
+                    rx_hdr_got = 0;
+                    rx_magic_sync = 0;
+                    frame_ready = 1;
+                }
+            }
+        } else if (rx_state == RX_MESH_TEX_HDR) {
+            rx_tex_hdr_buf[rx_tex_hdr_got++] = b;
+            if (rx_tex_hdr_got == 5) {
+                rx_tex_w = (u32)rx_tex_hdr_buf[0] | ((u32)rx_tex_hdr_buf[1] << 8);
+                rx_tex_h = (u32)rx_tex_hdr_buf[2] | ((u32)rx_tex_hdr_buf[3] << 8);
+                /* channels = rx_tex_hdr_buf[4], 期待 3 */
+                rx_tex_total = rx_tex_w * rx_tex_h * 3;
+                rx_mesh_bytes = 0;
+                if (rx_tex_w > MESH_TEX_MAX_SIZE || rx_tex_h > MESH_TEX_MAX_SIZE) {
+                    xil_printf("[mesh-rx] tex %ux%u 超 MAX\r\n",
+                               (unsigned)rx_tex_w, (unsigned)rx_tex_h);
+                    rx_state = RX_HDR;
+                    rx_hdr_got = 0;
+                    rx_magic_sync = 0;
+                } else {
+                    rx_state = RX_MESH_TEX_BODY;
+                }
+            }
+        } else if (rx_state == RX_MESH_TEX_BODY) {
+            mesh_texture[rx_mesh_bytes++] = b;
+            if (rx_mesh_bytes == rx_tex_total) {
                 mesh_n_verts = rx_mesh_n_verts_target;
                 mesh_n_tris  = rx_mesh_n_tris_target;
+                mesh_tex_w = rx_tex_w;
+                mesh_tex_h = rx_tex_h;
                 Xil_DCacheFlushRange(MESH_VERTS_ADDR,
                                      mesh_n_verts * sizeof(mesh_vert_t));
                 Xil_DCacheFlushRange(MESH_TRIS_ADDR,
                                      mesh_n_tris * sizeof(mesh_tri_t));
-                if (mesh_per_tri_color) {
-                    Xil_DCacheFlushRange(MESH_TRI_COLORS_ADDR, mesh_n_tris * 3);
-                }
+                Xil_DCacheFlushRange(MESH_VERT_UV_ADDR, mesh_n_verts * 2);
+                Xil_DCacheFlushRange(MESH_TEXTURE_ADDR, rx_tex_total);
                 __asm__ __volatile__("dsb sy" ::: "memory");
                 mesh_ready = 1;
                 right_dirty_g = 1;
                 mesh_compute_aabb();
-                xil_printf("[mesh-rxdone] verts=%u tris=%u\r\n",
-                           (unsigned)mesh_n_verts, (unsigned)mesh_n_tris);
-                /* dump first vert + first tri */
-                xil_printf("[mesh-dump] v0=(%d,%d,%d  r=%u g=%u b=%u)\r\n",
-                           (int)mesh_verts[0].x, (int)mesh_verts[0].y, (int)mesh_verts[0].z,
-                           (unsigned)mesh_verts[0].r, (unsigned)mesh_verts[0].g,
-                           (unsigned)mesh_verts[0].b);
-                xil_printf("[mesh-dump] tri0=(%u,%u,%u)\r\n",
-                           (unsigned)mesh_tris[0].i0, (unsigned)mesh_tris[0].i1,
-                           (unsigned)mesh_tris[0].i2);
+                xil_printf("[mesh-rxdone] verts=%u tris=%u tex=%ux%u\r\n",
+                           (unsigned)mesh_n_verts, (unsigned)mesh_n_tris,
+                           (unsigned)mesh_tex_w, (unsigned)mesh_tex_h);
                 rx_state = RX_HDR;
                 rx_hdr_got = 0;
                 rx_magic_sync = 0;
@@ -1388,6 +1455,87 @@ static void rasterize_tri_flat(u8 *fb, int origin_x, int origin_y,
     }
 }
 
+/* v3: textured rasterize. 内层 per-pixel: barycentric → uv lerp → tex sample.
+ * uv 都是 u8 (0..255 = 0..1). tex GBR 顺序写 fb. */
+static void rasterize_tri_textured(u8 *fb, int origin_x, int origin_y,
+                                    int panel_w, int panel_h,
+                                    screen_vert_t *v0, screen_vert_t *v1, screen_vert_t *v2,
+                                    int8_t *zbuf,
+                                    u8 u0_in, u8 vu0_in,
+                                    u8 u1_in, u8 vu1_in,
+                                    u8 u2_in, u8 vu2_in,
+                                    const u8 *tex, int tex_w, int tex_h)
+{
+    int x0 = v0->sx, y0 = v0->sy, z0 = v0->sz;
+    int x1 = v1->sx, y1 = v1->sy, z1 = v1->sz;
+    int x2 = v2->sx, y2 = v2->sy, z2 = v2->sz;
+    int u0 = u0_in, vu0 = vu0_in;
+    int u1 = u1_in, vu1 = vu1_in;
+    int u2 = u2_in, vu2 = vu2_in;
+
+    int area2 = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
+    if (area2 == 0) return;
+    if (area2 < 0) {
+        int tx_ = x1, ty_ = y1, tz_ = z1; x1=x2; y1=y2; z1=z2; x2=tx_; y2=ty_; z2=tz_;
+        int tu = u1, tv = vu1; u1=u2; vu1=vu2; u2=tu; vu2=tv;
+        area2 = -area2;
+    }
+
+    int minx = x0; if (x1 < minx) minx = x1; if (x2 < minx) minx = x2;
+    int miny = y0; if (y1 < miny) miny = y1; if (y2 < miny) miny = y2;
+    int maxx = x0; if (x1 > maxx) maxx = x1; if (x2 > maxx) maxx = x2;
+    int maxy = y0; if (y1 > maxy) maxy = y1; if (y2 > maxy) maxy = y2;
+    if (minx < 0) minx = 0;
+    if (miny < 0) miny = 0;
+    if (maxx > panel_w - 1) maxx = panel_w - 1;
+    if (maxy > panel_h - 1) maxy = panel_h - 1;
+    if (minx > maxx || miny > maxy) return;
+
+    const int inv_q24 = (int)((1u << 24) / (unsigned)area2);
+    int A12 = -(y2 - y1), B12 = (x2 - x1);
+    int A20 = -(y0 - y2), B20 = (x0 - x2);
+    int A01 = -(y1 - y0), B01 = (x1 - x0);
+    int e0_row = (x2 - x1) * (miny - y1) - (y2 - y1) * (minx - x1);
+    int e1_row = (x0 - x2) * (miny - y2) - (y0 - y2) * (minx - x2);
+    int e2_row = (x1 - x0) * (miny - y0) - (y1 - y0) * (minx - x0);
+
+    for (int y = miny; y <= maxy; y++) {
+        int e0 = e0_row, e1 = e1_row, e2 = e2_row;
+        u8 *row = fb + (origin_y + y) * STRIDE + origin_x * 3;
+        int8_t *zrow = zbuf + y * panel_w;
+        for (int x = minx; x <= maxx; x++) {
+            if ((e0 | e1 | e2) >= 0) {
+                int b0 = (int)(((long long)e0 * inv_q24) >> 16);
+                int b1 = (int)(((long long)e1 * inv_q24) >> 16);
+                int b2 = 256 - b0 - b1;
+                int z = (b0 * z0 + b1 * z1 + b2 * z2) >> 8;
+                int8_t zv = (int8_t)sat_int8(z);
+                if (zv > zrow[x]) {
+                    zrow[x] = zv;
+                    /* uv lerp Q8.0 (0..255) */
+                    int uu = (b0 * u0 + b1 * u1 + b2 * u2) >> 8;
+                    int vv = (b0 * vu0 + b1 * vu1 + b2 * vu2) >> 8;
+                    if (uu < 0) uu = 0; else if (uu > 255) uu = 255;
+                    if (vv < 0) vv = 0; else if (vv > 255) vv = 255;
+                    /* GLB v=0 在 texture 顶, host 已正向. 板端 v 翻转: ty = (255-vv) */
+                    int tx_pix = (uu * tex_w) >> 8;
+                    int ty_pix = ((255 - vv) * tex_h) >> 8;
+                    if (tx_pix >= tex_w) tx_pix = tex_w - 1;
+                    if (ty_pix >= tex_h) ty_pix = tex_h - 1;
+                    const u8 *p_tex = tex + (ty_pix * tex_w + tx_pix) * 3;
+                    u8 *p = row + x * 3;
+                    /* GBR fb order */
+                    p[0] = p_tex[1];   /* G */
+                    p[1] = p_tex[2];   /* B */
+                    p[2] = p_tex[0];   /* R */
+                }
+            }
+            e0 += A12; e1 += A20; e2 += A01;
+        }
+        e0_row += B12; e1_row += B20; e2_row += B01;
+    }
+}
+
 static void cpu_render_mesh(UINTPTR fb_base, int angle_deg,
                             int origin_x, int origin_y,
                             int panel_w, int panel_h, int scale_pct)
@@ -1439,6 +1587,20 @@ static void cpu_render_mesh(UINTPTR fb_base, int angle_deg,
         u16 i1 = mesh_tris[t].i1;
         u16 i2 = mesh_tris[t].i2;
         if (i0 >= mesh_n_verts || i1 >= mesh_n_verts || i2 >= mesh_n_verts) continue;
+        if (mesh_textured) {
+            u8 u0_uv = mesh_vert_uv[i0 * 2 + 0], v0_uv = mesh_vert_uv[i0 * 2 + 1];
+            u8 u1_uv = mesh_vert_uv[i1 * 2 + 0], v1_uv = mesh_vert_uv[i1 * 2 + 1];
+            u8 u2_uv = mesh_vert_uv[i2 * 2 + 0], v2_uv = mesh_vert_uv[i2 * 2 + 1];
+            rasterize_tri_textured(fb, origin_x, origin_y, panel_w, panel_h,
+                                    &mesh_screen_verts[i0],
+                                    &mesh_screen_verts[i1],
+                                    &mesh_screen_verts[i2],
+                                    mesh_zbuf,
+                                    u0_uv, v0_uv, u1_uv, v1_uv, u2_uv, v2_uv,
+                                    mesh_texture, (int)mesh_tex_w, (int)mesh_tex_h);
+            if ((t & 0x3F) == 0) uart_poll_frame();
+            continue;
+        }
         if (mesh_per_tri_color) {
             u8 cr = mesh_tri_colors[t * 3 + 0];
             u8 cg = mesh_tri_colors[t * 3 + 1];

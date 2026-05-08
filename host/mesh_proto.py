@@ -38,6 +38,15 @@ TRI_FMT_V2  = "<HHHBBB"
 TRI_SIZE_V2 = struct.calcsize(TRI_FMT_V2)     # 9
 
 FLAG_PER_TRI_COLOR = 0x0001
+FLAG_TEXTURED      = 0x0002
+
+# v3 (textured: vert xyz+uv, tri idx, +trailing texture block)
+VERT_FMT_V3 = "<hhhBB"        # xyz Q8.4 + u8 u + u8 v (0..255 -> 0..1)
+VERT_SIZE_V3 = struct.calcsize(VERT_FMT_V3)   # 8
+TRI_FMT_V3  = "<HHH"          # 6, no per-tri color (texture sample 替代)
+TRI_SIZE_V3 = struct.calcsize(TRI_FMT_V3)     # 6
+TEX_HDR_FMT  = "<HHB"         # tex_w u16, tex_h u16, channels u8 (=3 for RGB)
+TEX_HDR_SIZE = struct.calcsize(TEX_HDR_FMT)   # 5
 
 # Backward-compat aliases (existing board/host code expects these).
 VERT_FMT  = VERT_FMT_V1
@@ -93,4 +102,41 @@ def pack_mesh_v2(frame_id, vertices_xyz, faces_with_color, q4_scale=16):
                          max(0, min(255, int(g))),
                          max(0, min(255, int(b))))
         off += TRI_SIZE_V2
+    return bytes(out)
+
+
+def pack_mesh_v3(frame_id, vertices_xyz_uv, faces, tex_rgb_bytes, tex_w, tex_h,
+                 q4_scale=16):
+    """v3 textured packing.
+    vertices_xyz_uv: list of (x,y,z,u,v) — x/y/z float model, u/v float 0..1
+    faces:           list of (i0, i1, i2)
+    tex_rgb_bytes:   bytes/bytearray of tex_w*tex_h*3 (row-major, top-down,
+                     RGB order)
+    """
+    n_verts = len(vertices_xyz_uv)
+    n_tris  = len(faces)
+    flags = FLAG_TEXTURED
+    if len(tex_rgb_bytes) != tex_w * tex_h * 3:
+        raise ValueError(f"tex bytes mismatch: got {len(tex_rgb_bytes)}, "
+                         f"expect {tex_w*tex_h*3}")
+    body_size = n_verts * VERT_SIZE_V3 + n_tris * TRI_SIZE_V3 + \
+                TEX_HDR_SIZE + tex_w * tex_h * 3
+    out = bytearray(HDR_SIZE + body_size)
+    struct.pack_into(HDR_FMT, out, 0, MESH_MAGIC, frame_id & 0xFFFFFFFF,
+                     n_verts, n_tris, flags & 0xFFFF, 0)
+    off = HDR_SIZE
+    for (x, y, z, u, v) in vertices_xyz_uv:
+        xq = max(-32768, min(32767, int(round(x * q4_scale))))
+        yq = max(-32768, min(32767, int(round(y * q4_scale))))
+        zq = max(-32768, min(32767, int(round(z * q4_scale))))
+        uq = max(0, min(255, int(round((u % 1.0) * 255))))
+        vq = max(0, min(255, int(round((v % 1.0) * 255))))
+        struct.pack_into(VERT_FMT_V3, out, off, xq, yq, zq, uq, vq)
+        off += VERT_SIZE_V3
+    for (i0, i1, i2) in faces:
+        struct.pack_into(TRI_FMT_V3, out, off, i0, i1, i2)
+        off += TRI_SIZE_V3
+    struct.pack_into(TEX_HDR_FMT, out, off, tex_w, tex_h, 3)
+    off += TEX_HDR_SIZE
+    out[off:off + tex_w * tex_h * 3] = tex_rgb_bytes
     return bytes(out)

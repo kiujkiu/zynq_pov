@@ -351,6 +351,123 @@ def build_simplified_mesh_per_tri(glb_path, target_tris=6000, target_scale=40,
     return out_verts, out_tris
 
 
+def build_simplified_mesh_textured(glb_path, target_tris=6000, target_scale=40,
+                                     z_stretch=1.0, tex_size=256, verbose=True):
+    """v3: textured mesh.
+
+    Return:
+        verts_xyz_uv: list of (x, y, z, u, v) — float xyz model + float uv 0..1
+        tris:         list of (i0, i1, i2)
+        tex_rgb:      bytes of tex_size×tex_size×3 (downsampled baseColor)
+        tex_w, tex_h
+    """
+    from PIL import Image
+    import fast_simplification
+    from scipy.spatial import cKDTree
+
+    triangles = load_glb(glb_path, verbose=verbose)
+    n_orig = len(triangles)
+    if verbose:
+        print(f"[mesh-v3] {n_orig} original triangles")
+
+    # 找 baseColor texture (从首个 textured tri 取). 假设全 mesh 共享一个 tex.
+    base_tex = None
+    for (_, _, _, color_info) in triangles:
+        if color_info[0] == "tex":
+            base_tex = color_info[1]
+            break
+    if base_tex is None:
+        raise RuntimeError("v3 textured 需要 GLB 带 baseColor texture")
+
+    all_pts = np.array([p for t in triangles for p in t[:3]], dtype=np.float32)
+    cmin, cmax = all_pts.min(axis=0), all_pts.max(axis=0)
+    center = (cmin + cmax) / 2
+    span = (cmax - cmin).max()
+    scale = (2 * target_scale) / span
+
+    # 1) Build mesh + collect per-vertex uv (取该 vertex 首次见到的 uv)
+    DEDUP_QUANT = 0.05
+    vert_map = {}
+    verts_pos = []
+    verts_uv = []     # (u, v) per unique vertex
+    faces_idx = []
+    print_every = max(1, n_orig // 20)
+    for i, (p0, p1, p2, color_info) in enumerate(triangles):
+        if verbose and i % print_every == 0:
+            print(f"  build {i}/{n_orig}...")
+        e1 = (p1 - p0).astype(np.float32)
+        e2 = (p2 - p0).astype(np.float32)
+        area = 0.5 * float(np.linalg.norm(np.cross(e1, e2)))
+        if area <= 0:
+            continue
+        if color_info[0] != "tex":
+            continue
+        _, _, uv0, uv1, uv2 = color_info
+        uvs = (uv0, uv1, uv2)
+
+        tri_idx = []
+        for k_v, p_raw in enumerate((p0, p1, p2)):
+            n = (p_raw - center) * scale
+            n = n.astype(np.float32)
+            n[2] *= z_stretch
+            qkey = (int(round(n[0] / DEDUP_QUANT)),
+                    int(round(n[1] / DEDUP_QUANT)),
+                    int(round(n[2] / DEDUP_QUANT)))
+            v_idx = vert_map.get(qkey)
+            if v_idx is None:
+                v_idx = len(verts_pos)
+                vert_map[qkey] = v_idx
+                verts_pos.append([float(n[0]), float(n[1]), float(n[2])])
+                # 取该顶点首次见到的 uv
+                verts_uv.append([float(uvs[k_v][0]), float(uvs[k_v][1])])
+            tri_idx.append(v_idx)
+        if tri_idx[0] == tri_idx[1] or tri_idx[1] == tri_idx[2] or tri_idx[0] == tri_idx[2]:
+            continue
+        faces_idx.append(tuple(tri_idx))
+
+    if verbose:
+        print(f"[mesh-v3] post-build: {len(verts_pos)} verts, {len(faces_idx)} faces")
+
+    # 2) Quadric decimation
+    verts_arr = np.array(verts_pos, dtype=np.float32)
+    faces_arr = np.array(faces_idx, dtype=np.uint32)
+    if len(faces_idx) > target_tris:
+        target_reduction = 1.0 - float(target_tris) / len(faces_idx)
+        if verbose:
+            print(f"[mesh-v3] decimating: ({len(faces_idx)} → {target_tris})")
+        new_verts, new_faces = fast_simplification.simplify(
+            verts_arr, faces_arr, target_reduction=target_reduction)
+    else:
+        new_verts, new_faces = verts_arr, faces_arr
+    if verbose:
+        print(f"[mesh-v3] post-decimate: {len(new_verts)} verts, {len(new_faces)} faces")
+
+    # 3) UV transfer: 新 vertex KDTree 找最近原 vertex 取 uv.
+    orig_uvs_arr = np.array(verts_uv, dtype=np.float32)
+    tree = cKDTree(verts_arr)
+    _, nn_idx = tree.query(np.array(new_verts), k=1)
+    new_uvs = orig_uvs_arr[nn_idx]    # (n_new, 2)
+
+    # 4) Texture downsample 到 tex_size×tex_size
+    tex_h_orig, tex_w_orig = base_tex.shape[0], base_tex.shape[1]
+    tex_img = Image.fromarray(base_tex[:, :, :3].astype(np.uint8), mode="RGB")
+    tex_resized = tex_img.resize((tex_size, tex_size), Image.LANCZOS)
+    tex_arr = np.array(tex_resized, dtype=np.uint8)
+    if verbose:
+        print(f"[mesh-v3] texture {tex_w_orig}×{tex_h_orig} -> {tex_size}×{tex_size}")
+
+    # 5) Output (xyz + uv per vertex, faces idx, texture bytes)
+    # GLB UV: v 翻转 (1.0 - v) 让 v=0 在 texture 顶部. host 这里直接传 uv,
+    # 板端 sample 时做 v 翻转.
+    out_verts = []
+    for i, v in enumerate(new_verts):
+        u, v_uv = float(new_uvs[i][0]), float(new_uvs[i][1])
+        out_verts.append((float(v[0]), float(v[1]), float(v[2]), u, v_uv))
+    out_tris = [(int(f[0]), int(f[1]), int(f[2])) for f in new_faces]
+    tex_bytes = tex_arr.tobytes()
+    return out_verts, out_tris, tex_bytes, tex_size, tex_size
+
+
 if __name__ == "__main__":
     import sys
     glb = sys.argv[1] if len(sys.argv) > 1 else "anime_62459.glb"

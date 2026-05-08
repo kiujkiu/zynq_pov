@@ -1833,6 +1833,16 @@ static void mesh_compute_aabb(void)
                mesh_aabb_x_half_q4, mesh_aabb_y_min_q4, mesh_aabb_y_max_q4);
 }
 
+/* QSPI flash writer entry: 检测 magic flag 在 DDR 里, 若有就跑 flash write
+ * 模式 (从 DDR 0x10000000 读 BOOT.bin, 写 QSPI flash). xsdb 流程:
+ *   xsdb> dow -data BOOT.bin 0x10000000
+ *   xsdb> mwr 0x18000000 0xFLA51100 4   ; magic + size 后面手动也行
+ *   xsdb> mwr 0x18000004 <BOOT.bin size>
+ *   xsdb> dow hello_world.elf
+ *   xsdb> con
+ * 只跑一次, 烧完 reboot. */
+extern void qspi_flash_writer_main(void);
+
 int main(void)
 {
     init_platform();
@@ -1843,6 +1853,18 @@ int main(void)
     Xil_Out32(0xE0000018, 0x12);   /* UART0 BAUDGEN */
     Xil_Out32(0xE0000034, 0x05);   /* UART0 BAUDDIV */
     xil_printf("\r\n=== POV-3D Render Phase 4b (USE_PL=%d) baud=921600 ===\r\n", USE_PL);
+
+    /* QSPI flash writer mode: xsdb 在 0x18000000 写 magic, dow + run hello_world.
+     * 检测到 magic 就跑 flash writer 然后死循环 (不 boot 主程序). */
+    {
+        volatile u32 *magic = (volatile u32 *)0x18000000UL;
+        if (*magic == 0xFA571100UL) {
+            *magic = 0;   /* clear so 下次 boot 不再跑 */
+            qspi_flash_writer_main();
+            xil_printf("[qspi-fw] done. halt. 切板子拨码 S1=ON S2=OFF, 重启 = QSPI boot.\r\n");
+            while (1) ;
+        }
+    }
 
     XGpio Led;
     XGpio_Initialize(&Led, XPAR_AXI_GPIO_0_BASEADDR);

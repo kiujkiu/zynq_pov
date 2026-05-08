@@ -1836,8 +1836,12 @@ static void mesh_compute_aabb(void)
 int main(void)
 {
     init_platform();
-    /* PS UART0 baud is set by tools/dl_helloworld.tcl post-ps7_init mwr
-     * (BAUDGEN=0x1B=27 BAUDDIV=3 → 921600 @ 100 MHz UART_REF_CLK, 0.5% err). */
+    /* UART0 baud=921600 @ 100 MHz UART_REF_CLK.
+     * JTAG 启动时 dl_helloworld.tcl 在 ps7_post_config 后 mwr 设过.
+     * QSPI 启动时 FSBL 不会做这事, 必须代码自己设, 否则上电后 baud=115200
+     * 跟 host 921600 不匹配. BAUDGEN=0x12=18, BAUDDIV=5, 0.5% 误差. */
+    Xil_Out32(0xE0000018, 0x12);   /* UART0 BAUDGEN */
+    Xil_Out32(0xE0000034, 0x05);   /* UART0 BAUDDIV */
     xil_printf("\r\n=== POV-3D Render Phase 4b (USE_PL=%d) baud=921600 ===\r\n", USE_PL);
 
     XGpio Led;

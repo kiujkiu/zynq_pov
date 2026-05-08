@@ -160,16 +160,18 @@ def build_simplified_mesh(glb_path, target_tris=4096, target_scale=40, z_stretch
 
 def build_simplified_mesh_per_tri(glb_path, target_tris=6000, target_scale=40,
                                    z_stretch=1.0, brighten=1.0, gamma=1.0,
-                                   saturation=1.6, verbose=True):
+                                   saturation=1.6, lighting=True, ambient=0.55,
+                                   verbose=True):
     """v2: 每 tri 自己一个 RGB (per-tri flat shading), 不走顶点色 baking.
+
+    lighting=True 启用 Simplified PBR + Multi-dir IBL (对应 voxel path Option B):
+      4 lights: key(暖) / fill(冷) / sky(冷顶) / ground(暖底), per-channel
+      different IBL color → tri color = baseColor * (li_r, li_g, li_b).
+      anime baseColor 47% 平均亮度自带提亮 + 立体阴影感, 接近 3D viewer.
 
     Return:
         verts_xyz: list of (x, y, z) float
         tris_with_color: list of (i0, i1, i2, r, g, b)
-
-    每 tri 的颜色 = 简化后该 tri 的 centroid 落在原 mesh 哪个 tri 内 (KDTree
-    最近邻 centroid), 取该原 tri centroid uv-sample texture color. 这样
-    高对比 detail (黑帽/白领) 不被顶点 baking 邻居稀释.
     """
     import colorsys
     import fast_simplification
@@ -216,6 +218,38 @@ def build_simplified_mesh_per_tri(glb_path, target_tris=6000, target_scale=40,
             cr, cg, cb = (float(color_info[1][0]),
                           float(color_info[1][1]),
                           float(color_info[1][2]))
+
+        # Lighting: face normal (cross edges, world space — 用原始未归一化 p0/p1/p2)
+        if lighting:
+            ed1 = (p1 - p0).astype(np.float32)
+            ed2 = (p2 - p0).astype(np.float32)
+            n_face = np.cross(ed1, ed2)
+            n_len = float(np.linalg.norm(n_face))
+            if n_len > 0:
+                n_face = n_face / n_len
+            else:
+                n_face = np.array([0, 1, 0], dtype=np.float32)
+            # 4 IBL lights (世界坐标, GLB y-up). 每 light 强度 < 0.5 让总和
+            # 范围在 [ambient, ambient + ~1.0] 即 [0.7, 1.7], 不极端.
+            li_r = ambient; li_g = ambient; li_b = ambient
+            lights = (
+                ((0.5, 0.7, 0.5), (0.45, 0.40, 0.32)),    # key 暖
+                ((-0.6, 0.4, 0.3), (0.20, 0.25, 0.35)),   # fill 冷
+                ((0.0, 1.0, 0.0), (0.22, 0.28, 0.38)),    # sky
+                ((0.0, -1.0, 0.0), (0.20, 0.16, 0.12)),   # ground
+            )
+            for (ld, lc) in lights:
+                ldn = np.array(ld, dtype=np.float32)
+                ldn = ldn / float(np.linalg.norm(ldn))
+                intensity = max(0.0, float(np.dot(n_face, ldn)))
+                li_r += intensity * lc[0]
+                li_g += intensity * lc[1]
+                li_b += intensity * lc[2]
+            # baseColor anime 平均 47%, 乘 li (~0.7-1.7) 后 ~33%-80%, 加 brighten
+            # 在后处理阶段拉到 normal 亮度. 这里 lighting 主要给立体感.
+            cr = cr * li_r
+            cg = cg * li_g
+            cb = cb * li_b
 
         tri_idx = []
         norm_pts = []

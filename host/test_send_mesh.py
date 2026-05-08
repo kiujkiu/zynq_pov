@@ -23,7 +23,8 @@ baud = 921600
 print(f"build_simplified_mesh_per_tri {os.path.basename(glb)} target_tris={target_tris}...")
 verts_xyz, tris_with_color = build_simplified_mesh_per_tri(
     glb, target_tris=target_tris, target_scale=40,
-    z_stretch=1.5, brighten=1.0, gamma=1.0, saturation=1.6, verbose=True)
+    z_stretch=1.5, brighten=1.5, gamma=0.9, saturation=1.6,
+    lighting=True, ambient=0.5, verbose=True)
 print(f"  → {len(verts_xyz)} verts, {len(tris_with_color)} tris (per-tri color)")
 print(f"  v0={verts_xyz[0]}  tri0={tris_with_color[0]}")
 

@@ -270,12 +270,12 @@ typedef struct __attribute__((packed)) {
 } mesh_tri_v2_t;    /* 9 bytes */
 
 #define MAX_MESH_VERTS  16384
-#define MAX_MESH_TRIS   8192
+#define MAX_MESH_TRIS   32768
 /* DDR layout: 借用 RING_BUFFER 段(0x12000000), 当前未使用 (USE_PL=0 走 ARM render) */
-#define MESH_VERTS_ADDR  0x12000000UL    /* 144 KB max (16K × 9B) */
-#define MESH_TRIS_ADDR   0x12030000UL    /* 72 KB max (8K × 9B v2) */
-#define MESH_TRI_COLORS_ADDR 0x12050000UL /* 24 KB (8K × 3B), per-tri RGB */
-#define ZBUFFER_ADDR     0x12100000UL    /* 720*640 = 460 KB, allow pad */
+#define MESH_VERTS_ADDR      0x12000000UL    /* 144 KB max (16K × 9B v1, 16K × 6B v2) */
+#define MESH_TRIS_ADDR       0x12030000UL    /* 288 KB max (32K × 9B v2) */
+#define MESH_TRI_COLORS_ADDR 0x12080000UL    /* 96 KB max (32K × 3B), per-tri RGB */
+#define ZBUFFER_ADDR         0x12100000UL    /* 720*640 = 460 KB, allow pad */
 
 static mesh_vert_t * const mesh_verts    = (mesh_vert_t *)MESH_VERTS_ADDR;
 static mesh_tri_t  * const mesh_tris     = (mesh_tri_t  *)MESH_TRIS_ADDR;
@@ -1474,7 +1474,7 @@ typedef struct {
     uint8_t  rb, gb, bb;
 } mesh_seg_t;
 
-#define MAX_MESH_SEGS  8192
+#define MAX_MESH_SEGS  16384
 static mesh_seg_t mesh_segs_buf[MAX_MESH_SEGS];
 
 static void cpu_render_mesh_slice_panel(UINTPTR fb_base, int angle_deg,

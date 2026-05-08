@@ -158,6 +158,141 @@ def build_simplified_mesh(glb_path, target_tris=4096, target_scale=40, z_stretch
     return out_verts, out_faces
 
 
+def build_simplified_mesh_per_tri(glb_path, target_tris=6000, target_scale=40,
+                                   z_stretch=1.0, brighten=1.0, gamma=1.0,
+                                   saturation=1.6, verbose=True):
+    """v2: 每 tri 自己一个 RGB (per-tri flat shading), 不走顶点色 baking.
+
+    Return:
+        verts_xyz: list of (x, y, z) float
+        tris_with_color: list of (i0, i1, i2, r, g, b)
+
+    每 tri 的颜色 = 简化后该 tri 的 centroid 落在原 mesh 哪个 tri 内 (KDTree
+    最近邻 centroid), 取该原 tri centroid uv-sample texture color. 这样
+    高对比 detail (黑帽/白领) 不被顶点 baking 邻居稀释.
+    """
+    import colorsys
+    import fast_simplification
+    from scipy.spatial import cKDTree
+
+    triangles = load_glb(glb_path, verbose=verbose)
+    n_orig = len(triangles)
+    if verbose:
+        print(f"[mesh-v2] {n_orig} original triangles")
+
+    all_pts = np.array([p for t in triangles for p in t[:3]], dtype=np.float32)
+    cmin, cmax = all_pts.min(axis=0), all_pts.max(axis=0)
+    center = (cmin + cmax) / 2
+    span = (cmax - cmin).max()
+    if span <= 0:
+        return [], []
+    scale = (2 * target_scale) / span
+
+    # 1) 全 mesh: 顶点 dedup + per-tri centroid color (no per-vertex baking)
+    DEDUP_QUANT = 0.05
+    vert_map = {}
+    verts_pos = []          # (x, y, z) 归一化坐标
+    faces_idx = []          # (i0, i1, i2)
+    orig_tri_centroids = [] # 用于后续 KDTree (归一化坐标)
+    orig_tri_colors = []    # (r, g, b) per original tri
+    print_every = max(1, n_orig // 20)
+    for i, (p0, p1, p2, color_info) in enumerate(triangles):
+        if verbose and i % print_every == 0:
+            print(f"  build {i}/{n_orig}...")
+        e1 = (p1 - p0).astype(np.float32)
+        e2 = (p2 - p0).astype(np.float32)
+        area = 0.5 * float(np.linalg.norm(np.cross(e1, e2)))
+        if area <= 0:
+            continue
+
+        if color_info[0] == "tex":
+            _, tex, uv0, uv1, uv2 = color_info
+            uv = (uv0 + uv1 + uv2) / 3.0
+            tx = int((uv[0] % 1.0) * tex.shape[1]) % tex.shape[1]
+            ty = int((1.0 - (uv[1] % 1.0)) * tex.shape[0]) % tex.shape[0]
+            px = tex[ty, tx]
+            cr, cg, cb = float(px[0]), float(px[1]), float(px[2])
+        else:
+            cr, cg, cb = (float(color_info[1][0]),
+                          float(color_info[1][1]),
+                          float(color_info[1][2]))
+
+        tri_idx = []
+        norm_pts = []
+        for p_raw in (p0, p1, p2):
+            n = (p_raw - center) * scale
+            n = n.astype(np.float32)
+            n[2] *= z_stretch
+            qkey = (int(round(n[0] / DEDUP_QUANT)),
+                    int(round(n[1] / DEDUP_QUANT)),
+                    int(round(n[2] / DEDUP_QUANT)))
+            v_idx = vert_map.get(qkey)
+            if v_idx is None:
+                v_idx = len(verts_pos)
+                vert_map[qkey] = v_idx
+                verts_pos.append([float(n[0]), float(n[1]), float(n[2])])
+            tri_idx.append(v_idx)
+            norm_pts.append(n)
+        if tri_idx[0] == tri_idx[1] or tri_idx[1] == tri_idx[2] or tri_idx[0] == tri_idx[2]:
+            continue
+        faces_idx.append(tuple(tri_idx))
+        centroid = (norm_pts[0] + norm_pts[1] + norm_pts[2]) / 3.0
+        orig_tri_centroids.append([float(centroid[0]), float(centroid[1]), float(centroid[2])])
+        orig_tri_colors.append((cr, cg, cb))
+
+    if verbose:
+        print(f"[mesh-v2] post-build: {len(verts_pos)} verts, {len(faces_idx)} faces")
+
+    # 2) Quadric decimation
+    verts_arr = np.array(verts_pos, dtype=np.float32)
+    faces_arr = np.array(faces_idx, dtype=np.uint32)
+    if len(faces_idx) > target_tris:
+        target_reduction = 1.0 - float(target_tris) / len(faces_idx)
+        if verbose:
+            print(f"[mesh-v2] decimating: target_reduction={target_reduction:.4f} "
+                  f"({len(faces_idx)} → {target_tris})")
+        new_verts, new_faces = fast_simplification.simplify(
+            verts_arr, faces_arr, target_reduction=target_reduction)
+    else:
+        new_verts, new_faces = verts_arr, faces_arr
+    if verbose:
+        print(f"[mesh-v2] post-decimate: {len(new_verts)} verts, {len(new_faces)} faces")
+
+    # 3) Per-tri color transfer: 新 tri centroid → 最近原 tri centroid 颜色
+    orig_centroids_arr = np.array(orig_tri_centroids, dtype=np.float32)
+    tree = cKDTree(orig_centroids_arr)
+    new_tri_centroids = np.zeros((len(new_faces), 3), dtype=np.float32)
+    for i, f in enumerate(new_faces):
+        v0 = new_verts[f[0]]; v1 = new_verts[f[1]]; v2 = new_verts[f[2]]
+        new_tri_centroids[i] = (v0 + v1 + v2) / 3.0
+    _, nn_idx = tree.query(new_tri_centroids, k=1)
+
+    # 4) Output: 顶点只 xyz, tri 自带 RGB (post-process gamma/brighten/sat)
+    out_verts = [tuple(float(c) for c in v) for v in new_verts]
+    out_tris = []
+    for i, f in enumerate(new_faces):
+        cr, cg, cb = orig_tri_colors[int(nn_idx[i])]
+        r = int(cr); g = int(cg); b = int(cb)
+        if gamma != 1.0 and gamma > 0:
+            r = int(255 * pow(max(0, r) / 255.0, gamma))
+            g = int(255 * pow(max(0, g) / 255.0, gamma))
+            b = int(255 * pow(max(0, b) / 255.0, gamma))
+        if brighten != 1.0:
+            mx = max(r, g, b)
+            if mx > 0:
+                tgt = min(255, int(mx * brighten))
+                k = tgt / mx
+                r = int(r * k); g = int(g * k); b = int(b * k)
+        if saturation != 1.0:
+            h, s, v_ = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
+            s = min(1.0, s * saturation)
+            r2, g2, b2 = colorsys.hsv_to_rgb(h, s, v_)
+            r, g, b = int(r2*255), int(g2*255), int(b2*255)
+        r = max(0, min(255, r)); g = max(0, min(255, g)); b = max(0, min(255, b))
+        out_tris.append((int(f[0]), int(f[1]), int(f[2]), r, g, b))
+    return out_verts, out_tris
+
+
 if __name__ == "__main__":
     import sys
     glb = sys.argv[1] if len(sys.argv) > 1 else "anime_62459.glb"

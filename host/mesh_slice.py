@@ -139,20 +139,36 @@ if __name__ == "__main__":
 
     HERE = os.path.dirname(os.path.abspath(__file__))
     sys.path.insert(0, HERE)
-    from glb_to_mesh import build_simplified_mesh
+    from glb_to_mesh import build_simplified_mesh_per_tri
 
     glb = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "anime_62459.glb")
-    target_tris = int(sys.argv[2]) if len(sys.argv) > 2 else 3000
+    target_tris = int(sys.argv[2]) if len(sys.argv) > 2 else 6000
     n_angles = int(sys.argv[3]) if len(sys.argv) > 3 else 24
     out_dir = os.path.join(HERE, "out_slices")
     os.makedirs(out_dir, exist_ok=True)
 
-    print(f"build mesh {os.path.basename(glb)} target_tris={target_tris}...")
-    verts, faces = build_simplified_mesh(glb, target_tris=target_tris,
-                                          target_scale=40, z_stretch=1.0,
-                                          brighten=1.0, gamma=1.0,
-                                          saturation=1.6, verbose=False)
-    print(f"  {len(verts)} verts, {len(faces)} tris")
+    print(f"build mesh per-tri {os.path.basename(glb)} target_tris={target_tris}...")
+    verts_xyz, tris_with_color = build_simplified_mesh_per_tri(
+        glb, target_tris=target_tris, target_scale=40, z_stretch=1.0,
+        brighten=1.0, gamma=1.0, saturation=1.6, verbose=False)
+    # 转换为 (x,y,z,r,g,b) 给 slicer (slicer 用 vert color lerp,
+    # per-tri 模式 host PNG 生成 verts 用 tri 平均色 fallback).
+    verts = []
+    vert_colors_accum = [[0,0,0,0] for _ in verts_xyz]
+    for (i0,i1,i2,r,g,b) in tris_with_color:
+        for vi in (i0,i1,i2):
+            vert_colors_accum[vi][0] += r
+            vert_colors_accum[vi][1] += g
+            vert_colors_accum[vi][2] += b
+            vert_colors_accum[vi][3] += 1
+    for i, (x,y,z) in enumerate(verts_xyz):
+        n = vert_colors_accum[i][3] or 1
+        verts.append((x,y,z,
+                      vert_colors_accum[i][0]//n,
+                      vert_colors_accum[i][1]//n,
+                      vert_colors_accum[i][2]//n))
+    faces = [(t[0],t[1],t[2]) for t in tris_with_color]
+    print(f"  {len(verts)} verts, {len(faces)} tris (per-tri colors averaged for PNG preview)")
 
     xs = [v[0] for v in verts]; ys = [v[1] for v in verts]; zs = [v[2] for v in verts]
     # 旋转半径 = max(|x|,|z|) (绕 y 轴), y 是高度

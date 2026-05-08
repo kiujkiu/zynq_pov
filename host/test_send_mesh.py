@@ -11,23 +11,23 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import serial
-from glb_to_mesh import build_simplified_mesh
-from mesh_proto import pack_mesh
+from glb_to_mesh import build_simplified_mesh_per_tri
+from mesh_proto import pack_mesh_v2
 
-target_tris = int(sys.argv[1]) if len(sys.argv) > 1 else 3000
+target_tris = int(sys.argv[1]) if len(sys.argv) > 1 else 6000
 glb_default = os.path.join(HERE, "anime_62459.glb")
 glb = sys.argv[2] if len(sys.argv) > 2 else glb_default
 port = "COM4"
 baud = 921600
 
-print(f"build_simplified_mesh {os.path.basename(glb)} target_tris={target_tris}...")
-verts, faces = build_simplified_mesh(glb, target_tris=target_tris, target_scale=40,
-                                      z_stretch=1.5, brighten=1.0, gamma=1.0,
-                                      saturation=1.6, verbose=True)
-print(f"  → {len(verts)} verts, {len(faces)} tris")
-print(f"  v0={verts[0]}  tri0={faces[0]}")
+print(f"build_simplified_mesh_per_tri {os.path.basename(glb)} target_tris={target_tris}...")
+verts_xyz, tris_with_color = build_simplified_mesh_per_tri(
+    glb, target_tris=target_tris, target_scale=40,
+    z_stretch=1.5, brighten=1.0, gamma=1.0, saturation=1.6, verbose=True)
+print(f"  → {len(verts_xyz)} verts, {len(tris_with_color)} tris (per-tri color)")
+print(f"  v0={verts_xyz[0]}  tri0={tris_with_color[0]}")
 
-buf = pack_mesh(0, verts, faces)
+buf = pack_mesh_v2(0, verts_xyz, tris_with_color)
 print(f"opening {port}@{baud}...")
 ser = serial.Serial(port, baud, timeout=0)
 print(f"sending {len(buf)} bytes (mesh wire)...")

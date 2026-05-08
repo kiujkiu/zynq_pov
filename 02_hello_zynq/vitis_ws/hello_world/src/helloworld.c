@@ -253,27 +253,41 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
     int16_t  x, y, z;       /* Q8.4 fix-point: model unit = x / 16 */
-    uint8_t  r, g, b;
+    uint8_t  r, g, b;       /* v1 only; v2 用 mesh_tri_colors[] 替代 */
 } mesh_vert_t;   /* 9 bytes */
 
 typedef struct __attribute__((packed)) {
+    int16_t x, y, z;
+} mesh_vert_v2_t;   /* 6 bytes */
+
+typedef struct __attribute__((packed)) {
     uint16_t i0, i1, i2;
-} mesh_tri_t;
+} mesh_tri_t;       /* 6 bytes */
+
+typedef struct __attribute__((packed)) {
+    uint16_t i0, i1, i2;
+    uint8_t  r, g, b;
+} mesh_tri_v2_t;    /* 9 bytes */
 
 #define MAX_MESH_VERTS  16384
 #define MAX_MESH_TRIS   8192
 /* DDR layout: 借用 RING_BUFFER 段(0x12000000), 当前未使用 (USE_PL=0 走 ARM render) */
-#define MESH_VERTS_ADDR  0x12000000UL    /* 24 KB */
-#define MESH_TRIS_ADDR   0x12010000UL    /* 24 KB */
+#define MESH_VERTS_ADDR  0x12000000UL    /* 144 KB max (16K × 9B) */
+#define MESH_TRIS_ADDR   0x12030000UL    /* 72 KB max (8K × 9B v2) */
+#define MESH_TRI_COLORS_ADDR 0x12050000UL /* 24 KB (8K × 3B), per-tri RGB */
 #define ZBUFFER_ADDR     0x12100000UL    /* 720*640 = 460 KB, allow pad */
 
-static mesh_vert_t * const mesh_verts = (mesh_vert_t *)MESH_VERTS_ADDR;
-static mesh_tri_t  * const mesh_tris  = (mesh_tri_t  *)MESH_TRIS_ADDR;
-static int8_t      * const mesh_zbuf  = (int8_t      *)ZBUFFER_ADDR;
+static mesh_vert_t * const mesh_verts    = (mesh_vert_t *)MESH_VERTS_ADDR;
+static mesh_tri_t  * const mesh_tris     = (mesh_tri_t  *)MESH_TRIS_ADDR;
+static uint8_t     * const mesh_tri_colors = (uint8_t *)MESH_TRI_COLORS_ADDR; /* 3B/tri */
+static int8_t      * const mesh_zbuf     = (int8_t     *)ZBUFFER_ADDR;
+
+#define MESH_FLAG_PER_TRI_COLOR  0x0001u   /* v2: vert 6B, tri 9B + RGB */
 
 static volatile int  mesh_ready = 0;
 static volatile u32  mesh_n_verts = 0;
 static volatile u32  mesh_n_tris  = 0;
+static volatile int  mesh_per_tri_color = 0;   /* 1 = v2 protocol */
 
 /* model_n: volatile 让 main loop 看到 uart_poll_frame 内部的更新 (hybrid mode 切换) */
 /* (defined in build_model area but forward-declare volatile here for use_pl path) */
@@ -348,9 +362,11 @@ static int uart_poll_frame(void)
                             rx_mesh_n_verts_target = mh->n_verts;
                             rx_mesh_n_tris_target = mh->n_tris;
                             rx_mesh_bytes = 0;
+                            mesh_per_tri_color = (mh->flags & MESH_FLAG_PER_TRI_COLOR) ? 1 : 0;
                             rx_state = RX_MESH_VERTS;
-                            xil_printf("[mesh-rx] verts=%u tris=%u\r\n",
-                                       (unsigned)mh->n_verts, (unsigned)mh->n_tris);
+                            xil_printf("[mesh-rx] verts=%u tris=%u %s\r\n",
+                                       (unsigned)mh->n_verts, (unsigned)mh->n_tris,
+                                       mesh_per_tri_color ? "v2(per-tri)" : "v1(per-vert)");
                         }
                         continue;
                     }
@@ -487,15 +503,43 @@ static int uart_poll_frame(void)
                 }
             }
         } else if (rx_state == RX_MESH_VERTS) {
-            /* 把字节直接写到 mesh_verts buffer 里 (UART 顺序 = struct 布局) */
-            ((u8 *)mesh_verts)[rx_mesh_bytes++] = b;
-            if (rx_mesh_bytes == rx_mesh_n_verts_target * sizeof(mesh_vert_t)) {
-                rx_mesh_bytes = 0;
-                rx_state = RX_MESH_TRIS;
+            if (mesh_per_tri_color) {
+                /* v2: 6 byte/vert. 拆到 mesh_vert_t (9B), rgb 字段不写. */
+                u32 vi = rx_mesh_bytes / 6;
+                u32 sub = rx_mesh_bytes % 6;
+                u8 *dst = ((u8 *)&mesh_verts[vi]) + sub;
+                *dst = b;
+                rx_mesh_bytes++;
+                if (rx_mesh_bytes == rx_mesh_n_verts_target * 6) {
+                    rx_mesh_bytes = 0;
+                    rx_state = RX_MESH_TRIS;
+                }
+            } else {
+                /* v1: 9 byte/vert 直接 packed */
+                ((u8 *)mesh_verts)[rx_mesh_bytes++] = b;
+                if (rx_mesh_bytes == rx_mesh_n_verts_target * sizeof(mesh_vert_t)) {
+                    rx_mesh_bytes = 0;
+                    rx_state = RX_MESH_TRIS;
+                }
             }
         } else if (rx_state == RX_MESH_TRIS) {
-            ((u8 *)mesh_tris)[rx_mesh_bytes++] = b;
-            if (rx_mesh_bytes == rx_mesh_n_tris_target * sizeof(mesh_tri_t)) {
+            int done = 0;
+            if (mesh_per_tri_color) {
+                /* v2: 9 byte/tri = 6 byte index + 3 byte rgb. */
+                u32 ti = rx_mesh_bytes / 9;
+                u32 sub = rx_mesh_bytes % 9;
+                if (sub < 6) {
+                    ((u8 *)&mesh_tris[ti])[sub] = b;
+                } else {
+                    mesh_tri_colors[ti * 3 + (sub - 6)] = b;
+                }
+                rx_mesh_bytes++;
+                if (rx_mesh_bytes == rx_mesh_n_tris_target * 9) done = 1;
+            } else {
+                ((u8 *)mesh_tris)[rx_mesh_bytes++] = b;
+                if (rx_mesh_bytes == rx_mesh_n_tris_target * sizeof(mesh_tri_t)) done = 1;
+            }
+            if (done) {
                 /* Mesh 收完, flush cache + 标 ready */
                 mesh_n_verts = rx_mesh_n_verts_target;
                 mesh_n_tris  = rx_mesh_n_tris_target;
@@ -503,6 +547,9 @@ static int uart_poll_frame(void)
                                      mesh_n_verts * sizeof(mesh_vert_t));
                 Xil_DCacheFlushRange(MESH_TRIS_ADDR,
                                      mesh_n_tris * sizeof(mesh_tri_t));
+                if (mesh_per_tri_color) {
+                    Xil_DCacheFlushRange(MESH_TRI_COLORS_ADDR, mesh_n_tris * 3);
+                }
                 __asm__ __volatile__("dsb sy" ::: "memory");
                 mesh_ready = 1;
                 right_dirty_g = 1;
@@ -1275,6 +1322,72 @@ static void rasterize_tri(u8 *fb, int origin_x, int origin_y,
     }
 }
 
+/* Flat-shading 版: 整个 tri 使用单 RGB (来自 mesh_tri_colors[]).
+ * 避免内层逐像素颜色 lerp, render 更快, 颜色质量更好 (per-tri texture sample). */
+static void rasterize_tri_flat(u8 *fb, int origin_x, int origin_y,
+                               int panel_w, int panel_h,
+                               screen_vert_t *v0, screen_vert_t *v1, screen_vert_t *v2,
+                               int8_t *zbuf,
+                               u8 cr, u8 cg, u8 cb)
+{
+    int x0 = v0->sx, y0 = v0->sy, z0 = v0->sz;
+    int x1 = v1->sx, y1 = v1->sy, z1 = v1->sz;
+    int x2 = v2->sx, y2 = v2->sy, z2 = v2->sz;
+
+    int area2 = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0);
+    if (area2 == 0) return;
+    if (area2 < 0) {
+        int tx = x1, ty = y1, tz = z1;
+        x1 = x2; y1 = y2; z1 = z2;
+        x2 = tx; y2 = ty; z2 = tz;
+        area2 = -area2;
+    }
+
+    int minx = x0; if (x1 < minx) minx = x1; if (x2 < minx) minx = x2;
+    int miny = y0; if (y1 < miny) miny = y1; if (y2 < miny) miny = y2;
+    int maxx = x0; if (x1 > maxx) maxx = x1; if (x2 > maxx) maxx = x2;
+    int maxy = y0; if (y1 > maxy) maxy = y1; if (y2 > maxy) maxy = y2;
+    if (minx < 0) minx = 0;
+    if (miny < 0) miny = 0;
+    if (maxx > panel_w - 1) maxx = panel_w - 1;
+    if (maxy > panel_h - 1) maxy = panel_h - 1;
+    if (minx > maxx || miny > maxy) return;
+
+    const int inv_q24 = (int)((1u << 24) / (unsigned)area2);
+    int A12 = -(y2 - y1), B12 = (x2 - x1);
+    int A20 = -(y0 - y2), B20 = (x0 - x2);
+    int A01 = -(y1 - y0), B01 = (x1 - x0);
+    int e0_row = (x2 - x1) * (miny - y1) - (y2 - y1) * (minx - x1);
+    int e1_row = (x0 - x2) * (miny - y2) - (y0 - y2) * (minx - x2);
+    int e2_row = (x1 - x0) * (miny - y0) - (y1 - y0) * (minx - x0);
+
+    for (int y = miny; y <= maxy; y++) {
+        int e0 = e0_row, e1 = e1_row, e2 = e2_row;
+        u8 *row = fb + (origin_y + y) * STRIDE + origin_x * 3;
+        int8_t *zrow = zbuf + y * panel_w;
+        for (int x = minx; x <= maxx; x++) {
+            if ((e0 | e1 | e2) >= 0) {
+                int b0 = (int)(((long long)e0 * inv_q24) >> 16);
+                int b1 = (int)(((long long)e1 * inv_q24) >> 16);
+                int b2 = 256 - b0 - b1;
+                int z = (b0 * z0 + b1 * z1 + b2 * z2) >> 8;
+                int8_t zv = (int8_t)sat_int8(z);
+                if (zv > zrow[x]) {
+                    zrow[x] = zv;
+                    u8 *p = row + x * 3;
+                    p[0] = cg; p[1] = cb; p[2] = cr;   /* GBR */
+                }
+            }
+            e0 += A12;
+            e1 += A20;
+            e2 += A01;
+        }
+        e0_row += B12;
+        e1_row += B20;
+        e2_row += B01;
+    }
+}
+
 static void cpu_render_mesh(UINTPTR fb_base, int angle_deg,
                             int origin_x, int origin_y,
                             int panel_w, int panel_h, int scale_pct)
@@ -1326,6 +1439,18 @@ static void cpu_render_mesh(UINTPTR fb_base, int angle_deg,
         u16 i1 = mesh_tris[t].i1;
         u16 i2 = mesh_tris[t].i2;
         if (i0 >= mesh_n_verts || i1 >= mesh_n_verts || i2 >= mesh_n_verts) continue;
+        if (mesh_per_tri_color) {
+            u8 cr = mesh_tri_colors[t * 3 + 0];
+            u8 cg = mesh_tri_colors[t * 3 + 1];
+            u8 cb = mesh_tri_colors[t * 3 + 2];
+            rasterize_tri_flat(fb, origin_x, origin_y, panel_w, panel_h,
+                               &mesh_screen_verts[i0],
+                               &mesh_screen_verts[i1],
+                               &mesh_screen_verts[i2],
+                               mesh_zbuf, cr, cg, cb);
+            if ((t & 0x3F) == 0) uart_poll_frame();
+            continue;
+        }
         rasterize_tri(fb, origin_x, origin_y, panel_w, panel_h,
                       &mesh_screen_verts[i0],
                       &mesh_screen_verts[i1],
@@ -1389,30 +1514,39 @@ static void cpu_render_mesh_slice_panel(UINTPTR fb_base, int angle_deg,
         u8  cr[2], cg[2], cb[2];
         int nc = 0;
         const int edges[3][2] = {{0,1},{1,2},{2,0}};
+        u8 tri_r = 0, tri_g = 0, tri_b = 0;
+        if (mesh_per_tri_color) {
+            tri_r = mesh_tri_colors[t * 3 + 0];
+            tri_g = mesh_tri_colors[t * 3 + 1];
+            tri_b = mesh_tri_colors[t * 3 + 2];
+        }
         for (int e = 0; e < 3 && nc < 2; e++) {
             int a = edges[e][0], b = edges[e][1];
             if ((zp[a] > 0) == (zp[b] > 0)) continue;
             int denom = zp[a] - zp[b];
             if (denom == 0) continue;
-            /* xp_q12 = xa*c + za*s + (zp[a]/denom) * delta. 用 64-bit. */
             int xa_proj = (int)vs[a]->x * c_q8 + (int)vs[a]->z * s_q8;
             int xb_proj = (int)vs[b]->x * c_q8 + (int)vs[b]->z * s_q8;
             long long delta = ((long long)zp[a] * (long long)(xb_proj - xa_proj)) / denom;
             int xp_q12 = xa_proj + (int)delta;
-            int xp_q4  = xp_q12 >> 8;   /* back to Q8.4 (model unit *16) */
-            /* y_height lerp Q8.4 直接 */
+            int xp_q4  = xp_q12 >> 8;
             long long dy = ((long long)zp[a] * (long long)((int)vs[b]->y - (int)vs[a]->y)) / denom;
             int yp_q4 = (int)vs[a]->y + (int)dy;
-            /* color lerp: t_q8 = zp[a] * 256 / denom (sign-preserving) */
-            int t_q8 = (int)(((long long)zp[a] * 256) / denom);
-            int rr = (int)vs[a]->r + (((int)vs[b]->r - (int)vs[a]->r) * t_q8 >> 8);
-            int gg = (int)vs[a]->g + (((int)vs[b]->g - (int)vs[a]->g) * t_q8 >> 8);
-            int bb = (int)vs[a]->b + (((int)vs[b]->b - (int)vs[a]->b) * t_q8 >> 8);
-            if (rr < 0) rr = 0; else if (rr > 255) rr = 255;
-            if (gg < 0) gg = 0; else if (gg > 255) gg = 255;
-            if (bb < 0) bb = 0; else if (bb > 255) bb = 255;
+            u8 rr_u, gg_u, bb_u;
+            if (mesh_per_tri_color) {
+                rr_u = tri_r; gg_u = tri_g; bb_u = tri_b;
+            } else {
+                int t_q8 = (int)(((long long)zp[a] * 256) / denom);
+                int rr = (int)vs[a]->r + (((int)vs[b]->r - (int)vs[a]->r) * t_q8 >> 8);
+                int gg = (int)vs[a]->g + (((int)vs[b]->g - (int)vs[a]->g) * t_q8 >> 8);
+                int bb = (int)vs[a]->b + (((int)vs[b]->b - (int)vs[a]->b) * t_q8 >> 8);
+                if (rr < 0) rr = 0; else if (rr > 255) rr = 255;
+                if (gg < 0) gg = 0; else if (gg > 255) gg = 255;
+                if (bb < 0) bb = 0; else if (bb > 255) bb = 255;
+                rr_u = (u8)rr; gg_u = (u8)gg; bb_u = (u8)bb;
+            }
             cx[nc] = xp_q4; cy[nc] = yp_q4;
-            cr[nc] = (u8)rr; cg[nc] = (u8)gg; cb[nc] = (u8)bb;
+            cr[nc] = rr_u; cg[nc] = gg_u; cb[nc] = bb_u;
             nc++;
         }
         if (nc == 2 && n_segs < MAX_MESH_SEGS) {

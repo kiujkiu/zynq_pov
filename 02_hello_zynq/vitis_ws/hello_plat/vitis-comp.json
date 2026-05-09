@@ -3,8 +3,8 @@
   "type": "PLATFORM",
   "configuration": {
     "description": "",
-    "xsa": "D:\\workspace\\zynq_pov\\02_hello_zynq\\hello_zynq_wrapper.xsa",
-    "xsaPathInPlatform": "hello_plat\\hw\\hello_zynq_wrapper.xsa",
+    "xsa": "D:\\workspace\\zynq_pov\\02_hello_zynq\\02_hello_zynq.xsa",
+    "xsaPathInPlatform": "hello_plat\\hw\\02_hello_zynq.xsa",
     "emulationXsa": "",
     "emulationXsaPathInPlatform": "",
     "isCustomFSBL": false,

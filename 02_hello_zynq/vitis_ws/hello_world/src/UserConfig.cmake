@@ -30,6 +30,7 @@ set(USER_INCLUDE_DIRECTORIES
 set(USER_COMPILE_SOURCES
 "helloworld.c"
 "platform.c"
+"led_panel.c"
 )
 
 # -----------------------------------------

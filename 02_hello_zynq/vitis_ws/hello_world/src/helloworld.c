@@ -2249,6 +2249,9 @@ int main(void)
         /* Slow rotation: advance phase only every 3 frames. */
         if ((frame % 3) == 0) phase++;
 
+        /* Heartbeat LED at ~1 Hz (60.54 FPS → 30 frames per half-cycle). */
+        XGpio_DiscreteWrite(&Led, 1, ((frame / 30) & 1) ? 0x1 : 0x2);
+
         /* Telemetry every 32 frames (was prior cadence) created sustained
          * UART TX bursts that block the CPU in xil_printf, causing RX FIFO
          * overflow during host stream upload. Throttle to every 256 frames
@@ -2271,7 +2274,6 @@ int main(void)
             render_count  = 0;
             gt0 = gt1;
             t0 = t1;
-            XGpio_DiscreteWrite(&Led, 1, (frame >> 5) & 1 ? 0x1 : 0x2);
         }
     }
     return 0;

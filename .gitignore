@@ -148,3 +148,10 @@ host/_baked_tex_*.png
 host/anime_62459_baked_clean.glb
 /02_hello_zynq/02_hello_zynq.xsa
 /D:/
+
+# Claude Code worktrees + xsa output + scratch
+.claude/
+02_hello_zynq.xsa
+hls_proj/proj_pov_v2/
+hls_proj/proj_mesh_slice/
+

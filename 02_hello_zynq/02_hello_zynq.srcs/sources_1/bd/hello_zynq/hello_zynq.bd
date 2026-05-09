@@ -26,7 +26,11 @@
       "eth_rstn_const": "",
       "axi_smc_pov_hp": "",
       "proc_sys_reset_pov": "",
-      "pov_project_batch_0": ""
+      "pov_project_batch_0": "",
+      "pov_project_batch_1": "",
+      "pov_project_batch_2": "",
+      "pov_project_batch_3": "",
+      "sc_pov_axilite": ""
     },
     "interface_ports": {
       "DDR": {
@@ -1819,6 +1823,9 @@
             "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
             "parameters": {
+              "MAX_BURST_LENGTH": {
+                "value": "256"
+              },
               "NUM_READ_OUTSTANDING": {
                 "value": "8"
               },
@@ -1832,6 +1839,9 @@
                 "value": "1"
               },
               "RUSER_BITS_PER_BYTE": {
+                "value": "0"
+              },
+              "SUPPORTS_NARROW_BURST": {
                 "value": "0"
               },
               "WUSER_BITS_PER_BYTE": {
@@ -2079,7 +2089,7 @@
             "value": "1"
           },
           "NUM_SI": {
-            "value": "2"
+            "value": "8"
           }
         },
         "interface_ports": {
@@ -2100,6 +2110,102 @@
             ]
           },
           "S01_AXI": {
+            "mode": "Slave",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "16"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "8"
+              }
+            },
+            "bridges": [
+              "M00_AXI"
+            ]
+          },
+          "S02_AXI": {
+            "mode": "Slave",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "16"
+              }
+            },
+            "bridges": [
+              "M00_AXI"
+            ]
+          },
+          "S03_AXI": {
+            "mode": "Slave",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "16"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "8"
+              }
+            },
+            "bridges": [
+              "M00_AXI"
+            ]
+          },
+          "S04_AXI": {
+            "mode": "Slave",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "16"
+              }
+            },
+            "bridges": [
+              "M00_AXI"
+            ]
+          },
+          "S05_AXI": {
+            "mode": "Slave",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "16"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "8"
+              }
+            },
+            "bridges": [
+              "M00_AXI"
+            ]
+          },
+          "S06_AXI": {
+            "mode": "Slave",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "16"
+              }
+            },
+            "bridges": [
+              "M00_AXI"
+            ]
+          },
+          "S07_AXI": {
             "mode": "Slave",
             "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
@@ -2195,6 +2301,268 @@
             }
           }
         }
+      },
+      "pov_project_batch_1": {
+        "vlnv": "povlab:user:pov_project_batch:1.0",
+        "ip_revision": "2114598530",
+        "xci_name": "hello_zynq_pov_project_batch_1_0",
+        "xci_path": "ip\\hello_zynq_pov_project_batch_1_0\\hello_zynq_pov_project_batch_1_0.xci",
+        "inst_hier_path": "pov_project_batch_1",
+        "interface_ports": {
+          "m_axi_gmem0": {
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "mode": "Master",
+            "address_space_ref": "Data_m_axi_gmem0",
+            "base_address": {
+              "minimum": "0x00000000",
+              "maximum": "0xFFFFFFFFFFFFFFFF",
+              "width": "64"
+            }
+          },
+          "m_axi_gmem1": {
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "mode": "Master",
+            "address_space_ref": "Data_m_axi_gmem1",
+            "base_address": {
+              "minimum": "0x00000000",
+              "maximum": "0xFFFFFFFFFFFFFFFF",
+              "width": "64"
+            }
+          }
+        },
+        "addressing": {
+          "address_spaces": {
+            "Data_m_axi_gmem0": {
+              "range": "16E",
+              "width": "64"
+            },
+            "Data_m_axi_gmem1": {
+              "range": "16E",
+              "width": "64"
+            }
+          }
+        }
+      },
+      "pov_project_batch_2": {
+        "vlnv": "povlab:user:pov_project_batch:1.0",
+        "ip_revision": "2114598530",
+        "xci_name": "hello_zynq_pov_project_batch_2_0",
+        "xci_path": "ip\\hello_zynq_pov_project_batch_2_0\\hello_zynq_pov_project_batch_2_0.xci",
+        "inst_hier_path": "pov_project_batch_2",
+        "interface_ports": {
+          "m_axi_gmem0": {
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "mode": "Master",
+            "address_space_ref": "Data_m_axi_gmem0",
+            "base_address": {
+              "minimum": "0x00000000",
+              "maximum": "0xFFFFFFFFFFFFFFFF",
+              "width": "64"
+            }
+          },
+          "m_axi_gmem1": {
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "mode": "Master",
+            "address_space_ref": "Data_m_axi_gmem1",
+            "base_address": {
+              "minimum": "0x00000000",
+              "maximum": "0xFFFFFFFFFFFFFFFF",
+              "width": "64"
+            }
+          }
+        },
+        "addressing": {
+          "address_spaces": {
+            "Data_m_axi_gmem0": {
+              "range": "16E",
+              "width": "64"
+            },
+            "Data_m_axi_gmem1": {
+              "range": "16E",
+              "width": "64"
+            }
+          }
+        }
+      },
+      "pov_project_batch_3": {
+        "vlnv": "povlab:user:pov_project_batch:1.0",
+        "ip_revision": "2114598530",
+        "xci_name": "hello_zynq_pov_project_batch_3_0",
+        "xci_path": "ip\\hello_zynq_pov_project_batch_3_0\\hello_zynq_pov_project_batch_3_0.xci",
+        "inst_hier_path": "pov_project_batch_3",
+        "interface_ports": {
+          "m_axi_gmem0": {
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "mode": "Master",
+            "address_space_ref": "Data_m_axi_gmem0",
+            "base_address": {
+              "minimum": "0x00000000",
+              "maximum": "0xFFFFFFFFFFFFFFFF",
+              "width": "64"
+            }
+          },
+          "m_axi_gmem1": {
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "mode": "Master",
+            "address_space_ref": "Data_m_axi_gmem1",
+            "base_address": {
+              "minimum": "0x00000000",
+              "maximum": "0xFFFFFFFFFFFFFFFF",
+              "width": "64"
+            }
+          }
+        },
+        "addressing": {
+          "address_spaces": {
+            "Data_m_axi_gmem0": {
+              "range": "16E",
+              "width": "64"
+            },
+            "Data_m_axi_gmem1": {
+              "range": "16E",
+              "width": "64"
+            }
+          }
+        }
+      },
+      "sc_pov_axilite": {
+        "vlnv": "xilinx.com:ip:smartconnect:1.0",
+        "ip_revision": "25",
+        "xci_name": "hello_zynq_sc_pov_axilite_0",
+        "xci_path": "ip\\hello_zynq_sc_pov_axilite_0\\hello_zynq_sc_pov_axilite_0.xci",
+        "inst_hier_path": "sc_pov_axilite",
+        "parameters": {
+          "NUM_CLKS": {
+            "value": "1"
+          },
+          "NUM_MI": {
+            "value": "4"
+          },
+          "NUM_SI": {
+            "value": "1"
+          }
+        },
+        "interface_ports": {
+          "S00_AXI": {
+            "mode": "Slave",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "8"
+              }
+            },
+            "bridges": [
+              "M00_AXI",
+              "M01_AXI",
+              "M02_AXI",
+              "M03_AXI"
+            ]
+          },
+          "M00_AXI": {
+            "mode": "Master",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_READ_THREADS": {
+                "value": "1"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_WRITE_THREADS": {
+                "value": "1"
+              },
+              "RUSER_BITS_PER_BYTE": {
+                "value": "0"
+              },
+              "WUSER_BITS_PER_BYTE": {
+                "value": "0"
+              }
+            }
+          },
+          "M01_AXI": {
+            "mode": "Master",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_READ_THREADS": {
+                "value": "1"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_WRITE_THREADS": {
+                "value": "1"
+              },
+              "RUSER_BITS_PER_BYTE": {
+                "value": "0"
+              },
+              "WUSER_BITS_PER_BYTE": {
+                "value": "0"
+              }
+            }
+          },
+          "M02_AXI": {
+            "mode": "Master",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_READ_THREADS": {
+                "value": "1"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_WRITE_THREADS": {
+                "value": "1"
+              },
+              "RUSER_BITS_PER_BYTE": {
+                "value": "0"
+              },
+              "WUSER_BITS_PER_BYTE": {
+                "value": "0"
+              }
+            }
+          },
+          "M03_AXI": {
+            "mode": "Master",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_READ_THREADS": {
+                "value": "1"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_WRITE_THREADS": {
+                "value": "1"
+              },
+              "RUSER_BITS_PER_BYTE": {
+                "value": "0"
+              },
+              "WUSER_BITS_PER_BYTE": {
+                "value": "0"
+              }
+            }
+          }
+        }
       }
     },
     "interface_nets": {
@@ -2225,7 +2593,7 @@
       "axi_smc_M03_AXI": {
         "interface_ports": [
           "axi_smc/M03_AXI",
-          "pov_project_batch_0/s_axi_control"
+          "sc_pov_axilite/S00_AXI"
         ]
       },
       "axi_smc_hp_M00_AXI": {
@@ -2276,6 +2644,42 @@
           "axi_smc_pov_hp/S01_AXI"
         ]
       },
+      "pov_project_batch_1_m_axi_gmem0": {
+        "interface_ports": [
+          "pov_project_batch_1/m_axi_gmem0",
+          "axi_smc_pov_hp/S02_AXI"
+        ]
+      },
+      "pov_project_batch_1_m_axi_gmem1": {
+        "interface_ports": [
+          "pov_project_batch_1/m_axi_gmem1",
+          "axi_smc_pov_hp/S03_AXI"
+        ]
+      },
+      "pov_project_batch_2_m_axi_gmem0": {
+        "interface_ports": [
+          "pov_project_batch_2/m_axi_gmem0",
+          "axi_smc_pov_hp/S04_AXI"
+        ]
+      },
+      "pov_project_batch_2_m_axi_gmem1": {
+        "interface_ports": [
+          "pov_project_batch_2/m_axi_gmem1",
+          "axi_smc_pov_hp/S05_AXI"
+        ]
+      },
+      "pov_project_batch_3_m_axi_gmem0": {
+        "interface_ports": [
+          "pov_project_batch_3/m_axi_gmem0",
+          "axi_smc_pov_hp/S06_AXI"
+        ]
+      },
+      "pov_project_batch_3_m_axi_gmem1": {
+        "interface_ports": [
+          "pov_project_batch_3/m_axi_gmem1",
+          "axi_smc_pov_hp/S07_AXI"
+        ]
+      },
       "processing_system7_0_DDR": {
         "interface_ports": [
           "DDR",
@@ -2318,6 +2722,30 @@
           "rgb2dvi_0/TMDS"
         ]
       },
+      "sc_pov_axilite_M00_AXI": {
+        "interface_ports": [
+          "sc_pov_axilite/M00_AXI",
+          "pov_project_batch_0/s_axi_control"
+        ]
+      },
+      "sc_pov_axilite_M01_AXI": {
+        "interface_ports": [
+          "sc_pov_axilite/M01_AXI",
+          "pov_project_batch_1/s_axi_control"
+        ]
+      },
+      "sc_pov_axilite_M02_AXI": {
+        "interface_ports": [
+          "sc_pov_axilite/M02_AXI",
+          "pov_project_batch_2/s_axi_control"
+        ]
+      },
+      "sc_pov_axilite_M03_AXI": {
+        "interface_ports": [
+          "sc_pov_axilite/M03_AXI",
+          "pov_project_batch_3/s_axi_control"
+        ]
+      },
       "v_axi4s_vid_out_0_vid_io_out": {
         "interface_ports": [
           "v_axi4s_vid_out_0/vid_io_out",
@@ -2355,7 +2783,11 @@
         "ports": [
           "proc_sys_reset_pov/peripheral_aresetn",
           "axi_smc_pov_hp/aresetn",
-          "pov_project_batch_0/ap_rst_n"
+          "pov_project_batch_0/ap_rst_n",
+          "pov_project_batch_1/ap_rst_n",
+          "pov_project_batch_2/ap_rst_n",
+          "pov_project_batch_3/ap_rst_n",
+          "sc_pov_axilite/aresetn"
         ]
       },
       "processing_system7_0_FCLK_CLK0": {
@@ -2395,7 +2827,11 @@
           "axi_smc_pov_hp/aclk",
           "processing_system7_0/S_AXI_HP1_ACLK",
           "proc_sys_reset_pov/slowest_sync_clk",
-          "pov_project_batch_0/ap_clk"
+          "pov_project_batch_0/ap_clk",
+          "pov_project_batch_1/ap_clk",
+          "pov_project_batch_2/ap_clk",
+          "pov_project_batch_3/ap_clk",
+          "sc_pov_axilite/aclk"
         ]
       },
       "processing_system7_0_FCLK_RESET0_N": {
@@ -2442,6 +2878,27 @@
                 "offset_base_param": "C_S_AXI_CONTROL_BASEADDR",
                 "offset_high_param": "C_S_AXI_CONTROL_HIGHADDR"
               },
+              "SEG_pov_project_batch_1_Reg": {
+                "address_block": "/pov_project_batch_1/s_axi_control/Reg",
+                "offset": "0x40000000",
+                "range": "64K",
+                "offset_base_param": "C_S_AXI_CONTROL_BASEADDR",
+                "offset_high_param": "C_S_AXI_CONTROL_HIGHADDR"
+              },
+              "SEG_pov_project_batch_2_Reg": {
+                "address_block": "/pov_project_batch_2/s_axi_control/Reg",
+                "offset": "0x40010000",
+                "range": "64K",
+                "offset_base_param": "C_S_AXI_CONTROL_BASEADDR",
+                "offset_high_param": "C_S_AXI_CONTROL_HIGHADDR"
+              },
+              "SEG_pov_project_batch_3_Reg": {
+                "address_block": "/pov_project_batch_3/s_axi_control/Reg",
+                "offset": "0x40020000",
+                "range": "64K",
+                "offset_base_param": "C_S_AXI_CONTROL_BASEADDR",
+                "offset_high_param": "C_S_AXI_CONTROL_HIGHADDR"
+              },
               "SEG_v_tc_0_Reg": {
                 "address_block": "/v_tc_0/ctrl/Reg",
                 "offset": "0x43C00000",
@@ -2458,6 +2915,94 @@
               "SEG_processing_system7_0_HP0_DDR_LOWOCM": {
                 "address_block": "/processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM",
                 "offset": "0x00000000",
+                "range": "1G"
+              }
+            }
+          }
+        }
+      },
+      "/pov_project_batch_0": {
+        "address_spaces": {
+          "Data_m_axi_gmem0": {
+            "segments": {
+              "SEG_processing_system7_0_HP1_DDR_LOWOCM": {
+                "address_block": "/processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM",
+                "offset": "0x0000000000000000",
+                "range": "1G"
+              }
+            }
+          },
+          "Data_m_axi_gmem1": {
+            "segments": {
+              "SEG_processing_system7_0_HP1_DDR_LOWOCM": {
+                "address_block": "/processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM",
+                "offset": "0x0000000000000000",
+                "range": "1G"
+              }
+            }
+          }
+        }
+      },
+      "/pov_project_batch_1": {
+        "address_spaces": {
+          "Data_m_axi_gmem0": {
+            "segments": {
+              "SEG_processing_system7_0_HP1_DDR_LOWOCM": {
+                "address_block": "/processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM",
+                "offset": "0x0000000000000000",
+                "range": "1G"
+              }
+            }
+          },
+          "Data_m_axi_gmem1": {
+            "segments": {
+              "SEG_processing_system7_0_HP1_DDR_LOWOCM": {
+                "address_block": "/processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM",
+                "offset": "0x0000000000000000",
+                "range": "1G"
+              }
+            }
+          }
+        }
+      },
+      "/pov_project_batch_2": {
+        "address_spaces": {
+          "Data_m_axi_gmem0": {
+            "segments": {
+              "SEG_processing_system7_0_HP1_DDR_LOWOCM": {
+                "address_block": "/processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM",
+                "offset": "0x0000000000000000",
+                "range": "1G"
+              }
+            }
+          },
+          "Data_m_axi_gmem1": {
+            "segments": {
+              "SEG_processing_system7_0_HP1_DDR_LOWOCM": {
+                "address_block": "/processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM",
+                "offset": "0x0000000000000000",
+                "range": "1G"
+              }
+            }
+          }
+        }
+      },
+      "/pov_project_batch_3": {
+        "address_spaces": {
+          "Data_m_axi_gmem0": {
+            "segments": {
+              "SEG_processing_system7_0_HP1_DDR_LOWOCM": {
+                "address_block": "/processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM",
+                "offset": "0x0000000000000000",
+                "range": "1G"
+              }
+            }
+          },
+          "Data_m_axi_gmem1": {
+            "segments": {
+              "SEG_processing_system7_0_HP1_DDR_LOWOCM": {
+                "address_block": "/processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM",
+                "offset": "0x0000000000000000",
                 "range": "1G"
               }
             }

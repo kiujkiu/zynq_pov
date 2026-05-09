@@ -89,8 +89,12 @@ static int wait_not_busy(void)
 
 static int wren(void)
 {
-    u8 tx = CMD_WREN, rx;
-    return XQspiPs_PolledTransfer(&Qspi, &tx, &rx, 1) == XST_SUCCESS ? 0 : -1;
+    /* Write-only command: pass RecvBufPtr=NULL so driver does not switch
+     * to dummy-TX mode (which would corrupt any data beyond the first word).
+     * See xqspips.c PolledTransfer: when RecvBufferPtr != NULL and offset > 4
+     * the driver writes XQSPIPS_DUMMY_TX_DATA (0xFFFFFFFF) instead of SendBuf. */
+    u8 tx = CMD_WREN;
+    return XQspiPs_PolledTransfer(&Qspi, &tx, NULL, 1) == XST_SUCCESS ? 0 : -1;
 }
 
 static int erase_block(u32 addr)
@@ -100,8 +104,8 @@ static int erase_block(u32 addr)
                  (u8)((addr >> 16) & 0xFF),
                  (u8)((addr >>  8) & 0xFF),
                  (u8) (addr        & 0xFF) };
-    u8 rx[4];
-    if (XQspiPs_PolledTransfer(&Qspi, tx, rx, 4) != XST_SUCCESS) return -1;
+    /* Pure write — no RX buffer */
+    if (XQspiPs_PolledTransfer(&Qspi, tx, NULL, 4) != XST_SUCCESS) return -1;
     return wait_not_busy();
 }
 
@@ -110,13 +114,17 @@ static int program_page(u32 addr, const u8 *data, u32 len)
     if (len > PAGE_SIZE) return -1;
     if (wren() < 0) return -1;
     static u8 tx[4 + PAGE_SIZE];
-    static u8 rx[4 + PAGE_SIZE];
     tx[0] = CMD_PP;
     tx[1] = (u8)((addr >> 16) & 0xFF);
     tx[2] = (u8)((addr >>  8) & 0xFF);
     tx[3] = (u8) (addr        & 0xFF);
     memcpy(tx + 4, data, len);
-    if (XQspiPs_PolledTransfer(&Qspi, tx, rx, 4 + len) != XST_SUCCESS) return -1;
+    /* CRITICAL: RecvBufPtr MUST be NULL for page-program. If non-NULL the
+     * Xilinx driver assumes a READ flow and replaces every TX word past
+     * offset 4 with XQSPIPS_DUMMY_TX_DATA (0xFFFFFFFF), so the flash only
+     * sees cmd+addr followed by 256 bytes of 0xFF (a no-op on erased flash).
+     * This was the root cause of "first 4 bytes program, rest stays 0xFF". */
+    if (XQspiPs_PolledTransfer(&Qspi, tx, NULL, 4 + len) != XST_SUCCESS) return -1;
     return wait_not_busy();
 }
 
@@ -142,10 +150,10 @@ void qspi_flash_writer_main(void)
     if (qspi_init() < 0) return;
     xil_printf("[qfw] init done\r\n");
 
-    /* Force 3-byte addr mode */
+    /* Force 3-byte addr mode (write-only command, no RX) */
     {
-        u8 tx = CMD_EX4B, rx;
-        XQspiPs_PolledTransfer(&Qspi, &tx, &rx, 1);
+        u8 tx = CMD_EX4B;
+        XQspiPs_PolledTransfer(&Qspi, &tx, NULL, 1);
     }
     xil_printf("[qfw] EX4B sent\r\n");
 

@@ -173,7 +173,10 @@ u32 core1_wait_left(void)
 {
     u64 t0 = dc_gt_read();
     while (dc_load(OFF_LEFT_BUSY) != 0) {
-        /* tight poll — could WFE here but CPU0 already busy */
+        /* tight poll. 不调 uart_poll_frame — 主循环已 reentrancy-不安全
+         * (memory feedback uart_poll_nested_dispatch). dual-core 启用时如果 UART rx
+         * 丢字节, 用户应在单核模式下先 send model, 再切 ENABLE_DUAL_CORE=1
+         * rebuild + dl, 这时 model 已在 DDR, dual-core 渲染不依赖 UART. */
     }
     u64 t1 = dc_gt_read();
     return (u32)((t1 - t0) / GT_TICKS_PER_US_LOCAL);
@@ -221,6 +224,23 @@ void core1_main(void)
         int use_mesh     = (int)   dc_load(OFF_LEFT_USE_MESH);
 
         u64 t0 = dc_gt_read();
+
+        /* L1 dcache 一致性: CPU0 在 UART rx 后 FlushRange 到 L2/DDR, 但
+         * CPU1 自己的 L1 可能含 stale 行. 渲染前 invalidate CPU1 L1 给
+         * 共享 mesh/model 区段. A9 invalidate ~50 ns/cacheline (32B):
+         * 1 MB = 0.5 ms, 2 MB = 1 ms — 在 8 ms render budget 内.
+         * 限制 voxel ≤ 64K cells × 16B = 1MB; mesh 各 buffer 按 max alloc 一半. */
+        if (use_mesh && mesh_ready) {
+            Xil_DCacheInvalidateRange(0x12000000UL,  72UL * 1024); /* mesh_verts half */
+            Xil_DCacheInvalidateRange(0x12030000UL, 144UL * 1024); /* mesh_tris half */
+            Xil_DCacheInvalidateRange(0x12080000UL,  48UL * 1024); /* mesh_tri_colors half */
+            Xil_DCacheInvalidateRange(0x12098000UL,  16UL * 1024); /* mesh_vert_uv half */
+            Xil_DCacheInvalidateRange(0x120A0000UL, 256UL * 1024); /* mesh_texture 256² */
+        } else {
+            /* voxel model[]: 限 64K cells = 1 MB invalidate (实测 anime ~30K cells) */
+            Xil_DCacheInvalidateRange(0x1A000000UL, 1024UL * 1024);
+        }
+        dsb();
 
         if (use_mesh && mesh_ready) {
             cpu_render_mesh(fb_addr, angle, 0, 0, panel_w, panel_h, scale_pct);

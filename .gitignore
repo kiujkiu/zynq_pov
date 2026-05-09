@@ -125,6 +125,10 @@ hls_proj/proj_mesh_slice/
 hls_proj/proj_mesh_slice_csim/
 hls_proj/mesh_slice_ip.zip
 
+# === HLS proj_pov_v2 (Phase 9.5 task H II→1 优化版 synth output) ===
+hls_proj/proj_pov_v2/
+hls_proj/pov_project_v2_ip.zip
+
 # === Generated voxel files ===
 *.vxg
 

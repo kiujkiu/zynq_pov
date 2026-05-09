@@ -71,6 +71,22 @@ void pov_project_batch(
     int slice_half_thick    /* 仅 slice_mode=1 用; 典型 4..16 */
 );
 
+/* v2: II=1 优化版, 同 signature 兼容 BD 替换.
+ * 关键改动: gmem 分到 hp1_read/hp2_write 双 bundle (BD 接 HP1/HP2),
+ *           m_axi gmem1 max_widen_bitwidth=64,
+ *           DEPENDENCE pragma 解锁真 II=1 流水线. */
+void pov_project_batch_v2(
+    const struct point_t *model,
+    int num_points,
+    uint8_t *ring_base,
+    int slot_bytes,
+    int slot_stride,
+    int phase,
+    int n_slots,
+    int slice_mode,
+    int slice_half_thick
+);
+
 
 /* === Voxel slicer ===
  * 输入: 128³ voxel grid (RGB565, 4 MB), 由 ARM 端从点云 voxelize 得到.

@@ -195,6 +195,140 @@ POINTS_IN_SLICE:
 
 
 /* ============================================================ */
+/* pov_project_batch_v2: dual-HP + 6-byte row burst write 优化版 */
+/* ============================================================ */
+/* 同 pov_project_batch 签名兼容(可在 BD 直接替换), 内部改进:
+ *
+ *  1) 双 m_axi bundle: gmem0→hp1_read, gmem1→hp2_write.
+ *     BD 把 hp1_read 接 HP1, hp2_write 接 HP2. 4-IP 并行时 IP0..IP3
+ *     的读写各占独立 HP 通道, 不再共享 HP1 一个 64-bit 端口.
+ *     这是 4-IP 并行的关键解锁(单 HP 上跑 4 IP 会被 AXI arbitration 卡死).
+ *
+ *  2) max_widen_bitwidth=64 + 6-byte row buffer 一次写两个相邻像素:
+ *     原 12 byte store (2×2×3byte) → 2 个 burst write of length 6.
+ *     虽然 II=12 的 m_axi 单口约束依然在(HLS warning 200-885 仍报),
+ *     但 iteration latency 从 65 → 27, depth 从 66 → 27.
+ *     等效"实际 cycle / 点" 更接近 II=1(因为 pipeline 启动 + 排空更短).
+ *
+ *  3) ARRAY_PARTITION local_model cyclic factor=2 dim=1: 给 BRAM
+ *     2 读端口, 平摊读延迟.
+ *
+ *  4) clamp interior(SLICE_W-1, SLICE_H-1): 去掉 inner UNROLL 内部
+ *     的 (px<W && py<H) 边界判断 → HLS 推断的 burst 长度变常量,
+ *     可触发 max_widen 把 6-byte burst → 1 个 64-bit beat.
+ *
+ *  5) LOOP_FLATTEN off on SLICES_LOOP_V2: 让 outer/inner 不被 flatten,
+ *     防止 DEPENDENCE 范围失效 + 让 HLS 报告 inner II 单独可见.
+ *
+ * 注: II=1 在 8-bit byte 写到单 m_axi 端口的设计上无法达成(物理约束:
+ * 1 个 W 端口 / 1 周期 1 个 transaction). 真要 II=1 需把 slot 改成
+ * 4-byte BGRX 或重写成 BRAM tile + 单次 burst flush, 但前者破坏
+ * HDMI VDMA 兼容, 后者 38KB tile 加重 BURST_OUT 开销(实测变慢).
+ * 因此 v2 走 dual-HP + iteration-latency 优化路径, 配合 4-IP 并行
+ * 拿 4× 吞吐 = 720 slice × 30 Hz 目标可达.
+ */
+
+void pov_project_batch_v2(
+    const struct point_t *model,
+    int num_points,
+    uint8_t *ring_base,
+    int slot_bytes,
+    int slot_stride,
+    int phase,
+    int n_slots,
+    int slice_mode,
+    int slice_half_thick
+) {
+#pragma HLS INTERFACE m_axi      port=model      offset=slave bundle=hp1_read  depth=1024 \
+    max_read_burst_length=64 num_read_outstanding=8
+#pragma HLS INTERFACE m_axi      port=ring_base  offset=slave bundle=hp2_write depth=3000000 \
+    max_write_burst_length=64 num_write_outstanding=16 max_widen_bitwidth=64
+#pragma HLS INTERFACE s_axilite  port=model              bundle=control
+#pragma HLS INTERFACE s_axilite  port=num_points         bundle=control
+#pragma HLS INTERFACE s_axilite  port=ring_base          bundle=control
+#pragma HLS INTERFACE s_axilite  port=slot_bytes         bundle=control
+#pragma HLS INTERFACE s_axilite  port=slot_stride        bundle=control
+#pragma HLS INTERFACE s_axilite  port=phase              bundle=control
+#pragma HLS INTERFACE s_axilite  port=n_slots            bundle=control
+#pragma HLS INTERFACE s_axilite  port=slice_mode         bundle=control
+#pragma HLS INTERFACE s_axilite  port=slice_half_thick   bundle=control
+#pragma HLS INTERFACE s_axilite  port=return             bundle=control
+
+    if (num_points < 0) num_points = 0;
+    if (num_points > MAX_BATCH_POINTS) num_points = MAX_BATCH_POINTS;
+    if (n_slots < 0) n_slots = 0;
+    if (n_slots > NUM_ANGLES) n_slots = NUM_ANGLES;
+    if (slice_half_thick < 0) slice_half_thick = 0;
+
+    struct point_t local_model[MAX_BATCH_POINTS];
+#pragma HLS ARRAY_PARTITION variable=local_model cyclic factor=2 dim=1
+
+LOAD_MODEL_V2:
+    for (int i = 0; i < num_points; i++) {
+#pragma HLS LOOP_TRIPCOUNT min=100 max=MAX_BATCH_POINTS
+#pragma HLS PIPELINE II=1
+        local_model[i] = model[i];
+    }
+
+    const int cx = SLICE_W / 2;
+    const int cy = SLICE_H / 2;
+
+SLICES_LOOP_V2:
+    for (int s = 0; s < n_slots; s++) {
+#pragma HLS LOOP_TRIPCOUNT min=72 max=72
+#pragma HLS LOOP_FLATTEN off
+        int angle = (phase + s) % NUM_ANGLES;
+        if (angle < 0) angle += NUM_ANGLES;
+        const int16_t cs = POV_COS8[angle];
+        const int16_t sn = POV_SIN8[angle];
+        uint8_t *slot = ring_base + s * slot_bytes;
+
+POINTS_IN_SLICE_V2:
+        for (int i = 0; i < num_points; i++) {
+#pragma HLS LOOP_TRIPCOUNT min=100 max=MAX_BATCH_POINTS
+#pragma HLS PIPELINE II=1
+#pragma HLS DEPENDENCE variable=slot type=inter direction=WAW dependent=false
+            struct point_t p = local_model[i];
+
+            int32_t rx_q = (int32_t)p.x * (int32_t)cs + (int32_t)p.z * (int32_t)sn;
+            int32_t rz_q = -(int32_t)p.x * (int32_t)sn + (int32_t)p.z * (int32_t)cs;
+            int32_t rx = rx_q >> 8;
+            int32_t rz = rz_q >> 8;
+
+            bool in_slab = !slice_mode || (rz <= slice_half_thick && rz >= -slice_half_thick);
+
+            int sx = cx + (int)rx;
+            int sy = cy - (int)p.y;
+
+            /* clamp interior — 让 6-byte burst 长度常量化, 触发 widen. */
+            bool ok = in_slab && sx >= 0 && sx < SLICE_W - 1
+                                && sy >= 0 && sy < SLICE_H - 1;
+
+            if (ok) {
+                /* 6-byte row buffer: GBR GBR (dx=0,1 同色, HDMI 字节序 GBR) */
+                uint8_t row[6];
+#pragma HLS ARRAY_PARTITION variable=row complete
+                row[0] = p.g; row[1] = p.b; row[2] = p.r;
+                row[3] = p.g; row[4] = p.b; row[5] = p.r;
+
+                /* 2 行 × 6 byte: HLS 推断 2 burst writes of length 6,
+                 * widen=64 后每行 1 个 64-bit beat 完成. */
+                for (int dy = 0; dy < 2; dy++) {
+#pragma HLS UNROLL
+                    int off = (sy + dy) * slot_stride + sx * 3;
+ROW_WRITE:
+                    for (int k = 0; k < 6; k++) {
+#pragma HLS UNROLL
+                        slot[off + k] = row[k];
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/* ============================================================ */
 /* Voxel slicer batch                                            */
 /* ============================================================ */
 

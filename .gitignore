@@ -111,6 +111,10 @@ tools/BOOT.bin
 hls_proj/proj_voxel_slice/
 hls_proj/pov_voxel_slice_ip.zip
 
+# === HLS proj_pov_v2 (Phase 9.5 task H II→1 优化版 synth output) ===
+hls_proj/proj_pov_v2/
+hls_proj/pov_project_v2_ip.zip
+
 # === Generated voxel files ===
 *.vxg
 

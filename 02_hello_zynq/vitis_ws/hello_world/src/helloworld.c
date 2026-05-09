@@ -29,6 +29,15 @@
 #include "xil_io.h"
 #include "xiltimer.h"
 
+/* Phase 9.5 task I: dual-core AMP.  Default OFF — set ENABLE_DUAL_CORE=1 to
+ * boot CPU1 and offload LEFT panel render to it.  See dual_core.h. */
+#ifndef ENABLE_DUAL_CORE
+#define ENABLE_DUAL_CORE 0
+#endif
+#if ENABLE_DUAL_CORE
+#include "dual_core.h"
+#endif
+
 #define USE_PL 0
 /* Address-cache defeat experiment kept off — PL IP bug deferred. */
 #define DEFEAT_ADDR_CACHE 0
@@ -290,7 +299,8 @@ static int8_t      * const mesh_zbuf       = (int8_t     *)ZBUFFER_ADDR;
 #define MESH_FLAG_PER_TRI_COLOR  0x0001u   /* v2: vert 6B, tri 9B + RGB */
 #define MESH_FLAG_TEXTURED       0x0002u   /* v3: vert 8B (xyz+uv), tri 6B, +tex block */
 
-static volatile int  mesh_ready = 0;
+/* Phase 9.5 task I: external visibility for dual_core.c */
+volatile int  mesh_ready = 0;
 static volatile u32  mesh_n_verts = 0;
 static volatile u32  mesh_n_tris  = 0;
 static volatile int  mesh_per_tri_color = 0;   /* 1 = v2 protocol */
@@ -1165,7 +1175,8 @@ static void cpu_render_panel(UINTPTR fb_base, int angle_deg,
  *
  * slice_mode: 0 = full projection (all voxels)
  *             1 = thin radial slab (only voxels with |rotated_z| <= half) */
-static void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
+/* Phase 9.5 task I: external linkage for dual_core.c (CPU1 calls this). */
+void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
                                     int origin_x, int origin_y,
                                     int panel_w, int panel_h,
                                     int slice_mode, int scale_pct)
@@ -1536,7 +1547,8 @@ static void rasterize_tri_textured(u8 *fb, int origin_x, int origin_y,
     }
 }
 
-static void cpu_render_mesh(UINTPTR fb_base, int angle_deg,
+/* Phase 9.5 task I: external linkage for dual_core.c (CPU1 calls this). */
+void cpu_render_mesh(UINTPTR fb_base, int angle_deg,
                             int origin_x, int origin_y,
                             int panel_w, int panel_h, int scale_pct)
 {
@@ -1842,6 +1854,7 @@ static void mesh_compute_aabb(void)
  *   xsdb> con
  * 只跑一次, 烧完 reboot. */
 extern void qspi_flash_writer_main(void);
+extern void qspi_full_verify_main(void);
 
 int main(void)
 {
@@ -1859,9 +1872,15 @@ int main(void)
     {
         volatile u32 *magic = (volatile u32 *)0x18000000UL;
         if (*magic == 0xFA571100UL) {
-            *magic = 0;   /* clear so 下次 boot 不再跑 */
+            *magic = 0;
             qspi_flash_writer_main();
             xil_printf("[qspi-fw] done. halt. 切板子拨码 S1=ON S2=OFF, 重启 = QSPI boot.\r\n");
+            while (1) ;
+        }
+        if (*magic == 0xFA571101UL) {
+            *magic = 0;
+            qspi_full_verify_main();
+            xil_printf("[verify] done. halt.\r\n");
             while (1) ;
         }
     }
@@ -2013,6 +2032,21 @@ int main(void)
     u64 render_us_sum  = 0;
     u32 render_count   = 0;
 
+#if ENABLE_DUAL_CORE
+    /* Phase 9.5 task I: bring up CPU1 to take over LEFT panel render. */
+    {
+        int rc = core1_start();
+        xil_printf("[dual_core] core1_start() rc=%d\r\n", rc);
+        if (rc == 0) {
+            xil_printf("[dual_core] CPU1 alive=%u boot_ok=0x%x — LEFT offloaded\r\n",
+                       (unsigned)dc_load(OFF_CORE1_ALIVE),
+                       (unsigned)dc_load(OFF_CORE1_BOOT_OK));
+        } else {
+            xil_printf("[dual_core] CPU1 boot FAILED — falling back to single-core LEFT\r\n");
+        }
+    }
+#endif
+
     while (1) {
         int got_frame = uart_poll_frame();
         if (got_frame) {
@@ -2109,7 +2143,10 @@ int main(void)
                         if ((yy & 0x1F) == 0) uart_poll_frame();
                     }
                     /* 同时清 LEFT 半屏到灰底, 杜绝 boot cube wireframe 残留在
-                     * 非当前 write_idx 的 fb 上, VDMA 交替读两块 fb 看到 cube/anime 闪烁. */
+                     * 非当前 write_idx 的 fb 上, VDMA 交替读两块 fb 看到 cube/anime 闪烁.
+                     * AMP: ENABLE_DUAL_CORE=1 时 CPU1 拥有 LEFT 半屏, CPU0 不能再
+                     * 写 LEFT (会留 stale L1 cache line, race CPU1 后续写). */
+#if !ENABLE_DUAL_CORE
                     for (int yy = 0; yy < HEIGHT; yy++) {
                         memset((u8 *)addr + yy * STRIDE, 80, PW * BPP);
                         if ((yy & 0x1F) == 0) uart_poll_frame();
@@ -2118,6 +2155,14 @@ int main(void)
                         Xil_DCacheFlushRange(addr + yy * STRIDE, PW * BPP);
                         if ((yy & 0x1F) == 0) uart_poll_frame();
                     }
+#else
+                    /* AMP: invalidate CPU0's L1 lines for LEFT half so任何
+                     * stale/dirty line 不会被 cast-out 覆盖 CPU1 写入. */
+                    for (int yy = 0; yy < HEIGHT; yy++) {
+                        Xil_DCacheInvalidateRange(addr + yy * STRIDE, PW * BPP);
+                        if ((yy & 0x1F) == 0) uart_poll_frame();
+                    }
+#endif
                 }
                 u64 rt1 = gt_read();
                 u32 rt_us = (u32)((rt1 - rt0) / GT_TICKS_PER_US);
@@ -2132,6 +2177,26 @@ int main(void)
             int left_angle = (int)((us * 72ULL / 1000000ULL) % 360ULL);
             uart_poll_frame();
             u64 rt0 = gt_read();
+#if ENABLE_DUAL_CORE
+            /* CPU1 owns LEFT render. CPU0 only kicks + waits at end of frame. */
+            if (core1_is_alive()) {
+                core1_kick_left((u32)fb_write, (u32)left_angle,
+                                (u32)PW, (u32)PH, (u32)LEFT_SCALE,
+                                (u32)(mesh_ready ? 1 : 0));
+            } else {
+                /* Fallback: CPU1 didn't boot, do it ourselves */
+                if (mesh_ready) {
+                    cpu_render_mesh(fb_write, left_angle, 0, 0, PW, PH, LEFT_SCALE);
+                } else {
+                    cpu_render_voxel_panel(fb_write, left_angle, 0, 0, PW, PH, 0, LEFT_SCALE);
+                }
+                const u32 LEFT_W_BYTES = (WIDTH / 2) * BPP;
+                for (int yy = 0; yy < HEIGHT; yy++) {
+                    Xil_DCacheFlushRange(fb_write + yy * STRIDE, LEFT_W_BYTES);
+                    if ((yy & 0x1F) == 0) uart_poll_frame();
+                }
+            }
+#else
             if (mesh_ready) {
                 /* mesh path: software triangle rasterizer + z-buffer */
                 cpu_render_mesh(fb_write, left_angle, 0, 0, PW, PH, LEFT_SCALE);
@@ -2145,6 +2210,16 @@ int main(void)
                 for (int yy = 0; yy < HEIGHT; yy++) {
                     Xil_DCacheFlushRange(fb_write + yy * STRIDE, LEFT_W_BYTES);
                     if ((yy & 0x1F) == 0) uart_poll_frame();
+                }
+            }
+#endif
+#endif /* ENABLE_DUAL_CORE */
+#if ENABLE_DUAL_CORE
+            /* Wait for CPU1 to finish LEFT render+flush before we let the
+             * VDMA flip onto this fb_write.  uart polling continues. */
+            if (core1_is_alive()) {
+                while (dc_load(OFF_LEFT_BUSY) != 0) {
+                    uart_poll_frame();
                 }
             }
 #endif

@@ -11,6 +11,8 @@ _SUPERVISOR_STACK_SIZE = DEFINED(_SUPERVISOR_STACK_SIZE) ? _SUPERVISOR_STACK_SIZ
 _IRQ_STACK_SIZE = DEFINED(_IRQ_STACK_SIZE) ? _IRQ_STACK_SIZE : 1024;
 _FIQ_STACK_SIZE = DEFINED(_FIQ_STACK_SIZE) ? _FIQ_STACK_SIZE : 1024;
 _UNDEF_STACK_SIZE = DEFINED(_UNDEF_STACK_SIZE) ? _UNDEF_STACK_SIZE : 1024;
+/* Phase 9.5 task I: dedicated stack for CPU1 (AMP).  16 KB. */
+_CORE1_STACK_SIZE = DEFINED(_CORE1_STACK_SIZE) ? _CORE1_STACK_SIZE : 0x4000;
 
 MEMORY
 {
@@ -280,6 +282,14 @@ _SDA2_BASE_ = __sdata2_start + ((__sbss2_end - __sdata2_start) / 2 );
    . += _UNDEF_STACK_SIZE;
    . = ALIGN(16);
    __undef_stack = .;
+   /* Phase 9.5 task I: CPU1 stack — separate region so CPU0/CPU1 SPs
+    * never collide.  _stack_core1 is the low (bottom) addr, _stack_core1_top
+    * is the high addr that asm stub loads into SP (full-descending). */
+   . = ALIGN(16);
+   _stack_core1 = .;
+   . += _CORE1_STACK_SIZE;
+   . = ALIGN(16);
+   _stack_core1_top = .;
 } > ps7_ddr_0
 
 end = .;

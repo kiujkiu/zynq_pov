@@ -11,6 +11,10 @@ cmake_minimum_required(VERSION 3.16)
 # Example : Adding VERBOSE=1 will pass -DVERBOSE=1 to the compiler.
 set(USER_COMPILE_DEFINITIONS
 ""
+# Phase 9.5 task I: enable CPU1 (AMP).  Set to 1 to boot CPU1 and offload
+# LEFT panel mesh render to it.  Currently 1 for testing — flip to 0 to
+# disable (proven single-core path remains intact via #ifdef).
+"ENABLE_DUAL_CORE=1"
 )
 
 # Undefine any previously specified compiler definitions, either built in or provided with a -D option
@@ -31,6 +35,9 @@ set(USER_COMPILE_SOURCES
 "helloworld.c"
 "platform.c"
 "qspi_flash_writer.c"
+"qspi_full_verify.c"
+"dual_core.c"
+"core1_boot.S"
 )
 
 # -----------------------------------------

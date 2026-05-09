@@ -38,6 +38,7 @@ set(USER_COMPILE_SOURCES
 "qspi_full_verify.c"
 "dual_core.c"
 "core1_boot.S"
+"led_panel.c"
 )
 
 # -----------------------------------------

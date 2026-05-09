@@ -28,6 +28,7 @@
 #include "xil_mmu.h"   /* Xil_SetTlbAttributes for ring buffer non-cacheable */
 #include "xil_io.h"
 #include "xiltimer.h"
+#include "led_panel.h"
 
 /* Phase 9.5 task I: dual-core AMP.  Default OFF — set ENABLE_DUAL_CORE=1 to
  * boot CPU1 and offload LEFT panel render to it.  See dual_core.h. */
@@ -41,6 +42,16 @@
 #define USE_PL 0
 /* Address-cache defeat experiment kept off — PL IP bug deferred. */
 #define DEFEAT_ADDR_CACHE 0
+
+/* Task A: LED panel ARM bit-bang baseline.
+ * 1 = boot 后跑 led_panel_test_pattern() 循环切换测试图 (全白/RGB/棋盘格/...)
+ *     用于上电首次硬件 verify, 不依赖 PL.
+ * 0 = 走原 HDMI/POV-3D 主路径 (helloworld.c 主循环).
+ *
+ * 前提: BD 已加 axi_gpio_panel @ 0x41210000 (32-bit, all output) +
+ *       FPC pinout 已绑到 .xdc + 板子焊好 74HC245 buffer + ICND 阵列.
+ *       未满足时设 0 (绕过 led_panel 路径). */
+#define ENABLE_LED_PANEL_TEST 0
 
 /* Keep 720p60 for stable HDMI preview. 1080p upgrade needs rgb2dvi verification. */
 /* HDMI resolution: define USE_1080P30 to switch to 1920×1080 @ 30Hz.
@@ -1884,6 +1895,21 @@ int main(void)
             while (1) ;
         }
     }
+
+#if ENABLE_LED_PANEL_TEST
+    /* Task A: LED panel bring-up bit-bang. 不返回, 死循环切测试图. */
+    xil_printf("[main] ENABLE_LED_PANEL_TEST=1 — entering LED panel test loop\r\n");
+    led_panel_init();
+    int pat = 0;
+    while (1) {
+        xil_printf("[led_panel] pattern %d\r\n", pat);
+        led_panel_test_pattern(pat);
+        led_panel_flush();
+        sleep(2);  /* 每 2 s 切一图 */
+        pat = (pat + 1) % 8;
+    }
+    /* unreachable */
+#endif
 
     XGpio Led;
     XGpio_Initialize(&Led, XPAR_AXI_GPIO_0_BASEADDR);

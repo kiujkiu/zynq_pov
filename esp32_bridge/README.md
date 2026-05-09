@@ -37,6 +37,13 @@
 
 🔴 **暂停 — 等 WiFi 硬件就位再做**（2026-04-27 用户决定）。`firmware/main/pov_bridge.c` 已含 WiFi STA + TCP:8888 → UART1 921600 转发完整逻辑,**未烧录、未联调**。
 
+> **2026-05-07 更新**: Phase 9-A framework 已就绪 (分支 `experiment/wifi-framework`):
+> - 协议设计 → [`docs/wifi_protocol.md`](../docs/wifi_protocol.md) (PWFR session header + cache/delta 模式)
+> - 主机端 → [`host/wifi_stream.py`](../host/wifi_stream.py) (TCP client framework, dry-run OK)
+> - 板端 → [`02_hello_zynq/vitis_ws/hello_world/src/wifi_recv_stub.c`](../02_hello_zynq/vitis_ws/hello_world/src/wifi_recv_stub.c) (PWFR parser, 待 lwIP 集成)
+>
+> ESP32 桥本身仍走 **passthrough** (PMSH/PPCL 透传, 不做 PWFR 包装), 因 UART 921600 是吞吐瓶颈, PWFR 头浪费 24 B/帧不划算. PWFR 留给后续直 GEM0 + lwIP 链路 (Phase 9-C).
+
 恢复时序:买到 ESP32-WROOM-32 → ESP-IDF v5.x → `idf.py menuconfig` 填 SSID/密码 → `idf.py flash monitor` → host pov_gui.py 加 Network mode 选项,target = `pov-bridge.local:8888` → 联调。
 
 🟡 **代码完成但未烧录测试**（没有实体 ESP32）。代码可即买即用。

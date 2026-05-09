@@ -1,0 +1,8 @@
+# xsim artifacts
+xsim.dir/
+*.log
+*.jou
+*.pb
+*.wdb
+*.vcd
+*.backup.*

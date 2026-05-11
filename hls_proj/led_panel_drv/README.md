@@ -41,9 +41,13 @@ the row-scan driver advances rows in lock-step with all four chains.
 | 0x20 | CFG         | rw  | [7:0] | scan_ratio (rows per slice, default 90)        |
 |      |             |     | [15:8]| pwm_bits   (1..16, default 8)                  |
 |      |             |     |[31:16]| brightness gain (Q1.15)                        |
-| 0x24 | LE_CMD0     | rw  | [7:0] | DCLK count for DATA_WRITE LE pulse (default 1) |
-| 0x28 | LE_CMD1     | rw  | [7:0] | DCLK count for CFG1 LE pulse (default 3)       |
-|      |             |     | [15:8]| DCLK count for CFG2 LE pulse                   |
+| 0x24 | LE_CMD0     | rw  | [3:0] | DCLK count for DATA_LATCH (default 1)          |
+|      |             |     | [7:4] | DCLK count for VSYNC      (default 3)          |
+|      |             |     |[11:8] | DCLK count for WR_CFG     (default 5)          |
+|      |             |     |[15:12]| DCLK count for PRE_ACT    (default 14)         |
+|      |             |     |[19:16]| DCLK count for EN_OP      (default 11)         |
+|      |             |     |[23:20]| DCLK count for DIS_OP     (default 12)         |
+| 0x28 | LE_CMD1     | rw  | [3:0] | DCLK count for RD_CFG     (default 7)          |
 
 Trigger is sticky : the FSM consumes the request the next time it's idle,
 so writes are not lost across cfg-init.
@@ -127,22 +131,49 @@ Within a chain, lane = chip*16 + ch maps to (col, comp) by
 each chain has 432 lanes, of which 80*3 = 240 are pixels; the remaining
 192 lanes carry zeros (datasheet permits unused channels at 0).
 
-## 7. LE-encoded commands
+## 7. LE-encoded commands (ICND1069 编程指导 V1.2)
 
-ICND1069 differentiates writes by the number of DCLK cycles LE is held
-high. The IP exposes the lengths via `LE_CMD0` / `LE_CMD1` so the operator
-can match the lot-specific table in the connector handoff:
+ICND1069 differentiates commands by the number of DCLK rising edges
+observed while LE is asserted. The lengths are constants in the driver
+and are also exposed via `LE_CMD0` / `LE_CMD1` for runtime override:
 
-| LE high cycles | meaning                         |
-|----------------|---------------------------------|
-| 1              | DATA_WRITE (latch payload)      |
-| 2              | soft RESET                      |
-| 3              | WRITE_CFG1 (gain / scan ratio)  |
-| 4              | WRITE_CFG2 (PWM depth, blank)   |
-| 5              | WRITE_CFG3 (vendor specific)    |
+| LE high cycles | command       | SDI payload (per chip in cascade)   |
+|----------------|---------------|--------------------------------------|
+| 1              | DATA_LATCH    | 16-bit RGB intensity, MSB first      |
+| 3              | VSYNC         | (ignored, sent as 0)                 |
+| 5              | WR_CFG        | {addr[7:0], value[7:0]}              |
+| 7              | RD_CFG        | {addr[7:0], 8'h00}                   |
+| 11             | EN_OP         | (ignored)                            |
+| 12             | DIS_OP        | (ignored)                            |
+| 14             | PRE_ACT       | (ignored, must precede config burst) |
 
-After reset the FSM walks `CFG_SEQ_LEN` cfg writes once (currently issues
-length-3 then length-3 again with zero data; final cfg is a TODO).
+After power-on / `soft_reset` the FSM walks the init sequence below
+once. `cfg_done` (`STATUS[2]`) goes sticky on completion; trigger writes
+to 0x14 are queued and serviced afterwards.
+
+```
+ 1. PRE_ACT                     (LE=14)
+ 2. WR_CFG  0x00 = 0xAA         password byte 0     | unlock
+ 3. WR_CFG  0x01 = 0xAA         password byte 1     | sequence
+ 4. WR_CFG  0x04 = 0x02         PLL_PRE_DIV
+ 5. WR_CFG  0x05 = 0x04         PLL_LOOP_DIV
+ 6. WR_CFG  0x06 = 0x01         PLL_POST_DIV
+ 7. WR_CFG  0x07 = 0x20         GCLK / 4
+ 8. WR_CFG  0x1C = 0xC0         current gain 100%
+ 9. WR_CFG  0x02 = 0x59         scan_ratio - 1   (tune on panel)
+10. WR_CFG  0x03 = 0x0F         refresh_div - 1  (tune on panel)
+11. WR_CFG  0x00 = 0x55         password byte 0     | lock
+12. WR_CFG  0x01 = 0x55         password byte 1     | sequence
+13. EN_OP                       (LE=11)             enable display
+```
+
+Display loop per slice:
+
+```
+VSYNC (LE=3) -> 16 DCLK blanking -> ROW high 12 DCLK -> shift one row
+   (CHIPS_PER_CHAIN * 16 ch * 16 bit DCLK = 6912 per chain) ->
+   DATA_LATCH (LE=1) -> ROW high 4 DCLK -> next row ... -> DONE
+```
 
 ## 8. Timing budget vs 46 us slice
 
@@ -182,15 +213,22 @@ arrive and connector pinout is confirmed.
 ## 10. Testbench results (xsim 2024.2)
 
 Scaled-down panel (`PANEL_W=16 PANEL_H=18 CHIPS_PER_CHAIN=4
-DEFAULT_SCAN_RATIO=4 DEFAULT_PWM_BITS=8`) runs in ~85 us sim time:
+DEFAULT_SCAN_RATIO=4 INIT_REG_COUNT=7`) finishes in ~200 us sim time:
 
 ```
+[PASS] init pulse count = 13
+[PASS] init pulse[0] = PRE_ACT (LE=14)
+[PASS] init WR_CFG pulses : 11 x LE=5
+[PASS] init pulse[12] = EN_OP (LE=11)
 [PASS] CFG readback
+[PASS] VSYNC pulse LE=3
+[PASS] 4 DATA_LATCH pulses (LE=1 each)
+[PASS] 1 ROW long (>=8 DCLK) pulses
+[PASS] 4 ROW short (<8 DCLK) pulses
 [PASS] DCLK period >= 40 ns (twCLK)
 [PASS] twLE >= 10 ns
 [PASS] twROW >= 160 ns
-[PASS] tb slice within sanity window
-========== ALL 4 ASSERTIONS PASSED ==========
+========== ALL ASSERTIONS PASSED ==========
 ```
 
 Measurements:
@@ -198,9 +236,9 @@ Measurements:
 | signal     | value          |
 |------------|----------------|
 | DCLK period| 40.00 ns       |
-| twLE (min) | 80.00 ns       |
-| twROW (min)| 160.00 ns      |
-| slice time | 83.31 us       |
+| twLE (min) | 40.00 ns (= 1 DCLK, DATA_LATCH) |
+| twROW (min)| 160.00 ns (= 4 DCLK, short ROW) |
+| slice time | 166.6 us       |
 
 ## 11. Build / sim
 
@@ -223,8 +261,9 @@ verilator without modification.
 ## 12. TODO (post-panel-arrival)
 
 * Confirm 4-chain physical pinout mapping (which chain serves which quadrant).
-* Capture real ICND1069 cfg seq from panel vendor; populate `CFG_SEQ_LEN`
-  and `LE_CMD*` registers, then bake into firmware init.
+* Tune the `init_reg_entry` ROM values (registers 0x02 / 0x03 / 0x07 /
+  0x1C / 0x04..0x06) against real panel measurements; the V1.2 defaults
+  are encoded but final values are panel-lot-specific.
 * Tune `scan_ratio` after measuring panel internal-PWM refresh stability.
 * Add ping-pong frame buffer (currently single, ingest must finish before
   trigger).

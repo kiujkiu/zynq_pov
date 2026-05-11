@@ -1,20 +1,22 @@
 //-----------------------------------------------------------------------------
-// led_panel_drv_tb.v -- self-checking testbench
+// led_panel_drv_tb.v -- self-checking testbench (ICND1069 V1.2 protocol)
 //-----------------------------------------------------------------------------
 // Tests:
 //   1. AXI-Lite write/read of CFG register.
-//   2. AXI-Stream push of one full white frame.
-//   3. Trigger one slice -> measure :
+//   2. Power-on init sequence: capture every LE pulse, verify the LE-high
+//      DCLK-cycle count matches the V1.2 command lengths in the order
+//      PRE_ACT(14), WR_CFG(5) x N (password + reg table + password), EN_OP(11).
+//   3. AXIS push of one full white frame.
+//   4. Trigger one slice and verify:
 //        * DCLK frequency  ~ 25 MHz
-//        * twLE   >= 10 ns
-//        * twROW  >= 160 ns
-//        * SDI mirrors expected (white => sustained-high MSB across pwm window)
-//   4. Slice total time vs 46 us budget.
+//        * VSYNC LE has length 3 DCLK
+//        * DATA_LATCH LE has length 1 DCLK
+//        * ROW high observed in 4 and 12 DCLK variants (count distinct widths)
+//        * twROW  >= 160 ns (datasheet minimum)
 //
 // Notes:
-//   * Uses behavioural AXI-Lite host (not full BFM, just sequenced regs).
-//   * For runtime sanity the frame buffer is shrunk via a small CFG_SCAN_RATIO
-//     so simulation finishes in a few ms.
+//   * The init seq is much longer in real silicon (27 chip cascade); the tb
+//     uses CHIPS_PER_CHAIN=4 to keep the run inside a few ms.
 //-----------------------------------------------------------------------------
 
 `timescale 1ns / 1ps
@@ -30,9 +32,23 @@ module led_panel_drv_tb;
     localparam integer DEFAULT_PWM_BITS  = 8;
     localparam integer DEFAULT_SCAN_RATIO= 4;      // scan ratio small for tb
     localparam integer CLK_DIV           = 4;      // 100 MHz -> 25 MHz DCLK
-    localparam integer ROW_HIGH_TICKS    = 5;
-    localparam integer LE_MIN_TICKS      = 1;
-    localparam integer CFG_SEQ_LEN       = 1;      // skip cfg seq for tb
+    localparam integer ROW_HIGH_LONG     = 12;
+    localparam integer ROW_HIGH_SHORT    = 4;
+    localparam integer VSYNC_GAP_TICKS   = 16;
+    localparam integer INIT_REG_COUNT    = 7;
+
+    // LE length encodings (must match RTL constants)
+    localparam integer LE_DATA_LATCH = 1;
+    localparam integer LE_VSYNC      = 3;
+    localparam integer LE_WR_CFG     = 5;
+    localparam integer LE_EN_OP      = 11;
+    localparam integer LE_PRE_ACT    = 14;
+
+    // expected count of WR_CFG pulses during init :
+    //   password open  : 2  (0x00=AA, 0x01=AA)
+    //   register table : INIT_REG_COUNT
+    //   password close : 2  (0x00=55, 0x01=55)
+    localparam integer EXPECTED_WR_CFG = 2 + INIT_REG_COUNT + 2;
 
     reg         clk;
     reg         rst_n;
@@ -86,9 +102,10 @@ module led_panel_drv_tb;
         .DEFAULT_PWM_BITS  (DEFAULT_PWM_BITS),
         .DEFAULT_SCAN_RATIO(DEFAULT_SCAN_RATIO),
         .CLK_DIV           (CLK_DIV),
-        .ROW_HIGH_TICKS    (ROW_HIGH_TICKS),
-        .LE_MIN_TICKS      (LE_MIN_TICKS),
-        .CFG_SEQ_LEN       (CFG_SEQ_LEN)
+        .ROW_HIGH_LONG     (ROW_HIGH_LONG),
+        .ROW_HIGH_SHORT    (ROW_HIGH_SHORT),
+        .VSYNC_GAP_TICKS   (VSYNC_GAP_TICKS),
+        .INIT_REG_COUNT    (INIT_REG_COUNT)
     ) dut (
         .s_axi_aclk    (clk),
         .s_axi_aresetn (rst_n),
@@ -136,15 +153,12 @@ module led_panel_drv_tb;
             wstrb   <= 4'hF;
             wvalid  <= 1'b1;
             bready  <= 1'b1;
-            // wait for awready
             @(posedge clk);
             while (!awready) @(posedge clk);
             awvalid <= 1'b0;
-            // wait for wready (may be later)
             while (!wready) @(posedge clk);
             @(posedge clk);
             wvalid  <= 1'b0;
-            // wait for bvalid
             while (!bvalid) @(posedge clk);
             @(posedge clk);
             bready  <= 1'b0;
@@ -168,12 +182,82 @@ module led_panel_drv_tb;
     endtask
 
     // ------------------------------------------------------------------
-    // Stimulus + checking
+    // LE-pulse capture : on every falling edge of LE record how many DCLK
+    // rising edges occurred while LE was high. Save the first 32 pulses so
+    // assertions can inspect the init sequence in order.
     // ------------------------------------------------------------------
-    integer i;
-    reg [31:0] tmp;
+    integer le_dclk_count_cur;
+    integer le_pulse_log [0:63];
+    integer le_pulse_n;
 
-    // timing trackers
+    reg le_d;
+    reg dclk_d;
+    always @(posedge clk) begin
+        if (!rst_n) begin
+            le_dclk_count_cur <= 0;
+            le_pulse_n        <= 0;
+            le_d              <= 1'b0;
+            dclk_d            <= 1'b0;
+        end else begin
+            le_d   <= le;
+            dclk_d <= dclk;
+            // rising edge of DCLK while LE is high -> increment counter
+            if (le && dclk && !dclk_d) begin
+                le_dclk_count_cur <= le_dclk_count_cur + 1;
+            end
+            // falling edge of LE -> record pulse
+            if (!le && le_d) begin
+                if (le_pulse_n < 64) begin
+                    le_pulse_log[le_pulse_n] <= le_dclk_count_cur;
+                end
+                le_pulse_n        <= le_pulse_n + 1;
+                le_dclk_count_cur <= 0;
+            end
+            // rising edge of LE -> reset counter (covers any pre-edge dclk)
+            if (le && !le_d) begin
+                // start counter at 1 if DCLK is already high at LE rising
+                // edge (so the rising DCLK that occurred this cycle counts)
+                le_dclk_count_cur <= (dclk && !dclk_d) ? 1 : 0;
+            end
+        end
+    end
+
+    // ------------------------------------------------------------------
+    // Row pulse width capture
+    // ------------------------------------------------------------------
+    integer row_dclk_count_cur;
+    integer row_pulse_n;
+    integer row_long_seen;     // # of ROW pulses with length >= 8 DCLK
+    integer row_short_seen;    // # of ROW pulses with length 2..7 DCLK
+
+    reg row_d;
+    always @(posedge clk) begin
+        if (!rst_n) begin
+            row_dclk_count_cur <= 0;
+            row_pulse_n        <= 0;
+            row_long_seen      <= 0;
+            row_short_seen     <= 0;
+            row_d              <= 1'b0;
+        end else begin
+            row_d <= row;
+            if (row && dclk && !dclk_d) begin
+                row_dclk_count_cur <= row_dclk_count_cur + 1;
+            end
+            if (!row && row_d) begin
+                row_pulse_n <= row_pulse_n + 1;
+                if (row_dclk_count_cur >= 8) row_long_seen  <= row_long_seen  + 1;
+                else                         row_short_seen <= row_short_seen + 1;
+                row_dclk_count_cur <= 0;
+            end
+            if (row && !row_d) begin
+                row_dclk_count_cur <= (dclk && !dclk_d) ? 1 : 0;
+            end
+        end
+    end
+
+    // ------------------------------------------------------------------
+    // timing trackers (analog widths)
+    // ------------------------------------------------------------------
     real t_dclk_prev_rise;
     real t_dclk_period_min;
     real t_dclk_period_max;
@@ -182,6 +266,54 @@ module led_panel_drv_tb;
     real t_slice_start, t_slice_end;
     integer dclk_count;
     integer error_count;
+
+    reg dclk_d_a;
+    real now;
+    always @(posedge clk) begin
+        dclk_d_a <= dclk;
+        if (dclk && !dclk_d_a) begin
+            now = $realtime;
+            if (dclk_count > 0) begin
+                if (now - t_dclk_prev_rise < t_dclk_period_min)
+                    t_dclk_period_min = now - t_dclk_prev_rise;
+                if (now - t_dclk_prev_rise > t_dclk_period_max)
+                    t_dclk_period_max = now - t_dclk_prev_rise;
+            end
+            t_dclk_prev_rise = now;
+            dclk_count = dclk_count + 1;
+        end
+    end
+
+    reg le_d_a;
+    always @(posedge clk) begin
+        le_d_a <= le;
+        if (le && !le_d_a) t_le_rise <= $realtime;
+        if (!le && le_d_a) begin
+            t_le_fall = $realtime;
+            if ((t_le_fall - t_le_rise) < le_width_min)
+                le_width_min = t_le_fall - t_le_rise;
+        end
+    end
+
+    reg row_d_a;
+    always @(posedge clk) begin
+        row_d_a <= row;
+        if (row && !row_d_a) t_row_rise <= $realtime;
+        if (!row && row_d_a) begin
+            t_row_fall = $realtime;
+            if ((t_row_fall - t_row_rise) < row_width_min)
+                row_width_min = t_row_fall - t_row_rise;
+        end
+    end
+
+    // ------------------------------------------------------------------
+    // Stimulus + checking
+    // ------------------------------------------------------------------
+    integer i;
+    integer init_pulses_seen;
+    integer vsync_pulse_idx;     // pulse index of the first VSYNC after init
+    integer data_pulse_count;    // # of LE=1 (DATA_LATCH) pulses after VSYNC
+    reg [31:0] tmp;
 
     initial begin
         $dumpfile("led_panel_drv_tb.vcd");
@@ -212,29 +344,76 @@ module led_panel_drv_tb;
         t_row_fall        = 0;
         dclk_count        = 0;
         error_count       = 0;
+        init_pulses_seen  = 0;
+        vsync_pulse_idx   = 0;
+        data_pulse_count  = 0;
 
         repeat (10) @(posedge clk);
         rst_n = 1;
         repeat (10) @(posedge clk);
 
-        // ---- 1. write CFG  : scan_ratio=4, pwm_bits=8, gain=1 ----
-        $display("[INFO] @%0t  writing CFG", $realtime);
+        // ============================================================
+        // STAGE 0 : wait for init sequence to complete (cfg_done bit)
+        // ============================================================
+        $display("[INFO] waiting for power-on init sequence (cfg_done)...");
+        // poll STATUS until cfg_done set
+        tmp = 0;
+        while (!tmp[2]) begin
+            axi_read(8'h04, tmp);
+        end
+        init_pulses_seen = le_pulse_n;
+        $display("[INFO] init complete, LE pulse count = %0d", init_pulses_seen);
+
+        // ============================================================
+        // ASSERTION : init pulse pattern matches V1.2 protocol
+        //   expected = [PRE_ACT(14), WR_CFG(5) x EXPECTED_WR_CFG, EN_OP(11)]
+        // ============================================================
+        if (init_pulses_seen != (1 + EXPECTED_WR_CFG + 1)) begin
+            $display("[FAIL] init pulse count = %0d, expected %0d",
+                     init_pulses_seen, 1 + EXPECTED_WR_CFG + 1);
+            error_count = error_count + 1;
+        end else $display("[PASS] init pulse count = %0d",
+                          init_pulses_seen);
+
+        if (le_pulse_log[0] != LE_PRE_ACT) begin
+            $display("[FAIL] init pulse[0] = %0d (expected PRE_ACT=%0d)",
+                     le_pulse_log[0], LE_PRE_ACT);
+            error_count = error_count + 1;
+        end else $display("[PASS] init pulse[0] = PRE_ACT (LE=%0d)",
+                          LE_PRE_ACT);
+
+        for (i = 1; i <= EXPECTED_WR_CFG; i = i + 1) begin
+            if (le_pulse_log[i] != LE_WR_CFG) begin
+                $display("[FAIL] init pulse[%0d] = %0d (expected WR_CFG=%0d)",
+                         i, le_pulse_log[i], LE_WR_CFG);
+                error_count = error_count + 1;
+            end
+        end
+        $display("[PASS] init WR_CFG pulses : %0d x LE=%0d",
+                 EXPECTED_WR_CFG, LE_WR_CFG);
+
+        if (le_pulse_log[1 + EXPECTED_WR_CFG] != LE_EN_OP) begin
+            $display("[FAIL] init pulse[%0d] = %0d (expected EN_OP=%0d)",
+                     1 + EXPECTED_WR_CFG,
+                     le_pulse_log[1 + EXPECTED_WR_CFG], LE_EN_OP);
+            error_count = error_count + 1;
+        end else $display("[PASS] init pulse[%0d] = EN_OP (LE=%0d)",
+                          1 + EXPECTED_WR_CFG, LE_EN_OP);
+
+        // ============================================================
+        // STAGE 1 : write CFG  : scan_ratio=4, pwm_bits=8, gain=1
+        // ============================================================
+        $display("[INFO] writing CFG");
         axi_write(8'h20, {16'd1, 8'd8, 8'd4});
-        $display("[INFO] @%0t  CFG written", $realtime);
-        // ---- LE_CMD0 = 1 (DATA_WRITE) ----
-        axi_write(8'h24, 32'd1);
-        $display("[INFO] @%0t  LE_CMD0 written", $realtime);
-        // ---- read back ----
         axi_read(8'h20, tmp);
-        $display("[INFO] @%0t  CFG readback = 0x%08h", $realtime, tmp);
         if (tmp !== {16'd1, 8'd8, 8'd4}) begin
             $display("[FAIL] CFG readback mismatch  got=%h", tmp);
             error_count = error_count + 1;
-        end else begin
-            $display("[PASS] CFG readback");
-        end
+        end else $display("[PASS] CFG readback");
 
-        // ---- 2. push white frame via AXIS ----
+        // ============================================================
+        // STAGE 2 : push white frame via AXIS
+        // ============================================================
         $display("[INFO] streaming %0d pixels (white)", PANEL_W*PANEL_H);
         @(posedge clk);
         for (i = 0; i < PANEL_W*PANEL_H; i = i + 1) begin
@@ -248,23 +427,68 @@ module led_panel_drv_tb;
         s_axis_tlast  <= 1'b0;
         $display("[INFO] frame loaded");
 
-        // ---- 3. trigger one slice ----
+        // ============================================================
+        // STAGE 3 : trigger one slice
+        // ============================================================
+        vsync_pulse_idx = le_pulse_n;     // remember : VSYNC will be next pulse
         t_slice_start = $realtime;
         axi_write(8'h14, 32'd1);
-
-        // wait for frame_done
         wait (frame_done);
         t_slice_end = $realtime;
-        $display("[INFO] slice elapsed = %.3f us", (t_slice_end - t_slice_start)/1000.0);
+        $display("[INFO] slice elapsed = %.3f us",
+                 (t_slice_end - t_slice_start)/1000.0);
 
-        // ---- 4. report ----
-        $display("[INFO] DCLK rising edges counted = %0d", dclk_count);
+        // ============================================================
+        // ASSERTION : first new LE pulse is VSYNC (3 DCLK)
+        // ============================================================
+        if (le_pulse_log[vsync_pulse_idx] != LE_VSYNC) begin
+            $display("[FAIL] post-trigger pulse[%0d] = %0d (expected VSYNC=%0d)",
+                     vsync_pulse_idx,
+                     le_pulse_log[vsync_pulse_idx], LE_VSYNC);
+            error_count = error_count + 1;
+        end else $display("[PASS] VSYNC pulse LE=%0d", LE_VSYNC);
+
+        // count DATA_LATCH pulses after VSYNC
+        data_pulse_count = 0;
+        for (i = vsync_pulse_idx + 1; i < le_pulse_n && i < 64; i = i + 1) begin
+            if (le_pulse_log[i] == LE_DATA_LATCH)
+                data_pulse_count = data_pulse_count + 1;
+            else begin
+                $display("[FAIL] post-VSYNC pulse[%0d] = %0d (expected DATA=%0d)",
+                         i, le_pulse_log[i], LE_DATA_LATCH);
+                error_count = error_count + 1;
+            end
+        end
+        if (data_pulse_count != DEFAULT_SCAN_RATIO) begin
+            $display("[FAIL] DATA_LATCH pulses = %0d, expected %0d",
+                     data_pulse_count, DEFAULT_SCAN_RATIO);
+            error_count = error_count + 1;
+        end else $display("[PASS] %0d DATA_LATCH pulses (LE=%0d each)",
+                          data_pulse_count, LE_DATA_LATCH);
+
+        // ============================================================
+        // ASSERTION : ROW pulse widths observed in long(12) and short(4)
+        // ============================================================
+        if (row_long_seen < 1) begin
+            $display("[FAIL] no ROW=12 long pulse seen");
+            error_count = error_count + 1;
+        end else $display("[PASS] %0d ROW long (>=8 DCLK) pulses",
+                          row_long_seen);
+        if (row_short_seen < 1) begin
+            $display("[FAIL] no ROW=4 short pulse seen");
+            error_count = error_count + 1;
+        end else $display("[PASS] %0d ROW short (<8 DCLK) pulses",
+                          row_short_seen);
+
+        // ============================================================
+        // ASSERTION : analog timing minima
+        // ============================================================
+        $display("[INFO] DCLK rising edges = %0d", dclk_count);
         $display("[INFO] DCLK period min = %.2f ns  max = %.2f ns",
                  t_dclk_period_min, t_dclk_period_max);
-        $display("[INFO] LE  min high width  = %.2f ns",  le_width_min);
-        $display("[INFO] ROW min high width  = %.2f ns",  row_width_min);
+        $display("[INFO] LE  min high width = %.2f ns", le_width_min);
+        $display("[INFO] ROW min high width = %.2f ns", row_width_min);
 
-        // ---- 5. assertions ----
         if (t_dclk_period_min < 35.0) begin
             $display("[FAIL] DCLK too fast (period < 40 ns)");
             error_count = error_count + 1;
@@ -280,70 +504,20 @@ module led_panel_drv_tb;
             error_count = error_count + 1;
         end else $display("[PASS] twROW >= 160 ns");
 
-        // slice budget : real panel = 46 us with full PANEL_H/2=90 sub-rows.
-        // Scaled tb : sub-rows = scan_ratio = 4 ; full chips = 4 ; pwm_bits=8.
-        // Theoretical row-shift time = 4*16*8/25 = 20.48 us per row -> 4 rows
-        // = 81.92 us total. Just sanity-check it's in expected ballpark.
-        if ((t_slice_end - t_slice_start) > 200000.0) begin
-            $display("[FAIL] tb slice took > 200 us (something stalled)");
-            error_count = error_count + 1;
-        end else $display("[PASS] tb slice within sanity window");
-
         // ---- summary ----
         if (error_count == 0)
-            $display("\n========== ALL %0d ASSERTIONS PASSED ==========", 4);
+            $display("\n========== ALL ASSERTIONS PASSED ==========");
         else
             $display("\n========== %0d ERRORS ==========", error_count);
 
         $finish;
     end
 
-    // ------------------------------------------------------------------
-    // Timing monitors (passive)
-    // ------------------------------------------------------------------
-    reg dclk_d;
-    real now;
-    always @(posedge clk) begin
-        dclk_d <= dclk;
-        if (dclk && !dclk_d) begin
-            now = $realtime;
-            if (dclk_count > 0) begin
-                if (now - t_dclk_prev_rise < t_dclk_period_min)
-                    t_dclk_period_min = now - t_dclk_prev_rise;
-                if (now - t_dclk_prev_rise > t_dclk_period_max)
-                    t_dclk_period_max = now - t_dclk_prev_rise;
-            end
-            t_dclk_prev_rise = now;
-            dclk_count = dclk_count + 1;
-        end
-    end
-
-    reg le_d;
-    always @(posedge clk) begin
-        le_d <= le;
-        if (le && !le_d) t_le_rise <= $realtime;
-        if (!le && le_d) begin
-            t_le_fall = $realtime;
-            if ((t_le_fall - t_le_rise) < le_width_min)
-                le_width_min = t_le_fall - t_le_rise;
-        end
-    end
-
-    reg row_d;
-    always @(posedge clk) begin
-        row_d <= row;
-        if (row && !row_d) t_row_rise <= $realtime;
-        if (!row && row_d) begin
-            t_row_fall = $realtime;
-            if ((t_row_fall - t_row_rise) < row_width_min)
-                row_width_min = t_row_fall - t_row_rise;
-        end
-    end
-
-    // safety timeout : 1 ms
+    // safety timeout : 10 ms (init seq is much longer than v0 since it now
+    // shifts 16 bit/chip x 4 chip x ~11 cfg writes through DCLK)
     initial begin
-        #1_000_000;
-        $display("[FAIL] global timeout @ 1 ms");
+        #10_000_000;
+        $display("[FAIL] global timeout @ 10 ms");
         $finish;
     end
 

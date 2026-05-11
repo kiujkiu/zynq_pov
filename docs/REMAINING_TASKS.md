@@ -1,4 +1,25 @@
-# 剩余任务清单 (2026-05-11)
+# 剩余任务清单 (2026-05-11 update — ESP32 + Zynq SDIO 全栈代码就绪)
+
+## ✅ 新增完成 (2026-05-11)
+
+- **ESP32-C5 SDIO firmware** (IDF master `9bbb6446b`): pov_bridge.bin 969 KB, WiFi STA undef + SDIO slave 4-bit DDR50 + TCP:8888 + mDNS `pov-bridge.local`, build verified
+- **Zynq baremetal SDIO host driver** (`sdio_esp.h/.c`): IO card init seq (CMD0/5/3/7/52/53) + send/recv API, ELF 99930 byte build verified
+- **BD tcl** `tools/bd_enable_sd0_for_esp32.tcl`: PCW_USE_SDIO0=1 + MIO40-47 配置 (待 user 跑 Vivado)
+- **PC 测试脚本** `host/test_wifi_bridge.py`: mDNS / TCP / 吞吐量验证
+
+## 等用户硬件 wire (按顺序)
+
+1. flash ESP32-C5 (`esptool --chip esp32c5 -p COM5 write-flash 0x2000 bootloader.bin 0x8000 partition-table.bin 0x10000 pov_bridge.bin`)
+2. `idf.py monitor` 验 "Got IP: x.x.x.x"
+3. PC 跑 `python host/test_wifi_bridge.py` — mDNS + TCP echo 验同 LAN
+4. Vivado 跑 `bd_enable_sd0_for_esp32.tcl` + 综合 + 重 export XSA
+5. 接 SDIO 线: ESP32 GPIO 9/10/8/7/14/11 (CMD/CLK/D0-3/INT) ↔ Zynq MIO40-47 (断 microSD)
+6. ENABLE_SDIO_ESP_BRIDGE=1 + rebuild + dl
+7. UART log "[sdio-esp] CMD5 OP_COND OK, RCA=..." 验通信通
+
+---
+
+# 旧版剩余任务清单 (2026-05-11 之前)
 
 Phase 9.5 + LED panel prep 全部完成. Boot QSPI standalone 通. 跑产品需以下分类任务推进.
 

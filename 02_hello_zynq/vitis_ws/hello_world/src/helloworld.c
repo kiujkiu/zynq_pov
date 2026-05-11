@@ -28,6 +28,17 @@
 #include "xil_mmu.h"   /* Xil_SetTlbAttributes for ring buffer non-cacheable */
 #include "xil_io.h"
 #include "xiltimer.h"
+#include "sdio_esp.h"   /* ESP32-C5 SDIO bridge (compile-time gated below) */
+
+/* ENABLE_SDIO_ESP_BRIDGE: when non-zero, try to init PS SD0 + ESP32 SDIO slave
+ * on boot and use sdio_esp_recv() for model data instead of UART. On init
+ * failure (BSP missing xsdps, ESP not connected, etc.) falls back to UART —
+ * existing CH340 path stays functional. Same off-by-default convention as
+ * ENABLE_DUAL_CORE.
+ */
+#ifndef ENABLE_SDIO_ESP_BRIDGE
+#define ENABLE_SDIO_ESP_BRIDGE 0
+#endif
 
 #define USE_PL 0
 /* Address-cache defeat experiment kept off — PL IP bug deferred. */
@@ -209,11 +220,50 @@ static void voxelize_model(void) {
 #define UART_FIFO    0x30   /* RX/TX FIFO */
 #define UART_SR_REMPTY  (1u << 1)
 
-static inline int uart_rx_has(void) {
+static inline int uart_rx_has_hw(void) {
     return !(Xil_In32(UART0_BASE + UART_SR) & UART_SR_REMPTY);
 }
-static inline u8 uart_rx_byte(void) {
+static inline u8 uart_rx_byte_hw(void) {
     return (u8)(Xil_In32(UART0_BASE + UART_FIFO) & 0xFF);
+}
+
+/* SDIO-ESP byte injector: when bridge is active, sdio_esp_recv() pulls a
+ * 512B-multiple block at a time into this static buffer; the existing rx
+ * state machine then drains it one byte at a time via uart_rx_has()/byte().
+ * Falls through to UART otherwise — UART path unchanged. */
+#define SDIO_RX_CHUNK   (4 * 1024)  /* 8 blocks; tune later */
+static int  sdio_bridge_active = 0;
+static u8   sdio_rx_buf[SDIO_RX_CHUNK];
+static u32  sdio_rx_head = 0;
+static u32  sdio_rx_tail = 0;
+
+static int sdio_rx_refill_nonblock(void)
+{
+    if (!sdio_bridge_active) return 0;
+    if (sdio_rx_head != sdio_rx_tail) return 1;   /* still data buffered */
+    /* try to pull a chunk */
+    u32 got = 0;
+    int rc = sdio_esp_recv(sdio_rx_buf, sizeof(sdio_rx_buf), &got);
+    if (rc == SDIO_ESP_OK && got > 0) {
+        sdio_rx_head = 0;
+        sdio_rx_tail = got;
+        return 1;
+    }
+    return 0;
+}
+
+static inline int uart_rx_has(void) {
+    if (sdio_bridge_active) {
+        if (sdio_rx_head != sdio_rx_tail) return 1;
+        return sdio_rx_refill_nonblock();
+    }
+    return uart_rx_has_hw();
+}
+static inline u8 uart_rx_byte(void) {
+    if (sdio_bridge_active && sdio_rx_head != sdio_rx_tail) {
+        return sdio_rx_buf[sdio_rx_head++];
+    }
+    return uart_rx_byte_hw();
 }
 
 /* Wire protocol (little-endian, matches host/pointcloud_proto.py):
@@ -1030,6 +1080,23 @@ int main(void)
     /* PS UART0 baud is set by tools/dl_helloworld.tcl post-ps7_init mwr
      * (BAUDGEN=0x1B=27 BAUDDIV=3 → 921600 @ 100 MHz UART_REF_CLK, 0.5% err). */
     xil_printf("\r\n=== POV-3D Render Phase 4b (USE_PL=%d) baud=921600 ===\r\n", USE_PL);
+
+#if ENABLE_SDIO_ESP_BRIDGE
+    /* Try ESP32 SDIO bridge. On any failure we fall back to UART path —
+     * uart_rx_has()/byte() check sdio_bridge_active and just bypass SDIO. */
+    {
+        int sd_rc = sdio_esp_init();
+        if (sd_rc == SDIO_ESP_OK) {
+            sdio_bridge_active = 1;
+            xil_printf("[sdio-esp] bridge ACTIVE — model data via ESP32 SDIO\r\n");
+        } else {
+            xil_printf("[sdio-esp] init rc=%d — fallback to UART CH340\r\n",
+                       sd_rc);
+        }
+    }
+#else
+    xil_printf("[sdio-esp] disabled at compile time (ENABLE_SDIO_ESP_BRIDGE=0)\r\n");
+#endif
 
     XGpio Led;
     XGpio_Initialize(&Led, XPAR_AXI_GPIO_0_BASEADDR);

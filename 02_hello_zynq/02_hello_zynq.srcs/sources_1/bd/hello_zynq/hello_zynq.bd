@@ -861,35 +861,17 @@
           "PCW_MIO_45_SLEW": {
             "value": "slow"
           },
-          "PCW_MIO_46_IOTYPE": {
-            "value": "LVCMOS 3.3V"
-          },
-          "PCW_MIO_46_PULLUP": {
-            "value": "enabled"
-          },
-          "PCW_MIO_46_SLEW": {
-            "value": "slow"
-          },
-          "PCW_MIO_47_IOTYPE": {
-            "value": "LVCMOS 3.3V"
-          },
-          "PCW_MIO_47_PULLUP": {
-            "value": "enabled"
-          },
-          "PCW_MIO_47_SLEW": {
-            "value": "slow"
-          },
           "PCW_MIO_PRIMITIVE": {
             "value": "54"
           },
           "PCW_MIO_TREE_PERIPHERALS": {
             "value": [
               "unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#SD",
-              "0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned"
+              "0#SD 0#SD 0#SD 0#SD 0#SD 0#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned"
             ]
           },
           "PCW_MIO_TREE_SIGNALS": {
-            "value": "unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#clk#cmd#data[0]#data[1]#data[2]#data[3]#cd#wp#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned"
+            "value": "unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#clk#cmd#data[0]#data[1]#data[2]#data[3]#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned#unassigned"
           },
           "PCW_M_AXI_GP0_ENABLE_STATIC_REMAP": {
             "value": "0"
@@ -1093,19 +1075,13 @@
             "value": "MIO 1 .. 6"
           },
           "PCW_SD0_GRP_CD_ENABLE": {
-            "value": "1"
-          },
-          "PCW_SD0_GRP_CD_IO": {
-            "value": "MIO 46"
+            "value": "0"
           },
           "PCW_SD0_GRP_POW_ENABLE": {
             "value": "0"
           },
           "PCW_SD0_GRP_WP_ENABLE": {
-            "value": "1"
-          },
-          "PCW_SD0_GRP_WP_IO": {
-            "value": "MIO 47"
+            "value": "0"
           },
           "PCW_SD0_PERIPHERAL_ENABLE": {
             "value": "1"

@@ -256,8 +256,9 @@ static inline u8 uart_rx_byte_hw(void) {
  * 512B-multiple block at a time into this static buffer; the existing rx
  * state machine then drains it one byte at a time via uart_rx_has()/byte().
  * Falls through to UART otherwise — UART path unchanged. */
-#define SDIO_RX_CHUNK   (4 * 1024)  /* 8 blocks; tune later */
+#define SDIO_RX_CHUNK   (16 * 1024) /* 32 blocks; absorbs latency spikes */
 static int  sdio_bridge_active = 0;
+int         last_sdio_init_rc  = -99;
 static u8   sdio_rx_buf[SDIO_RX_CHUNK];
 static u32  sdio_rx_head = 0;
 static u32  sdio_rx_tail = 0;
@@ -266,12 +267,21 @@ static int sdio_rx_refill_nonblock(void)
 {
     if (!sdio_bridge_active) return 0;
     if (sdio_rx_head != sdio_rx_tail) return 1;   /* still data buffered */
-    /* try to pull a chunk */
-    u32 got = 0;
-    int rc = sdio_esp_recv(sdio_rx_buf, sizeof(sdio_rx_buf), &got);
-    if (rc == SDIO_ESP_OK && got > 0) {
+    /* Spin: drain as many available SDIO blocks as fit, in one main-loop
+     * call. ESP32 keeps queueing while we read — each iteration reads
+     * whatever blocks are currently queued, growing during the loop. */
+    u32 total = 0;
+    for (int i = 0; i < 8; i++) {  /* hard cap to bound main-loop latency */
+        u32 got = 0;
+        int rc = sdio_esp_recv(sdio_rx_buf + total,
+                               sizeof(sdio_rx_buf) - total, &got);
+        if (rc != SDIO_ESP_OK || got == 0) break;
+        total += got;
+        if (total >= sizeof(sdio_rx_buf) - 512) break;
+    }
+    if (total > 0) {
         sdio_rx_head = 0;
-        sdio_rx_tail = got;
+        sdio_rx_tail = total;
         return 1;
     }
     return 0;
@@ -1966,6 +1976,7 @@ int main(void)
      * uart_rx_has()/byte() check sdio_bridge_active and just bypass SDIO. */
     {
         int sd_rc = sdio_esp_init();
+        last_sdio_init_rc = sd_rc;
         if (sd_rc == SDIO_ESP_OK) {
             sdio_bridge_active = 1;
             xil_printf("[sdio-esp] bridge ACTIVE — model data via ESP32 SDIO\r\n");
@@ -2358,10 +2369,16 @@ int main(void)
             u32 ms = us / 1000;
             u32 fps100 = ms ? (u32)((256ULL * 100 * 1000) / ms) : 0;
             u32 r_avg = render_count ? (u32)(render_us_sum / render_count) : 0;
-            xil_printf("frame=%u dT=%u us (%u.%02u FPS)  render avg=%u us max=%u us\r\n",
-                       (unsigned)frame, us,
+            extern int last_sdio_init_rc;
+            xil_printf("frame=%u (%u.%02u FPS) | sdio_act=%d init=%d step=%d rc=%d err_cmd=%u err_intr=0x%x\r\n",
+                       (unsigned)frame,
                        fps100 / 100, fps100 % 100,
-                       r_avg, render_us_max);
+                       sdio_bridge_active,
+                       sdio_esp_dbg_initialized(),
+                       sdio_esp_dbg_init_step(),
+                       last_sdio_init_rc,
+                       (unsigned)sdio_esp_dbg_err_cmd(),
+                       (unsigned)sdio_esp_dbg_err_intr());
             render_us_max = 0;
             render_us_sum = 0;
             render_count  = 0;

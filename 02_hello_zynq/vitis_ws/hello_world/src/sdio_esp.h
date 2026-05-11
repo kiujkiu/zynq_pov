@@ -52,16 +52,36 @@ extern "C" {
 #define SDIO_FBR_BLK_SIZE_LO(n)     (SDIO_FBR(n) + 0x10)
 #define SDIO_FBR_BLK_SIZE_HI(n)     (SDIO_FBR(n) + 0x11)
 
-/* ESP32 host-interrupt source register (slave-specific, in Func1 space).
- * See ESP-IDF components/esp_driver_sdio/include/driver/sdio_slave.h and
- * the ESP-Hosted slave protocol — host interrupt status at function 1
- * offset 0x05 mirrors a bitmask the slave raised. */
+/* ESP-IDF essl_sdio host protocol — Zynq must speak this to interop with
+ * ESP-IDF's sdio_slave_transmit()/sdio_slave_recv() API.
+ * Reference: idf-extra-components/esp_serial_slave_link/essl_sdio.c
+ *
+ * All register accesses are CMD52/CMD53 against Func1, address = SLCHOST
+ * register offset & 0x3FF. */
 #define SDIO_ESP_FUNC               1
-#define SDIO_ESP_INTR_ST            (SDIO_FBR(1) + 0x05)
-#define SDIO_ESP_INTR_CLR           (SDIO_FBR(1) + 0x08)
-#define SDIO_ESP_PKT_LEN_REG        (SDIO_FBR(1) + 0x60)  /* 32b: TX bytes queued */
-#define SDIO_ESP_TX_REG             (SDIO_FBR(1) + 0x44)  /* CMD53 read window */
-#define SDIO_ESP_RX_REG             (SDIO_FBR(1) + 0x40)  /* CMD53 write window */
+
+/* SLCHOST registers visible to host via Func1 */
+#define ESSL_TOKEN_RDATA_REG        0x044   /* TX buffer count (>>16, mask 0xFFF) */
+#define ESSL_INT_RAW_REG            0x050   /* slave→host interrupt raw status */
+#define ESSL_INT_ST_REG             0x058
+#define ESSL_PKT_LEN_REG            0x060   /* RX byte counter (mask 0xFFFFF) */
+#define ESSL_INT_CLR_REG            0x0D4
+#define ESSL_FUNC1_INT_ENA_REG      0x0DC
+
+/* CMD53 data window. Slave decodes address as (end - len_remain): top is
+ * fixed 0x1F800, so each transfer reveals its byte count from the addr. */
+#define ESSL_CMD53_END_ADDR         0x1F800
+
+/* RX byte counter is 20-bit, wraps via modulo (RX_BYTE_MASK + 1). */
+#define ESSL_RX_BYTE_MASK           0xFFFFFu
+#define ESSL_RX_BYTE_MAX            0x100000u
+
+/* TX buffer counter is 12-bit (number of buffers slave preallocated). */
+#define ESSL_TX_BUFFER_MASK         0xFFFu
+#define ESSL_TX_BUFFER_MAX          0x1000u
+
+/* New-packet interrupt bit (slave→host) — c5 shares with esp32/c6 = bit23. */
+#define ESSL_NEW_PACKET_INT_MASK    (1u << 23)
 
 /*
  * Init PS SDIO0 controller + run ESP32-as-IO-card init sequence:
@@ -106,6 +126,17 @@ int sdio_esp_recv(u8 *buf, u32 max_len, u32 *actual);
  * Returns value 0..0xFF, or negative on bus error.
  */
 int sdio_esp_get_status(void);
+
+/* Diagnostics: current values of rx counters (essl PKT_LEN tracking). */
+u32 sdio_esp_dbg_rx_got(void);
+u32 sdio_esp_dbg_rx_latest(void);
+int sdio_esp_dbg_initialized(void);
+int sdio_esp_dbg_init_step(void);
+u32 sdio_esp_dbg_present_state(void);
+u32 sdio_esp_dbg_clk_ctrl(void);
+u32 sdio_esp_dbg_hc1(void);
+u32 sdio_esp_dbg_err_intr(void);
+u32 sdio_esp_dbg_err_cmd(void);
 
 #ifdef __cplusplus
 }

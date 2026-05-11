@@ -27,6 +27,6 @@ idf_component_register(
         driver
         esp_driver_sdio
         esp_driver_gpio
-        esp_driver_sdio
+        esp_timer
         lwip
 )

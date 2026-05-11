@@ -30,6 +30,7 @@
 #include "xiltimer.h"
 #include "led_panel.h"
 #include "sdio_esp.h"   /* ESP32-C5 SDIO bridge (compile-time gated below) */
+#include "pov_project_batch_4x.h"  /* 4× HLS pov_project_batch parallel driver */
 
 /* Phase 9.5 task I: dual-core AMP.  Default OFF — set ENABLE_DUAL_CORE=1 to
  * boot CPU1 and offload LEFT panel render to it.  See dual_core.h. */
@@ -50,7 +51,11 @@
 #define ENABLE_SDIO_ESP_BRIDGE 0
 #endif
 
-#define USE_PL 0
+#define USE_PL 1
+/* 4-IP parallel disabled until BD m_axi gmem ports for IP1/2/3 are wired.
+ * Currently only IP0 (HP1) has working data path; IP1-3 AXI-Lite OK but
+ * never assert DONE (m_axi reads hang). Re-enable after Vivado BD fix. */
+#define USE_PL_4X 0
 /* Address-cache defeat experiment kept off — PL IP bug deferred. */
 #define DEFEAT_ADDR_CACHE 0
 
@@ -918,8 +923,28 @@ static inline u64 gt_read(void) {
 
 static void pov_render_frame_to_ring(u32 phase)
 {
-    /* Force phase to heavy test values so different output must occur. */
     u32 test_phase = phase & 0x3F;   /* 0..63 */
+
+#if USE_PL_4X
+    /* 4× IP parallel: each IP renders 18 of 72 slots. ~4× speedup over single IP. */
+    p4x_fire_all((u32)MODEL_ADDR, model_n, (u32)RING_BUFFER_ADDR,
+                 SLOT_BYTES, SLICE_W * 3, test_phase,
+                 N_SLOTS, /*slice_mode*/ 0, /*slice_half_thick*/ 8);
+    /* Budget: each IP renders ~18 slices × 30µs = 540µs; allow 10× margin.
+     * 1M iters @ ~4ns each = 4ms total — bounded loop hang. */
+    int rc = p4x_wait_all(1000000);
+    if (rc) {
+        static u32 dbg4 = 0;
+        if ((dbg4++ & 0x1F) == 0) {
+            xil_printf("p4x timeout AP={0x%x 0x%x 0x%x 0x%x}\r\n",
+                       (unsigned)p4x_r(0, P4X_AP_CTRL),
+                       (unsigned)p4x_r(1, P4X_AP_CTRL),
+                       (unsigned)p4x_r(2, P4X_AP_CTRL),
+                       (unsigned)p4x_r(3, P4X_AP_CTRL));
+        }
+    }
+    return;
+#endif
 
 #if DEFEAT_ADDR_CACHE
     /* Each call: copy MODEL_ADDR → MODEL_ADDR_B (alternating each frame),
@@ -2069,6 +2094,20 @@ int main(void)
     u32 rb2 = pov_r(POV_DST_X);
     xil_printf("AXI-Lite WR/RD: num_points=0x%x dst_x=0x%x (expect deadbeef/12345678)\r\n",
                (unsigned)rb1, (unsigned)rb2);
+#if USE_PL_4X
+    /* 4× IP sanity — write distinct pattern to each, readback */
+    xil_printf("4× IP sanity:\r\n");
+    for (int ip = 0; ip < 4; ip++) {
+        u32 pattern = 0xC0DE0000U + ip;
+        p4x_w(ip, P4X_NUM_POINTS, pattern);
+        u32 rb = p4x_r(ip, P4X_NUM_POINTS);
+        u32 ap = p4x_r(ip, P4X_AP_CTRL);
+        xil_printf("  IP%d @ 0x%x: w=0x%x r=0x%x  AP=0x%x %s\r\n",
+                   ip, (unsigned)p4x_bases[ip],
+                   (unsigned)pattern, (unsigned)rb,
+                   (unsigned)ap, rb == pattern ? "OK" : "FAIL");
+    }
+#endif
     xil_printf("IP initial AP_CTRL=0x%x  Ready=%u Done=%u Idle=%u\r\n",
                (unsigned)pov_r(POV_AP_CTRL),
                (unsigned)(pov_r(POV_AP_CTRL) >> 0 & 1),

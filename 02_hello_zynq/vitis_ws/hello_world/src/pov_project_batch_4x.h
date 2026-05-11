@@ -22,10 +22,10 @@
 
 /* PS GP0 地址映射, 各 IP 64KB 控制窗口. 实际值待 BD 跑完 assign_bd_address
  * 后从 xparameters.h XPAR_POV_PROJECT_BATCH_*_S_AXI_CONTROL_BASEADDR 取代. */
-#define P4X_BASE_0  0x43C20000UL
-#define P4X_BASE_1  0x43C30000UL
-#define P4X_BASE_2  0x43C40000UL
-#define P4X_BASE_3  0x43C50000UL
+#define P4X_BASE_0  0x43C20000UL  /* XPAR_POV_PROJECT_BATCH_0_BASEADDR */
+#define P4X_BASE_1  0x40000000UL  /* XPAR_POV_PROJECT_BATCH_1_BASEADDR */
+#define P4X_BASE_2  0x40010000UL  /* XPAR_POV_PROJECT_BATCH_2_BASEADDR */
+#define P4X_BASE_3  0x40020000UL  /* XPAR_POV_PROJECT_BATCH_3_BASEADDR */
 
 /* HLS 寄存器布局 (跟 pov_project.cpp 中 #pragma s_axilite 顺序对齐) */
 #define P4X_AP_CTRL          0x00

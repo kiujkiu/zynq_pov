@@ -194,6 +194,14 @@ static int sdio_raw_cmd(u8 cmd, u32 arg, u32 resp_type, u32 *resp)
     if (!done) {
         if (g_last_err_intr == 0) { g_last_err_intr = 0xFFFF; g_last_err_cmd = cmd; }
         ERR_LOG("[sdio-esp] CMD%d timeout\r\n", cmd);
+        /* Recover controller via SW reset of CMD+DAT lines; without this the
+         * stuck state propagates to every subsequent command. */
+        XSdPs_WriteReg8(base, XSDPS_SW_RST_OFFSET, 0x06);
+        for (u32 i = 0; i < 100000; i++) {
+            if (!(XSdPs_ReadReg8(base, XSDPS_SW_RST_OFFSET) & 0x06)) break;
+        }
+        XSdPs_WriteReg16(base, XSDPS_NORM_INTR_STS_OFFSET, 0xFFFF);
+        XSdPs_WriteReg16(base, XSDPS_ERR_INTR_STS_OFFSET, 0xFFFF);
         return SDIO_ESP_ERR_TIMEOUT;
     }
 
@@ -489,12 +497,12 @@ int sdio_esp_init(void)
     /* Enable host int master + Func1 int (bit0 master, bit1 Func1) */
     if ((rc = sdio_cmd52_write(0, SDIO_CCCR_INT_ENABLE, 0x03))) return rc;
 
-    /* Stay in 1-bit mode — 4-bit gives DATA_CRC errors on D1-3 lines
-     * (signal-integrity issue with flying-wire connection). DAT0 alone is
-     * reliable. To enable 4-bit, add external 10kΩ pull-ups on D0-D3 + CMD
-     * and use shorter wires. */
+    /* 1-bit mode (4-bit attempt 2026-05-11: even with external pull-ups
+     * added on DAT1-3, runtime CMD53 data fails and CMD52 follow-up timeouts
+     * — likely pull-up contact not solid or flying-wire signal integrity
+     * still insufficient. Stay 1-bit for production. */
 
-    /* Bump SD clock to ~25 MHz (default-speed max). */
+    /* Bump SD clock to ~25 MHz. */
     {
         u16 clk = XSdPs_ReadReg16(base, XSDPS_CLK_CTRL_OFFSET);
         clk &= ~0x0004;
@@ -507,7 +515,7 @@ int sdio_esp_init(void)
         }
         clk |= 0x0004;
         XSdPs_WriteReg16(base, XSDPS_CLK_CTRL_OFFSET, clk);
-        xil_printf("[sdio-esp] SD clock @ 25 MHz (CLK=0x%04x)\r\n", (unsigned)clk);
+        xil_printf("[sdio-esp] 1-bit @ 25MHz (CLK=0x%04x)\r\n", (unsigned)clk);
     }
 
     /* Set host controller block size = 512 (it stays per-CMD53 too). */

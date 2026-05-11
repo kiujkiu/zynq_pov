@@ -1,0 +1,15 @@
+menu "POV bridge configuration"
+
+config POV_WIFI_SSID
+    string "WiFi SSID"
+    default "REPLACE_ME_SSID"
+    help
+        SSID to connect to as STA.
+
+config POV_WIFI_PASSWORD
+    string "WiFi password"
+    default "REPLACE_ME_PASS"
+    help
+        WPA2 password.
+
+endmenu

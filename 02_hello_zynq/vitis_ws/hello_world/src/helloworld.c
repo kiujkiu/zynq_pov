@@ -2095,9 +2095,10 @@ int main(void)
     xil_printf("AXI-Lite WR/RD: num_points=0x%x dst_x=0x%x (expect deadbeef/12345678)\r\n",
                (unsigned)rb1, (unsigned)rb2);
 #if USE_PL_4X
-    /* 4× IP sanity — write distinct pattern to each, readback */
-    xil_printf("4× IP sanity:\r\n");
+    /* 4× IP sanity — defer first AXI write til UART says we're alive */
+    xil_printf("4× IP sanity (about to probe IP1-3 — if hang then BD wiring issue):\r\n");
     for (int ip = 0; ip < 4; ip++) {
+        xil_printf("  probe IP%d @ 0x%x ...\r\n", ip, (unsigned)p4x_bases[ip]);
         u32 pattern = 0xC0DE0000U + ip;
         p4x_w(ip, P4X_NUM_POINTS, pattern);
         u32 rb = p4x_r(ip, P4X_NUM_POINTS);

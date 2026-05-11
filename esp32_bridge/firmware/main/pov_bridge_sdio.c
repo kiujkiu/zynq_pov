@@ -34,8 +34,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include "lwip/sockets.h"
+#include "lwip/inet.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -244,7 +244,7 @@ static void server_task(void *pv) {
             close(listen_fd);
             continue;
         }
-        ESP_LOGI(TAG, "client connected: " IPSTR, IP2STR(&cli.sin_addr));
+        { uint8_t *ip = (uint8_t *)&cli.sin_addr.s_addr; ESP_LOGI(TAG, "client connected: %u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]); }
 
         /* Disable Nagle to reduce latency */
         int nodelay = 1;

@@ -165,3 +165,9 @@ hls_proj/proj_pov_v2/
 hls_proj/proj_mesh_slice/
 
 hls_proj/mesh_slice_ip/
+
+# ESP32 IDF generated
+esp32_bridge/firmware/build/
+esp32_bridge/firmware/sdkconfig
+esp32_bridge/firmware/managed_components/
+esp32_bridge/firmware/dependencies.lock

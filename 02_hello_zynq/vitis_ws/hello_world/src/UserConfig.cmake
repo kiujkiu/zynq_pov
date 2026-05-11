@@ -39,6 +39,7 @@ set(USER_COMPILE_SOURCES
 "dual_core.c"
 "core1_boot.S"
 "led_panel.c"
+"sdio_esp.c"
 )
 
 # -----------------------------------------

@@ -1,19 +1,29 @@
-/* pov_bridge.c — ESP32 WiFi-to-UART bridge for POV3D streaming.
+/* pov_bridge.c — ESP32-C5 WiFi-to-UART bridge for POV3D streaming.
  *
- * - Connects to WiFi (STA mode) using credentials in NVS or sdkconfig.
+ * - Target: ESP32-C5 (RISC-V, dual-band WiFi 6, ESP-IDF v5.4+).
+ * - Connects to WiFi (STA mode) using credentials from sdkconfig (or hardcoded below).
  * - Listens on TCP :8888.
- * - Anything received over TCP is forwarded byte-for-byte to UART (921600 baud).
+ * - Anything received over TCP is forwarded byte-for-byte to UART1 (921600 baud).
  * - mDNS: advertises "pov-bridge.local" so host can find by name.
  *
- * Build with ESP-IDF v5.x. Place under your IDF project's main/.
+ * Build with ESP-IDF v5.4+. Place under your IDF project's main/.
+ *   idf.py set-target esp32c5
+ *   idf.py build flash monitor
+ *
+ * USER EDITS REQUIRED (search "USER:"):
+ *   1. POV_WIFI_SSID, POV_WIFI_PASS  — your 2.4/5 GHz router credentials
+ *   2. UART_TX_PIN, UART_RX_PIN      — verify GPIOs match your wiring to Zynq
  */
 
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/event_groups.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_netif.h"
@@ -25,11 +35,18 @@
 #include "lwip/err.h"
 #include "mdns.h"
 
-#define WIFI_SSID      CONFIG_POV_WIFI_SSID
-#define WIFI_PASS      CONFIG_POV_WIFI_PASSWORD
+/* USER: fill in your WiFi credentials (ESP32-C5 supports both 2.4 and 5 GHz). */
+#define POV_WIFI_SSID  "YOUR_SSID_HERE"
+#define POV_WIFI_PASS  "YOUR_PASSWORD_HERE"
+
 #define UART_PORT      UART_NUM_1
-#define UART_TX_PIN    GPIO_NUM_17
-#define UART_RX_PIN    GPIO_NUM_16
+/* USER: ESP32-C5 has no fixed UART1 default pins — GPIO matrix routes any IO.
+ *   GPIO4/GPIO5 are safe (no strapping, no USB-Serial-JTAG conflict).
+ *   Avoid GPIO11/12 (USB-Serial-JTAG / UART0 console) and strapping pins
+ *   GPIO2, GPIO7, GPIO8, GPIO9, GPIO15, GPIO27, GPIO28 on C5.
+ */
+#define UART_TX_PIN    GPIO_NUM_4
+#define UART_RX_PIN    GPIO_NUM_5
 #define UART_BAUD      921600
 #define LISTEN_PORT    8888
 
@@ -71,15 +88,15 @@ static void wifi_init_sta(void) {
 
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = WIFI_SSID,
-            .password = WIFI_PASS,
+            .ssid = POV_WIFI_SSID,
+            .password = POV_WIFI_PASS,
             .threshold.authmode = WIFI_AUTH_WPA2_PSK,
         },
     };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
-    ESP_LOGI(TAG, "WiFi STA started, connecting to '%s'", WIFI_SSID);
+    ESP_LOGI(TAG, "WiFi STA started, connecting to '%s'", POV_WIFI_SSID);
 }
 
 /* ------------------------------------------------------------------ */
@@ -98,13 +115,14 @@ static void start_mdns(void) {
 /* ------------------------------------------------------------------ */
 static void uart_init(void) {
     uart_config_t cfg = {
-        .baud_rate = UART_BAUD,
-        .data_bits = UART_DATA_8_BITS,
-        .parity    = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .baud_rate  = UART_BAUD,
+        .data_bits  = UART_DATA_8_BITS,
+        .parity     = UART_PARITY_DISABLE,
+        .stop_bits  = UART_STOP_BITS_1,
+        .flow_ctrl  = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
     };
-    uart_driver_install(UART_PORT, 4096, 4096, 0, NULL, 0);
+    uart_driver_install(UART_PORT, 8192, 8192, 0, NULL, 0);
     uart_param_config(UART_PORT, &cfg);
     uart_set_pin(UART_PORT, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     ESP_LOGI(TAG, "UART %d: %d baud TX=GPIO%d RX=GPIO%d",
@@ -115,7 +133,7 @@ static void uart_init(void) {
 /* TCP server                                                         */
 /* ------------------------------------------------------------------ */
 static void server_task(void *pv) {
-    char rx_buf[4096];
+    static char rx_buf[4096];
 
     while (1) {
         int listen_fd = socket(AF_INET, SOCK_STREAM, 0);

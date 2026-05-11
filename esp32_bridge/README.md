@@ -27,38 +27,34 @@
 
 ## 文件
 
-- `firmware/main/pov_bridge.c` — ESP32 主程序（ESP-IDF）
-- `firmware/main/CMakeLists.txt`
-- `firmware/sdkconfig.defaults` — 默认配置
-- `firmware/README.md` — 编译/烧录指南
-- `host/network_proto.py` — PC 端 TCP client（pov_gui 集成用）
+- `firmware/main/pov_bridge.c` — ESP32-C5 主程序（ESP-IDF v5.4+, target esp32c5）
+- `firmware/main/CMakeLists.txt` — 组件 register
+- `firmware/CMakeLists.txt` — 顶层 IDF project
+- `firmware/sdkconfig.defaults` — WiFi/lwIP/FreeRTOS 调优 (含 `CONFIG_IDF_TARGET=esp32c5`)
+- `HOWTO.md` — Windows 装 IDF + 改 SSID + 烧 COM5 step-by-step
+- `host/wifi_stream.py` (项目根 `host/`) — PC 端 TCP client
 
 ## 当前状态
 
-🔴 **暂停 — 等 WiFi 硬件就位再做**（2026-04-27 用户决定）。`firmware/main/pov_bridge.c` 已含 WiFi STA + TCP:8888 → UART1 921600 转发完整逻辑,**未烧录、未联调**。
+🟡 **代码 ESP32-C5 就绪, 待用户烧录**（Phase 9-A, 2026-05-09）。firmware target 已切到 ESP32-C5 (RISC-V, 双频 WiFi 6, 需 ESP-IDF v5.4+)。详细烧录步骤见 `HOWTO.md`。
 
-> **2026-05-07 更新**: Phase 9-A framework 已就绪 (分支 `experiment/wifi-framework`):
-> - 协议设计 → [`docs/wifi_protocol.md`](../docs/wifi_protocol.md) (PWFR session header + cache/delta 模式)
-> - 主机端 → [`host/wifi_stream.py`](../host/wifi_stream.py) (TCP client framework, dry-run OK)
-> - 板端 → [`02_hello_zynq/vitis_ws/hello_world/src/wifi_recv_stub.c`](../02_hello_zynq/vitis_ws/hello_world/src/wifi_recv_stub.c) (PWFR parser, 待 lwIP 集成)
->
-> ESP32 桥本身仍走 **passthrough** (PMSH/PPCL 透传, 不做 PWFR 包装), 因 UART 921600 是吞吐瓶颈, PWFR 头浪费 24 B/帧不划算. PWFR 留给后续直 GEM0 + lwIP 链路 (Phase 9-C).
+之前的 ESP32-WROOM-32 路线已 deprecated — 用户实际拿到的是 ESP32-C5。
 
-恢复时序:买到 ESP32-WROOM-32 → ESP-IDF v5.x → `idf.py menuconfig` 填 SSID/密码 → `idf.py flash monitor` → host pov_gui.py 加 Network mode 选项,target = `pov-bridge.local:8888` → 联调。
-
-🟡 **代码完成但未烧录测试**（没有实体 ESP32）。代码可即买即用。
+🔴 **未烧录、未联调** — 等用户在 Windows 装 ESP-IDF v5.4 + 烧 COM5。
 
 测试硬件清单：
-- ESP32-WROOM-32（最便宜，约 ¥15）
-- Micro-USB 数据线
+- ESP32-C5-DevKitC-1（用户已购）
+- USB-C 数据线
 - 杜邦线 3 根（GND、TX→RX、RX→TX）
 
 接线（Zynq UART0 是 PS 内置，连上 PC 的串口转 USB；ESP32 走另一组 UART）：
 
 ```
-ESP32 GND  ←→ Zynq GND
-ESP32 GPIO17 (TX) ←→ Zynq RX (PMOD JA1 pin 1 if exposed, or via UART1 EMIO)
-ESP32 GPIO16 (RX) ←→ Zynq TX
+ESP32-C5 GND       ←→ Zynq GND
+ESP32-C5 GPIO4 (TX) ←→ Zynq UART1 RX (PMOD JA1 pin 1 if exposed, or via UART1 EMIO)
+ESP32-C5 GPIO5 (RX) ←→ Zynq UART1 TX
 ```
 
 注意：**Zynq 板默认串口 UART0 已经接 USB**给 PC 调试用了，ESP32 桥需要走第二条 UART（UART1），需要在 BD 里启用 PS UART1 通过 EMIO 出来。或者直接接 PMOD 上的 UART (FTDI)。
+
+ESP32-C5 没有"默认" UART1 pin map（GPIO matrix 全可路由），GPIO4/5 是 dev board 上没占用、没 strapping 冲突的安全选择。

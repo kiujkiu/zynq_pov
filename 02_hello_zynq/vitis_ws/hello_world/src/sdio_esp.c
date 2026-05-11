@@ -312,13 +312,44 @@ int sdio_esp_init(void)
             return SDIO_ESP_ERR_INIT;
         }
     }
-    /* 3.3V bus, enable internal clock, host divisor for ~400 kHz init */
-    XSdPs_WriteReg16(base, XSDPS_CLK_CTRL_OFFSET, 0x0000);
-    /* (Specific divisor depends on PS_CLK; left to BSP defaults via
-     *  XSdPs_Change_ClkFreq if present in this build) */
+    /* SD clock init: BSP PS clock to SD0 is 50 MHz (from BD PCW_SDIO_PERIPHERAL_FREQMHZ).
+     * SDHCI v2 divisor field (bits 8-15) divides by 2N. N=64 -> clock = 50e6/128 = ~390 kHz.
+     * Sequence (SDHCI 2.1.2):
+     *   1) Internal clock enable (bit 0 = 1), divisor set
+     *   2) Wait Internal Clock Stable (bit 1 = 1)
+     *   3) SD Clock Enable (bit 2 = 1)
+     */
+    {
+        u16 clk_ctrl = (0x40 << 8) | 0x0001;  /* divisor=64 + ICE=1 */
+        XSdPs_WriteReg16(base, XSDPS_CLK_CTRL_OFFSET, clk_ctrl);
+        u32 to = 100000;
+        while (to-- &&
+               !(XSdPs_ReadReg16(base, XSDPS_CLK_CTRL_OFFSET) & 0x0002)) {}
+        if (to == 0) {
+            xil_printf("[sdio-esp] internal clock not stable\r\n");
+            return SDIO_ESP_ERR_INIT;
+        }
+        /* Enable SD clock to card */
+        clk_ctrl = XSdPs_ReadReg16(base, XSDPS_CLK_CTRL_OFFSET) | 0x0004;
+        XSdPs_WriteReg16(base, XSDPS_CLK_CTRL_OFFSET, clk_ctrl);
+        xil_printf("[sdio-esp] SD clock ~400 kHz ON (CLK_CTRL=0x%04x)\r\n",
+                   (unsigned)clk_ctrl);
+    }
 
     /* Power on bus */
     XSdPs_WriteReg8(base, XSDPS_POWER_CTRL_OFFSET, 0x0F);  /* 3.3V + PWR */
+
+    /* Override card-detect: LXB-ZYNQ7000 board MIO46 wired to microSD CD pin.
+     * With microSD removed (ESP32 connected to MIO40-45 instead), CD reports
+     * "no card", and SD controller refuses to issue CMD. Set Host Control 1
+     * bit 7 (CD signal selection = test level) + bit 6 (CD test level = 1)
+     * to force the controller to think card is always present. */
+    {
+        u8 hc1 = XSdPs_ReadReg8(base, XSDPS_HOST_CTRL1_OFFSET);
+        hc1 |= (1U << 7) | (1U << 6);  /* CD test source + force "inserted" */
+        XSdPs_WriteReg8(base, XSDPS_HOST_CTRL1_OFFSET, hc1);
+        xil_printf("[sdio-esp] CD override set: HC1=0x%02x\r\n", (unsigned)hc1);
+    }
 
     /* 80 dummy clocks: small udelay enough — controller auto-clocks once on */
     usleep(2000);

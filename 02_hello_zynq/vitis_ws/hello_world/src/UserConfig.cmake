@@ -15,6 +15,7 @@ set(USER_COMPILE_DEFINITIONS
 # LEFT panel mesh render to it.  Currently 1 for testing — flip to 0 to
 # disable (proven single-core path remains intact via #ifdef).
 "ENABLE_DUAL_CORE=0"
+"ENABLE_SDIO_ESP_BRIDGE=1"
 )
 
 # Undefine any previously specified compiler definitions, either built in or provided with a -D option

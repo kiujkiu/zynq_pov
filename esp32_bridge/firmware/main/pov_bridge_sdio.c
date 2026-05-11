@@ -308,7 +308,11 @@ static void server_task(void *pv) {
             int rem = n;
 
             /* Detect mode on first bytes of stream. */
-            if (!sink_mode && !dflt_mode && total == 0 && rem >= 4) {
+            /* Mode detection: any time we're idle (no active inflate or sink),
+             * try to parse magic header on incoming bytes. Removed `total==0`
+             * gate — multiple DFLT frames in one TCP stream need re-detect
+             * after each frame boundary. */
+            if (!sink_mode && !dflt_mode && rem >= 4) {
                 if (p[0]=='S' && p[1]=='I' && p[2]=='N' && p[3]=='K') {
                     sink_mode = 1; p += 4; rem -= 4;
                     ESP_LOGW(TAG, "SINK mode");

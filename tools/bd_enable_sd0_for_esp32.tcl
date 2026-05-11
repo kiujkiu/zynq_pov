@@ -54,13 +54,20 @@ save_bd_design
 puts "=== Regenerate outputs ==="
 generate_target all [get_files ${bd_name}.bd] -force
 
-# !!! NOT auto-launching synth/impl/bitstream/XSA export.  User must:
-#     reset_run synth_1; reset_run impl_1; launch_runs impl_1 -to_step write_bitstream -jobs 8
-#     wait_on_run impl_1
-#     open_run impl_1
-#     write_hw_platform -fixed -include_bit -force "$proj_dir/hello_zynq_wrapper.xsa"
-#   ...再回 Vitis 用新 XSA refresh platform, BSP 自动加 xsdps driver.
-puts "=== BD updated. Run synth/impl manually, then re-export XSA. ==="
-puts "=== After re-XSA, Vitis BSP will include xsdps; sdio_esp.c real path compiles. ==="
+# Auto-run synth + impl + bitstream + XSA export (Claude does this for user).
+puts "=== reset + launch synth + impl + bitstream ==="
+catch { reset_run synth_1 }
+catch { reset_run impl_1 }
+launch_runs synth_1 -jobs 4
+wait_on_run synth_1
+launch_runs impl_1 -to_step write_bitstream -jobs 4
+wait_on_run impl_1
+
+puts "=== export XSA ==="
+# Use absolute path to avoid pwd ambiguity (cf. prior bug写到错路径).
+write_hw_platform -fixed -include_bit -force "$proj_dir/hello_zynq_wrapper.xsa"
+
+puts "=== DONE. New XSA at $proj_dir/hello_zynq_wrapper.xsa ==="
+puts "=== Next: Vitis refresh hello_plat from new XSA, BSP gets xsdps driver. ==="
 close_project
 exit 0

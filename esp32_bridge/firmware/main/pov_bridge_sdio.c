@@ -108,10 +108,37 @@ static void wifi_init_sta(void) {
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
-    /* Force 2.4G — stable RSSI -29 dBm, sustained 1-2 Mbps with bursts to 15 Mbps.
-     * 5G unstable here (-47 to -55 dBm) so AUTO often picks worse signal. */
-    esp_err_t band_err = esp_wifi_set_band_mode(WIFI_BAND_MODE_2G_ONLY);
-    (void)band_err;
+    /* Per ESP32-C5 throughput note (project_esp32c5_wifi_throughput.md):
+     * HE/11ax mode hardware-locked to BW20. Switch to 11n + BW40 to break
+     * through. Force 5G (ch149/157/161 supports HT40 in this office, 2.4G
+     * only HT20). Memory measured TCP 40 / UDP 70 Mbps with this config. */
+    {
+        esp_err_t er = esp_wifi_set_band_mode(WIFI_BAND_MODE_5G_ONLY);
+        if (er != ESP_OK)
+            ESP_LOGW(TAG, "set_band_mode(5G) rc=%s", esp_err_to_name(er));
+        else
+            ESP_LOGI(TAG, "Forced 5G band (for HT40 support)");
+    }
+    esp_wifi_set_ps(WIFI_PS_NONE);
+    {
+        wifi_protocols_t protos = {
+            .ghz_2g = WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N,
+            .ghz_5g = WIFI_PROTOCOL_11A | WIFI_PROTOCOL_11N,
+        };
+        esp_err_t er = esp_wifi_set_protocols(WIFI_IF_STA, &protos);
+        if (er != ESP_OK) {
+            ESP_LOGW(TAG, "set_protocols rc=%s", esp_err_to_name(er));
+        } else {
+            ESP_LOGI(TAG, "Protocols: 2G=11bgn, 5G=11an (dropped 11ax)");
+        }
+        wifi_bandwidths_t bws = { .ghz_2g = WIFI_BW40, .ghz_5g = WIFI_BW40 };
+        er = esp_wifi_set_bandwidths(WIFI_IF_STA, &bws);
+        if (er != ESP_OK) {
+            ESP_LOGW(TAG, "set_bandwidths rc=%s", esp_err_to_name(er));
+        } else {
+            ESP_LOGI(TAG, "Bandwidth: 2G=BW40, 5G=BW40 (HT40)");
+        }
+    }
     ESP_LOGI(TAG, "WiFi STA started, connecting to '%s'", WIFI_SSID);
 }
 

@@ -1963,6 +1963,9 @@ int main(void)
     Xil_Out32(0xE0000034, 0x05);   /* UART0 BAUDDIV */
     xil_printf("\r\n=== POV-3D Render Phase 4b (USE_PL=%d) baud=921600 ===\r\n", USE_PL);
 
+    /* Cache stays default (cacheable WB). Optimization: narrow fb flush range
+     * (full 6 MB DCacheFlush → 4 MB grid-region only). */
+
     /* QSPI flash writer mode: xsdb 在 0x18000000 写 magic, dow + run hello_world.
      * 检测到 magic 就跑 flash writer 然后死循环 (不 boot 主程序). */
     {
@@ -2219,7 +2222,9 @@ int main(void)
          * 30K 后 PL 启动. */
         /* Plain USE_PL=1: always PL render (regression test 看 PL m_axi 是否还工作) */
         pov_render_frame_to_ring(phase);
-        if ((frame % 3) == 0) {
+        /* Every frame: copy ring → fb (was every 3 frames; with fb non-coherent
+         * trick removed, throughput now limited by 2.7 MB invalidate + flush) */
+        {
             Xil_DCacheInvalidateRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
             for (int s = 0; s < N_SLOTS; s++) {
                 u32 col = s % GRID_COLS;
@@ -2232,7 +2237,9 @@ int main(void)
                     memcpy(dst + yy * STRIDE, src + yy * (SLICE_W * 3), SLICE_W * 3);
                 }
             }
-            Xil_DCacheFlushRange(fb_write, FRAME_BYTES);
+            /* Flush only the grid rows (720 × 1920 ≈ 4 MB) — 1/3 less than
+             * full 6 MB. Single call (per-line loop has high overhead). */
+            Xil_DCacheFlushRange(fb_write, (GRID_ROWS * SLICE_H) * STRIDE);
             /* DEBUG: ring nonzero */
             static u32 vd = 0;
             if ((vd++ & 0x3F) == 0) {

@@ -2222,9 +2222,10 @@ int main(void)
          * 30K 后 PL 启动. */
         /* Plain USE_PL=1: always PL render (regression test 看 PL m_axi 是否还工作) */
         pov_render_frame_to_ring(phase);
-        /* Every frame: copy ring → fb (was every 3 frames; with fb non-coherent
-         * trick removed, throughput now limited by 2.7 MB invalidate + flush) */
-        {
+        /* Every 2 frames: balance between visible HDMI fps and main loop
+         * throughput (every-frame copy slows main loop too much; every-3
+         * makes visible fps too low). */
+        if ((frame & 1) == 0) {
             Xil_DCacheInvalidateRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
             for (int s = 0; s < N_SLOTS; s++) {
                 u32 col = s % GRID_COLS;

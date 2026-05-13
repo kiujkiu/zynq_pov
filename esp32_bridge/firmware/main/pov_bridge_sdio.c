@@ -17,11 +17,11 @@
  * SDIO block size: 512 B (standard SDIO). The PWFR 24B header + payload is
  * not interpreted here — the bridge is byte-transparent like the UART version.
  *
- * ESP32-C5 SDIO slave fixed IOMUX pins (per ESP32-C5 TRM, subject to
- * confirmation against final silicon):
+ * ESP32-C5 SDIO slave fixed IOMUX pins (验证: IDF v6.1
+ * components/esp_hal_sd/esp32c5/include/soc/sdio_slave_pins.h, 与早期注释相反):
  *   CLK  = GPIO9
- *   CMD  = GPIO8
- *   D0   = GPIO10
+ *   CMD  = GPIO10   (注: 此前注释错写 GPIO8, 焊线必须按 GPIO10)
+ *   D0   = GPIO8    (注: 此前注释错写 GPIO10)
  *   D1   = GPIO7
  *   D2   = GPIO14
  *   D3   = GPIO13
@@ -74,11 +74,14 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data) {
     if (event_base == WIFI_EVENT) {
         if (event_id == WIFI_EVENT_STA_START) {
+            vTaskDelay(pdMS_TO_TICKS(2000));   /* let AP scan-respond settle */
             esp_wifi_connect();
         } else if (event_id == WIFI_EVENT_STA_DISCONNECTED) {
-            esp_wifi_connect();
+            wifi_event_sta_disconnected_t *d = (wifi_event_sta_disconnected_t *)event_data;
             xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
-            ESP_LOGW(TAG, "WiFi disconnected, retrying");
+            ESP_LOGW(TAG, "WiFi disconnected reason=%d, retrying in 5s", d->reason);
+            vTaskDelay(pdMS_TO_TICKS(5000));   /* longer cooldown to avoid AP rate-limit */
+            esp_wifi_connect();
         }
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
@@ -92,6 +95,8 @@ static void wifi_init_sta(void) {
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
+    /* DHCP enabled by default - with 5G HT40 + WPA2 strict, handshake completes
+     * cleanly so DHCP-OFFER/REQUEST/ACK lands. Remove static IP hack. */
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -102,44 +107,25 @@ static void wifi_init_sta(void) {
         .sta = {
             .ssid = WIFI_SSID,
             .password = WIFI_PASS,
-            .threshold.authmode = WIFI_AUTH_WPA2_PSK,
+            .threshold.authmode = WIFI_AUTH_WPA_WPA2_PSK,
+            .pmf_cfg = { .capable = true, .required = false },
+            .listen_interval = 1,
         },
     };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
-    /* Per ESP32-C5 throughput note (project_esp32c5_wifi_throughput.md):
-     * HE/11ax mode hardware-locked to BW20. Switch to 11n + BW40 to break
-     * through. Force 5G (ch149/157/161 supports HT40 in this office, 2.4G
-     * only HT20). Memory measured TCP 40 / UDP 70 Mbps with this config. */
-    {
-        esp_err_t er = esp_wifi_set_band_mode(WIFI_BAND_MODE_5G_ONLY);
-        if (er != ESP_OK)
-            ESP_LOGW(TAG, "set_band_mode(5G) rc=%s", esp_err_to_name(er));
-        else
-            ESP_LOGI(TAG, "Forced 5G band (for HT40 support)");
-    }
+    /* Working combo from this morning (gave 4900 TCP connects in 60s):
+     * 2.4G + 11b/g/n + WPA_WPA2 + PMF capable + listen_interval=1.
+     * 5G ch149 HT40 tried per memory note but gave reason 203/204 — AP may
+     * have changed config since the memory was written. */
+    esp_wifi_set_protocols(WIFI_IF_STA, &(wifi_protocols_t){
+        .ghz_2g = WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N,
+        .ghz_5g = WIFI_PROTOCOL_11A | WIFI_PROTOCOL_11N,
+    });
     esp_wifi_set_ps(WIFI_PS_NONE);
-    {
-        wifi_protocols_t protos = {
-            .ghz_2g = WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N,
-            .ghz_5g = WIFI_PROTOCOL_11A | WIFI_PROTOCOL_11N,
-        };
-        esp_err_t er = esp_wifi_set_protocols(WIFI_IF_STA, &protos);
-        if (er != ESP_OK) {
-            ESP_LOGW(TAG, "set_protocols rc=%s", esp_err_to_name(er));
-        } else {
-            ESP_LOGI(TAG, "Protocols: 2G=11bgn, 5G=11an (dropped 11ax)");
-        }
-        wifi_bandwidths_t bws = { .ghz_2g = WIFI_BW40, .ghz_5g = WIFI_BW40 };
-        er = esp_wifi_set_bandwidths(WIFI_IF_STA, &bws);
-        if (er != ESP_OK) {
-            ESP_LOGW(TAG, "set_bandwidths rc=%s", esp_err_to_name(er));
-        } else {
-            ESP_LOGI(TAG, "Bandwidth: 2G=BW40, 5G=BW40 (HT40)");
-        }
-    }
-    ESP_LOGI(TAG, "WiFi STA started, connecting to '%s'", WIFI_SSID);
+    esp_wifi_set_band_mode(WIFI_BAND_MODE_2G_ONLY);
+    ESP_LOGI(TAG, "WiFi STA started (2.4G, 11b/g/n, WPA_WPA2, PMF cap)");
 }
 
 /* Periodically log link details: RSSI, PHY mode, rate. Called after STA
@@ -171,29 +157,30 @@ static void start_mdns(void) {
 /* RX buffer pool (Zynq -> ESP32 direction).
  * sdio_slave wants the user to register buffers ahead of time; the driver
  * fills them as the host (Zynq) writes blocks.
+ * DMA_ATTR: buffers must be DMA-accessible (per IDF example).
  */
-static uint8_t sdio_rx_pool[SDIO_RX_BUF_NUM][SDIO_RX_BUF_SIZE];
+#include "esp_attr.h"
+DMA_ATTR static uint8_t sdio_rx_pool[SDIO_RX_BUF_NUM][SDIO_RX_BUF_SIZE];
 
 static esp_err_t sdio_slave_setup(void) {
+    /* Match IDF v6 SDIO slave example as closely as possible.
+     * The example IS proven to work with Zynq host @ divisor=0xFF. */
     sdio_slave_config_t scfg = {
-        /* Zynq runs default-speed (≤25 MHz), needs slave to drive DAT on
-         * negedge so host samples on posedge. Default 0 = HS mode = wrong. */
-        .timing          = SDIO_SLAVE_TIMING_NSEND_PSAMPLE,
         .sending_mode    = SDIO_SLAVE_SEND_PACKET,
         .send_queue_size = SDIO_TX_BUF_NUM,
         .recv_buffer_size = SDIO_RX_BUF_SIZE,
         .event_cb        = NULL,
-        /* INTERNAL_PULLUP: with flying-wire connection no external 10k
-         * pull-ups exist; internal weak pull-ups stabilize idle DAT lines.
-         * DEFAULT_SPEED: disable HS capability advertise — host stays in DS. */
-        .flags           = SDIO_SLAVE_FLAG_INTERNAL_PULLUP
-                         | SDIO_SLAVE_FLAG_DEFAULT_SPEED,
+        /* Internal pullups for flying-wire setup (no external 10k pullups). */
+        .flags           = SDIO_SLAVE_FLAG_INTERNAL_PULLUP,
     };
     esp_err_t err = sdio_slave_initialize(&scfg);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "sdio_slave_initialize: %s", esp_err_to_name(err));
         return err;
     }
+
+    /* IDF example writes register 0 — possibly required for slave readiness */
+    sdio_slave_write_reg(0, 0);
 
     /* Register RX buffers — driver will fill them as host writes blocks. */
     for (int i = 0; i < SDIO_RX_BUF_NUM; ++i) {
@@ -205,8 +192,16 @@ static esp_err_t sdio_slave_setup(void) {
         ESP_ERROR_CHECK(sdio_slave_recv_load_buf(h));
     }
 
-    sdio_slave_set_host_intena(SDIO_SLAVE_HOSTINT_BIT0
-                               | SDIO_SLAVE_HOSTINT_SEND_NEW_PACKET);
+    /* Enable all 8 host interrupt bits like IDF example */
+    sdio_slave_set_host_intena(SDIO_SLAVE_HOSTINT_SEND_NEW_PACKET
+                               | SDIO_SLAVE_HOSTINT_BIT0
+                               | SDIO_SLAVE_HOSTINT_BIT1
+                               | SDIO_SLAVE_HOSTINT_BIT2
+                               | SDIO_SLAVE_HOSTINT_BIT3
+                               | SDIO_SLAVE_HOSTINT_BIT4
+                               | SDIO_SLAVE_HOSTINT_BIT5
+                               | SDIO_SLAVE_HOSTINT_BIT6
+                               | SDIO_SLAVE_HOSTINT_BIT7);
 
     err = sdio_slave_start();
     if (err != ESP_OK) {
@@ -277,7 +272,9 @@ static void sdio_rx_task(void *pv) {
 static void server_task(void *pv) {
     static uint8_t rx_buf[4096];
 
+    /* Standard TCP server: listen on LISTEN_PORT for incoming connections from PC. */
     while (1) {
+        ESP_LOGI(TAG, "server_task: creating socket...");
         int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
         if (listen_fd < 0) {
             ESP_LOGE(TAG, "socket: %d", errno);
@@ -297,12 +294,13 @@ static void server_task(void *pv) {
             continue;
         }
         listen(listen_fd, 1);
-        ESP_LOGI(TAG, "TCP listening on :%d", LISTEN_PORT);
+        ESP_LOGI(TAG, "TCP listening on :%d (accept blocking)", LISTEN_PORT);
 
         struct sockaddr_in cli;
         socklen_t cl = sizeof(cli);
         int client_fd = accept(listen_fd, (struct sockaddr *)&cli, &cl);
         if (client_fd < 0) {
+            ESP_LOGW(TAG, "accept failed errno=%d", errno);
             close(listen_fd);
             continue;
         }
@@ -555,6 +553,10 @@ static void udp_sink_task(void *pv) {
 
 /* ------------------------------------------------------------------ */
 void app_main(void) {
+    /* WiFi internals spam INFO level, drowning our pov_bridge_sdio logs at
+     * 115200 baud. Bump to WARN. */
+    esp_log_level_set("wifi", ESP_LOG_WARN);
+    esp_log_level_set("wifi_init", ESP_LOG_WARN);
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -565,17 +567,30 @@ void app_main(void) {
     /* SDIO slave first — Zynq may already be probing the card. */
     ESP_ERROR_CHECK(sdio_slave_setup());
 
+#if 0  /* SDIO-only debug mode (set to 1 to skip WiFi for isolation testing) */
+    ESP_LOGI(TAG, "[DEBUG] SDIO-only mode: WiFi disabled. Keeping main task alive.");
+    while (1) { vTaskDelay(portMAX_DELAY); }
+#else
     wifi_init_sta();
 
-    /* wait for IP */
-    xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT,
-                        pdFALSE, pdTRUE, portMAX_DELAY);
-    vTaskDelay(pdMS_TO_TICKS(500));  /* let rate negotiation settle */
-    log_wifi_link();
-    start_mdns();
-
+    /* Start TCP server immediately - bind to INADDR_ANY works without IP.
+     * Office AP "undef" drops STA every ~10s before GOT_IP fires reliably,
+     * so blocking here means listener never starts. lwIP accepts the bind/listen
+     * even before DHCP completes; SYN packets get processed once IP is bound. */
     xTaskCreate(sdio_rx_task, "sdio_rx", 4096, NULL, 6, NULL);
     xTaskCreate(server_task,  "server",  16384, NULL, 5, NULL);  /* miniz inflate needs ~10K stack */
+
+    /* Best-effort: wait briefly for IP for mdns/log. Don't block forever. */
+    EventBits_t got = xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT,
+                                          pdFALSE, pdTRUE, pdMS_TO_TICKS(15000));
+    if (got & WIFI_CONNECTED_BIT) {
+        vTaskDelay(pdMS_TO_TICKS(500));
+        log_wifi_link();
+        start_mdns();
+    } else {
+        ESP_LOGW(TAG, "No IP after 15s - TCP listener already started anyway");
+    }
+#endif
     /* udp_sink_task disabled — competes with TCP for CPU and lwIP queues.
      * Enable only for UDP-mode benchmarks. */
     /* xTaskCreate(udp_sink_task, "udp_sink", 4096, NULL, 5, NULL); */

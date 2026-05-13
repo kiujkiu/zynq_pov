@@ -97,8 +97,9 @@ POINTS_LOOP:
 /* Batch 版: 一次 ap_start 渲染 N 个 slice.                      */
 /* 省掉 72× AXI-Lite 协议 + 72× ap_done 握手 + 72× model DMA.    */
 
-/* 每点 16 byte, MAX_POINTS 太大放 BRAM 塞不下; 限制 batch 最大支持的点数. */
-#define MAX_BATCH_POINTS  1024
+/* 每点 16 byte. anime voxel 实测 ~30K, 提到 32K 给 anime 留足空间.
+ * 32768 × 16 = 512KB BRAM (~114 个 36Kb 块 ≈ Zynq-7020 BRAM 容量的 40%). */
+#define MAX_BATCH_POINTS  32768
 
 void pov_project_batch(
     const struct point_t *model,

@@ -122,10 +122,12 @@ static inline void vdma_park(u32 idx)
     }
 }
 
-/* Read-only: current MM2S read frame store index (bits [20:16]). */
+/* Read-only: current MM2S read frame store index. Per Xilinx VDMA PG020,
+ * PARK_PTR_REG[28:24] = RdFrmStr_State (MM2S = read channel), NOT [20:16]
+ * which is WrFrmStr_State (S2MM = write channel, unused for HDMI). */
 static inline u32 vdma_current_read_idx(void)
 {
-    return (Xil_In32(VDMA_BASE + VDMA_PARK_PTR_OFF) >> 16) & 0x1F;
+    return (Xil_In32(VDMA_BASE + VDMA_PARK_PTR_OFF) >> 24) & 0x1F;
 }
 /* DMACR bit 1 is Circular_Park: 0=park mode, 1=circular. Must be 0 here. */
 static inline u32 vdma_dmacr(void)
@@ -970,6 +972,13 @@ static void pov_render_frame_to_ring(u32 phase)
     pov_w(BATCH_SLOT_STRIDE, SLICE_W * 3);
     pov_w(BATCH_PHASE,       test_phase);
     pov_w(BATCH_N_SLOTS,     N_SLOTS);
+
+    /* Clear ring buffer to black before HLS fire. HLS only writes pixels at
+     * anime point projections; untouched pixels retain previous fire's data.
+     * As phase rotates each frame, slot N accumulates angle X + (X+1) + ...
+     * → ghost/double-image. memset + flush ensures fresh start each fire. */
+    memset((void *)RING_BUFFER_ADDR, 0, N_SLOTS * SLOT_BYTES);
+    Xil_DCacheFlushRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
 
     /* Diagnostic every 128 frames: print what IP actually sees */
     static u32 dbg = 0;
@@ -2078,9 +2087,31 @@ int main(void)
 
     /* DEBUG: 移除 MMU non-cacheable 配置, 验证 PL m_axi 是否还工作 */
 
-    build_model();
-    /* Model lives in DDR; flush once so IP sees it via HP1 (not cache-coherent) */
-    Xil_DCacheFlushRange(MODEL_ADDR, MAX_POINTS * sizeof(PovPoint));
+    /* JTAG anime injection: xsdb writes ANIME_MAGIC + count + raw PovPoint
+     * data into DDR before resuming ARM. If magic is set, skip build_model
+     * and use injected data as-is. Workaround for WiFi/UART blocked in this
+     * AP environment. See tools/dl_helloworld_with_anime.tcl. */
+    #define ANIME_MAGIC_ADDR  0x1F000000UL
+    #define ANIME_MAGIC_VALUE 0xA11ECEC0U
+    volatile u32 *anime_magic = (volatile u32 *)ANIME_MAGIC_ADDR;
+    volatile int *anime_n_ptr = (volatile int *)(ANIME_MAGIC_ADDR + 4);
+    Xil_DCacheInvalidateRange(ANIME_MAGIC_ADDR, 8);
+    if (*anime_magic == ANIME_MAGIC_VALUE) {
+        model_n = *anime_n_ptr;
+        *anime_magic = 0;  /* consume so next reset rebuilds cube */
+        Xil_DCacheFlushRange(ANIME_MAGIC_ADDR, 8);
+        /* Anime PovPoint data already in DDR via JTAG. Invalidate ARM L1
+         * cache for MODEL_ADDR so any stale lines from previous boot are
+         * dropped (HLS reads via HP1 which is non-coherent with ARM cache,
+         * so what matters is DDR matches what JTAG wrote — invalidate just
+         * ensures we don't write back stale lines). */
+        Xil_DCacheInvalidateRange(MODEL_ADDR, MAX_POINTS * sizeof(PovPoint));
+        xil_printf("[anime] JTAG-injected model: %d points\r\n", model_n);
+    } else {
+        build_model();
+        /* Model lives in DDR; flush once so IP sees it via HP1 (not cache-coherent) */
+        Xil_DCacheFlushRange(MODEL_ADDR, MAX_POINTS * sizeof(PovPoint));
+    }
     /* Voxelize boot-time cube model so render path has valid data before
      * any PPCL frame arrives. */
     voxelize_model();
@@ -2222,33 +2253,52 @@ int main(void)
          * 30K 后 PL 启动. */
         /* Plain USE_PL=1: always PL render (regression test 看 PL m_axi 是否还工作) */
         pov_render_frame_to_ring(phase);
-        /* Every 2 frames: balance between visible HDMI fps and main loop
-         * throughput (every-frame copy slows main loop too much; every-3
-         * makes visible fps too low). */
-        if ((frame & 1) == 0) {
+        {
             Xil_DCacheInvalidateRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
-            for (int s = 0; s < N_SLOTS; s++) {
-                u32 col = s % GRID_COLS;
-                u32 row = s / GRID_COLS;
-                u32 x0 = col * SLICE_W;
-                u32 y0 = row * SLICE_H;
-                const u8 *src = (const u8 *)(RING_BUFFER_ADDR + s * SLOT_BYTES);
-                u8 *dst = (u8 *)fb_write + y0 * STRIDE + x0 * 3;
-                for (int yy = 0; yy < SLICE_H; yy++) {
-                    memcpy(dst + yy * STRIDE, src + yy * (SLICE_W * 3), SLICE_W * 3);
+            /* Single big 3D: pick one rotating slice, scale up 6×, center it.
+             * SLICE_W=106 × 6 = 636 wide. SLICE_H=120 × 6 = 720 tall.
+             * H offset: (1280 - 636) / 2 = 322 px. */
+            const int S3D_SCALE = 6;
+            const int S3D_VIEW_W = SLICE_W * S3D_SCALE;       /* 636 */
+            const int S3D_OFF_X  = (WIDTH - S3D_VIEW_W) / 2;  /* 322 */
+            int slot_pick = (frame / 4) % N_SLOTS;
+            const u8 *src_slot = (const u8 *)(RING_BUFFER_ADDR + slot_pick * SLOT_BYTES);
+
+            /* Always write BOTH fbs: VDMA circular cycle is unreliable across
+             * processor resets (PL state retention quirk), so writing both
+             * guarantees whichever buffer VDMA currently reads shows fresh data. */
+            for (int t = 0; t < 2; t++) {
+                UINTPTR fb_t = fb_bufs[t];
+                /* Clear entire fb to black */
+                memset((u8 *)fb_t, 0, HEIGHT * STRIDE);
+
+                /* Scale-blit slice into center */
+                u8 *dst_base = (u8 *)fb_t + S3D_OFF_X * 3;
+                for (int dy = 0; dy < HEIGHT; dy++) {
+                    int sy = dy / S3D_SCALE;
+                    if (sy >= SLICE_H) sy = SLICE_H - 1;
+                    const u8 *src_line = src_slot + sy * (SLICE_W * 3);
+                    u8 *dst_line = dst_base + dy * STRIDE;
+                    for (int sx = 0; sx < SLICE_W; sx++) {
+                        u8 c0 = src_line[sx * 3 + 0];
+                        u8 c1 = src_line[sx * 3 + 1];
+                        u8 c2 = src_line[sx * 3 + 2];
+                        u8 *p = dst_line + sx * S3D_SCALE * 3;
+                        for (int n = 0; n < S3D_SCALE; n++) {
+                            p[n*3+0] = c0; p[n*3+1] = c1; p[n*3+2] = c2;
+                        }
+                    }
                 }
+                Xil_DCacheFlushRange(fb_t, HEIGHT * STRIDE);
             }
-            /* Flush only the grid rows (720 × 1920 ≈ 4 MB) — 1/3 less than
-             * full 6 MB. Single call (per-line loop has high overhead). */
-            Xil_DCacheFlushRange(fb_write, (GRID_ROWS * SLICE_H) * STRIDE);
             /* DEBUG: ring nonzero */
             static u32 vd = 0;
             if ((vd++ & 0x3F) == 0) {
                 volatile u8 *r = (volatile u8 *)RING_BUFFER_ADDR;
                 u32 nz = 0;
                 for (u32 b = 0; b < 100000; b++) if (r[b]) nz++;
-                xil_printf("[ringV] nz=%u/100K [0..3]=%02x%02x%02x%02x\r\n",
-                           (unsigned)nz, r[0],r[1],r[2],r[3]);
+                xil_printf("[ringV] nz=%u/100K [0..3]=%02x%02x%02x%02x slot=%d\r\n",
+                           (unsigned)nz, r[0],r[1],r[2],r[3], slot_pick);
             }
         }
 #else

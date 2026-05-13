@@ -3,8 +3,8 @@
   "ip_inst": {
     "xci_name": "hello_zynq_pov_project_batch_0_0",
     "cell_name": "pov_project_batch_0",
-    "component_reference": "povlab:user:pov_project_batch:1.0",
-    "ip_revision": "2114598530",
+    "component_reference": "povlab:user:pov_project_batch:1.1",
+    "ip_revision": "2114607174",
     "gen_directory": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_pov_project_batch_0_0",
     "parameters": {
       "component_parameters": {
@@ -37,7 +37,7 @@
         "machine": [ { "value": "64", "enabled": false, "usage": "all" } ],
         "combinational": [ { "value": "0", "enabled": false, "usage": "all" } ],
         "latency": [ { "value": "86676", "enabled": false, "usage": "all" } ],
-        "II": [ { "value": "86677 ~ 886861", "enabled": false, "usage": "all" } ]
+        "II": [ { "value": "86677 ~ 28377165", "enabled": false, "usage": "all" } ]
       },
       "model_parameters": {
         "C_S_AXI_CONTROL_ADDR_WIDTH": [ { "value": "7", "resolve_type": "generated", "format": "long", "usage": "all" } ],
@@ -80,7 +80,7 @@
       },
       "runtime_parameters": {
         "IPCONTEXT": [ { "value": "IP_Integrator" } ],
-        "IPREVISION": [ { "value": "2114598530" } ],
+        "IPREVISION": [ { "value": "2114607174" } ],
         "MANAGED": [ { "value": "TRUE" } ],
         "OUTPUTDIR": [ { "value": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_pov_project_batch_0_0" } ],
         "SELECTEDSIMMODEL": [ { "value": "" } ],

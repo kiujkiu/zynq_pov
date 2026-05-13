@@ -2266,13 +2266,16 @@ int main(void)
 
             /* Always write BOTH fbs: VDMA circular cycle is unreliable across
              * processor resets (PL state retention quirk), so writing both
-             * guarantees whichever buffer VDMA currently reads shows fresh data. */
+             * guarantees whichever buffer VDMA currently reads shows fresh data.
+             *
+             * Boundary regions [0, S3D_OFF_X) and [S3D_OFF_X + S3D_VIEW_W, WIDTH)
+             * 在 boot 时一次性 memset 0 (line 2084-2086), 之后只 scale-blit 中心,
+             * 不每帧 memset 整 fb (2.76MB × 2 / 帧 ≈ 50ms 节省, 且暴露 boundary
+             * stale 异常: 截图发现 dst_x=1211 出现红点 — 在 scale-blit 边界外,
+             * 唯一来源 = cache/DDR stale, 不 mask 就 freeze 容易确认). */
+            const u32 BLIT_BYTES_PER_ROW = (u32)(S3D_VIEW_W * 3);
             for (int t = 0; t < 2; t++) {
                 UINTPTR fb_t = fb_bufs[t];
-                /* Clear entire fb to black */
-                memset((u8 *)fb_t, 0, HEIGHT * STRIDE);
-
-                /* Scale-blit slice into center */
                 u8 *dst_base = (u8 *)fb_t + S3D_OFF_X * 3;
                 for (int dy = 0; dy < HEIGHT; dy++) {
                     int sy = dy / S3D_SCALE;
@@ -2288,17 +2291,36 @@ int main(void)
                             p[n*3+0] = c0; p[n*3+1] = c1; p[n*3+2] = c2;
                         }
                     }
+                    /* Flush 中心 BLIT 区域 only — 边界已 boot-cleared, 不动 */
+                    Xil_DCacheFlushRange((UINTPTR)dst_line, BLIT_BYTES_PER_ROW);
                 }
-                Xil_DCacheFlushRange(fb_t, HEIGHT * STRIDE);
             }
-            /* DEBUG: ring nonzero */
+            /* DEBUG: ring nonzero + fb boundary stale detector. 每 64 帧扫描
+             * fb_A 在 scale-blit 写区外的 row 354 段是否有非零 (应该全 0). */
             static u32 vd = 0;
             if ((vd++ & 0x3F) == 0) {
                 volatile u8 *r = (volatile u8 *)RING_BUFFER_ADDR;
                 u32 nz = 0;
                 for (u32 b = 0; b < 100000; b++) if (r[b]) nz++;
-                xil_printf("[ringV] nz=%u/100K [0..3]=%02x%02x%02x%02x slot=%d\r\n",
-                           (unsigned)nz, r[0],r[1],r[2],r[3], slot_pick);
+                /* Boundary check: fb_A row 354 right of scale-blit (dst_x >= 958) */
+                const u32 RIGHT_OFFSET = (u32)(S3D_OFF_X + S3D_VIEW_W) * 3;  /* 958*3 = 2874 */
+                const u32 ROW_TAIL_BYTES = (u32)STRIDE - RIGHT_OFFSET;        /* 3840-2874=966 */
+                Xil_DCacheInvalidateRange(FB_A_ADDR + 354 * STRIDE + RIGHT_OFFSET,
+                                          ROW_TAIL_BYTES);
+                volatile u8 *fb_row_tail = (volatile u8 *)(FB_A_ADDR + 354 * STRIDE + RIGHT_OFFSET);
+                u32 fb_nz = 0;
+                u32 fb_first_nz_off = 0;
+                u8  fb_first_nz_byte = 0;
+                for (u32 k = 0; k < ROW_TAIL_BYTES; k++) {
+                    if (fb_row_tail[k]) {
+                        if (fb_nz == 0) { fb_first_nz_off = k; fb_first_nz_byte = fb_row_tail[k]; }
+                        fb_nz++;
+                    }
+                }
+                xil_printf("[ringV] nz=%u/100K  fb_row354_tail_nz=%u (first@+%u=%02x)  slot=%d\r\n",
+                           (unsigned)nz, (unsigned)fb_nz,
+                           (unsigned)fb_first_nz_off, (unsigned)fb_first_nz_byte,
+                           slot_pick);
             }
         }
 #else

@@ -58,7 +58,8 @@
 
 /* SDIO slave configuration */
 #define SDIO_BLOCK_SIZE    512
-#define SDIO_TX_BUF_NUM    16     /* 16 * 512 = 8 KB TX ring (ESP -> Zynq) */
+#define SDIO_TX_BUF_NUM    128    /* 128 * 512 = 64 KB TX ring (ESP -> Zynq);
+                                   * 旧 8KB 限制 Zynq 一次 chunk drain ≤8KB → throughput cap */
 #define SDIO_RX_BUF_NUM    8      /* 8  * 512 = 4 KB RX ring (Zynq -> ESP) */
 #define SDIO_RX_BUF_SIZE   512
 
@@ -110,22 +111,26 @@ static void wifi_init_sta(void) {
             .threshold.authmode = WIFI_AUTH_WPA_WPA2_PSK,
             .pmf_cfg = { .capable = true, .required = false },
             .listen_interval = 1,
+            .channel = 149,            /* 5G BSSID hint, iperf 验证可连 */
+            .scan_method = WIFI_ALL_CHANNEL_SCAN,
         },
     };
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
-    /* Working combo from this morning (gave 4900 TCP connects in 60s):
-     * 2.4G + 11b/g/n + WPA_WPA2 + PMF capable + listen_interval=1.
-     * 5G ch149 HT40 tried per memory note but gave reason 203/204 — AP may
-     * have changed config since the memory was written. */
+    /* 5G HT40 via 11n only — measured ~30 Mbps TCP vs ~15 Mbps on 2.4G HT20.
+     * Must be set AFTER esp_wifi_start; plural API required for BAND_AUTO/5G_ONLY. */
     esp_wifi_set_protocols(WIFI_IF_STA, &(wifi_protocols_t){
         .ghz_2g = WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N,
         .ghz_5g = WIFI_PROTOCOL_11A | WIFI_PROTOCOL_11N,
     });
+    esp_wifi_set_bandwidths(WIFI_IF_STA, &(wifi_bandwidths_t){
+        .ghz_2g = WIFI_BW40,
+        .ghz_5g = WIFI_BW40,
+    });
     esp_wifi_set_ps(WIFI_PS_NONE);
-    esp_wifi_set_band_mode(WIFI_BAND_MODE_2G_ONLY);
-    ESP_LOGI(TAG, "WiFi STA started (2.4G, 11b/g/n, WPA_WPA2, PMF cap)");
+    esp_wifi_set_band_mode(WIFI_BAND_MODE_5G_ONLY);
+    ESP_LOGI(TAG, "WiFi STA started (5G HT40, 11n only, WPA_WPA2, PMF cap)");
 }
 
 /* Periodically log link details: RSSI, PHY mode, rate. Called after STA
@@ -270,7 +275,10 @@ static void sdio_rx_task(void *pv) {
 /* TCP server  (host PC -> ESP32 -> SDIO -> Zynq)                     */
 /* ------------------------------------------------------------------ */
 static void server_task(void *pv) {
-    static uint8_t rx_buf[4096];
+    /* Big RX buf so a single recv() pulls a large chunk from lwIP socket buf,
+     * cutting per-iter recv+sdio_tx serialization overhead. 32KB matches typical
+     * TCP window scale + ESP32 SDIO TX ring (64KB) so one cycle fills half ring. */
+    static uint8_t rx_buf[32768];
 
     /* Standard TCP server: listen on LISTEN_PORT for incoming connections from PC. */
     while (1) {
@@ -432,9 +440,46 @@ static void server_task(void *pv) {
                     if (st == TINFL_STATUS_NEEDS_MORE_INPUT && in_consumed == 0) break;
                 }
             } else if (!sink_mode && rem > 0) {
-                if (sdio_tx_bytes(p, (size_t)rem) < 0) {
-                    ESP_LOGW(TAG, "SDIO TX failed");
-                    break;
+                /* Passthrough alignment: SDIO slave pads non-512-multiple writes
+                 * with zeros — corrupts the wire stream (Zynq PPCL parser then
+                 * mis-aligns 5B/16B point boundaries). 累积到 512 倍数才 tx,
+                 * 跟 DFLT mode 一样防 padding. 末尾不足 512B 留到下次 recv 拼. */
+                static uint8_t pass_buf[8192];
+                static size_t  pass_pos = 0;
+                size_t src_off = 0;
+                while (src_off < (size_t)rem && pass_pos < sizeof(pass_buf)) {
+                    size_t take = (size_t)rem - src_off;
+                    size_t cap  = sizeof(pass_buf) - pass_pos;
+                    if (take > cap) take = cap;
+                    if (take == 0) break;
+                    memcpy(pass_buf + pass_pos, p + src_off, take);
+                    pass_pos += take;
+                    src_off += take;
+                    if (pass_pos >= sizeof(pass_buf)) {
+                        size_t aligned = (pass_pos / 512) * 512;
+                        if (sdio_tx_bytes(pass_buf, aligned) < 0) {
+                            ESP_LOGW(TAG, "SDIO TX failed (passthrough aligned)");
+                            break;
+                        }
+                        size_t left = pass_pos - aligned;
+                        if (left > 0 && aligned > 0 && aligned < sizeof(pass_buf)) {
+                            memmove(pass_buf, pass_buf + aligned, left);
+                        }
+                        pass_pos = left;
+                    }
+                }
+                /* Flush whatever 512-multiple we have so far */
+                if (pass_pos >= 512) {
+                    size_t aligned = (pass_pos / 512) * 512;
+                    if (sdio_tx_bytes(pass_buf, aligned) < 0) {
+                        ESP_LOGW(TAG, "SDIO TX failed (passthrough flush)");
+                    } else {
+                        size_t left = pass_pos - aligned;
+                        if (left > 0 && aligned > 0 && aligned < sizeof(pass_buf)) {
+                            memmove(pass_buf, pass_buf + aligned, left);
+                        }
+                        pass_pos = left;
+                    }
                 }
             }
             total += n;

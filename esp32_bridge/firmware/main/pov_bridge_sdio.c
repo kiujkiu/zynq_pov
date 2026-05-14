@@ -444,6 +444,8 @@ static void server_task(void *pv) {
                  * with zeros — corrupts the wire stream (Zynq PPCL parser then
                  * mis-aligns 5B/16B point boundaries). 累积到 512 倍数才 tx,
                  * 跟 DFLT mode 一样防 padding. 末尾不足 512B 留到下次 recv 拼. */
+                /* 8KB sweet spot — 试过 64KB 反而慢 2.3x (alignment 累积时间
+                 * 让 socket recv 阻塞过久, TCP window 0 → PC 阻塞). */
                 static uint8_t pass_buf[8192];
                 static size_t  pass_pos = 0;
                 size_t src_off = 0;

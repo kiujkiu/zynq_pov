@@ -370,7 +370,7 @@ int sdio_esp_init(void)
      */
     g_init_step = 2;
     {
-        u16 clk_ctrl = (0x40 << 8) | 0x0001;  /* divisor=64 + ICE=1 */
+        u16 clk_ctrl = (0xFF << 8) | 0x0001;  /* divisor=255 (~98 kHz) + ICE=1; 飞线信号完整性 */
         XSdPs_WriteReg16(base, XSDPS_CLK_CTRL_OFFSET, clk_ctrl);
         int stable = 0;
         for (u32 i = 0; i < 1000000; i++) {
@@ -497,25 +497,57 @@ int sdio_esp_init(void)
     /* Enable host int master + Func1 int (bit0 master, bit1 Func1) */
     if ((rc = sdio_cmd52_write(0, SDIO_CCCR_INT_ENABLE, 0x03))) return rc;
 
-    /* 1-bit mode (4-bit attempt 2026-05-11: even with external pull-ups
-     * added on DAT1-3, runtime CMD53 data fails and CMD52 follow-up timeouts
-     * — likely pull-up contact not solid or flying-wire signal integrity
-     * still insufficient. Stay 1-bit for production. */
+    /* 4-bit mode + 12.5 MHz attempt (2026-05-14).
+     * 之前 5-11 试 4-bit @ 25 MHz 飞线挂; commit c35ff1a log 留指导 "shorter
+     * wires + GND + 降 clock 到 12.5 MHz". 这次组合: 4-bit + 12.5 MHz, 物理
+     * link D2/D3 已经从 USB-JTAG 让出 (PnP 不见 ESP32 内置 USB device),
+     * slave 端 SDIO_SLAVE_FLAG_INTERNAL_PULLUP 已开. */
+#ifndef SDIO_ESP_USE_4BIT
+#define SDIO_ESP_USE_4BIT 1
+#endif
+#ifndef SDIO_ESP_CLK_DIV
+/* Try 4-bit @ 25 MHz (100 Mbps theoretical). Falls back via signal-quality
+ * fail mode: CMD53 corrupts controller → recover via SW reset path. */
+#define SDIO_ESP_CLK_DIV 0x01  /* 0x01→25MHz, 0x02→12.5MHz, 0x04→6.25MHz */
+#endif
 
-    /* Bump SD clock to ~25 MHz. */
+    if (SDIO_ESP_USE_4BIT) {
+        /* Slave first: CCCR 0x07 (Bus Interface Control), BIT[1:0]=10 → 4-bit */
+        rc = sdio_cmd52_write(0, 0x07, 0x02);
+        if (rc) {
+            xil_printf("[sdio-esp] CMD52 CCCR 0x07=0x02 (slave→4-bit) FAILED rc=%d\r\n", rc);
+            return rc;
+        }
+        u8 bic = 0;
+        rc = sdio_cmd52_read(0, 0x07, &bic);
+        xil_printf("[sdio-esp] slave CCCR 0x07 readback=0x%02x (expect 0x02)\r\n", (unsigned)bic);
+
+        /* Host: HOST_CTRL1 bit 1 = 1 (Data Transfer Width = 4-bit) */
+        u8 hc1 = XSdPs_ReadReg8(base, XSDPS_HOST_CTRL1_OFFSET);
+        hc1 |= (1U << 1);
+        XSdPs_WriteReg8(base, XSDPS_HOST_CTRL1_OFFSET, hc1);
+        xil_printf("[sdio-esp] host HC1 4-bit set: 0x%02x\r\n", (unsigned)hc1);
+    }
+
+    /* Set SD clock per SDIO_ESP_CLK_DIV. 50e6 / (2N) where N=clk_div. */
     {
         u16 clk = XSdPs_ReadReg16(base, XSDPS_CLK_CTRL_OFFSET);
-        clk &= ~0x0004;
+        clk &= ~0x0004;  /* disable card-clock during change */
         XSdPs_WriteReg16(base, XSDPS_CLK_CTRL_OFFSET, clk);
         clk = (clk & 0x00FF) & ~0xFF00;
-        clk |= (0x01 << 8) | 0x0001;
+        clk |= (SDIO_ESP_CLK_DIV << 8) | 0x0001;
         XSdPs_WriteReg16(base, XSDPS_CLK_CTRL_OFFSET, clk);
         for (u32 i = 0; i < 100000; i++) {
             if (XSdPs_ReadReg16(base, XSDPS_CLK_CTRL_OFFSET) & 0x0002) break;
         }
         clk |= 0x0004;
         XSdPs_WriteReg16(base, XSDPS_CLK_CTRL_OFFSET, clk);
-        xil_printf("[sdio-esp] 1-bit @ 25MHz (CLK=0x%04x)\r\n", (unsigned)clk);
+        unsigned mhz = (SDIO_ESP_CLK_DIV == 0x01) ? 25 :
+                       (SDIO_ESP_CLK_DIV == 0x02) ? 12 :
+                       (SDIO_ESP_CLK_DIV == 0x04) ? 6 : 0;
+        xil_printf("[sdio-esp] %s-bit @ ~%u MHz (CLK=0x%04x, DIV=0x%02x)\r\n",
+                   SDIO_ESP_USE_4BIT ? "4" : "1", mhz, (unsigned)clk,
+                   (unsigned)SDIO_ESP_CLK_DIV);
     }
 
     /* Set host controller block size = 512 (it stays per-CMD53 too). */

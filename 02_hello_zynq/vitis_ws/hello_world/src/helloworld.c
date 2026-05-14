@@ -263,7 +263,9 @@ static inline u8 uart_rx_byte_hw(void) {
  * 512B-multiple block at a time into this static buffer; the existing rx
  * state machine then drains it one byte at a time via uart_rx_has()/byte().
  * Falls through to UART otherwise — UART path unchanged. */
-#define SDIO_RX_CHUNK   (16 * 1024) /* 32 blocks; absorbs latency spikes */
+#define SDIO_RX_CHUNK   (16 * 1024) /* 32 blocks; absorbs latency spikes
+                                     * (tried 64KB: throughput halved — 一次 refill
+                                     * 占太长 main-loop 时间) */
 static int  sdio_bridge_active = 0;
 int         last_sdio_init_rc  = -99;
 static u8   sdio_rx_buf[SDIO_RX_CHUNK];
@@ -426,9 +428,46 @@ static u32         rx_tex_total = 0;
 static void mesh_compute_aabb(void);   /* forward decl, def near main */
 static int uart_poll_frame(void)
 {
+    int frame_ready = 0;
+
+    /* SDIO bulk fast path: when receiving RAW points (16B/pt), bypass the
+     * byte-by-byte parser and memcpy whole-point chunks straight from
+     * sdio_rx_buf into model[]. Header (RX_HDR) + non-raw payloads still
+     * use the byte path below. Empirically 30-50x faster than parser for
+     * large RAW frames (30K pts × 16B = 480KB, byte loop CPU-bound). */
+    while (sdio_bridge_active && rx_state == RX_PTS && rx_pts_got == 0
+           && rx_expected_pts > 0 && !rx_is_mesh
+           && (rx_flags & (PC_FLAG_COMPRESSED | PC_FLAG_SPARSE_VOXEL)) == 0) {
+        if (sdio_rx_head == sdio_rx_tail) {
+            if (!sdio_rx_refill_nonblock()) break;
+        }
+        u32 buf_avail   = sdio_rx_tail - sdio_rx_head;
+        u32 pts_remain  = rx_expected_pts - rx_pts_done;
+        u32 bytes_need  = pts_remain * PC_POINT_LEN_RAW;
+        u32 to_copy     = (buf_avail < bytes_need) ? buf_avail : bytes_need;
+        u32 pts_full    = to_copy / PC_POINT_LEN_RAW;
+        if (pts_full == 0) break;  /* < 1 full point in buf → fall through */
+        memcpy(&model[rx_pts_done],
+               &sdio_rx_buf[sdio_rx_head],
+               (size_t)pts_full * PC_POINT_LEN_RAW);
+        sdio_rx_head += pts_full * PC_POINT_LEN_RAW;
+        rx_pts_done  += pts_full;
+        if (rx_pts_done == rx_expected_pts) {
+            model_n = rx_expected_pts;
+            __asm__ __volatile__("dsb sy" ::: "memory");
+            Xil_DCacheFlushRange(MODEL_ADDR, model_n * sizeof(PovPoint));
+            xil_printf("[rxdone] model_n=%d (fastpath)\r\n", model_n);
+            rx_state = RX_HDR;
+            rx_hdr_got = 0;
+            rx_magic_sync = 0;
+            frame_ready = 1;
+            right_dirty_g = 1;
+            break;
+        }
+    }
+
     /* Drain as much as is available without blocking render loop.
      * Safety: cap at 256 bytes per call so we never hang here. */
-    int frame_ready = 0;
     int guard = 256;
     while (guard-- > 0 && uart_rx_has()) {
         u8 b = uart_rx_byte();

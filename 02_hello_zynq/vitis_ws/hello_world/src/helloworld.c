@@ -48,7 +48,7 @@
  * ENABLE_DUAL_CORE.
  */
 #ifndef ENABLE_SDIO_ESP_BRIDGE
-#define ENABLE_SDIO_ESP_BRIDGE 0
+#define ENABLE_SDIO_ESP_BRIDGE 1
 #endif
 
 #define USE_PL 1

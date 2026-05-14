@@ -11,6 +11,7 @@ Usage:
   python anime_stream.py obj 300 4       # obj with 300 pts @ 4 FPS
 """
 import serial
+import socket
 import math
 import time
 import sys
@@ -19,6 +20,36 @@ import argparse
 from pointcloud_proto import pack_frame
 from mesh_to_points import sample_mesh
 from glb_to_points import sample_glb
+
+
+class TcpAsSerial:
+    """Minimal serial.Serial-compatible wrapper over TCP.
+
+    Exposes only write() / read() / close() — enough for anime_stream main loop.
+    Used when --host is set, replacing serial.Serial without other code changes.
+    """
+    def __init__(self, host, port, timeout=0):
+        self.sock = socket.create_connection((host, port), timeout=5)
+        self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        # timeout=0 → non-blocking read used by drain_rx
+        self.sock.settimeout(0.001)
+        self._host = host
+        self._port = port
+
+    def write(self, data):
+        return self.sock.sendall(data) or len(data)
+
+    def read(self, n):
+        try:
+            return self.sock.recv(n)
+        except (socket.timeout, BlockingIOError):
+            return b""
+        except OSError:
+            return b""
+
+    def close(self):
+        try: self.sock.close()
+        except: pass
 
 
 def animate(pts, t, y_rotate_period=4.0, rotate=True):
@@ -49,8 +80,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mesh_path", nargs="?", default=None,
                     help="Path to .obj (omit for builtin figure)")
-    ap.add_argument("--port", default="COM7")
+    ap.add_argument("--port", default="COM7",
+                    help="Serial port (ignored if --host set)")
     ap.add_argument("--baud", type=int, default=115200)
+    ap.add_argument("--host", default=None,
+                    help="ESP32 TCP host, e.g. 10.168.168.137 or pov-bridge.local. "
+                         "If set, send over TCP instead of serial.")
+    ap.add_argument("--tcp-port", type=int, default=8888,
+                    help="ESP32 TCP port (default 8888)")
     ap.add_argument("--points", type=int, default=300,
                     help="Number of points to sample (more = slower stream)")
     ap.add_argument("--fps", type=float, default=3.0,
@@ -90,8 +127,12 @@ def main():
         return
     print(f"[anime] sampled {len(base_pts)} points")
 
-    ser = serial.Serial(args.port, args.baud, timeout=0)
-    print(f"[anime] opened {args.port}@{args.baud}")
+    if args.host:
+        ser = TcpAsSerial(args.host, args.tcp_port)
+        print(f"[anime] opened TCP {args.host}:{args.tcp_port}")
+    else:
+        ser = serial.Serial(args.port, args.baud, timeout=0)
+        print(f"[anime] opened {args.port}@{args.baud}")
     t0 = time.time()
     fid = 0
     period = 1.0 / args.fps

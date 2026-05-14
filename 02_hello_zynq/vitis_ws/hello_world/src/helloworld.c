@@ -2330,11 +2330,11 @@ int main(void)
                             p[n*3+0] = c0; p[n*3+1] = c1; p[n*3+2] = c2;
                         }
                     }
+                    /* SDIO drain 跟 scale-blit 并行: 每 16 row (~720us ARM
+                     * write time) 调一次 uart_poll_frame, fastpath memcpy SDIO
+                     * → model[]. 让 ESP32 SDIO TX queue 不积压. */
+                    if ((dy & 0xF) == 0) uart_poll_frame();
                 }
-                /* Batch flush 整 fb 一次代替 720 次 per-row flush. boundary
-                 * 区域是 clean (boot-only memset), 不会触发 write-back; 只 dirty
-                 * 中心 BLIT cache line 被写到 DDR. 实测 720× function call cost
-                 * 占 main-loop 显著时间. */
                 Xil_DCacheFlushRange(fb_t, HEIGHT * STRIDE);
             }
             /* DEBUG: ring nonzero + fb boundary stale detector. 每 64 帧扫描

@@ -35,6 +35,10 @@
 /* Phase 9.5 task I: dual-core AMP.  Default OFF — set ENABLE_DUAL_CORE=1 to
  * boot CPU1 and offload LEFT panel render to it.  See dual_core.h. */
 #ifndef ENABLE_DUAL_CORE
+/* ENABLE_DUAL_CORE=1 尝试: cpu1 boot 失败 (BOOT_OK_MAGIC 永不 set), 即使
+ * EFUSE 报 dual-core part. 需要进一步 debug core1_asm_entry 是否 linked.
+ * 改 0 走 single-core for-loop 跑 2 fb scale-blit. dual-core kick mechanism
+ * 代码留下, 框架可以 reuse. */
 #define ENABLE_DUAL_CORE 0
 #endif
 #if ENABLE_DUAL_CORE
@@ -1012,10 +1016,9 @@ static void pov_render_frame_to_ring(u32 phase)
     pov_w(BATCH_PHASE,       test_phase);
     pov_w(BATCH_N_SLOTS,     N_SLOTS);
 
-    /* Clear ring buffer to black before HLS fire. HLS only writes pixels at
-     * anime point projections; untouched pixels retain previous fire's data.
-     * As phase rotates each frame, slot N accumulates angle X + (X+1) + ...
-     * → ghost/double-image. memset + flush ensures fresh start each fire. */
+    /* Clear ring buffer to black before HLS fire. HLS v1.2 内置 SLOT_CLEAR
+     * 试过但 m_axi byte-store overhead 让总 fire 时间升 +19ms 反而拖累, ARM
+     * memset 110 MB/s × 2.75MB ≈ 25ms 实际更快. 留 HLS clear 代码也无害 (双清). */
     memset((void *)RING_BUFFER_ADDR, 0, N_SLOTS * SLOT_BYTES);
     Xil_DCacheFlushRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
 
@@ -1035,6 +1038,41 @@ static void pov_render_frame_to_ring(u32 phase)
         if (++to > 0x10000000) { xil_printf("batch timeout\r\n"); return; }
         uart_poll_frame();
     }
+}
+
+/* Forward decl for SDIO parallel drain in scale-blit row loop */
+static int uart_poll_frame(void);
+
+/* Scale-blit one fb: read SLICE_W×SLICE_H from src_slot, scale by S3D_SCALE
+ * (6×) into fb_t center starting at (S3D_OFF_X, 0). Called by CPU0 and CPU1.
+ * src_slot must already be cache-invalidated by caller (CPU0 does Xil_DCacheInvalidateRange
+ * on RING_BUFFER_ADDR before calling).
+ *
+ * `cpu_id` 0 = CPU0 (does SDIO parallel drain every 16 row), 1 = CPU1 (skip
+ * SDIO poll, CPU1 不调 UART/SDIO 保 thread-safety per memory note). */
+void cpu_scale_blit_one_fb(UINTPTR fb_t, const u8 *src_slot,
+                           int s3d_off_x, int s3d_scale, int cpu_id)
+{
+    u8 *dst_base = (u8 *)fb_t + s3d_off_x * 3;
+    for (int dy = 0; dy < HEIGHT; dy++) {
+        int sy = dy / s3d_scale;
+        if (sy >= SLICE_H) sy = SLICE_H - 1;
+        const u8 *src_line = src_slot + sy * (SLICE_W * 3);
+        u8 *dst_line = dst_base + dy * STRIDE;
+        for (int sx = 0; sx < SLICE_W; sx++) {
+            u8 c0 = src_line[sx * 3 + 0];
+            u8 c1 = src_line[sx * 3 + 1];
+            u8 c2 = src_line[sx * 3 + 2];
+            u8 *p = dst_line + sx * s3d_scale * 3;
+            for (int n = 0; n < s3d_scale; n++) {
+                p[n*3+0] = c0; p[n*3+1] = c1; p[n*3+2] = c2;
+            }
+        }
+        /* CPU0 every 16 row: drain SDIO fastpath into model[] so ESP32 TX
+         * queue doesn't stall. CPU1 must not touch SDIO/UART. */
+        if (cpu_id == 0 && (dy & 0xF) == 0) uart_poll_frame();
+    }
+    Xil_DCacheFlushRange(fb_t, HEIGHT * STRIDE);
 }
 
 /* Dump center pixel + a few sample locations of slot 0, and nonzero count.
@@ -2312,30 +2350,21 @@ int main(void)
              * 不每帧 memset 整 fb (2.76MB × 2 / 帧 ≈ 50ms 节省, 且暴露 boundary
              * stale 异常: 截图发现 dst_x=1211 出现红点 — 在 scale-blit 边界外,
              * 唯一来源 = cache/DDR stale, 不 mask 就 freeze 容易确认). */
-            const u32 BLIT_BYTES_PER_ROW = (u32)(S3D_VIEW_W * 3);
-            for (int t = 0; t < 2; t++) {
-                UINTPTR fb_t = fb_bufs[t];
-                u8 *dst_base = (u8 *)fb_t + S3D_OFF_X * 3;
-                for (int dy = 0; dy < HEIGHT; dy++) {
-                    int sy = dy / S3D_SCALE;
-                    if (sy >= SLICE_H) sy = SLICE_H - 1;
-                    const u8 *src_line = src_slot + sy * (SLICE_W * 3);
-                    u8 *dst_line = dst_base + dy * STRIDE;
-                    for (int sx = 0; sx < SLICE_W; sx++) {
-                        u8 c0 = src_line[sx * 3 + 0];
-                        u8 c1 = src_line[sx * 3 + 1];
-                        u8 c2 = src_line[sx * 3 + 2];
-                        u8 *p = dst_line + sx * S3D_SCALE * 3;
-                        for (int n = 0; n < S3D_SCALE; n++) {
-                            p[n*3+0] = c0; p[n*3+1] = c1; p[n*3+2] = c2;
-                        }
-                    }
-                    /* SDIO drain 跟 scale-blit 并行: 每 16 row (~720us ARM
-                     * write time) 调一次 uart_poll_frame, fastpath memcpy SDIO
-                     * → model[]. 让 ESP32 SDIO TX queue 不积压. */
-                    if ((dy & 0xF) == 0) uart_poll_frame();
+            /* dual-core 时 CPU0 跑 fb_B, CPU1 同时跑 fb_A — 一帧两 fb 并行 */
+#if ENABLE_DUAL_CORE
+            if (core1_is_alive()) {
+                /* CPU1 task: scale-blit fb_A (use_mesh=2 标 BLIT type, angle=slot_pick) */
+                core1_kick_left(fb_bufs[0], (u32)slot_pick,
+                                S3D_OFF_X, S3D_VIEW_W, S3D_SCALE, /*BLIT type*/ 2);
+                /* CPU0 self: scale-blit fb_B */
+                cpu_scale_blit_one_fb(fb_bufs[1], src_slot, S3D_OFF_X, S3D_SCALE, 0);
+                core1_wait_left();
+            } else
+#endif
+            {
+                for (int t = 0; t < 2; t++) {
+                    cpu_scale_blit_one_fb(fb_bufs[t], src_slot, S3D_OFF_X, S3D_SCALE, 0);
                 }
-                Xil_DCacheFlushRange(fb_t, HEIGHT * STRIDE);
             }
             /* DEBUG: ring nonzero + fb boundary stale detector. 每 64 帧扫描
              * fb_A 在 scale-blit 写区外的 row 354 段是否有非零 (应该全 0). */

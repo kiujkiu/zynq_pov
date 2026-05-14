@@ -17,6 +17,11 @@ extern volatile int  mesh_ready;
 extern void cpu_render_mesh(UINTPTR fb_base, int angle_deg,
                             int origin_x, int origin_y,
                             int panel_w, int panel_h, int scale_pct);
+extern void cpu_scale_blit_one_fb(UINTPTR fb_t, const u8 *src_slot,
+                                  int s3d_off_x, int s3d_scale, int cpu_id);
+#define RING_BUFFER_ADDR_DC 0x12000000UL
+#define SLOT_BYTES_DC       (106 * 120 * 3)
+
 extern void cpu_render_voxel_panel(UINTPTR fb_base, int angle_deg,
                                    int origin_x, int origin_y,
                                    int panel_w, int panel_h,
@@ -242,7 +247,16 @@ void core1_main(void)
         }
         dsb();
 
-        if (use_mesh && mesh_ready) {
+        if (use_mesh == 2) {
+            /* USE_PL=1 path: scale-blit slot N (angle field = slot_pick) into fb */
+            int slot_pick = angle;
+            const u8 *src_slot = (const u8 *)(RING_BUFFER_ADDR_DC + slot_pick * SLOT_BYTES_DC);
+            /* CPU1 L1 invalidate ring slot — HLS HP1 writes DDR bypass ARM cache */
+            Xil_DCacheInvalidateRange((UINTPTR)src_slot, SLOT_BYTES_DC);
+            dsb();
+            /* panel_w = S3D_OFF_X, panel_h = S3D_VIEW_W (unused), scale_pct = S3D_SCALE */
+            cpu_scale_blit_one_fb(fb_addr, src_slot, panel_w, scale_pct, /*cpu_id*/ 1);
+        } else if (use_mesh && mesh_ready) {
             cpu_render_mesh(fb_addr, angle, 0, 0, panel_w, panel_h, scale_pct);
         } else {
             cpu_render_voxel_panel(fb_addr, angle, 0, 0,

@@ -158,6 +158,17 @@ SLICES_LOOP:
         const int16_t sn = POV_SIN8[angle];
         uint8_t *slot = ring_base + s * slot_bytes;
 
+        /* In-IP slot clear: 取代 ARM 端每帧 memset 整 ring (2.75MB, ~30ms).
+         * HLS m_axi 1 byte/cycle @ 150 MHz × 38160 byte/slot × 72 slots
+         * = 18 ms 总, 但 HLS 跟 ARM 并行所以 ARM 那 30ms 完全节省.
+         * SLOT_CLEAR loop, II=1 (max_widen_bitwidth 会推断 burst). */
+SLOT_CLEAR:
+        for (int b = 0; b < slot_bytes; b++) {
+#pragma HLS LOOP_TRIPCOUNT min=38160 max=38160
+#pragma HLS PIPELINE II=1
+            slot[b] = 0;
+        }
+
 POINTS_IN_SLICE:
         for (int i = 0; i < num_points; i++) {
 #pragma HLS LOOP_TRIPCOUNT min=100 max=MAX_BATCH_POINTS

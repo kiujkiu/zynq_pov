@@ -35,10 +35,11 @@
 /* Phase 9.5 task I: dual-core AMP.  Default OFF — set ENABLE_DUAL_CORE=1 to
  * boot CPU1 and offload LEFT panel render to it.  See dual_core.h. */
 #ifndef ENABLE_DUAL_CORE
-/* ENABLE_DUAL_CORE=1 尝试: cpu1 boot 失败 (BOOT_OK_MAGIC 永不 set), 即使
- * EFUSE 报 dual-core part. 需要进一步 debug core1_asm_entry 是否 linked.
- * 改 0 走 single-core for-loop 跑 2 fb scale-blit. dual-core kick mechanism
- * 代码留下, 框架可以 reuse. */
+/* CPU1 boot 进 core1_asm_entry 后 DAP 通信坏 (JTAG ARM*#1 enum 失败),
+ * CPU1 状态 Running 但 PC=N/A, core1_main 没 reach. core1_boot.S MMU
+ * 初始化阶段可能 hang — MMUTable 共享指针在 CPU1 invalidate TLB 后失效,
+ * 或 SCTLR enable cache 写 panic. 留 framework 但 default 关.
+ * 重新启用需要先修 core1_asm_entry MMU 初始化. */
 #define ENABLE_DUAL_CORE 0
 #endif
 #if ENABLE_DUAL_CORE
@@ -1016,11 +1017,9 @@ static void pov_render_frame_to_ring(u32 phase)
     pov_w(BATCH_PHASE,       test_phase);
     pov_w(BATCH_N_SLOTS,     N_SLOTS);
 
-    /* Clear ring buffer to black before HLS fire. HLS v1.2 内置 SLOT_CLEAR
-     * 试过但 m_axi byte-store overhead 让总 fire 时间升 +19ms 反而拖累, ARM
-     * memset 110 MB/s × 2.75MB ≈ 25ms 实际更快. 留 HLS clear 代码也无害 (双清). */
-    memset((void *)RING_BUFFER_ADDR, 0, N_SLOTS * SLOT_BYTES);
-    Xil_DCacheFlushRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
+    /* HLS v1.4 内部 SLOT_CLEAR (64-bit widen, 2.3ms total) 替代 ARM 端
+     * memset 整 ring (25ms). 完全节省 — HLS 跟 ARM 并行, ARM 这边只跑
+     * scale-blit + flush. */
 
     /* Diagnostic every 128 frames: print what IP actually sees */
     static u32 dbg = 0;

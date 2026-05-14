@@ -3,8 +3,8 @@
   "ip_inst": {
     "xci_name": "hello_zynq_pov_project_batch_0_0",
     "cell_name": "pov_project_batch_0",
-    "component_reference": "povlab:user:pov_project_batch:1.2",
-    "ip_revision": "2114608969",
+    "component_reference": "povlab:user:pov_project_batch:1.4",
+    "ip_revision": "2114609006",
     "gen_directory": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_pov_project_batch_0_0",
     "parameters": {
       "component_parameters": {
@@ -22,7 +22,7 @@
         "C_M_AXI_GMEM0_CACHE_VALUE": [ { "value": "\"0011\"", "resolve_type": "user", "format": "bitString", "usage": "all" } ],
         "C_M_AXI_GMEM1_ENABLE_ID_PORTS": [ { "value": "true", "resolve_type": "user", "format": "bool", "usage": "all" } ],
         "C_M_AXI_GMEM1_ID_WIDTH": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
-        "C_M_AXI_GMEM1_DATA_WIDTH": [ { "value": "32", "resolve_type": "user", "format": "long", "usage": "all" } ],
+        "C_M_AXI_GMEM1_DATA_WIDTH": [ { "value": "32", "value_src": "user", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "C_M_AXI_GMEM1_ENABLE_USER_PORTS": [ { "value": "false", "resolve_type": "user", "format": "bool", "usage": "all" } ],
         "C_M_AXI_GMEM1_AWUSER_WIDTH": [ { "value": "1", "resolve_type": "user", "format": "long", "enabled": false, "usage": "all" } ],
         "C_M_AXI_GMEM1_WUSER_WIDTH": [ { "value": "1", "resolve_type": "user", "format": "long", "enabled": false, "usage": "all" } ],
@@ -36,8 +36,8 @@
         "clk_period": [ { "value": "6.67", "enabled": false, "usage": "all" } ],
         "machine": [ { "value": "64", "enabled": false, "usage": "all" } ],
         "combinational": [ { "value": "0", "enabled": false, "usage": "all" } ],
-        "latency": [ { "value": "2838384", "enabled": false, "usage": "all" } ],
-        "II": [ { "value": "2838385 ~ 31128873", "enabled": false, "usage": "all" } ]
+        "latency": [ { "value": "434304", "enabled": false, "usage": "all" } ],
+        "II": [ { "value": "434305 ~ 28724793", "enabled": false, "usage": "all" } ]
       },
       "model_parameters": {
         "C_S_AXI_CONTROL_ADDR_WIDTH": [ { "value": "7", "resolve_type": "generated", "format": "long", "usage": "all" } ],
@@ -80,7 +80,7 @@
       },
       "runtime_parameters": {
         "IPCONTEXT": [ { "value": "IP_Integrator" } ],
-        "IPREVISION": [ { "value": "2114608969" } ],
+        "IPREVISION": [ { "value": "2114609006" } ],
         "MANAGED": [ { "value": "TRUE" } ],
         "OUTPUTDIR": [ { "value": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_pov_project_batch_0_0" } ],
         "SELECTEDSIMMODEL": [ { "value": "" } ],

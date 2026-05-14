@@ -115,7 +115,7 @@ void pov_project_batch(
 #pragma HLS INTERFACE m_axi      port=model      offset=slave bundle=gmem0 depth=1024 \
     max_read_burst_length=64 num_read_outstanding=8
 #pragma HLS INTERFACE m_axi      port=ring_base  offset=slave bundle=gmem1 depth=3000000 \
-    max_write_burst_length=256 num_write_outstanding=8
+    max_write_burst_length=256 num_write_outstanding=8 max_widen_bitwidth=64
 #pragma HLS INTERFACE s_axilite  port=model              bundle=control
 #pragma HLS INTERFACE s_axilite  port=num_points         bundle=control
 #pragma HLS INTERFACE s_axilite  port=ring_base          bundle=control
@@ -158,15 +158,20 @@ SLICES_LOOP:
         const int16_t sn = POV_SIN8[angle];
         uint8_t *slot = ring_base + s * slot_bytes;
 
-        /* In-IP slot clear: 取代 ARM 端每帧 memset 整 ring (2.75MB, ~30ms).
-         * HLS m_axi 1 byte/cycle @ 150 MHz × 38160 byte/slot × 72 slots
-         * = 18 ms 总, 但 HLS 跟 ARM 并行所以 ARM 那 30ms 完全节省.
-         * SLOT_CLEAR loop, II=1 (max_widen_bitwidth 会推断 burst). */
+        /* In-IP slot clear via 64-bit casted writes: 8 byte/cycle bursts.
+         * 38160 bytes = 4770 × 8 byte (38160 == 4770×8 ✓). 72 slots × 4770
+         * cycles @ 150 MHz = 2.3 ms total (vs byte-store 18 ms).
+         * slot_bytes 实际固定 38160 = 8 倍数, slot 起点 ring_base+s*slot_bytes
+         * 也 8-byte 对齐 (0x12000000 + 38160×s 全 8-byte 倍数). */
+        {
+            unsigned long long *slot64 = (unsigned long long *)slot;
+            const int slot_bytes_64 = 4770;  /* 38160 / 8 */
 SLOT_CLEAR:
-        for (int b = 0; b < slot_bytes; b++) {
-#pragma HLS LOOP_TRIPCOUNT min=38160 max=38160
+            for (int b = 0; b < slot_bytes_64; b++) {
+#pragma HLS LOOP_TRIPCOUNT min=4770 max=4770
 #pragma HLS PIPELINE II=1
-            slot[b] = 0;
+                slot64[b] = 0ULL;
+            }
         }
 
 POINTS_IN_SLICE:

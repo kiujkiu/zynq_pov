@@ -2246,11 +2246,16 @@
         "inst_hier_path": "proc_sys_reset_pov"
       },
       "pov_project_batch_0": {
-        "vlnv": "povlab:user:pov_project_batch:1.2",
-        "ip_revision": "2114608969",
+        "vlnv": "povlab:user:pov_project_batch:1.4",
+        "ip_revision": "2114609006",
         "xci_name": "hello_zynq_pov_project_batch_0_0",
         "xci_path": "ip\\hello_zynq_pov_project_batch_0_0\\hello_zynq_pov_project_batch_0_0.xci",
         "inst_hier_path": "pov_project_batch_0",
+        "parameters": {
+          "C_M_AXI_GMEM1_DATA_WIDTH": {
+            "value": "32"
+          }
+        },
         "interface_ports": {
           "m_axi_gmem0": {
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",

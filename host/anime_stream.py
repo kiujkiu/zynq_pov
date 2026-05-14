@@ -31,21 +31,26 @@ class TcpAsSerial:
     def __init__(self, host, port, timeout=0):
         self.sock = socket.create_connection((host, port), timeout=5)
         self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        # timeout=0 → non-blocking read used by drain_rx
-        self.sock.settimeout(0.001)
+        # Connect timeout done; switch to blocking write + non-blocking read.
+        self.sock.setblocking(True)
         self._host = host
         self._port = port
 
     def write(self, data):
-        return self.sock.sendall(data) or len(data)
+        self.sock.sendall(data)
+        return len(data)
 
     def read(self, n):
+        # Non-blocking read for drain_rx — return b"" if no data
+        self.sock.setblocking(False)
         try:
             return self.sock.recv(n)
-        except (socket.timeout, BlockingIOError):
+        except (BlockingIOError, socket.timeout):
             return b""
         except OSError:
             return b""
+        finally:
+            self.sock.setblocking(True)
 
     def close(self):
         try: self.sock.close()

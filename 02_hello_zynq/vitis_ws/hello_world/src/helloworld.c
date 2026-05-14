@@ -2330,9 +2330,12 @@ int main(void)
                             p[n*3+0] = c0; p[n*3+1] = c1; p[n*3+2] = c2;
                         }
                     }
-                    /* Flush 中心 BLIT 区域 only — 边界已 boot-cleared, 不动 */
-                    Xil_DCacheFlushRange((UINTPTR)dst_line, BLIT_BYTES_PER_ROW);
                 }
+                /* Batch flush 整 fb 一次代替 720 次 per-row flush. boundary
+                 * 区域是 clean (boot-only memset), 不会触发 write-back; 只 dirty
+                 * 中心 BLIT cache line 被写到 DDR. 实测 720× function call cost
+                 * 占 main-loop 显著时间. */
+                Xil_DCacheFlushRange(fb_t, HEIGHT * STRIDE);
             }
             /* DEBUG: ring nonzero + fb boundary stale detector. 每 64 帧扫描
              * fb_A 在 scale-blit 写区外的 row 354 段是否有非零 (应该全 0). */

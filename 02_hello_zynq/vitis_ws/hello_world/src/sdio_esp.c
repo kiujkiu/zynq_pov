@@ -503,11 +503,12 @@ int sdio_esp_init(void)
      * link D2/D3 已经从 USB-JTAG 让出 (PnP 不见 ESP32 内置 USB device),
      * slave 端 SDIO_SLAVE_FLAG_INTERNAL_PULLUP 已开. */
 #ifndef SDIO_ESP_USE_4BIT
-#define SDIO_ESP_USE_4BIT 1
+/* 4-bit 飞线 25 MHz / 12.5 MHz 都看到 HDMI 散点 (随机 bit-flip), 退回 1-bit.
+ * SDIO 物理利用率本就远低于 1.3%, 1-bit 25 MHz 跟 4-bit 同样 ~160 KB/s 实测,
+ * 没收益就稳定优先. */
+#define SDIO_ESP_USE_4BIT 0
 #endif
 #ifndef SDIO_ESP_CLK_DIV
-/* Try 4-bit @ 25 MHz (100 Mbps theoretical). Falls back via signal-quality
- * fail mode: CMD53 corrupts controller → recover via SW reset path. */
 #define SDIO_ESP_CLK_DIV 0x01  /* 0x01→25MHz, 0x02→12.5MHz, 0x04→6.25MHz */
 #endif
 

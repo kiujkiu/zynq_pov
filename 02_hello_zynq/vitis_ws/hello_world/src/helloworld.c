@@ -2465,9 +2465,17 @@ int main(void)
             } else
 #endif
             {
+                /* HDMI demo speed-up: scale-blit only the fb VDMA isn't reading
+                 * (write_idx, alternated each iter). Was both fbs (=25ms);
+                 * now 1 fb = ~12.5ms saving. VDMA cycles read between fbs,
+                 * we always have fresh frame on next VDMA swap. */
+#if HDMI_DEMO_N_SLOTS == 1
+                cpu_scale_blit_one_fb(fb_bufs[write_idx], src_slot, S3D_OFF_X, S3D_SCALE, 0);
+#else
                 for (int t = 0; t < 2; t++) {
                     cpu_scale_blit_one_fb(fb_bufs[t], src_slot, S3D_OFF_X, S3D_SCALE, 0);
                 }
+#endif
             }
             u64 ts_d = gt_read();
             /* Stage timing log (1Hz) */

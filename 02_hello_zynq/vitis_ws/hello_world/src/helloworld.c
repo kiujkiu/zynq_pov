@@ -2431,7 +2431,13 @@ int main(void)
         pov_render_frame_to_ring(phase);
         u64 ts_b = gt_read();
         {
+            /* HDMI demo: HLS only writes slot 0, so we only need to invalidate
+             * that single slot (38KB), not full ring (2.62MB). 4ms→0.06ms. */
+#if HDMI_DEMO_N_SLOTS == 1
+            Xil_DCacheInvalidateRange(RING_BUFFER_ADDR, SLOT_BYTES);
+#else
             Xil_DCacheInvalidateRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
+#endif
             u64 ts_c = gt_read();
             /* Single big 3D: pick one rotating slice, scale up 6×, center it.
              * SLICE_W=106 × 6 = 636 wide. SLICE_H=120 × 6 = 720 tall.

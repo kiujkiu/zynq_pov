@@ -409,9 +409,18 @@ static void server_task(void *pv) {
         size_t dflt_flush_pos = 0;
         int64_t t_first_us = esp_timer_get_time();
         int64_t t_last_log_us = t_first_us;
+        /* per-stage timing accumulators (1Hz log) */
+        int64_t prof_recv_us = 0, prof_pass_us = 0, prof_sdio_us = 0;
+        uint32_t prof_iter = 0;
+        size_t prof_recv_bytes = 0, prof_sdio_bytes = 0;
         for (;;) {
+            int64_t t_recv_a = esp_timer_get_time();
             int n = recv(client_fd, rx_buf, sizeof(rx_buf), 0);
+            int64_t t_recv_b = esp_timer_get_time();
             if (n <= 0) break;
+            prof_recv_us += (t_recv_b - t_recv_a);
+            prof_recv_bytes += n;
+            prof_iter++;
             const uint8_t *p = rx_buf;
             int rem = n;
 
@@ -533,9 +542,19 @@ static void server_task(void *pv) {
                         sent_b += n2;
                     }
                 } else {
+#ifndef BENCH_DISCARD_SDIO
+#define BENCH_DISCARD_SDIO 0
+#endif
+#if BENCH_DISCARD_SDIO
+                    /* Bench mode: discard incoming data, no SDIO write. Verifies
+                     * if it's the sdio_tx_bytes path itself (memcpy + send_queue)
+                     * that throttles BRIDGE compared to SINK. */
+                    (void)p; (void)rem;
+#else
                     /* Fallback: single-task direct sdio_tx with alignment */
                     static uint8_t pass_buf[8192];
                     static size_t  pass_pos = 0;
+                    int64_t t_pass_a = esp_timer_get_time();
                     size_t src_off = 0;
                     while (src_off < (size_t)rem && pass_pos < sizeof(pass_buf)) {
                         size_t take = (size_t)rem - src_off;
@@ -547,7 +566,11 @@ static void server_task(void *pv) {
                         src_off += take;
                         if (pass_pos >= sizeof(pass_buf)) {
                             size_t aligned = (pass_pos / 512) * 512;
+                            int64_t t_sdio_a = esp_timer_get_time();
                             sdio_tx_bytes(pass_buf, aligned);
+                            int64_t t_sdio_b = esp_timer_get_time();
+                            prof_sdio_us += (t_sdio_b - t_sdio_a);
+                            prof_sdio_bytes += aligned;
                             size_t left = pass_pos - aligned;
                             if (left > 0 && aligned > 0 && aligned < sizeof(pass_buf))
                                 memmove(pass_buf, pass_buf + aligned, left);
@@ -556,22 +579,44 @@ static void server_task(void *pv) {
                     }
                     if (pass_pos >= 512) {
                         size_t aligned = (pass_pos / 512) * 512;
+                        int64_t t_sdio_a = esp_timer_get_time();
                         sdio_tx_bytes(pass_buf, aligned);
+                        int64_t t_sdio_b = esp_timer_get_time();
+                        prof_sdio_us += (t_sdio_b - t_sdio_a);
+                        prof_sdio_bytes += aligned;
                         size_t left = pass_pos - aligned;
                         if (left > 0 && aligned > 0 && aligned < sizeof(pass_buf))
                             memmove(pass_buf, pass_buf + aligned, left);
                         pass_pos = left;
                     }
+                    int64_t t_pass_b = esp_timer_get_time();
+                    prof_pass_us += (t_pass_b - t_pass_a);
+#endif
                 }
             }
             total += n;
             int64_t now_us = esp_timer_get_time();
             if (now_us - t_last_log_us >= 1000000) {
                 int64_t dt_us = now_us - t_first_us;
+                int64_t win_us = now_us - t_last_log_us;
                 ESP_LOGI(TAG, "rx %u B in %lld us (%.1f KB/s, %s)",
                          (unsigned)total, dt_us,
                          (double)total / ((double)dt_us / 1e6) / 1024.0,
                          sink_mode ? "SINK" : (dflt_mode ? "DFLT" : "BRIDGE"));
+                if (prof_iter > 0) {
+                    /* Window-relative per-stage timing — % of last 1 second */
+                    int rcv_pct  = (int)(prof_recv_us * 100 / win_us);
+                    int pass_pct = (int)(prof_pass_us * 100 / win_us);
+                    int sdio_pct = (int)(prof_sdio_us * 100 / win_us);
+                    int idle_pct = 100 - rcv_pct - pass_pct;
+                    ESP_LOGI(TAG, "prof iter=%u recv=%d%% pass=%d%% (sdio=%d%%) idle=%d%% rx_avg=%uB sdio_avg=%uB",
+                             (unsigned)prof_iter, rcv_pct, pass_pct, sdio_pct, idle_pct,
+                             (unsigned)(prof_recv_bytes / prof_iter),
+                             (unsigned)(prof_iter ? prof_sdio_bytes / prof_iter : 0));
+                }
+                prof_iter = 0;
+                prof_recv_us = prof_pass_us = prof_sdio_us = 0;
+                prof_recv_bytes = prof_sdio_bytes = 0;
                 t_last_log_us = now_us;
             }
         }

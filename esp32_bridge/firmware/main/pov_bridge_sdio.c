@@ -172,7 +172,10 @@ static esp_err_t sdio_slave_setup(void) {
     /* Match IDF v6 SDIO slave example as closely as possible.
      * The example IS proven to work with Zynq host @ divisor=0xFF. */
     sdio_slave_config_t scfg = {
-        .sending_mode    = SDIO_SLAVE_SEND_PACKET,
+        /* STREAM mode: esp-hosted-mcu benchmarks 80 Mbps vs PACKET 33 Mbps
+         * (https://github.com/espressif/esp-hosted-mcu sdio.md). 我们 PACKET 模式
+         * 实测 ~1 Mbps. Stream 模式合并 packet boundary, 减少 SDIO 协议 overhead. */
+        .sending_mode    = SDIO_SLAVE_SEND_STREAM,
         .send_queue_size = SDIO_TX_BUF_NUM,
         .recv_buffer_size = SDIO_RX_BUF_SIZE,
         .event_cb        = NULL,
@@ -686,8 +689,17 @@ void app_main(void) {
     }
     ESP_ERROR_CHECK(ret);
 
-    /* SDIO slave first — Zynq may already be probing the card. */
+    /* SDIO slave first — Zynq may already be probing the card.
+     * BENCH_NO_SDIO=1 跳过 sdio_slave_setup, 用来基准 SINK mode (pure WiFi+TCP),
+     * 排除 SDIO slave init + DMA task 对 WiFi throughput 的影响. */
+#ifndef BENCH_NO_SDIO
+#define BENCH_NO_SDIO 0
+#endif
+#if BENCH_NO_SDIO
+    ESP_LOGW(TAG, "BENCH_NO_SDIO=1: skipping SDIO init for pure WiFi benchmark");
+#else
     ESP_ERROR_CHECK(sdio_slave_setup());
+#endif
 
 #if 0  /* SDIO-only debug mode (set to 1 to skip WiFi for isolation testing) */
     ESP_LOGI(TAG, "[DEBUG] SDIO-only mode: WiFi disabled. Keeping main task alive.");
@@ -703,7 +715,9 @@ void app_main(void) {
      * RISC-V, 时间分片不并行, 实测 -50% (上下文切换开销 + stream cap 阻塞).
      * Revert single-task path, sdio_stream=NULL 让 server_task 走 fallback 直接
      * sdio_tx_bytes. drain task code 留作 future multi-core 芯片 reuse. */
+#if !BENCH_NO_SDIO
     xTaskCreate(sdio_rx_task, "sdio_rx", 4096, NULL, 6, NULL);
+#endif
     xTaskCreate(server_task,  "server",  16384, NULL, 5, NULL);  /* miniz inflate needs ~10K stack */
 
     /* Best-effort: wait briefly for IP for mdns/log. Don't block forever. */

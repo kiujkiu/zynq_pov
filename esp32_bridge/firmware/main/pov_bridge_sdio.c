@@ -39,6 +39,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/stream_buffer.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_netif.h"
@@ -226,6 +227,18 @@ static esp_err_t sdio_slave_setup(void) {
  * decompressor (32 KB dict + ~11 KB state). */
 #define SDIO_TX_PACKET   2048
 #define SDIO_TX_POOL_N   8
+
+/* Dual-task pipeline: server_task (recv from TCP) → sdio_stream (StreamBuffer)
+ * → sdio_drain_task (alignment + sdio_tx_bytes). 取代 single-thread serialize
+ * recv+tx cap ~100 KB/s, 让 recv 不被 sdio_tx 阻塞.
+ *
+ * Stream buffer size 128 KB: 跟 ESP32 SDIO TX ring 64KB + 一帧 30K compressed
+ * 150KB 同量级, 一帧能基本 fit. recv_task push 满 stream → block on send;
+ * 仍是 backpressure 但 decoupled from sdio_tx 实际推送时间. */
+static StreamBufferHandle_t sdio_stream = NULL;
+#define SDIO_STREAM_SIZE   (32 * 1024)  /* heap tight (ESP32-C5 173KB free); 32KB fits + 一帧 30K compressed=150KB 时 PC sendall backpressure 自动调度 */
+#define SDIO_STREAM_TRIG   512  /* xStreamBufferReceive wakes when ≥ this many bytes */
+
 static int sdio_tx_bytes(const uint8_t *buf, size_t len) {
     static uint8_t tx_pool[SDIO_TX_POOL_N][SDIO_TX_PACKET] __attribute__((aligned(4)));
     static int     tx_idx = 0;
@@ -249,6 +262,63 @@ static int sdio_tx_bytes(const uint8_t *buf, size_t len) {
     }
     while (sdio_slave_send_get_finished(&finished_arg, 0) == ESP_OK) { }
     return (int)len;
+}
+
+/* ------------------------------------------------------------------ */
+/* SDIO drain task: pop bytes from sdio_stream, accumulate to 512B    */
+/* multiple in pass_buf, sdio_tx_bytes. Decouples recv (server_task)  */
+/* from SDIO push, so PC TCP can sustain WiFi link speed while SDIO   */
+/* drains at its own pace into 64KB ring buffer.                      */
+/* ------------------------------------------------------------------ */
+static void sdio_drain_task(void *pv) {
+    static uint8_t scratch[8192];   /* read chunks from stream */
+    static uint8_t pass_buf[8192];  /* 512B alignment buffer */
+    size_t pass_pos = 0;
+    ESP_LOGI(TAG, "sdio_drain_task started");
+    while (1) {
+        size_t n = xStreamBufferReceive(sdio_stream, scratch, sizeof(scratch),
+                                        pdMS_TO_TICKS(100));
+        if (n == 0) {
+            /* Timeout — flush whatever 512-multiple we have */
+            if (pass_pos >= 512) {
+                size_t aligned = (pass_pos / 512) * 512;
+                sdio_tx_bytes(pass_buf, aligned);
+                size_t left = pass_pos - aligned;
+                if (left > 0 && aligned < sizeof(pass_buf))
+                    memmove(pass_buf, pass_buf + aligned, left);
+                pass_pos = left;
+            }
+            continue;
+        }
+        /* Append n bytes to pass_buf, flush 512-multiples eagerly */
+        size_t src_off = 0;
+        while (src_off < n) {
+            size_t cap = sizeof(pass_buf) - pass_pos;
+            size_t take = n - src_off;
+            if (take > cap) take = cap;
+            if (take == 0) break;
+            memcpy(pass_buf + pass_pos, scratch + src_off, take);
+            pass_pos += take;
+            src_off += take;
+            if (pass_pos >= sizeof(pass_buf)) {
+                size_t aligned = (pass_pos / 512) * 512;
+                sdio_tx_bytes(pass_buf, aligned);
+                size_t left = pass_pos - aligned;
+                if (left > 0 && aligned > 0 && aligned < sizeof(pass_buf))
+                    memmove(pass_buf, pass_buf + aligned, left);
+                pass_pos = left;
+            }
+        }
+        /* Eager flush of complete 512-blocks while still > 512 in pass_buf */
+        if (pass_pos >= 512) {
+            size_t aligned = (pass_pos / 512) * 512;
+            sdio_tx_bytes(pass_buf, aligned);
+            size_t left = pass_pos - aligned;
+            if (left > 0 && aligned > 0 && aligned < sizeof(pass_buf))
+                memmove(pass_buf, pass_buf + aligned, left);
+            pass_pos = left;
+        }
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -440,46 +510,51 @@ static void server_task(void *pv) {
                     if (st == TINFL_STATUS_NEEDS_MORE_INPUT && in_consumed == 0) break;
                 }
             } else if (!sink_mode && rem > 0) {
-                /* Passthrough alignment: SDIO slave pads non-512-multiple writes
-                 * with zeros — corrupts the wire stream (Zynq PPCL parser then
-                 * mis-aligns 5B/16B point boundaries). 累积到 512 倍数才 tx,
-                 * 跟 DFLT mode 一样防 padding. 末尾不足 512B 留到下次 recv 拼. */
-                /* 8KB sweet spot — 试过 64KB 反而慢 2.3x (alignment 累积时间
-                 * 让 socket recv 阻塞过久, TCP window 0 → PC 阻塞). */
-                static uint8_t pass_buf[8192];
-                static size_t  pass_pos = 0;
-                size_t src_off = 0;
-                while (src_off < (size_t)rem && pass_pos < sizeof(pass_buf)) {
-                    size_t take = (size_t)rem - src_off;
-                    size_t cap  = sizeof(pass_buf) - pass_pos;
-                    if (take > cap) take = cap;
-                    if (take == 0) break;
-                    memcpy(pass_buf + pass_pos, p + src_off, take);
-                    pass_pos += take;
-                    src_off += take;
-                    if (pass_pos >= sizeof(pass_buf)) {
-                        size_t aligned = (pass_pos / 512) * 512;
-                        if (sdio_tx_bytes(pass_buf, aligned) < 0) {
-                            ESP_LOGW(TAG, "SDIO TX failed (passthrough aligned)");
+                /* Dual-task: push to sdio_stream, sdio_drain_task handles
+                 * alignment + sdio_tx_bytes. Decouples recv from SDIO push.
+                 * Block if stream buffer full (= backpressure to TCP).
+                 * Null fallback: stream-buffer alloc failed → direct sdio_tx. */
+                if (sdio_stream) {
+                    size_t sent_b = 0;
+                    while (sent_b < (size_t)rem) {
+                        size_t n2 = xStreamBufferSend(sdio_stream,
+                                                      p + sent_b, (size_t)rem - sent_b,
+                                                      pdMS_TO_TICKS(500));
+                        if (n2 == 0) {
+                            ESP_LOGW(TAG, "sdio_stream send timeout (%u left)",
+                                     (unsigned)((size_t)rem - sent_b));
                             break;
                         }
-                        size_t left = pass_pos - aligned;
-                        if (left > 0 && aligned > 0 && aligned < sizeof(pass_buf)) {
-                            memmove(pass_buf, pass_buf + aligned, left);
-                        }
-                        pass_pos = left;
+                        sent_b += n2;
                     }
-                }
-                /* Flush whatever 512-multiple we have so far */
-                if (pass_pos >= 512) {
-                    size_t aligned = (pass_pos / 512) * 512;
-                    if (sdio_tx_bytes(pass_buf, aligned) < 0) {
-                        ESP_LOGW(TAG, "SDIO TX failed (passthrough flush)");
-                    } else {
-                        size_t left = pass_pos - aligned;
-                        if (left > 0 && aligned > 0 && aligned < sizeof(pass_buf)) {
-                            memmove(pass_buf, pass_buf + aligned, left);
+                } else {
+                    /* Fallback: single-task direct sdio_tx with alignment */
+                    static uint8_t pass_buf[8192];
+                    static size_t  pass_pos = 0;
+                    size_t src_off = 0;
+                    while (src_off < (size_t)rem && pass_pos < sizeof(pass_buf)) {
+                        size_t take = (size_t)rem - src_off;
+                        size_t cap  = sizeof(pass_buf) - pass_pos;
+                        if (take > cap) take = cap;
+                        if (take == 0) break;
+                        memcpy(pass_buf + pass_pos, p + src_off, take);
+                        pass_pos += take;
+                        src_off += take;
+                        if (pass_pos >= sizeof(pass_buf)) {
+                            size_t aligned = (pass_pos / 512) * 512;
+                            sdio_tx_bytes(pass_buf, aligned);
+                            size_t left = pass_pos - aligned;
+                            if (left > 0 && aligned > 0 && aligned < sizeof(pass_buf))
+                                memmove(pass_buf, pass_buf + aligned, left);
+                            pass_pos = left;
                         }
+                    }
+                    if (pass_pos >= 512) {
+                        size_t aligned = (pass_pos / 512) * 512;
+                        sdio_tx_bytes(pass_buf, aligned);
+                        size_t left = pass_pos - aligned;
+                        if (left > 0 && aligned > 0 && aligned < sizeof(pass_buf))
+                            memmove(pass_buf, pass_buf + aligned, left);
                         pass_pos = left;
                     }
                 }
@@ -624,6 +699,10 @@ void app_main(void) {
      * Office AP "undef" drops STA every ~10s before GOT_IP fires reliably,
      * so blocking here means listener never starts. lwIP accepts the bind/listen
      * even before DHCP completes; SYN packets get processed once IP is bound. */
+    /* Dual-task 试过 (sdio_stream 32KB + sdio_drain_task) — ESP32-C5 single-core
+     * RISC-V, 时间分片不并行, 实测 -50% (上下文切换开销 + stream cap 阻塞).
+     * Revert single-task path, sdio_stream=NULL 让 server_task 走 fallback 直接
+     * sdio_tx_bytes. drain task code 留作 future multi-core 芯片 reuse. */
     xTaskCreate(sdio_rx_task, "sdio_rx", 4096, NULL, 6, NULL);
     xTaskCreate(server_task,  "server",  16384, NULL, 5, NULL);  /* miniz inflate needs ~10K stack */
 

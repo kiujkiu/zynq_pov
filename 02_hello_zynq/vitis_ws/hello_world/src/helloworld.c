@@ -1068,7 +1068,13 @@ static void pov_render_frame_to_ring(u32 phase)
     pov_w(BATCH_SLOT_BYTES,  SLOT_BYTES);
     pov_w(BATCH_SLOT_STRIDE, SLICE_W * 3);
     pov_w(BATCH_PHASE,       test_phase);
-    pov_w(BATCH_N_SLOTS,     N_SLOTS);
+    /* HDMI demo: 只需要当前 phase 1 个 slot, 不是 72. HLS render time
+     * scales linearly with n_slots, 1/72 时间 → 30+ fps capable.
+     * 真 POV 显示要 72 slot, 那时改回 N_SLOTS. */
+#ifndef HDMI_DEMO_N_SLOTS
+#define HDMI_DEMO_N_SLOTS 1
+#endif
+    pov_w(BATCH_N_SLOTS,     HDMI_DEMO_N_SLOTS);
 
     /* v1.7 HLS 内部 BRAM slot_local 自己 clear, ARM 不再 memset/flush ring. */
     u64 tm0 = gt_read();
@@ -2377,7 +2383,23 @@ int main(void)
     }
 #endif
 
+    /* Full main-loop iter timing */
+    u64 mloop_t_prev = gt_read();
+    u64 mloop_sum = 0;
+    u32 mloop_cnt = 0;
+    u64 mloop_last_log = mloop_t_prev;
     while (1) {
+        u64 mloop_t_now = gt_read();
+        mloop_sum += (mloop_t_now - mloop_t_prev);
+        mloop_cnt++;
+        if (mloop_t_now - mloop_last_log >= (u64)GT_TICKS_PER_US * 1000000ULL) {
+            u32 avg_us = (u32)((mloop_sum / mloop_cnt) / GT_TICKS_PER_US);
+            xil_printf("[mloop n=%u] avg_iter_us=%u (%.2f fps)\r\n",
+                       (unsigned)mloop_cnt, avg_us, (double)1000000.0 / avg_us);
+            mloop_sum = 0; mloop_cnt = 0; mloop_last_log = mloop_t_now;
+        }
+        mloop_t_prev = mloop_t_now;
+
         int got_frame = uart_poll_frame();
         if (got_frame) {
             stream_frames++;
@@ -2417,7 +2439,9 @@ int main(void)
             const int S3D_SCALE = 6;
             const int S3D_VIEW_W = SLICE_W * S3D_SCALE;       /* 636 */
             const int S3D_OFF_X  = (WIDTH - S3D_VIEW_W) / 2;  /* 322 */
-            int slot_pick = (frame / 4) % N_SLOTS;
+            /* HDMI demo: HLS only fills slot 0 (HDMI_DEMO_N_SLOTS=1), phase
+             * controls angle. Always scale-blit slot 0. */
+            int slot_pick = (HDMI_DEMO_N_SLOTS == 1) ? 0 : (frame / 4) % N_SLOTS;
             const u8 *src_slot = (const u8 *)(RING_BUFFER_ADDR + slot_pick * SLOT_BYTES);
 
             /* Always write BOTH fbs: VDMA circular cycle is unreliable across
@@ -2625,19 +2649,10 @@ int main(void)
         }
 #endif
 
-        /* Pure circular VDMA: auto-cycles fbs[0] ↔ fbs[1] at vsync.
-         * 撕裂修复: 等 VDMA 翻到我们刚写的 buffer (write_idx), 然后下一轮
-         * 写另一块. 这样保证 ARM 永远写的是 VDMA "不在读" 的 buffer.
-         * 当 render <16.6ms 时与原 ^=1 等价; render >16.6ms 时仍可能撕裂
-         * (单帧内 vsync 翻到我们半成品 fb), 但避免了 race 后选错 buffer. */
-        u32 target = write_idx;
-        for (u32 wait = 0; wait < 600000; wait++) {
-            if (vdma_current_read_idx() == target) break;
-            if ((wait & 0xFF) == 0) uart_poll_frame();
-        }
-        /* 直接按当前 cur 选下一块: 1 - cur 永远是 VDMA 不在读的那块.
-         * 即使 wait 超时 cur 卡住, 1-cur 仍是合法选择 (写入未被读的 buffer). */
-        write_idx = 1 - vdma_current_read_idx();
+        /* HDMI demo mode: skip VDMA sync wait (was 250+ ms cap when VDMA
+         * not cycling). With scale-blit writing BOTH fb_A + fb_B each frame,
+         * VDMA always reads valid data regardless. Direct toggle. */
+        write_idx = 1 - write_idx;
 
         frame++;
         /* Slow rotation: advance phase only every 3 frames. */

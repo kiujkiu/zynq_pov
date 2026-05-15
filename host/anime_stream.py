@@ -16,8 +16,9 @@ import math
 import time
 import sys
 import argparse
+import numpy as np
 
-from pointcloud_proto import pack_frame
+from pointcloud_proto import pack_frame, pack_frame_np
 from mesh_to_points import sample_mesh
 from glb_to_points import sample_glb
 
@@ -81,6 +82,31 @@ def animate(pts, t, y_rotate_period=4.0, rotate=True):
     return out
 
 
+def animate_np(pts_np, t, y_rotate_period=4.0, rotate=True):
+    """numpy vectorized animate. pts_np is (N, 6) int16 array of (x,y,z,r,g,b).
+    Returns (N, 6) int16 array. 30-100x faster than Python loop for 30K pts."""
+    if rotate:
+        ang = t * 2.0 * math.pi / y_rotate_period
+        ca = math.cos(ang); sa = math.sin(ang)
+    else:
+        ca = 1.0; sa = 0.0
+    scale = 1.0 + 0.05 * math.sin(t * 2.0 * math.pi / 3.0)
+    y_offset = 3.0 * math.sin(t * 2.0 * math.pi / 2.0)
+
+    xs = pts_np[:, 0].astype(np.float32)
+    ys = pts_np[:, 1].astype(np.float32)
+    zs = pts_np[:, 2].astype(np.float32)
+    rx = xs * ca - zs * sa
+    rz = xs * sa + zs * ca
+    nx = np.clip((rx * scale).astype(np.int32), -127, 127)
+    ny = np.clip((ys + y_offset).astype(np.int32), -127, 127)
+    nz = np.clip((rz * scale).astype(np.int32), -127, 127)
+    out = np.empty_like(pts_np)
+    out[:, 0] = nx; out[:, 1] = ny; out[:, 2] = nz
+    out[:, 3:] = pts_np[:, 3:]
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("mesh_path", nargs="?", default=None,
@@ -132,6 +158,10 @@ def main():
         return
     print(f"[anime] sampled {len(base_pts)} points")
 
+    # numpy fastpath: convert base_pts list to (N, 6) int16 array once
+    base_pts_np = np.array(base_pts, dtype=np.int16)
+    print(f"[anime] numpy array shape={base_pts_np.shape} dtype={base_pts_np.dtype}")
+
     if args.host:
         ser = TcpAsSerial(args.host, args.tcp_port)
         print(f"[anime] opened TCP {args.host}:{args.tcp_port}")
@@ -158,15 +188,15 @@ def main():
     try:
         while True:
             t = time.time() - t0
-            pts = animate(base_pts, t, rotate=not args.no_rotate)
+            pts_np = animate_np(base_pts_np, t, rotate=not args.no_rotate)
             if fid == 0:
-                p0 = pts[0]
+                p0 = pts_np[0]
                 print(f"[DEBUG] first point: x={p0[0]} y={p0[1]} z={p0[2]} "
                       f"r={p0[3]} g={p0[4]} b={p0[5]}")
-            buf = pack_frame(fid, pts, compressed=args.compressed)
+            buf = pack_frame_np(fid, pts_np, compressed=args.compressed)
             ser.write(buf)
             if fid % 5 == 0:
-                print(f"[anime] frame {fid}  {len(pts)} pts  {len(buf)} B  t={t:.1f}s")
+                print(f"[anime] frame {fid}  {pts_np.shape[0]} pts  {len(buf)} B  t={t:.1f}s")
             fid += 1
             drain_rx()
             if args.count and fid >= args.count:

@@ -33,8 +33,8 @@ csynth_design
 
 puts "== EXPORT RTL AS IP =="
 export_design -format ip_catalog -output pov_project_ip.zip \
-              -description "POV 3D projection engine v1.6: POINTS_IN_SLICE 6-byte row write + max_widen=64, no in-IP clear (ARM memset)" \
-              -vendor povlab -library user -version 1.6 \
+              -description "POV 3D projection engine v1.7: BRAM slot buffer + burst write to DDR (target 30 fps × 30K compressed)" \
+              -vendor povlab -library user -version 1.7 \
               -display_name "POV Project Engine"
 
 puts "DONE. See proj_pov/solution1/impl/ for IP package."

@@ -147,25 +147,44 @@ LOAD_MODEL:
     const int cx = SLICE_W / 2;
     const int cy = SLICE_H / 2;
 
+    /* v1.7: BRAM slot buffer + burst write. Architecture:
+     *   1) Local 38KB slot_local[] in BRAM, ARRAY_PARTITION cyclic factor=6
+     *      → 6 separate BRAMs, 1 byte each in row[0..5] writes to different
+     *      partition → 6 parallel writes/cycle, II=2 for 2-row 12B/point.
+     *   2) Project all points to slot_local (BRAM only, no m_axi contention).
+     *   3) Burst-write slot_local to DDR via m_axi widened=64 (8 byte/cycle).
+     *      4770 cycles per slot burst.
+     *   Total per slot: ~(num_points × 2 + 4770) cycles. 30K pts × 72 slot
+     *   = 30000 × 2 × 72 + 4770 × 72 = 4.32M + 0.34M = 4.66M cycle = 31 ms.
+     *   vs v1.6 II=12: 30000 × 12 × 72 = 25.9M cycles = 173 ms estimate,
+     *   actual hardware 1.39 sec. Expected 30+ fps render after this change. */
+    static const int SLOT_BYTES_MAX = SLICE_W * SLICE_H * 3;
+    /* 38160 byte slot, partition cyclic 6 way 让 6 个连续 byte 同 cycle 写不同 BRAM */
+    uint8_t slot_local[SLOT_BYTES_MAX];
+#pragma HLS ARRAY_PARTITION variable=slot_local cyclic factor=6
+
 SLICES_LOOP:
     for (int s = 0; s < n_slots; s++) {
 #pragma HLS LOOP_TRIPCOUNT min=72 max=72
-        /* Use explicit modulo — HLS synthesis of while-loop reduction has
-         * been seen to compile weirdly on hardware. */
         int angle = (phase + s) % NUM_ANGLES;
         if (angle < 0) angle += NUM_ANGLES;
         const int16_t cs = POV_COS8[angle];
         const int16_t sn = POV_SIN8[angle];
-        uint8_t *slot = ring_base + s * slot_bytes;
+        uint8_t *slot_ddr = ring_base + s * slot_bytes;
 
-        /* v1.4 加 SLOT_CLEAR 64-bit cast 让 HDMI 满屏散点 — POINTS_IN_SLICE
-         * 跟 SLOT_CLEAR 共享 gmem1 m_axi, 64-bit cast 让 AXI state corrupt
-         * 后续写错位. v1.5 删 SLOT_CLEAR, 回 ARM memset ring 做 clear. */
+        /* Phase 1: Clear local slot buffer (BRAM, parallel via partition) */
+SLOT_LOCAL_CLEAR:
+        for (int b = 0; b < SLOT_BYTES_MAX; b++) {
+#pragma HLS LOOP_TRIPCOUNT min=38160 max=38160
+#pragma HLS PIPELINE II=1
+            slot_local[b] = 0;
+        }
 
+        /* Phase 2: Project points into local slot BRAM. */
 POINTS_IN_SLICE:
         for (int i = 0; i < num_points; i++) {
 #pragma HLS LOOP_TRIPCOUNT min=100 max=MAX_BATCH_POINTS
-#pragma HLS PIPELINE II=1
+#pragma HLS PIPELINE II=2
             struct point_t p = local_model[i];
 
             int32_t rx_q = (int32_t)p.x * (int32_t)cs + (int32_t)p.z * (int32_t)sn;
@@ -177,11 +196,6 @@ POINTS_IN_SLICE:
 
             int sx = cx + (int)rx;
             int sy = cy - (int)p.y;
-
-            /* v1.6: clamp interior, write 6-byte row (2 pixels GBR GBR) per dy.
-             * max_widen=64 + 6-byte chunked write let HLS coalesce into 1 beat
-             * per row. Avoid v1.4 SLOT_CLEAR bug (separate loops state corruption);
-             * here only POINTS_IN_SLICE writes — no SLOT_CLEAR loop. */
             bool ok = in_slab && sx >= 0 && sx < SLICE_W - 1
                                 && sy >= 0 && sy < SLICE_H - 1;
             if (ok) {
@@ -192,13 +206,21 @@ POINTS_IN_SLICE:
                 for (int dy = 0; dy < 2; dy++) {
 #pragma HLS UNROLL
                     int off = (sy + dy) * slot_stride + sx * 3;
-ROW_WRITE_V16:
+ROW_WRITE_LOCAL:
                     for (int k = 0; k < 6; k++) {
 #pragma HLS UNROLL
-                        slot[off + k] = row[k];
+                        slot_local[off + k] = row[k];
                     }
                 }
             }
+        }
+
+        /* Phase 3: Burst-write slot_local (BRAM) to DDR via m_axi widened=64 */
+SLOT_BURST_WRITE:
+        for (int b = 0; b < SLOT_BYTES_MAX; b++) {
+#pragma HLS LOOP_TRIPCOUNT min=38160 max=38160
+#pragma HLS PIPELINE II=1
+            slot_ddr[b] = slot_local[b];
         }
     }
 }

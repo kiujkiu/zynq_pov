@@ -1070,14 +1070,10 @@ static void pov_render_frame_to_ring(u32 phase)
     pov_w(BATCH_PHASE,       test_phase);
     pov_w(BATCH_N_SLOTS,     N_SLOTS);
 
-    /* Clear ring buffer to black before HLS fire. v1.4 试过 in-IP SLOT_CLEAR
-     * 64-bit cast 让 POINTS_IN_SLICE state corrupt → HDMI 满屏散点.
-     * v1.5 删 in-IP clear, ARM memset 接回. */
+    /* v1.7 HLS 内部 BRAM slot_local 自己 clear, ARM 不再 memset/flush ring. */
     u64 tm0 = gt_read();
-    memset((void *)RING_BUFFER_ADDR, 0, N_SLOTS * SLOT_BYTES);
-    u64 tm1 = gt_read();
-    Xil_DCacheFlushRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
-    u64 tm2 = gt_read();
+    u64 tm1 = tm0;
+    u64 tm2 = tm0;
 
     /* Diagnostic every 128 frames: print what IP actually sees */
     static u32 dbg = 0;

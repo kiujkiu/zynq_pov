@@ -228,7 +228,9 @@ static esp_err_t sdio_slave_setup(void) {
 /* Non-blocking send_queue with small pool (8 × 2048 = 16 KB) — keeps
  * SDIO TX overlapping with WiFi RX, while leaving heap room for DFLT
  * decompressor (32 KB dict + ~11 KB state). */
-#define SDIO_TX_PACKET   2048
+/* 增大 SDIO TX 内部 pool 配合 STREAM mode 大 ring. 4092×16=65KB tx_pool 让
+ * heap 不够 WiFi 关联 fail. 折中 4092×8=32KB, 跟 SDIO ring 半 size. */
+#define SDIO_TX_PACKET   4092
 #define SDIO_TX_POOL_N   8
 
 /* Dual-task pipeline: server_task (recv from TCP) → sdio_stream (StreamBuffer)

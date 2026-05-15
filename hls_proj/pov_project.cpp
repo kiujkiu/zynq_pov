@@ -115,7 +115,7 @@ void pov_project_batch(
 #pragma HLS INTERFACE m_axi      port=model      offset=slave bundle=gmem0 depth=1024 \
     max_read_burst_length=64 num_read_outstanding=8
 #pragma HLS INTERFACE m_axi      port=ring_base  offset=slave bundle=gmem1 depth=3000000 \
-    max_write_burst_length=256 num_write_outstanding=8 max_widen_bitwidth=64
+    max_write_burst_length=256 num_write_outstanding=16 max_widen_bitwidth=64
 #pragma HLS INTERFACE s_axilite  port=model              bundle=control
 #pragma HLS INTERFACE s_axilite  port=num_points         bundle=control
 #pragma HLS INTERFACE s_axilite  port=ring_base          bundle=control
@@ -158,21 +158,9 @@ SLICES_LOOP:
         const int16_t sn = POV_SIN8[angle];
         uint8_t *slot = ring_base + s * slot_bytes;
 
-        /* In-IP slot clear via 64-bit casted writes: 8 byte/cycle bursts.
-         * 38160 bytes = 4770 × 8 byte (38160 == 4770×8 ✓). 72 slots × 4770
-         * cycles @ 150 MHz = 2.3 ms total (vs byte-store 18 ms).
-         * slot_bytes 实际固定 38160 = 8 倍数, slot 起点 ring_base+s*slot_bytes
-         * 也 8-byte 对齐 (0x12000000 + 38160×s 全 8-byte 倍数). */
-        {
-            unsigned long long *slot64 = (unsigned long long *)slot;
-            const int slot_bytes_64 = 4770;  /* 38160 / 8 */
-SLOT_CLEAR:
-            for (int b = 0; b < slot_bytes_64; b++) {
-#pragma HLS LOOP_TRIPCOUNT min=4770 max=4770
-#pragma HLS PIPELINE II=1
-                slot64[b] = 0ULL;
-            }
-        }
+        /* v1.4 加 SLOT_CLEAR 64-bit cast 让 HDMI 满屏散点 — POINTS_IN_SLICE
+         * 跟 SLOT_CLEAR 共享 gmem1 m_axi, 64-bit cast 让 AXI state corrupt
+         * 后续写错位. v1.5 删 SLOT_CLEAR, 回 ARM memset ring 做 clear. */
 
 POINTS_IN_SLICE:
         for (int i = 0; i < num_points; i++) {
@@ -190,19 +178,24 @@ POINTS_IN_SLICE:
             int sx = cx + (int)rx;
             int sy = cy - (int)p.y;
 
-            if (in_slab && sx >= 0 && sx < SLICE_W && sy >= 0 && sy < SLICE_H) {
+            /* v1.6: clamp interior, write 6-byte row (2 pixels GBR GBR) per dy.
+             * max_widen=64 + 6-byte chunked write let HLS coalesce into 1 beat
+             * per row. Avoid v1.4 SLOT_CLEAR bug (separate loops state corruption);
+             * here only POINTS_IN_SLICE writes — no SLOT_CLEAR loop. */
+            bool ok = in_slab && sx >= 0 && sx < SLICE_W - 1
+                                && sy >= 0 && sy < SLICE_H - 1;
+            if (ok) {
+                uint8_t row[6];
+#pragma HLS ARRAY_PARTITION variable=row complete
+                row[0] = p.g; row[1] = p.b; row[2] = p.r;
+                row[3] = p.g; row[4] = p.b; row[5] = p.r;
                 for (int dy = 0; dy < 2; dy++) {
-                    for (int dx = 0; dx < 2; dx++) {
 #pragma HLS UNROLL
-                        int px = sx + dx;
-                        int py = sy + dy;
-                        if (px < SLICE_W && py < SLICE_H) {
-                            int off = py * slot_stride + px * 3;
-                            /* HDMI fb 字节序 = GBR */
-                            slot[off + 0] = p.g;
-                            slot[off + 1] = p.b;
-                            slot[off + 2] = p.r;
-                        }
+                    int off = (sy + dy) * slot_stride + sx * 3;
+ROW_WRITE_V16:
+                    for (int k = 0; k < 6; k++) {
+#pragma HLS UNROLL
+                        slot[off + k] = row[k];
                     }
                 }
             }

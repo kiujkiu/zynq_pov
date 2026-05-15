@@ -437,9 +437,8 @@ static int uart_poll_frame(void)
 
     /* SDIO bulk fast path: when receiving RAW points (16B/pt), bypass the
      * byte-by-byte parser and memcpy whole-point chunks straight from
-     * sdio_rx_buf into model[]. Header (RX_HDR) + non-raw payloads still
-     * use the byte path below. Empirically 30-50x faster than parser for
-     * large RAW frames (30K pts × 16B = 480KB, byte loop CPU-bound). */
+     * sdio_rx_buf into model[]. Header (RX_HDR) + sparse_voxel + mesh still
+     * use the byte path below. */
     while (sdio_bridge_active && rx_state == RX_PTS && rx_pts_got == 0
            && rx_expected_pts > 0 && !rx_is_mesh
            && (rx_flags & (PC_FLAG_COMPRESSED | PC_FLAG_SPARSE_VOXEL)) == 0) {
@@ -471,9 +470,63 @@ static int uart_poll_frame(void)
         }
     }
 
+    /* SDIO bulk fast path for COMPRESSED (5B/pt): bulk-decode chunks of
+     * sdio_rx_buf to model[]. 30K pts at byte-parse = 30K × ~10us = 300ms
+     * per frame; this loop tight body ~1us/pt = 30ms per frame. */
+    while (sdio_bridge_active && rx_state == RX_PTS && rx_pts_got == 0
+           && rx_expected_pts > 0 && !rx_is_mesh
+           && (rx_flags & PC_FLAG_COMPRESSED) != 0
+           && (rx_flags & PC_FLAG_SPARSE_VOXEL) == 0) {
+        if (sdio_rx_head == sdio_rx_tail) {
+            if (!sdio_rx_refill_nonblock()) break;
+        }
+        u32 buf_avail   = sdio_rx_tail - sdio_rx_head;
+        u32 pts_remain  = rx_expected_pts - rx_pts_done;
+        u32 bytes_need  = pts_remain * PC_POINT_LEN_COMP;
+        u32 to_copy     = (buf_avail < bytes_need) ? buf_avail : bytes_need;
+        u32 pts_full    = to_copy / PC_POINT_LEN_COMP;
+        if (pts_full == 0) break;
+        /* Tight decode loop: 5B in (x,y,z int8 + rgb16) → 16B PovPoint out */
+        const u8 *src = &sdio_rx_buf[sdio_rx_head];
+        PovPoint *dst = &model[rx_pts_done];
+        for (u32 i = 0; i < pts_full; i++) {
+            int8_t xs = (int8_t)src[0];
+            int8_t ys = (int8_t)src[1];
+            int8_t zs = (int8_t)src[2];
+            u16 rgb = (u16)src[3] | ((u16)src[4] << 8);
+            u8 r5 = (rgb >> 11) & 0x1F;
+            u8 g6 = (rgb >> 5)  & 0x3F;
+            u8 b5 = rgb         & 0x1F;
+            dst->x = xs; dst->y = ys; dst->z = zs; dst->_pad0 = 0;
+            dst->r = (r5 << 3) | (r5 >> 2);
+            dst->g = (g6 << 2) | (g6 >> 4);
+            dst->b = (b5 << 3) | (b5 >> 2);
+            dst->_pad1 = 0;
+            dst->_pad2 = 0;
+            src += PC_POINT_LEN_COMP;
+            dst++;
+        }
+        sdio_rx_head += pts_full * PC_POINT_LEN_COMP;
+        rx_pts_done  += pts_full;
+        if (rx_pts_done == rx_expected_pts) {
+            model_n = rx_expected_pts;
+            __asm__ __volatile__("dsb sy" ::: "memory");
+            Xil_DCacheFlushRange(MODEL_ADDR, model_n * sizeof(PovPoint));
+            xil_printf("[rxdone] model_n=%d (comp_fastpath)\r\n", model_n);
+            rx_state = RX_HDR;
+            rx_hdr_got = 0;
+            rx_magic_sync = 0;
+            frame_ready = 1;
+            right_dirty_g = 1;
+            break;
+        }
+    }
+
     /* Drain as much as is available without blocking render loop.
-     * Safety: cap at 256 bytes per call so we never hang here. */
-    int guard = 256;
+     * SDIO bridge 模式下 byte-parse compressed frame 150KB, 256 guard 让
+     * 一帧需要 600 次 uart_poll_frame 调用 → HLS fire spin 累积 900ms+.
+     * 改 16384 让一次 call 能处理整 16KB SDIO buf (compressed 5 pts/byte). */
+    int guard = sdio_bridge_active ? 16384 : 256;
     while (guard-- > 0 && uart_rx_has()) {
         u8 b = uart_rx_byte();
         if (rx_state == RX_HDR) {
@@ -1017,9 +1070,11 @@ static void pov_render_frame_to_ring(u32 phase)
     pov_w(BATCH_PHASE,       test_phase);
     pov_w(BATCH_N_SLOTS,     N_SLOTS);
 
-    /* HLS v1.4 内部 SLOT_CLEAR (64-bit widen, 2.3ms total) 替代 ARM 端
-     * memset 整 ring (25ms). 完全节省 — HLS 跟 ARM 并行, ARM 这边只跑
-     * scale-blit + flush. */
+    /* Clear ring buffer to black before HLS fire. v1.4 试过 in-IP SLOT_CLEAR
+     * 64-bit cast 让 POINTS_IN_SLICE state corrupt → HDMI 满屏散点.
+     * v1.5 删 in-IP clear, ARM memset 接回. */
+    memset((void *)RING_BUFFER_ADDR, 0, N_SLOTS * SLOT_BYTES);
+    Xil_DCacheFlushRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
 
     /* Diagnostic every 128 frames: print what IP actually sees */
     static u32 dbg = 0;
@@ -2328,9 +2383,13 @@ int main(void)
          * 让 ARM boot 阶段全心处理 UART, anime 接收完成 model_n 跳到
          * 30K 后 PL 启动. */
         /* Plain USE_PL=1: always PL render (regression test 看 PL m_axi 是否还工作) */
+        /* Stage timing instrumentation (1Hz log) — measure each render phase */
+        u64 ts_a = gt_read();
         pov_render_frame_to_ring(phase);
+        u64 ts_b = gt_read();
         {
             Xil_DCacheInvalidateRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
+            u64 ts_c = gt_read();
             /* Single big 3D: pick one rotating slice, scale up 6×, center it.
              * SLICE_W=106 × 6 = 636 wide. SLICE_H=120 × 6 = 720 tall.
              * H offset: (1280 - 636) / 2 = 322 px. */
@@ -2364,6 +2423,26 @@ int main(void)
                 for (int t = 0; t < 2; t++) {
                     cpu_scale_blit_one_fb(fb_bufs[t], src_slot, S3D_OFF_X, S3D_SCALE, 0);
                 }
+            }
+            u64 ts_d = gt_read();
+            /* Stage timing log (1Hz) */
+            static u64 timing_last_log = 0;
+            static u32 timing_count = 0;
+            static u64 timing_fire_sum = 0, timing_inv_sum = 0, timing_blit_sum = 0;
+            timing_fire_sum += (ts_b - ts_a);
+            timing_inv_sum  += (ts_c - ts_b);
+            timing_blit_sum += (ts_d - ts_c);
+            timing_count++;
+            if (ts_d - timing_last_log >= (u64)GT_TICKS_PER_US * 1000000ULL) {
+                u32 fire_us = (u32)((timing_fire_sum / timing_count) / GT_TICKS_PER_US);
+                u32 inv_us  = (u32)((timing_inv_sum  / timing_count) / GT_TICKS_PER_US);
+                u32 blit_us = (u32)((timing_blit_sum / timing_count) / GT_TICKS_PER_US);
+                u32 total_us = fire_us + inv_us + blit_us;
+                xil_printf("[stage_us avg n=%u] HLS_fire+memset_ring=%u  ring_invalid=%u  scale_blit=%u  total=%u\r\n",
+                           (unsigned)timing_count, fire_us, inv_us, blit_us, total_us);
+                timing_last_log = ts_d;
+                timing_count = 0;
+                timing_fire_sum = timing_inv_sum = timing_blit_sum = 0;
             }
             /* DEBUG: ring nonzero + fb boundary stale detector. 每 64 帧扫描
              * fb_A 在 scale-blit 写区外的 row 354 段是否有非零 (应该全 0). */

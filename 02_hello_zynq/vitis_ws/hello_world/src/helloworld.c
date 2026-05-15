@@ -1073,8 +1073,11 @@ static void pov_render_frame_to_ring(u32 phase)
     /* Clear ring buffer to black before HLS fire. v1.4 试过 in-IP SLOT_CLEAR
      * 64-bit cast 让 POINTS_IN_SLICE state corrupt → HDMI 满屏散点.
      * v1.5 删 in-IP clear, ARM memset 接回. */
+    u64 tm0 = gt_read();
     memset((void *)RING_BUFFER_ADDR, 0, N_SLOTS * SLOT_BYTES);
+    u64 tm1 = gt_read();
     Xil_DCacheFlushRange(RING_BUFFER_ADDR, N_SLOTS * SLOT_BYTES);
+    u64 tm2 = gt_read();
 
     /* Diagnostic every 128 frames: print what IP actually sees */
     static u32 dbg = 0;
@@ -1087,10 +1090,32 @@ static void pov_render_frame_to_ring(u32 phase)
     }
 
     pov_w(POV_AP_CTRL, 0x1);
+    u64 tm3 = gt_read();
     u32 to = 0;
     while (!(pov_r(POV_AP_CTRL) & 0x2)) {
         if (++to > 0x10000000) { xil_printf("batch timeout\r\n"); return; }
         uart_poll_frame();
+    }
+    u64 tm4 = gt_read();
+    /* Substage timing log (1Hz) */
+    static u64 sub_last_log = 0;
+    static u64 sub_memset_sum = 0, sub_flush_sum = 0, sub_setup_sum = 0, sub_spin_sum = 0;
+    static u32 sub_count = 0;
+    sub_memset_sum += (tm1 - tm0);
+    sub_flush_sum  += (tm2 - tm1);
+    sub_setup_sum  += (tm3 - tm2);
+    sub_spin_sum   += (tm4 - tm3);
+    sub_count++;
+    if (tm4 - sub_last_log >= (u64)GT_TICKS_PER_US * 1000000ULL) {
+        u32 memset_us = (u32)((sub_memset_sum / sub_count) / GT_TICKS_PER_US);
+        u32 flush_us  = (u32)((sub_flush_sum  / sub_count) / GT_TICKS_PER_US);
+        u32 setup_us  = (u32)((sub_setup_sum  / sub_count) / GT_TICKS_PER_US);
+        u32 spin_us   = (u32)((sub_spin_sum   / sub_count) / GT_TICKS_PER_US);
+        xil_printf("[sub_us n=%u] memset_ring=%u flush_ring=%u setup=%u HLS_spin=%u (model_n=%d)\r\n",
+                   (unsigned)sub_count, memset_us, flush_us, setup_us, spin_us, model_n);
+        sub_last_log = tm4;
+        sub_count = 0;
+        sub_memset_sum = sub_flush_sum = sub_setup_sum = sub_spin_sum = 0;
     }
 }
 

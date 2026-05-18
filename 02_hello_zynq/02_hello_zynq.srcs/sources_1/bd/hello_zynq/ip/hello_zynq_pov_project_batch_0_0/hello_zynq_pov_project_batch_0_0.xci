@@ -3,8 +3,8 @@
   "ip_inst": {
     "xci_name": "hello_zynq_pov_project_batch_0_0",
     "cell_name": "pov_project_batch_0",
-    "component_reference": "povlab:user:pov_project_batch:1.4",
-    "ip_revision": "2114609006",
+    "component_reference": "povlab:user:pov_project_batch:1.7",
+    "ip_revision": "2114610332",
     "gen_directory": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_pov_project_batch_0_0",
     "parameters": {
       "component_parameters": {
@@ -36,8 +36,8 @@
         "clk_period": [ { "value": "6.67", "enabled": false, "usage": "all" } ],
         "machine": [ { "value": "64", "enabled": false, "usage": "all" } ],
         "combinational": [ { "value": "0", "enabled": false, "usage": "all" } ],
-        "latency": [ { "value": "434304", "enabled": false, "usage": "all" } ],
-        "II": [ { "value": "434305 ~ 28724793", "enabled": false, "usage": "all" } ]
+        "latency": [ { "value": "5516784", "enabled": false, "usage": "all" } ],
+        "II": [ { "value": "5516785 ~ 10286313", "enabled": false, "usage": "all" } ]
       },
       "model_parameters": {
         "C_S_AXI_CONTROL_ADDR_WIDTH": [ { "value": "7", "resolve_type": "generated", "format": "long", "usage": "all" } ],
@@ -80,7 +80,7 @@
       },
       "runtime_parameters": {
         "IPCONTEXT": [ { "value": "IP_Integrator" } ],
-        "IPREVISION": [ { "value": "2114609006" } ],
+        "IPREVISION": [ { "value": "2114610332" } ],
         "MANAGED": [ { "value": "TRUE" } ],
         "OUTPUTDIR": [ { "value": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_pov_project_batch_0_0" } ],
         "SELECTEDSIMMODEL": [ { "value": "" } ],
@@ -383,7 +383,7 @@
           "address_space_ref": "Data_m_axi_gmem1",
           "parameters": {
             "NUM_READ_OUTSTANDING": [ { "value": "16", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
-            "NUM_WRITE_OUTSTANDING": [ { "value": "8", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
+            "NUM_WRITE_OUTSTANDING": [ { "value": "16", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
             "MAX_READ_BURST_LENGTH": [ { "value": "16", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
             "MAX_WRITE_BURST_LENGTH": [ { "value": "256", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
             "MAX_BURST_LENGTH": [ { "value": "256", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],

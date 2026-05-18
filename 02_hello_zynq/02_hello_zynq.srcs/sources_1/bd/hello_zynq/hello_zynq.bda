@@ -216,7 +216,7 @@
                 "MX": "/pov_project_batch_0",
                 "MI": "m_axi_gmem0",
                 "MS": "SEG_processing_system7_0_HP1_DDR_LOWOCM",
-                "MV": "povlab:user:pov_project_batch:1.4",
+                "MV": "povlab:user:pov_project_batch:1.7",
                 "SX": "/processing_system7_0",
                 "SI": "S_AXI_HP1",
                 "SS": "HP1_DDR_LOWOCM",
@@ -234,7 +234,7 @@
                 "MX": "/pov_project_batch_0",
                 "MI": "m_axi_gmem1",
                 "MS": "SEG_processing_system7_0_HP1_DDR_LOWOCM",
-                "MV": "povlab:user:pov_project_batch:1.4",
+                "MV": "povlab:user:pov_project_batch:1.7",
                 "SX": "/processing_system7_0",
                 "SI": "S_AXI_HP1",
                 "SS": "HP1_DDR_LOWOCM",
@@ -310,7 +310,7 @@
                 "SX": "/pov_project_batch_0",
                 "SI": "s_axi_control",
                 "SS": "Reg",
-                "SV": "povlab:user:pov_project_batch:1.4",
+                "SV": "povlab:user:pov_project_batch:1.7",
                 "TM": "both",
                 "TU": "register"
             }

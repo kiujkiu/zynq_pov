@@ -1,7 +1,7 @@
 puts "DL: starting"
 # 旧路径 (vitis classic IDE) 与 unified IDE 通过 Python API 重建 platform 后路径不同;
 # 新机走 platform sdt (Vivado 导出 XSA 解出来的 bit + ps7_init).
-set bit "D:/workspace/zynq_pov/02_hello_zynq/vitis_ws/hello_plat/hw/sdt/hello_zynq_wrapper.bit"
+set bit "D:/workspace/zynq_pov/02_hello_zynq/vitis_ws/hello_plat/hw/sdt/02_hello_zynq.bit"
 set psinit "D:/workspace/zynq_pov/02_hello_zynq/vitis_ws/hello_plat/hw/sdt/ps7_init.tcl"
 set elf  "D:/workspace/zynq_pov/02_hello_zynq/vitis_ws/hello_world/build/hello_world.elf"
 puts "DL: connecting"

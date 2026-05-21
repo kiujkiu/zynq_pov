@@ -64,15 +64,21 @@
 /* Address-cache defeat experiment kept off — PL IP bug deferred. */
 #define DEFEAT_ADDR_CACHE 0
 
-/* Task A: LED panel ARM bit-bang baseline.
- * 1 = boot 后跑 led_panel_test_pattern() 循环切换测试图 (全白/RGB/棋盘格/...)
- *     用于上电首次硬件 verify, 不依赖 PL.
+/* LED panel ARM bit-bang baseline (HUB75 风格, 见 led_panel.h).
+ * 1 = boot 后跑 led_panel_test_pattern() 循环切换测试图 (全白/RGB/group/scan/...)
+ *     用于上电首次硬件 verify, 不依赖 PL IP.
  * 0 = 走原 HDMI/POV-3D 主路径 (helloworld.c 主循环).
  *
- * 前提: BD 已加 axi_gpio_panel @ 0x41210000 (32-bit, all output) +
- *       FPC pinout 已绑到 .xdc + 板子焊好 74HC245 buffer + ICND 阵列.
- *       未满足时设 0 (绕过 led_panel 路径). */
-#define ENABLE_LED_PANEL_TEST 0
+ * 前提:
+ *   1) BD 跑 tools/bd_add_led_panel_drv.tcl → 加 axi_gpio_panel (dual ch
+ *      18-bit out + 1-bit in), 重综合 + bitstream + 重新 export XSA
+ *   2) led_panel.c 顶部 LED_PANEL_GPIO_BASE 改成 XPAR_AXI_GPIO_PANEL_BASEADDR
+ *      (从 xparameters.h 查, 跑完 BD 才有)
+ *   3) led_pins.xdc 已绑 panel 信号 → GPIO1 connector (本仓库已写)
+ *   4) panel FPC 接到鹿小班 GPIO1 + 外部 +3.8V/+2.8V/+5V 电源 OK
+ * 未满足时设 0 (走 stub 不烧 panel; ENABLE_LED_PANEL_TEST=1 +
+ * LED_PANEL_GPIO_BASE=0 时只 printf 不动 AXI). */
+#define ENABLE_LED_PANEL_TEST 1
 
 /* Keep 720p60 for stable HDMI preview. 1080p upgrade needs rgb2dvi verification. */
 /* HDMI resolution: define USE_1080P30 to switch to 1920×1080 @ 30Hz.
@@ -1022,7 +1028,7 @@ static inline u64 gt_read(void) {
 
 static void pov_render_frame_to_ring(u32 phase)
 {
-    u32 test_phase = phase & 0x3F;   /* 0..63 */
+    u32 test_phase = phase % N_SLOTS;   /* 0..71 — full 360° */
 
 #if USE_PL_4X
     /* 4× IP parallel: each IP renders 18 of 72 slots. ~4× speedup over single IP. */
@@ -2152,17 +2158,48 @@ int main(void)
     }
 
 #if ENABLE_LED_PANEL_TEST
-    /* Task A: LED panel bring-up bit-bang. 不返回, 死循环切测试图. */
-    xil_printf("[main] ENABLE_LED_PANEL_TEST=1 — entering LED panel test loop\r\n");
+    /* HUB75 LED panel bring-up bit-bang. 不返回. */
+    xil_printf("[main] ENABLE_LED_PANEL_TEST=1\r\n");
     led_panel_init();
-    int pat = 0;
+    /* 上电先读 panel SPI flash JEDEC + 前 32 字节, 看里面是不是 ICND1069 init seq */
+    led_panel_spi_read_flash_jedec();
+
+    /* === Mode A: 慢速 GPIO toggle bring-up sanity ===========================
+     * 用万用表测 panel J1 各 pin 是否跟着 0V<->3.3V 切. 1 Hz 全高/全低.
+     * 设 LED_PANEL_SLOW_TOGGLE=1 进这个模式 (优先于 pattern loop).
+     * 排除 FPC/电源/PL pin 路径问题. */
+#define LED_PANEL_SLOW_TOGGLE 0    /* 0 = pattern loop 模式 (推荐) */
+#if LED_PANEL_SLOW_TOGGLE
+    xil_printf("[led_panel] SLOW_TOGGLE: 数据线 + ABC 1Hz toggle, OE 始终 0 (LED 应亮)\r\n");
+    volatile u32 *gpio_data = (volatile u32 *)0x40000000UL;
+    u32 toggle = 0;
     while (1) {
-        xil_printf("[led_panel] pattern %d\r\n", pat);
-        led_panel_test_pattern(pat);
-        led_panel_flush();
-        sleep(2);  /* 每 2 s 切一图 */
-        pat = (pat + 1) % 8;
+        toggle = !toggle;
+        /* OE bit2 = 0 (亮); SPI_CS bit16 = 1 (idle); 其他切 */
+        *gpio_data = toggle ? 0x0003fffbUL : 0x00010000UL;
+        xil_printf("[toggle] %s\r\n", toggle ? "HIGH" : "LOW");
+        for (volatile u32 i = 0; i < 50000000UL; i++) ;
     }
+#else
+    /* === Mode B: 正常 pattern loop ======================================== */
+    /* 固定在 pattern 1 (全白) 让 panel 持续看到亮信号.
+     * 每 5 帧切换 pattern (5 帧 ≈ 5-10 sec, ARM bit-bang 9-chain LE 协议慢). */
+    int pat = 1;   /* start with white */
+    led_panel_test_pattern(pat);
+    xil_printf("[led_panel] FAST_LOOP pattern %d (white)\r\n", pat);
+    const u32 FRAMES_PER_PATTERN = 5;
+    u32 fcnt = 0;
+    while (1) {
+        led_panel_flush();
+        fcnt++;
+        if (fcnt >= FRAMES_PER_PATTERN) {
+            fcnt = 0;
+            pat = (pat == 1) ? 2 : (pat == 2 ? 3 : (pat == 3 ? 4 : 1));  /* W->R->G->B->W */
+            led_panel_test_pattern(pat);
+            xil_printf("[led_panel] pattern %d\r\n", pat);
+        }
+    }
+#endif
     /* unreachable */
 #endif
 

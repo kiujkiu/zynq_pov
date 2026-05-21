@@ -159,9 +159,13 @@ LOAD_MODEL:
      *   vs v1.6 II=12: 30000 × 12 × 72 = 25.9M cycles = 173 ms estimate,
      *   actual hardware 1.39 sec. Expected 30+ fps render after this change. */
     static const int SLOT_BYTES_MAX = SLICE_W * SLICE_H * 3;
+    static const int DEPTH_PIXELS   = SLICE_W * SLICE_H;
     /* 38160 byte slot, partition cyclic 6 way 让 6 个连续 byte 同 cycle 写不同 BRAM */
     uint8_t slot_local[SLOT_BYTES_MAX];
 #pragma HLS ARRAY_PARTITION variable=slot_local cyclic factor=6
+    /* v1.10 z-buffer: per-pixel depth, int8 (rz range ±80 fits). 12720 bytes ≈ 3 BRAM blocks.
+     * 解决 voxel last-write 覆盖问题: 同屏幕像素只有最 "近" 那个 voxel 留下. */
+    int8_t depth_local[DEPTH_PIXELS];
 
 SLICES_LOOP:
     for (int s = 0; s < n_slots; s++) {
@@ -180,7 +184,16 @@ SLOT_LOCAL_CLEAR:
             slot_local[b] = 0;
         }
 
-        /* Phase 2: Project points into local slot BRAM. */
+        /* Phase 1b: Clear depth buffer to most-negative (any voxel can write first time).
+         * rz 越大表示越靠近 camera (face at +z), 所以初始 -128 让任何 voxel 都"近过它". */
+DEPTH_CLEAR:
+        for (int p = 0; p < DEPTH_PIXELS; p++) {
+#pragma HLS LOOP_TRIPCOUNT min=12720 max=12720
+#pragma HLS PIPELINE II=1
+            depth_local[p] = -128;
+        }
+
+        /* Phase 2: Project points into local slot BRAM with z-buffer test. */
 POINTS_IN_SLICE:
         for (int i = 0; i < num_points; i++) {
 #pragma HLS LOOP_TRIPCOUNT min=100 max=MAX_BATCH_POINTS
@@ -196,13 +209,23 @@ POINTS_IN_SLICE:
 
             int sx = cx + (int)rx;
             int sy = cy - (int)p.y;
-            bool ok = in_slab && sx >= 0 && sx < SLICE_W - 1
-                                && sy >= 0 && sy < SLICE_H - 1;
+            int depth_idx = sy * SLICE_W + sx;
+            bool in_screen = sx >= 0 && sx < SLICE_W - 1 && sy >= 0 && sy < SLICE_H - 1;
+            int8_t old_z = in_screen ? depth_local[depth_idx] : (int8_t)127;
+            /* z-buffer: only write if new voxel is closer (rz > old_z, since +rz = camera-facing). */
+            bool ok = in_slab && in_screen && ((int32_t)rz > (int32_t)old_z);
             if (ok) {
+                /* Depth-fade additional brightness gradient. */
+                int32_t df = 192 + rz;
+                if (df > 256) df = 256;
+                if (df < 96)  df = 96;
+                uint8_t r_d = (uint8_t)(((int32_t)p.r * df) >> 8);
+                uint8_t g_d = (uint8_t)(((int32_t)p.g * df) >> 8);
+                uint8_t b_d = (uint8_t)(((int32_t)p.b * df) >> 8);
                 uint8_t row[6];
 #pragma HLS ARRAY_PARTITION variable=row complete
-                row[0] = p.g; row[1] = p.b; row[2] = p.r;
-                row[3] = p.g; row[4] = p.b; row[5] = p.r;
+                row[0] = g_d; row[1] = b_d; row[2] = r_d;
+                row[3] = g_d; row[4] = b_d; row[5] = r_d;
                 for (int dy = 0; dy < 2; dy++) {
 #pragma HLS UNROLL
                     int off = (sy + dy) * slot_stride + sx * 3;
@@ -212,6 +235,7 @@ ROW_WRITE_LOCAL:
                         slot_local[off + k] = row[k];
                     }
                 }
+                depth_local[depth_idx] = (int8_t)rz;
             }
         }
 

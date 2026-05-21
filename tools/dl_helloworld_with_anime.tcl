@@ -1,5 +1,5 @@
 puts "DL-ANIME: full cold boot + JTAG-inject anime model"
-set bit    "D:/workspace/zynq_pov/02_hello_zynq/vitis_ws/hello_plat/hw/sdt/hello_zynq_wrapper.bit"
+set bit    "D:/workspace/zynq_pov/02_hello_zynq/vitis_ws/hello_plat/hw/sdt/02_hello_zynq.bit"
 set psinit "D:/workspace/zynq_pov/02_hello_zynq/vitis_ws/hello_plat/hw/sdt/ps7_init.tcl"
 set elf    "D:/workspace/zynq_pov/02_hello_zynq/vitis_ws/hello_world/build/hello_world.elf"
 set anime  "D:/workspace/zynq_pov/anime_points.bin"

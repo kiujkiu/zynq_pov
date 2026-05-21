@@ -9,12 +9,15 @@ import sys, struct
 sys.path.insert(0, r"D:\workspace\zynq_pov\host")
 from glb_to_points import voxelize_mesh
 
-GLB = r"D:\workspace\zynq_pov\host\anime_62459_baked_warm.glb"
+GLB = r"D:\workspace\zynq_pov\host\anime_62459.glb"
 OUT = r"D:\workspace\zynq_pov\anime_points.bin"
 
 print(f"voxelizing {GLB}...", flush=True)
+# Option B PBR: raw glb + voxelize 内置 lambert + multi-dir IBL.
+# 验证过 memory: 金发/深蓝披风/白铠甲/金剑色块可辨.
 pts = voxelize_mesh(GLB, target_scale=40, z_stretch=1.5, voxel_size=1.0, verbose=False,
-                    brighten=1.4, gamma=0.95, saturation=1.4, lighting="none", ambient=1.0)
+                    brighten=1.5, gamma=0.9, saturation=2.0,
+                    lighting="lambert", ambient=0.7)
 print(f"  {len(pts)} voxels", flush=True)
 
 # Pack each as 16-byte PovPoint

@@ -1,173 +1,81 @@
 /*
- * led_panel.h — ARM bit-bang ICND1069 + ICND3019 LED panel driver
+ * led_panel.h — HUB75-style LED panel ARM bit-bang driver
  *
- * Updated to follow ICND1069 编程指导 V1.2 (2024-05, 深圳映己鸿鹄科技
- * 有限公司专用).  The original V1.1-era prototype used LE=2 for latch +
- * LE=1 for PWM data; V1.2 redefines LE entirely (see table below).  All
- * legacy entry points (led_panel_init / led_panel_set_pixel /
- * led_panel_clear / led_panel_flush / led_panel_test_pattern) are kept
- * with the same signatures so existing helloworld.c paths still build.
+ * Panel 协议 (从 FPC 接线图 image-20260518-140625-dy36.jpg 抽出):
+ *   - 3 RGB 数据组并行: (R1,G1,B1), (R2,G2,B2), (R3,G3,B3)
+ *   - 3-bit 行地址: AIN/BIN/CIN → 8 scan lines (1/8 scan)
+ *   - DCLK 每个上升沿移入一列, LAT 高锁存一行
+ *   - GCLK 副时钟 (ICND1069 内置 PLL, 可 NC)
+ *   - SPI 4 线 (CLK/CS/MOSI/MISO): panel 上电时主控读 flash 配置 ICND1069 寄存器,
+ *     FPGA 运行时 SPI 保持 idle (CS=1). 烧 flash 用单独工具.
  *
- * Protocol summary (V1.2 编程指导, page 5-10):
+ *  Panel 几何 (待 user 实测 PANEL_W 真实值):
+ *    PANEL_H = SCAN_LINES * GROUPS = 8 × 3 = 24 行
+ *    row 0..7   → group 0 (走 R1/G1/B1)
+ *    row 8..15  → group 1 (走 R2/G2/B2)
+ *    row 16..23 → group 2 (走 R3/G3/B3)
+ *    group 内 row index = ABC scan line (000..111)
  *
- *   DCLK   continuous clock (4 MHz < FDCLK < 16 MHz, default 12.5 MHz)
- *   LE     command-length encoding — DCLK rising edges with LE high
- *            1  DATA_LATCH   latch 16-bit greyscale, MSB first (D[15:0])
- *            3  VSYNC        frame sync
- *            5  WR_CFG       write reg, hi 8b = addr, lo 8b = value
- *            7  RD_CFG       read reg (debug only)
- *            9  SOFT_RST     soft reset (non-register)
- *           11  EN_OP        enable PWM outputs
- *           12  DIS_OP       disable PWM outputs
- *           14  PRE_ACT      write enable (precedes WR_CFG bursts)
+ *  灰阶: panel 内部 ICND1069 16-bit PWM (96 MHz GCLK PLL) 自己 handles,
+ *  FPGA 每个 DCLK 周期只送 1-bit on/off; 多次 BCM 累积可做软件 PWM, 但
+ *  先用 1-bit 测亮即可.
  *
- *   For data-bearing commands the 16-bit SDI window covers exactly 16
- *   DCLK rising edges; LE is held high during the LAST N of them.
- *
- *   WR_CFG sequence (page 7-8):
- *     PRE_ACT -> WR 0x00=0xAA -> WR 0x01=0xAA   (password open)
- *             -> WR <regs ...>                  (config)
- *             -> WR 0x00=0x55 -> WR 0x01=0x55   (password close)
- *
- *   Display timing (page 10):
- *     1) VSYNC (LE=3)
- *     2) wait 16 DCLK
- *     3) ROW = 12 DCLK high (group-1 row-1 marker)
- *     4) per row: 16 ch * cascade-depth DATA_LATCH commands, chain
- *        tail first, OUT15..OUT0
- *     5) ROW = 4 DCLK high (next row)
- *     6) repeat until all groups * scan_rows latches sent, then VSYNC
- *
- * Panel target (POV-3D 鹿小班 v0):
- *   - 160 x 180 RGB pixel grid
- *   - 4 parallel SDI chains (chain 0..3), 27 ICND1069 chips per chain
- *   - 24 ICND3019 row drivers cascaded externally
- *
- * Hardware assumption:
- *   axi_gpio_panel @ LED_PANEL_GPIO_BASE (overridable via build flag).
- *   Default 0 means "FPC not wired yet" — every call is a safe no-op
- *   that emits one warning.  Set ENABLE_LED_PANEL_TEST=1 + provide a
- *   real GPIO base to actually drive the panel.
- *
- * Performance: bit-bang ~2 FPS — only good for physical-link bring-up.
- * Real POV timing (21.6 K slice/s) is owned by a PL Verilog core.
+ *  性能: ARM bit-bang ~5-10 fps, 只够物理 bring-up.
+ *  真 POV 时序 (21.6 K slice/s) 由 PL Verilog led_panel_drv IP 接管.
  */
 #ifndef LED_PANEL_H_
 #define LED_PANEL_H_
 
 #include "xil_types.h"
 
-/* === Panel geometry =================================================== */
-#define LED_PANEL_W              160          /* pixel columns        */
-#define LED_PANEL_H              180          /* pixel rows           */
-#define LED_PANEL_CHAINS         4            /* parallel SDI lanes   */
-#define LED_PANEL_CHIPS_PER_CHAIN 27          /* ICND1069 cascade     */
-#define LED_PANEL_CH_PER_CHIP    16           /* OUT0..OUT15          */
-#define LED_PANEL_ROWS           LED_PANEL_H  /* alias for clarity    */
+/* === Panel geometry ================================================== */
+#ifndef PANEL_W
+#define PANEL_W        160        /* user 确认 160 column */
+#endif
+#define PANEL_H        180        /* user 确认 180 row */
+/* 厂家规格书 P0.9375COB: 驱动方式 1/54 scan, 模组分辨率 160×180 */
+#define SCAN_LINES     54         /* reg 0x02 = SCAN_LINES - 1 = 53 (0x35) */
+#define GROUPS         9          /* 9 chain 并行 (R1/G1/B1 R2/G2/B2 R3/G3/B3) */
 
-/* === LE command lengths (DCLK rising edges with LE high) ============== */
-#define LED_LE_DATA_LATCH        1
-#define LED_LE_VSYNC             3
-#define LED_LE_WR_CFG            5
-#define LED_LE_RD_CFG            7
-#define LED_LE_SOFT_RST          9
-#define LED_LE_EN_OP             11
-#define LED_LE_DIS_OP            12
-#define LED_LE_PRE_ACT           14
+/* legacy alias for existing helloworld.c includes */
+#define LED_PANEL_W    PANEL_W
+#define LED_PANEL_H    PANEL_H
 
-/* === Key register addresses (V1.2 register table, page 24-25) ========= */
-#define LED_REG_PASSWORD_A       0x00 /* part-1 of password (0xAA / 0x55) */
-#define LED_REG_PASSWORD_B       0x01 /* part-2                           */
-#define LED_REG_SCAN             0x02 /* bit[5:0] = scan_num - 1          */
-#define LED_REG_GROUPS           0x03 /* bit[6:0] = sub_frames - 1        */
-#define LED_REG_PLL_PRE          0x04 /* default 0x02                     */
-#define LED_REG_PLL_LOOP         0x05 /* default 0x04                     */
-#define LED_REG_PLL_POST         0x06 /* default 0x01                     */
-#define LED_REG_DCLK_PER_ROW     0x07 /* GCLK/4 per row (default 0x20)    */
-#define LED_REG_COUPLE1          0x0C /* default 0x1F                     */
-#define LED_REG_BLANK_TIME       0x0D /* default 0x02                     */
-#define LED_REG_ROW1_COMP_T      0x0E /* default 0x06                     */
-#define LED_REG_BLANK_START      0x0F /* default 0x01                     */
-#define LED_REG_LOW_UNIFORM      0x10 /* default 0xDF                     */
-#define LED_REG_OPEN_DET         0x16 /* 0x01 = enable open detect        */
-#define LED_REG_ROW1_COMP_A      0x18 /* default 0x15                     */
-#define LED_REG_ROW1_COMP_B      0x19 /* default 0x00                     */
-#define LED_REG_GAIN             0x1C /* current gain (default 0xC0)      */
-#define LED_REG_SLOW_KNEE        0x1D /* default 0xA6                     */
-#define LED_REG_BLANK_LEVEL      0x1E /* default 0x40                     */
-#define LED_REG_COUPLE2_EN       0x1F /* default 0x00                     */
-#define LED_REG_COUPLE2_LV       0x20 /* default 0x02                     */
-#define LED_REG_MISC_21          0x21 /* default 0x01                     */
-#define LED_REG_COUPLE2_BST      0x22 /* default 0x1C                     */
-#define LED_REG_LOWGREY_COMP     0x23 /* default 0x00                     */
-#define LED_REG_MISC_24          0x24 /* default 0x01                     */
-#define LED_REG_MISC_25          0x25 /* default 0x02                     */
-#define LED_REG_MISC_26          0x26 /* default 0xAA                     */
-#define LED_REG_MISC_27          0x27 /* default 0xAA                     */
+/* === axi_gpio bit assignment — must match led_pins.xdc =============== */
+#define LED_BIT_DCLK     0
+#define LED_BIT_LE       1   /* 接线图标"LAT"实际是 ICND1069 LE 引脚 */
+#define LED_BIT_LAT      LED_BIT_LE  /* legacy alias */
+#define LED_BIT_ROW      2   /* 接线图标"GCLK"实际是 ICND1069 ROW 引脚 (datasheet V1.2 page 3 + page 9) */
+#define LED_BIT_GCLK     LED_BIT_ROW /* legacy alias */
+#define LED_BIT_OE       LED_BIT_ROW /* legacy alias */
+#define LED_BIT_R1       3
+#define LED_BIT_G1       4
+#define LED_BIT_B1       5
+#define LED_BIT_R2       6
+#define LED_BIT_G2       7
+#define LED_BIT_B2       8
+#define LED_BIT_R3       9
+#define LED_BIT_G3       10   /* GPIO1.18 / AA18 / IO_L12N_T1_MRCC_33 */
+#define LED_BIT_B3       11
+#define LED_BIT_AIN      12
+#define LED_BIT_BIN      13
+#define LED_BIT_CIN      14
+#define LED_BIT_SPI_CLK  15
+#define LED_BIT_SPI_CS   16
+#define LED_BIT_SPI_MOSI 17
 
-/* === Legacy API (kept for binary compatibility) ======================= */
-
-/* Boot-time init: set GPIO direction, push default register map (PRE_ACT
- * + password-open + V1.2 defaults + password-close), zero the frame
- * buffer, leave outputs ENABLED.  Safe to call multiple times. */
+/* === Legacy API (helloworld.c 还在用这些) =========================== */
 void led_panel_init(void);
-
-/* Update one pixel in the software frame buffer.  No I/O. */
 void led_panel_set_pixel(int x, int y, u8 r, u8 g, u8 b);
-
-/* Software frame buffer -> all black (no I/O). */
 void led_panel_clear(void);
-
-/* Push the entire frame buffer to the panel via bit-bang VSYNC + ROW +
- * 16-bit DATA_LATCH stream.  Blocking, ~2 FPS. */
 void led_panel_flush(void);
-
-/* Built-in test patterns (fills the frame buffer only, caller flushes).
- *   0 black  1 white  2 red  3 green  4 blue
- *   5 checker  6 color-bars  7 concentric circles  */
 void led_panel_test_pattern(int pattern_id);
+   /* pattern: 0=black 1=white 2=R 3=G 4=B 5=checker 6=color-bars 7=circles */
 
-/* === V1.2 protocol primitives (new) =================================== */
-
-/* Set GPIO direction + idle state.  Returns 0 on success, -1 if base
- * address is undefined (no FPC pinout yet). */
-int  led_panel_init_pins(void);
-
-/* Low-level LE pulse: emit 16 DCLKs while shifting `sdi_data` MSB-first
- * on every chain, holding LE high during the LAST `le_count` edges.
- * Falling edge of LE latches the command per ICND1069 V1.2 spec. */
-void led_panel_le_pulse(u8 le_count, u16 sdi_data);
-
-/* No-payload LE marker (VSYNC / EN_OP / DIS_OP / SOFT_RST / PRE_ACT):
- * runs only `le_count` DCLKs with LE held high. */
-void led_panel_le_marker(u8 le_count);
-
-/* WR_CFG: build addr|val word + broadcast across the whole cascade so
- * every chip latches on the same LE-falling edge. */
-void led_panel_write_cfg(u8 addr, u8 val);
-
-/* PRE_ACT (LE=14, write enable). */
-void led_panel_pre_act(void);
-
-/* Open (v=0xAA) or close (v=0x55) the WR_CFG password gate.  Issues
- * both WR 0x00=v and WR 0x01=v. */
-void led_panel_password(u8 v);
-
-/* VSYNC (LE=3). */
-void led_panel_vsync(void);
-
-/* EN_OP (LE=11) / DIS_OP (LE=12). */
-void led_panel_en_op(void);
-void led_panel_dis_op(void);
-
-/* Push the default register init sequence from the V1.2 datasheet
- * register table.  Wraps PRE_ACT -> password open -> WR ... ->
- * password close.  Caller picks scan_minus1 / subframes_minus1. */
-void led_panel_init_default(u8 scan_minus1, u8 subframes_minus1);
-
-/* ROW pulses: 12-DCLK-high marks group-1 row-1, 4-DCLK-high marks any
- * subsequent row advance. */
-void led_panel_row12(void);
-void led_panel_row4(void);
+/* === Low-level helpers ================================================ */
+int  led_panel_init_pins(void);    /* set GPIO direction + idle state */
+void led_panel_scan_frame(void);    /* 1 个完整 frame: 8 scan × W col, 软件 BCM 可选 */
+void led_panel_spi_read_flash_jedec(void);  /* dump panel SPI flash JEDEC ID + 头 32 字节 */
+void led_panel_icnd3019_slow_scan(void);    /* 慢速 (200ms/step) chain advance, 不动 ICND1069, 测 OUT 用 */
 
 #endif /* LED_PANEL_H_ */

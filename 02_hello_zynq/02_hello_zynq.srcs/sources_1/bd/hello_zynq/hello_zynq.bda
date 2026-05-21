@@ -216,7 +216,7 @@
                 "MX": "/pov_project_batch_0",
                 "MI": "m_axi_gmem0",
                 "MS": "SEG_processing_system7_0_HP1_DDR_LOWOCM",
-                "MV": "povlab:user:pov_project_batch:1.7",
+                "MV": "povlab:user:pov_project_batch:1.10",
                 "SX": "/processing_system7_0",
                 "SI": "S_AXI_HP1",
                 "SS": "HP1_DDR_LOWOCM",
@@ -234,7 +234,7 @@
                 "MX": "/pov_project_batch_0",
                 "MI": "m_axi_gmem1",
                 "MS": "SEG_processing_system7_0_HP1_DDR_LOWOCM",
-                "MV": "povlab:user:pov_project_batch:1.7",
+                "MV": "povlab:user:pov_project_batch:1.10",
                 "SX": "/processing_system7_0",
                 "SI": "S_AXI_HP1",
                 "SS": "HP1_DDR_LOWOCM",
@@ -243,6 +243,24 @@
                 "TU": "memory"
             },
             "V6": {
+                "VT": "AC",
+                "BA": "0x40000000",
+                "HA": "0x4000FFFF",
+                "BP": "C_BASEADDR",
+                "HP": "C_HIGHADDR",
+                "MA": "Data",
+                "MX": "/processing_system7_0",
+                "MI": "M_AXI_GP0",
+                "MS": "SEG_axi_gpio_panel_Reg",
+                "MV": "xilinx.com:ip:processing_system7:5.5",
+                "SX": "/axi_gpio_panel",
+                "SI": "S_AXI",
+                "SS": "Reg",
+                "SV": "xilinx.com:ip:axi_gpio:2.0",
+                "TM": "both",
+                "TU": "register"
+            },
+            "V7": {
                 "VT": "AC",
                 "BA": "0x41200000",
                 "HA": "0x4120FFFF",
@@ -260,7 +278,7 @@
                 "TM": "both",
                 "TU": "register"
             },
-            "V7": {
+            "V8": {
                 "VT": "AC",
                 "BA": "0x43C00000",
                 "HA": "0x43C0FFFF",
@@ -278,7 +296,7 @@
                 "TM": "both",
                 "TU": "register"
             },
-            "V8": {
+            "V9": {
                 "VT": "AC",
                 "BA": "0x43C10000",
                 "HA": "0x43C1FFFF",
@@ -296,7 +314,7 @@
                 "TM": "both",
                 "TU": "register"
             },
-            "V9": {
+            "V10": {
                 "VT": "AC",
                 "BA": "0x43C20000",
                 "HA": "0x43C2FFFF",
@@ -310,7 +328,7 @@
                 "SX": "/pov_project_batch_0",
                 "SI": "s_axi_control",
                 "SS": "Reg",
-                "SV": "povlab:user:pov_project_batch:1.7",
+                "SV": "povlab:user:pov_project_batch:1.10",
                 "TM": "both",
                 "TU": "register"
             }
@@ -356,6 +374,11 @@
             },
             {
                 "src": "V9",
+                "trg": "V2",
+                "EH": "2"
+            },
+            {
+                "src": "V10",
                 "trg": "V2",
                 "EH": "2"
             }

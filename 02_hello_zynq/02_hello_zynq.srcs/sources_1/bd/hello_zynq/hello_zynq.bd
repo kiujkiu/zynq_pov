@@ -1,7 +1,7 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0x8D28A8EC1CDC39CD",
+      "boundary_crc": "0xEBC3D25C866E3541",
       "device": "xc7z020clg484-2",
       "gen_directory": "../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq",
       "name": "hello_zynq",
@@ -27,7 +27,8 @@
       "axi_smc_pov_hp": "",
       "proc_sys_reset_pov": "",
       "pov_project_batch_0": "",
-      "sc_pov_axilite": ""
+      "sc_pov_axilite": "",
+      "axi_gpio_panel": ""
     },
     "interface_ports": {
       "DDR": {
@@ -321,6 +322,16 @@
     "ports": {
       "eth_rstn": {
         "direction": "O",
+        "left": "0",
+        "right": "0"
+      },
+      "panel_gpio_tri_o": {
+        "direction": "O",
+        "left": "17",
+        "right": "0"
+      },
+      "panel_spi_miso_tri_i": {
+        "direction": "I",
         "left": "0",
         "right": "0"
       }
@@ -1701,7 +1712,7 @@
             "value": "2"
           },
           "NUM_MI": {
-            "value": "4"
+            "value": "5"
           },
           "NUM_SI": {
             "value": "1"
@@ -1724,7 +1735,8 @@
               "M00_AXI",
               "M01_AXI",
               "M02_AXI",
-              "M03_AXI"
+              "M03_AXI",
+              "M04_AXI"
             ]
           },
           "M00_AXI": {
@@ -1826,6 +1838,31 @@
                 "value": "0"
               },
               "SUPPORTS_NARROW_BURST": {
+                "value": "0"
+              },
+              "WUSER_BITS_PER_BYTE": {
+                "value": "0"
+              }
+            }
+          },
+          "M04_AXI": {
+            "mode": "Master",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "parameters": {
+              "NUM_READ_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_READ_THREADS": {
+                "value": "1"
+              },
+              "NUM_WRITE_OUTSTANDING": {
+                "value": "8"
+              },
+              "NUM_WRITE_THREADS": {
+                "value": "1"
+              },
+              "RUSER_BITS_PER_BYTE": {
                 "value": "0"
               },
               "WUSER_BITS_PER_BYTE": {
@@ -2246,8 +2283,8 @@
         "inst_hier_path": "proc_sys_reset_pov"
       },
       "pov_project_batch_0": {
-        "vlnv": "povlab:user:pov_project_batch:1.7",
-        "ip_revision": "2114610332",
+        "vlnv": "povlab:user:pov_project_batch:1.10",
+        "ip_revision": "2114618485",
         "xci_name": "hello_zynq_pov_project_batch_0_0",
         "xci_path": "ip\\hello_zynq_pov_project_batch_0_0\\hello_zynq_pov_project_batch_0_0.xci",
         "inst_hier_path": "pov_project_batch_0",
@@ -2333,6 +2370,9 @@
             "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
             "parameters": {
+              "MAX_BURST_LENGTH": {
+                "value": "1"
+              },
               "NUM_READ_OUTSTANDING": {
                 "value": "8"
               },
@@ -2346,6 +2386,9 @@
                 "value": "1"
               },
               "RUSER_BITS_PER_BYTE": {
+                "value": "0"
+              },
+              "SUPPORTS_NARROW_BURST": {
                 "value": "0"
               },
               "WUSER_BITS_PER_BYTE": {
@@ -2429,6 +2472,33 @@
             }
           }
         }
+      },
+      "axi_gpio_panel": {
+        "vlnv": "xilinx.com:ip:axi_gpio:2.0",
+        "ip_revision": "35",
+        "xci_name": "hello_zynq_axi_gpio_panel_0",
+        "xci_path": "ip\\hello_zynq_axi_gpio_panel_0\\hello_zynq_axi_gpio_panel_0.xci",
+        "inst_hier_path": "axi_gpio_panel",
+        "parameters": {
+          "C_ALL_INPUTS_2": {
+            "value": "1"
+          },
+          "C_ALL_OUTPUTS": {
+            "value": "1"
+          },
+          "C_DOUT_DEFAULT": {
+            "value": "0x00010000"
+          },
+          "C_GPIO2_WIDTH": {
+            "value": "1"
+          },
+          "C_GPIO_WIDTH": {
+            "value": "18"
+          },
+          "C_IS_DUAL": {
+            "value": "1"
+          }
+        }
       }
     },
     "interface_nets": {
@@ -2460,6 +2530,12 @@
         "interface_ports": [
           "axi_smc/M03_AXI",
           "sc_pov_axilite/S00_AXI"
+        ]
+      },
+      "axi_smc_M04_AXI": {
+        "interface_ports": [
+          "axi_smc/M04_AXI",
+          "axi_gpio_panel/S_AXI"
         ]
       },
       "axi_smc_hp_M00_AXI": {
@@ -2572,10 +2648,22 @@
       }
     },
     "nets": {
+      "axi_gpio_panel_gpio_io_o": {
+        "ports": [
+          "axi_gpio_panel/gpio_io_o",
+          "panel_gpio_tri_o"
+        ]
+      },
       "eth_rstn_const_dout": {
         "ports": [
           "eth_rstn_const/dout",
           "eth_rstn"
+        ]
+      },
+      "panel_spi_miso_tri_i_1": {
+        "ports": [
+          "panel_spi_miso_tri_i",
+          "axi_gpio_panel/gpio2_io_i"
         ]
       },
       "proc_sys_reset_0_peripheral_aresetn": {
@@ -2588,7 +2676,8 @@
           "v_axi4s_vid_out_0/aresetn",
           "rgb2dvi_0/aRst_n",
           "axi_vdma_0/axi_resetn",
-          "axi_smc_hp/aresetn"
+          "axi_smc_hp/aresetn",
+          "axi_gpio_panel/s_axi_aresetn"
         ]
       },
       "proc_sys_reset_pov_peripheral_aresetn": {
@@ -2620,7 +2709,8 @@
           "axi_vdma_0/m_axi_mm2s_aclk",
           "axi_vdma_0/m_axis_mm2s_aclk",
           "axi_smc_hp/aclk",
-          "processing_system7_0/S_AXI_HP0_ACLK"
+          "processing_system7_0/S_AXI_HP0_ACLK",
+          "axi_gpio_panel/s_axi_aclk"
         ]
       },
       "processing_system7_0_FCLK_CLK2": {
@@ -2670,6 +2760,11 @@
               "SEG_axi_gpio_0_Reg": {
                 "address_block": "/axi_gpio_0/S_AXI/Reg",
                 "offset": "0x41200000",
+                "range": "64K"
+              },
+              "SEG_axi_gpio_panel_Reg": {
+                "address_block": "/axi_gpio_panel/S_AXI/Reg",
+                "offset": "0x40000000",
                 "range": "64K"
               },
               "SEG_axi_vdma_0_Reg": {

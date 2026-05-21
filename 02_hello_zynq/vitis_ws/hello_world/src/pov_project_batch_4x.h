@@ -83,17 +83,21 @@ static inline void p4x_fire_all(u32 model, u32 num_points, u32 ring_base,
     }
 }
 
-/* Block until all 4 IPs report ap_done. Returns 0=ok, ip+1 if that IP timed out. */
+/* Block until all 4 IPs report ap_done. Returns 0=ok, -1=timeout.
+ * NB: ap_done is clear-on-read — latch each IP's done so we don't lose it. */
 static inline int p4x_wait_all(u32 timeout_iters)
 {
+    int done_mask = 0;
     for (u32 t = 0; t < timeout_iters; t++) {
-        int done = 0;
         for (int ip = 0; ip < 4; ip++) {
-            if (p4x_r(ip, P4X_AP_CTRL) & P4X_AP_DONE_BIT) done++;
+            if (done_mask & (1 << ip)) continue;
+            if (p4x_r(ip, P4X_AP_CTRL) & P4X_AP_DONE_BIT) {
+                done_mask |= (1 << ip);
+            }
         }
-        if (done == 4) return 0;
+        if (done_mask == 0xF) return 0;
     }
-    return -1;
+    return -(done_mask + 1);
 }
 
 #endif

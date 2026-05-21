@@ -21,7 +21,7 @@ n  = int(sys.argv[2])   if len(sys.argv) > 2 else 30000
 # Option A baked 版本 baked 时偏冷色 IBL, anime 金发被压成浅白. 改用 raw + lambert.
 glb_default = os.path.join(HERE, "anime_62459.glb")
 glb = sys.argv[3] if len(sys.argv) > 3 else glb_default
-port = "COM4"
+port = os.environ.get("POV_COM", "COM4")
 baud = 921600
 
 print(f"voxelize_mesh (Option A: 3D triangle rasterization) {os.path.basename(glb)}, z_stretch={zs}...")

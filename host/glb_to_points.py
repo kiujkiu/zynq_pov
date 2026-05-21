@@ -280,8 +280,10 @@ def sample_triangles(triangles, n_total,
         if color_info[0] == "tex":
             _, tex, uv0, uv1, uv2 = color_info
             uv = bw * uv0 + bu * uv1 + bv * uv2
+            # glTF 2.0: UV v=0 在图片顶部, 不需要 1.0-v 翻转.
+            # 之前有 (1.0 - uv[1]) 是双重翻转, 导致相邻 tri 采到无关纹理区域 → 花斑.
             tx = int((uv[0] % 1.0) * tex.shape[1]) % tex.shape[1]
-            ty = int((1.0 - (uv[1] % 1.0)) * tex.shape[0]) % tex.shape[0]
+            ty = int((uv[1] % 1.0) * tex.shape[0]) % tex.shape[0]
             px = tex[ty, tx]
             r_, g_, b_ = int(px[0]), int(px[1]), int(px[2])
         else:
@@ -479,8 +481,9 @@ def voxelize_mesh(path, target_scale=40, z_stretch=1.0, voxel_size=1.0, verbose=
         if color_info[0] == "tex":
             _, tex, uv0, uv1, uv2 = color_info
             uv = (uv0 + uv1 + uv2) / 3
+            # glTF 2.0: UV v=0 在图片顶部, 不需要 1.0-v 翻转.
             tx = int((uv[0] % 1.0) * tex.shape[1]) % tex.shape[1]
-            ty = int((1.0 - (uv[1] % 1.0)) * tex.shape[0]) % tex.shape[0]
+            ty = int((uv[1] % 1.0) * tex.shape[0]) % tex.shape[0]
             px = tex[ty, tx]
             tri_r, tri_g, tri_b = float(px[0]), float(px[1]), float(px[2])
         else:

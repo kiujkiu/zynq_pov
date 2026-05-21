@@ -1,6 +1,10 @@
 # LED Panel Bring-up 工作清单
 
-针对 160×180 RGB POV LED panel (24× ICND3019 + 108× ICND1069 + 8× 74HC245).
+针对 1069+3019 LED panel — **新协议 (2026-05-18)**:
+HUB75 风格电气接口 (3 RGB 数据组 + ABC 1/8 scan + DCLK/LAT/GCLK + SPI 4 线 panel-side flash 自配置),
+ICND1069+ICND3019 在 panel 内部由主控驱动, FPGA 不直接 LE 协议.
+PANEL_W=160 (user 确认), PANEL_H = SCAN_LINES(8) × GROUPS(3) = 24.
+接线图: `image-20260518-140625-dy36.jpg`, J1 ↔ 鹿小班 GPIO1 BANK 33.
 
 ## 阶段 0: panel 到货前 (软件准备)
 

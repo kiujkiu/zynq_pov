@@ -40,18 +40,26 @@ set_property -dict { PACKAGE_PIN J22  IOSTANDARD TMDS_33 } [get_ports { hdmi_tmd
 ## 注意 SPI_MISO 是 FPGA 输入，axi_gpio 可以做双向 (channel-2 input) 或独立 axi_gpio_in
 ## 暂统一一个 32-bit output GPIO + SPI_MISO 走第二个 1-bit input GPIO
 
-set_property -dict { PACKAGE_PIN Y18  IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[0]  }];  # DCLK
-set_property -dict { PACKAGE_PIN Y19  IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[1]  }];  # LAT
-set_property -dict { PACKAGE_PIN AA19 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[2]  }];  # GCLK
-set_property -dict { PACKAGE_PIN AA22 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[3]  }];  # R1
-set_property -dict { PACKAGE_PIN AB22 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[4]  }];  # G1
-set_property -dict { PACKAGE_PIN AA21 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[5]  }];  # B1
-set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[6]  }];  # R2
-set_property -dict { PACKAGE_PIN Y20  IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[7]  }];  # G2
-set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[8]  }];  # B2
-set_property -dict { PACKAGE_PIN AB19 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[9]  }];  # R3
-set_property -dict { PACKAGE_PIN AA18 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[10] }];  # G3
-set_property -dict { PACKAGE_PIN AB20 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[11] }];  # B3
+## === 2026-05-22: 改为 PL 端 led_panel_seq IP 驱动 DCLK/LE/SDI ===
+## panel_gpio_tri_o[0]/[1]/[3..11] 在 axi_gpio_panel 仍是 18-bit 输出,
+## 但 XDC 不再分配 LOC, Vivado 自动 drop. ARM 写这些 bit 无效.
+## OE/ABC/SPI 仍走 axi_gpio_panel (bit 2/12-17), DCLK/LE/SDI 走 led_panel_seq.
+##
+## panel_seq_dclk → Y18  (DCLK)
+## panel_seq_le   → Y19  (LATIN/LE)
+## panel_seq_sdi[0..8] → 9 个 SDI pin (R1/G1/B1/R2/G2/B2/R3/G3/B3 顺序)
+set_property -dict { PACKAGE_PIN Y18  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_dclk    }];  # DCLK
+set_property -dict { PACKAGE_PIN Y19  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_le      }];  # LAT
+set_property -dict { PACKAGE_PIN AA19 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_row     }];  # GCLK/ROW (PL IP 控, 精确 12 DCLK 脉冲)
+set_property -dict { PACKAGE_PIN AA22 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[0] }];  # R1
+set_property -dict { PACKAGE_PIN AB22 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[1] }];  # G1
+set_property -dict { PACKAGE_PIN AA21 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[2] }];  # B1
+set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[3] }];  # R2
+set_property -dict { PACKAGE_PIN Y20  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[4] }];  # G2
+set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[5] }];  # B2
+set_property -dict { PACKAGE_PIN AB19 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[6] }];  # R3
+set_property -dict { PACKAGE_PIN AA18 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[7] }];  # G3
+set_property -dict { PACKAGE_PIN AB20 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[8] }];  # B3
 set_property -dict { PACKAGE_PIN W18  IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[12] }];  # AIN
 set_property -dict { PACKAGE_PIN W17  IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[13] }];  # BIN
 set_property -dict { PACKAGE_PIN W16  IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[14] }];  # CIN

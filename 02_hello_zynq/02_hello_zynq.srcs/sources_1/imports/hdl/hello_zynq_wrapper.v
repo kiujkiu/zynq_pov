@@ -2,7 +2,7 @@
 //Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
-//Date        : Thu May 21 11:27:13 2026
+//Date        : Fri May 22 19:56:01 2026
 //Host        : DESKTOP-O1VQ95V running 64-bit major release  (build 9200)
 //Command     : generate_target hello_zynq_wrapper.bd
 //Design      : hello_zynq_wrapper
@@ -49,6 +49,10 @@ module hello_zynq_wrapper
     hdmi_tmds_data_p,
     led_tri_o,
     panel_gpio_tri_o,
+    panel_seq_dclk,
+    panel_seq_le,
+    panel_seq_row,
+    panel_seq_sdi,
     panel_spi_miso_tri_i);
   inout [14:0]DDR_addr;
   inout [2:0]DDR_ba;
@@ -88,6 +92,10 @@ module hello_zynq_wrapper
   output [2:0]hdmi_tmds_data_p;
   output [1:0]led_tri_o;
   output [17:0]panel_gpio_tri_o;
+  output panel_seq_dclk;
+  output panel_seq_le;
+  output panel_seq_row;
+  output [8:0]panel_seq_sdi;
   input [0:0]panel_spi_miso_tri_i;
 
   wire [14:0]DDR_addr;
@@ -131,6 +139,10 @@ module hello_zynq_wrapper
   wire [2:0]hdmi_tmds_data_p;
   wire [1:0]led_tri_o;
   wire [17:0]panel_gpio_tri_o;
+  wire panel_seq_dclk;
+  wire panel_seq_le;
+  wire panel_seq_row;
+  wire [8:0]panel_seq_sdi;
   wire [0:0]panel_spi_miso_tri_i;
 
   IOBUF MDIO_PHY_0_mdio_iobuf
@@ -179,5 +191,9 @@ module hello_zynq_wrapper
         .hdmi_tmds_data_p(hdmi_tmds_data_p),
         .led_tri_o(led_tri_o),
         .panel_gpio_tri_o(panel_gpio_tri_o),
+        .panel_seq_dclk(panel_seq_dclk),
+        .panel_seq_le(panel_seq_le),
+        .panel_seq_row(panel_seq_row),
+        .panel_seq_sdi(panel_seq_sdi),
         .panel_spi_miso_tri_i(panel_spi_miso_tri_i));
 endmodule

@@ -77,5 +77,8 @@ int  led_panel_init_pins(void);    /* set GPIO direction + idle state */
 void led_panel_scan_frame(void);    /* 1 个完整 frame: 8 scan × W col, 软件 BCM 可选 */
 void led_panel_spi_read_flash_jedec(void);  /* dump panel SPI flash JEDEC ID + 头 32 字节 */
 void led_panel_icnd3019_slow_scan(void);    /* 慢速 (200ms/step) chain advance, 不动 ICND1069, 测 OUT 用 */
+void led_panel_rd_cfg_test_burst(void);     /* 反推: PRE_ACT + init + RD_CFG, 100ms 沉默后重复, 用逻辑分析仪看 SDO 是否有回应 */
+void led_panel_force_all_white_test(void);  /* 暴力全亮: 最简 init + 全 0xFFFF + OE 强制低, 跳过 scan ratio + ROW pulse */
+void led_panel_max_dclk_speed_test(void);   /* 测 ARM 极限 DCLK 速度 */
 
 #endif /* LED_PANEL_H_ */

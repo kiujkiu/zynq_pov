@@ -2182,22 +2182,13 @@ int main(void)
     }
 #else
     /* === Mode B: 正常 pattern loop ======================================== */
-    /* 固定在 pattern 1 (全白) 让 panel 持续看到亮信号.
-     * 每 5 帧切换 pattern (5 帧 ≈ 5-10 sec, ARM bit-bang 9-chain LE 协议慢). */
-    int pat = 1;   /* start with white */
-    led_panel_test_pattern(pat);
-    xil_printf("[led_panel] FAST_LOOP pattern %d (white)\r\n", pat);
-    const u32 FRAMES_PER_PATTERN = 5;
-    u32 fcnt = 0;
+    /* === RD_CFG bring-up test mode ====================================
+     * Phase 3 验证: 每 100ms 发一次 init + RD_CFG sequence, 用逻辑分析仪
+     * 看 chip 是否在 SDO 输出 reg 值. 如果 SDO 死 → chip 没被正确寻址 /
+     * chain 数错; 如果 SDO 有数据但值不对 → 寄存器 init 失败. */
+    xil_printf("[led_panel] PL IP FORCE_ALL_WHITE: panel_seq IP @ 0x40010000, 7.5 MHz DCLK\r\n");
     while (1) {
-        led_panel_flush();
-        fcnt++;
-        if (fcnt >= FRAMES_PER_PATTERN) {
-            fcnt = 0;
-            pat = (pat == 1) ? 2 : (pat == 2 ? 3 : (pat == 3 ? 4 : 1));  /* W->R->G->B->W */
-            led_panel_test_pattern(pat);
-            xil_printf("[led_panel] pattern %d\r\n", pat);
-        }
+        led_panel_force_all_white_test();
     }
 #endif
     /* unreachable */

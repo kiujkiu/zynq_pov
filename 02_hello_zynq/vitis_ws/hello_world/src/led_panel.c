@@ -370,16 +370,15 @@ static void mode_a_minimal(void)
     vsync_pulse();
     panel_seq_dclk_keepalive(200);
 
-    for (int row = 0; row < 20; row++) {
+    /* Test 1: 384 advance per frame, 首 SDI=1 其他 0 → 1 "1" 周游 chain → 真扫描. */
+    for (int row = 0; row < 384; row++) {
+        icnd3019_advance_row(row == 0 ? 1 : 0);
         panel_seq_row_pulse(row == 0 ? 12 : 4);
-        for (int ch = 0; ch < 16; ch++) {
-            if (CHIPS_PER_CHAIN > 1) {
-                panel_seq_burst_word(0xFFFF, 0, CHIPS_PER_CHAIN - 2);
-            }
-            panel_seq_word(0xFFFF, 1);
-            panel_seq_word(0, 0);
+        if (CHIPS_PER_CHAIN > 1) {
+            panel_seq_burst_word(0xFFFF, 0, CHIPS_PER_CHAIN - 2);
         }
-        icnd3019_advance_row(1);   /* 每行 SDI=1 = 全亮调试 */
+        panel_seq_word(0xFFFF, 1);
+        panel_seq_word(0, 0);
     }
 }
 

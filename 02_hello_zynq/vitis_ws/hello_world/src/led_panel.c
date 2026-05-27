@@ -70,9 +70,9 @@
 #define REG_SCAN         0x02   /* bit[5:0] = scan-1 */
 #define REG_GROUPS       0x03   /* sub-frames-1 */
 
-/* Cascade chips per chain. 9 chain × 12 = 108 (匹配接线图 9 RGB 数据线 + 108 chip).
- * 注: cascade 链长错 → password broadcast 错位 → init 失败 → panel 全黑. */
+/* Cascade chips per chain. 官方 dsl 解出来 = 1 (每命令 16 DCLK). 完全模仿. */
 #ifndef CHIPS_PER_CHAIN
+/* 2026-05-27 v9: 回 cascade=12 + 恢复 init */
 #  define CHIPS_PER_CHAIN  12
 #endif
 
@@ -150,13 +150,18 @@ static void le_pulse_broadcast(u8 le_count, u16 sdi_data)
     gpio_clr_bits(SDI_MASK);
 }
 
-/* Marker-only (no data): LE 高 le_count DCLK. PRE_ACT / EN_OP / DIS_OP /
- * VSYNC 都用这个. 2026-05-22: 走 PL IP. */
+/* 所有 LE 命令 (含 marker 类) 都必须前面有 ≥16 DCLK shift (manual page 5).
+ * 多级联时 = cascade × 16. 用 word mode 实现: shift 全 0 数据 cascade 次, 末次末 LE 高 le_count. */
 static void le_marker(u8 le_count)
 {
     if (!pins_ok) return;
     if (le_count == 0 || le_count > 31) return;
-    panel_seq_marker(le_count);
+    for (u8 chip = 0; chip < (u8)(CHIPS_PER_CHAIN - 1); chip++) {
+        panel_seq_word(0, 0);             /* shift no-LE */
+    }
+    panel_seq_word(0, le_count);          /* 末 word: 末 le_count DCLK 高 LE */
+    /* 2026-05-27: 16 DCLK 全 0 gap, chip 内部 commit 时间 (官方 bin 反解 ~9 DCLK 间隙). */
+    panel_seq_word(0, 0);
 }
 
 /* WR_CFG: 写 cascade chain 所有 chip 同一寄存器同一值 (broadcast).
@@ -172,6 +177,8 @@ static void wr_cfg(u8 addr, u8 val)
         panel_seq_word(word, 0);
     }
     panel_seq_word(word, LE_WR_CFG);
+    /* 2026-05-27: 16 DCLK 全 0 gap, chip 写 register file 内部 commit 时间. */
+    panel_seq_word(0, 0);
 }
 
 static void pre_act(void)     { le_marker(LE_PRE_ACT); }
@@ -296,39 +303,268 @@ void led_panel_force_all_white_test(void)
     panel_seq_dclk_keepalive(5000);
 }
 
-/* 公开接口: RD_CFG bring-up test. 每帧发一次:
- *   PRE_ACT + password(0xAA) + WR_CFG reg=0x02 val=53 + password(0x55)
- *   + EN_OP + 100us gap (sequence boundary marker)
- *   + RD_CFG reg=0x02
- * 之后 100ms 全沉默给逻辑分析仪稳定 trigger. */
+/* 多模式诊断 loop. 每 5 秒切换一个 mode, UART 打印当前 mode 名称.
+ * scope 接 ICND1069 任意 chip OUT pin (常亮 / 微闪 / 完全黑) + ICND3019 OUT0 (LOW=选中).
+ * panel 直视 — 任何 mode 看到 LED 亮哪怕 1 颗都报回. */
+static void mode_a_minimal(void);
+static void mode_b_gain_max(void);
+static void mode_c_scan_20(void);
+static void mode_d_alt_data(void);
+static void mode_e_warmup_long(void);
+
+static void mode_f_soft_rst(void);
+static void mode_g_n1_cascade(void);
+static void mode_h_pure_shift(void);
+static void mode_i_periodic_oe(void);
+
+void led_panel_multi_mode_diag(void)
+{
+    if (!pins_ok && led_panel_init_pins() < 0) return;
+    /* 锁定 Mode A 持续跑, 方便用 scope 在 chip OUT pin 上观察 */
+    static int announced = 0;
+    if (!announced) {
+        xil_printf("\r\n=== LOCKED MODE A: 无 init, 仅 LATCH 0xFFFF + EN_OP (持续) ===\r\n");
+        announced = 1;
+    }
+    for (u32 i = 0; i < 5000; i++) mode_a_minimal();
+    return;
+    /* 旧的 9 模式轮换 (已禁用):
+     * static int mode = 0; ... */
+}
+
+/* Mode A: 最简但发 ROW 脉冲. chip 必须收到 ROW marker 才会启动行扫描.
+ * 每帧: VSYNC + 16 DCLK gap + ROW=12 (first-row marker) + 192 LATCH + EN_OP (首帧) + keepalive
+ * BIN 心跳每 100 帧, scope 验证 ICND3019 路径仍通. */
+/* 仿造官方波形: SCAN=1/20 + 每帧 20 ROW × 52 DCLK wide + 每行 16 LATCH × 12 chip cascade.
+ * 跟前一版 (1/1 scan + 1 ROW=12) 完全不同, 跟硬件 panel 拓扑匹配概率高很多. */
+static void icnd3019_advance_row(int inject_one);   /* fwd decl */
+static void mode_a_minimal(void)
+{
+    /* 2026-05-27 16:55 confirmed working state (image o2ja 整片红 + 斜线):
+     * 每帧重发 init (没 init_done flag), 20 行 × 16 LATCH × SDI=1 每行. */
+    vsync_pulse();                       /* LE=3 VSYNC */
+    en_op();                             /* LE=11 EN_OP */
+    pre_act();                           /* LE=14 PRE_ACT */
+    wr_cfg(REG_PASSWORD_A, 0xAA);        /* LE=5 #1 */
+    wr_cfg(REG_PASSWORD_B, 0xAA);        /* LE=5 #2 */
+    wr_cfg(0x20, 0x09);                  /* LE=5 #3 magic */
+    wr_cfg(REG_PASSWORD_A, 0x55);        /* LE=5 #4 */
+    wr_cfg(REG_PASSWORD_B, 0x55);        /* LE=5 #5 */
+    panel_seq_dclk_keepalive(200);
+
+    for (int row = 0; row < 20; row++) {
+        panel_seq_row_pulse(row == 0 ? 12 : 4);
+        for (int ch = 0; ch < 16; ch++) {
+            if (CHIPS_PER_CHAIN > 1) {
+                panel_seq_burst_word(0xFFFF, 0, CHIPS_PER_CHAIN - 2);
+            }
+            panel_seq_word(0xFFFF, 1);
+            panel_seq_word(0, 0);
+        }
+        icnd3019_advance_row(1);   /* 每行 SDI=1 = 全亮调试 */
+    }
+}
+
+/* 2026-05-27: 移到 PL IP. ICND3019 datasheet:
+ *   - SDI=1 移入 → LINE[N] 输出 LOW (通道打开, LED ON, 共阴扫描)
+ *   - 每行 1 个 DCLK 脉冲, DCLK HIGH = 消影时间 ≥500ns
+ *   - chip 内部 setup/hold 由 PL FSM 严格保证
+ * inject_one=1: 第 0 行注入 1 启动扫描; inject_one=0: 后续行 shift 0 进 chain. */
+static void icnd3019_advance_row(int inject_one)
+{
+    panel_seq_icnd_advance(inject_one ? 1u : 0u);
+}
+
+/* Mode B: 显式 GAIN=0xFF, 余同 mode A */
+static void mode_b_gain_max(void)
+{
+    static int init_done = 0;
+    if (!init_done) {
+        pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA);
+        wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x1C, 0xFF);   /* GAIN 200% MAX */
+        wr_cfg(REG_PASSWORD_A, 0x55);
+        wr_cfg(REG_PASSWORD_B, 0x55);
+        init_done = 1;
+    }
+    static int en_op_done = 0;
+    panel_seq_burst_word(0xFFFF, 1, CHIPS_PER_CHAIN * 16 - 1);
+    if (!en_op_done) { en_op(); en_op_done = 1; }
+    panel_seq_dclk_keepalive(1000);
+}
+
+/* Mode C: SCAN=19 (1/20 真实硬件配置) + 20 ROW per frame */
+static void mode_c_scan_20(void)
+{
+    static int init_done = 0;
+    if (!init_done) {
+        pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA);
+        wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(REG_SCAN, 19);     /* 1/20 scan = 真实 panel 行数 */
+        wr_cfg(0x1C, 0xFF);
+        wr_cfg(REG_PASSWORD_A, 0x55);
+        wr_cfg(REG_PASSWORD_B, 0x55);
+        init_done = 1;
+    }
+    static int en_op_done = 0;
+    vsync_pulse();
+    panel_seq_word(0, 0);   /* 16 DCLK gap */
+
+    /* 20 行 scan: ROW=12 first, ROW=4 next, 每行 16 LATCH */
+    for (int row = 0; row < 20; row++) {
+        panel_seq_row_pulse(row == 0 ? 12 : 4);
+        icnd3019_clk();   /* 3019 chain advance per row */
+        for (int ch = 0; ch < 16; ch++) {
+            panel_seq_burst_word(0xFFFF, 0, CHIPS_PER_CHAIN - 2);
+            panel_seq_word(0xFFFF, 1);
+        }
+    }
+    if (!en_op_done) { en_op(); en_op_done = 1; }
+    panel_seq_dclk_keepalive(500);
+}
+
+/* Mode D: 帧间数据 toggle 0xAAAA / 0x5555, 给 scope 看 OUT 是否跟变 */
+static void mode_d_alt_data(void)
+{
+    static int en_op_done = 0;
+    static int toggle = 0;
+    u16 data = toggle ? 0xAAAA : 0x5555;
+    panel_seq_burst_word(data, 1, CHIPS_PER_CHAIN * 16 - 1);
+    if (!en_op_done) { en_op(); en_op_done = 1; }
+    panel_seq_dclk_keepalive(1000);
+    toggle ^= 1;
+}
+
+/* Mode E: 长 DCLK 暖机 (PLL 锁) 后再 init, 跑 5 帧静止 */
+static void mode_e_warmup_long(void)
+{
+    /* 100K DCLK 暖机, PLL 有充足时间锁 */
+    for (int b = 0; b < 100; b++) panel_seq_burst_word(0, 0, 999);
+    panel_seq_wait_idle();
+    pre_act();
+    wr_cfg(REG_PASSWORD_A, 0xAA);
+    wr_cfg(REG_PASSWORD_B, 0xAA);
+    wr_cfg(0x1C, 0xFF);
+    wr_cfg(REG_PASSWORD_A, 0x55);
+    wr_cfg(REG_PASSWORD_B, 0x55);
+    for (int f = 0; f < 5000; f++) {
+        panel_seq_burst_word(0xFFFF, 1, CHIPS_PER_CHAIN * 16 - 1);
+        if (f == 0) en_op();
+        panel_seq_dclk_keepalive(1000);
+    }
+}
+
+/* Mode F: SOFT_RST (LE=9) 首发, 复位 chip 内部状态再 init */
+static void mode_f_soft_rst(void)
+{
+    static int init_done = 0;
+    if (!init_done) {
+        panel_seq_marker(9);   /* SOFT_RST: LE 高 9 DCLK */
+        panel_seq_dclk_keepalive(200);
+        pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA);
+        wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x1C, 0xFF);
+        wr_cfg(REG_PASSWORD_A, 0x55);
+        wr_cfg(REG_PASSWORD_B, 0x55);
+        init_done = 1;
+    }
+    static int en_op_done = 0;
+    panel_seq_burst_word(0xFFFF, 1, CHIPS_PER_CHAIN * 16 - 1);
+    if (!en_op_done) { en_op(); en_op_done = 1; }
+    panel_seq_dclk_keepalive(1000);
+}
+
+/* Mode G: N=1 cascade — 假设 chip 实际不是 12 级联, 每 SDI chain 只 1 chip.
+ * 每帧 16 LATCH × 16-bit shift, 每 LATCH 末位 LE=1. */
+static void mode_g_n1_cascade(void)
+{
+    static int en_op_done = 0;
+    for (int ch = 0; ch < 16; ch++) {
+        panel_seq_word(0xFFFF, 1);   /* 16 DCLK shift + LE=1, 假设 N=1 */
+    }
+    if (!en_op_done) { en_op(); en_op_done = 1; }
+    panel_seq_dclk_keepalive(1000);
+}
+
+/* Mode H: 纯 shift + LE, **完全不发任何 ICND1069 协议命令**.
+ * 假设丝印 ICND1069 但 chip 实际是 FM6124-protocol (shift+latch+OE only). */
+static void mode_h_pure_shift(void)
+{
+    /* 不发 PRE_ACT, 不发 EN_OP, 不发 VSYNC.
+     * 只 shift 192 bit (12 chip × 16-bit) + 1 LE pulse. */
+    panel_seq_burst_word(0xFFFF, 0, CHIPS_PER_CHAIN - 2);  /* 11 word LE=0 */
+    panel_seq_word(0xFFFF, 1);                              /* 末 word LE=1 */
+    panel_seq_dclk_keepalive(1000);
+}
+
+/* Mode I: ROW 周期性脉冲 1kHz, 可能 chip 需要持续 sync */
+static void mode_i_periodic_oe(void)
+{
+    static int en_op_done = 0;
+    static int row_counter = 0;
+    panel_seq_burst_word(0xFFFF, 1, CHIPS_PER_CHAIN * 16 - 1);
+    if (!en_op_done) { en_op(); en_op_done = 1; }
+    /* 每 1ms 一个 ROW pulse */
+    row_counter++;
+    if (row_counter % 1 == 0) {
+        panel_seq_row_pulse(4);   /* ROW=4 next-row marker */
+    }
+    panel_seq_dclk_keepalive(1000);
+}
+
+/* 公开接口: RD_CFG bring-up test (PL IP 版).
+ *   WR_CFG REG_SCAN=0x35 (验证写) → RD_CFG REG_SCAN → ARM polls MISO 期间 PL fire dummy DCLK.
+ *   chip alive 则 MISO 上能看到 chain 推 0x35 出来的 bit pattern (有 transitions).
+ *   chip dead/SDO 断 → MISO 一直 0 或 1, 无 transitions. */
 void led_panel_rd_cfg_test_burst(void)
 {
     if (!pins_ok && led_panel_init_pins() < 0) return;
 
-    /* 同步标记: 50-DCLK LE 让 trigger 容易锁 */
-    le_marker(50);
-    for (int i = 0; i < 8; i++) pulse_dclk();
+    /* trigger marker: PRE_ACT (14 DCLK LE) 容易在 dsl 上锁 */
+    panel_seq_marker(14);
+    panel_seq_dclk_keepalive(200);   /* gap */
 
-    /* 标准 init */
+    /* 标准 init: PRE_ACT + open password + WR_CFG SCAN=0x35 + close password */
     pre_act();
-    for (int i = 0; i < 8; i++) pulse_dclk();
     wr_cfg(REG_PASSWORD_A, 0xAA);
     wr_cfg(REG_PASSWORD_B, 0xAA);
-    wr_cfg(REG_SCAN, (u8)(SCAN_LINES - 1));
+    wr_cfg(REG_SCAN, 0x35);          /* 写一个识别值 */
     wr_cfg(REG_PASSWORD_A, 0x55);
     wr_cfg(REG_PASSWORD_B, 0x55);
-    en_op();
-    for (int i = 0; i < 8; i++) pulse_dclk();
 
-    /* === 关键: RD_CFG + 同时通过 J1.9 SPI_MISO_IN 采样 SDO ===
-     * 如果 chip SDO 物理连到 J1.9, sample 出来的值会含 reg 0x02 = 53 = 0x35.
-     * 如果一直 0 或一直 1, 说明 SDO 不在这条线上, 要换探针物理位置. */
-    u32 sdo = rd_cfg_and_sample_sdo(REG_SCAN);
-    xil_printf("[rd_cfg] reg=0x%02x wrote=0x%02x sdo_tail32=0x%08x\r\n",
-               REG_SCAN, (u8)(SCAN_LINES - 1), (unsigned)sdo);
+    panel_seq_dclk_keepalive(200);
 
-    /* 100ms 静默, 让示波器有清晰 sequence 边界 */
-    for (volatile u32 i = 0; i < 5000000UL; i++) ;
+    /* MISO baseline: RD_CFG 前 MISO 状态. axi_gpio ch2 input at +0x08 bit 0. */
+    panel_seq_wait_idle();
+    u32 miso_before = Xil_In32((UINTPTR)LED_PANEL_GPIO_BASE + 0x08) & 1u;
+
+    /* RD_CFG: 12 chip cascade × 16-bit shift + last LE=7. wr_cfg with addr only. */
+    rd_cfg(REG_SCAN);
+
+    /* RD_CFG 后 chip 在 SDO 推数据. 立即 fire 32 个 dummy word (512 DCLK) 把数据 clock 出来.
+     * ARM 在 PL 跑期间持续 poll MISO, 数 transitions/hi/lo. */
+    panel_seq_burst_word(0, 0, 31);  /* 32 words × 16 DCLK = 512 DCLK */
+
+    u32 miso_hi = 0, miso_lo = 0, miso_trans = 0;
+    u32 prev = miso_before;
+    for (int i = 0; i < 5000; i++) {
+        u32 cur = Xil_In32((UINTPTR)LED_PANEL_GPIO_BASE + 0x08) & 1u;
+        if (cur != prev) miso_trans++;
+        if (cur) miso_hi++; else miso_lo++;
+        prev = cur;
+    }
+
+    panel_seq_wait_idle();
+
+    xil_printf("[rd_cfg] wrote SCAN=0x35, MISO before=%u, samples 5000: hi=%u lo=%u trans=%u\r\n",
+               (unsigned)miso_before, (unsigned)miso_hi, (unsigned)miso_lo, (unsigned)miso_trans);
+    xil_printf("  trans>10 = chip alive, SDO has data; trans=0 = chip dead or SDO not on J1.9\r\n");
+
+    /* 1 sec gap */
+    for (volatile u32 i = 0; i < 100000000UL; i++) ;
 }
 __attribute__((unused)) static void dis_op(void) { le_marker(LE_DIS_OP); }
 static void vsync_pulse(void) { le_marker(LE_VSYNC); }
@@ -358,53 +594,15 @@ static void row_pulse(u8 dclks_high)
  * 一颗 ICND3019 16 channel NMOS, 24 颗 cascade × 16 = 384 row select.
  * panel 用其中 180 (剩 204 备用 / NC).
  */
-static inline void icnd3019_clk(void)
-{
-    /* ICND3019 datasheet: DCLK 脉宽 (高电平) 建议 ≥500ns 当消影时间.
-     * ARM AXI write ~40ns 不够, 必须加 busy-loop delay 到 ~1µs 高. */
-    gpio_set_bits(ABC_BIN);                          /* DCLK ↑ */
-    for (volatile int i = 0; i < 300; i++) ;         /* ~1µs HIGH (>500ns blanking) */
-    gpio_clr_bits(ABC_BIN);                          /* DCLK ↓ */
-    for (volatile int i = 0; i < 100; i++) ;         /* ~300ns LOW (display gap + setup) */
-}
-static inline void icnd3019_load_first(void)
-{
-    /* 帧开始: SDI=1, 1 个 DCLK 上升沿 → chain shift in "1" → 选中第 1 行 (OUT0 拉低) */
-    gpio_set_bits(ABC_AIN);
-    icnd3019_clk();
-    gpio_clr_bits(ABC_AIN);
-}
-static inline void icnd3019_next_row(void)
-{
-    /* SDI=0, 1 个 DCLK 上升沿 → 移到下一行 */
-    gpio_clr_bits(ABC_AIN);
-    icnd3019_clk();
-}
+/* 2026-05-27: 移到 PL IP. ARM bit-bang 完全废弃. */
+static inline void icnd3019_clk(void)        { panel_seq_icnd_advance(0); }
+static inline void icnd3019_load_first(void) { panel_seq_icnd_advance(1); }
+static inline void icnd3019_next_row(void)   { panel_seq_icnd_advance(0); }
 
-/* ICND3019 寄存器配置: DCLK 低期间发 N 个 RCLK ↑, 设 Reg[3:0] = N - 8.
- * 普通模式 + 2.5V 消隐: N=21 (Reg=1101) — datasheet default.
- * 然后清 384-bit chain + load_first 选第 1 行 (这步必须做 1 次, 否则 chain
- * 残留导致多行被拉低或没行被拉低, 全黑). 只在 boot 调用 1 次, 不能放进 main
- * loop, 否则 ARM 70µs GPIO toggle 期间 PL DCLK 停 → ICND1069 PLL 失锁 → 不亮. */
+/* ICND3019 init: no-op, 用 POR 默认状态 (最早能亮的版本). */
 static void icnd3019_init(void)
 {
-    if (!pins_ok) return;
-    /* 确保 DCLK (BIN) 低. ICND3019 datasheet: RCLK 配置区域必须 DCLK 低, 前后各 100ns 空白. */
-    gpio_clr_bits(ABC_BIN);
-    for (volatile int i = 0; i < 100; i++) ;
-    /* 发 21 个 RCLK (CIN) 脉冲 → Reg<3:0>=13 (普通模式 + 2.5V 消隐).
-     * 每个 RCLK pulse 同样需要足够宽度 (~500ns) chip 才能采到. */
-    for (int i = 0; i < 21; i++) {
-        gpio_set_bits(ABC_CIN);
-        for (volatile int j = 0; j < 200; j++) ;     /* ~600ns HIGH */
-        gpio_clr_bits(ABC_CIN);
-        for (volatile int j = 0; j < 100; j++) ;     /* ~300ns LOW */
-    }
-    for (volatile int i = 0; i < 100; i++) ;         /* 配置后 100ns 空白 */
-    /* chain clear 384 个 0, 然后 load_first 注 "1" 选行 0. */
-    gpio_clr_bits(ABC_AIN);
-    for (int i = 0; i < 24 * 16; i++) icnd3019_clk();
-    icnd3019_load_first();
+    (void)0;
 }
 
 /* ===== Init ========================================================== */
@@ -532,15 +730,21 @@ void led_panel_scan_frame(void)
     vsync_pulse();
     for (u8 i = 0; i < 16; i++) pulse_dclk();
 
+    /* SDI 全 1, DATA_LATCH (LE=1) for each 16-bit cell.
+     * 预写 SDI 顺序: SDI/LE set up 后才 DCLK ↑, panel buffer 延迟 settle 容裕. */
     for (u8 scan = 0; scan < SCAN_LINES; scan++) {
+        gpio_write_field(SDI_MASK, SDI_MASK);
+        gpio_clr_bits(LE_M);
         for (int i = 0; i < CHIPS_PER_CHAIN * 16; i++) {
             for (u8 j = 0; j < 16; j++) {
-                gpio_write_field(SDI_MASK, SDI_MASK);
-                if (j == 15) gpio_set_bits(LE_M); else gpio_clr_bits(LE_M);
                 pulse_dclk();
+                /* DCLK ↓ 后立即预写下个 LE state: 在第 15 cycle (LE=1) 之前
+                 * (即 j=14 之后) 预设 LE=1, 然后 DCLK ↑ 时 LE 已经 settle */
+                if (j == 14) gpio_set_bits(LE_M);
+                else if (j == 15) gpio_clr_bits(LE_M);
             }
-            gpio_clr_bits(LE_M);
         }
+        gpio_clr_bits(LE_M);
         gpio_clr_bits(SDI_MASK);
         row_pulse(scan == 0 ? 12 : 4);
     }
@@ -627,10 +831,16 @@ void led_panel_init(void)
     xil_printf("[led_panel] ICND1069 V1.2 + ROW driver init: W=%d H=%d scan=%d chips/chain=%d chain=%d\r\n",
                PANEL_W, PANEL_H, SCAN_LINES, CHIPS_PER_CHAIN, GROUPS);
     if (led_panel_init_pins() < 0) return;
-    icnd3019_init();   /* ICND3019 RCLK 配置 + 进入普通模式 */
-    icnd1069_init();
+    xil_printf("[led_panel] starting icnd3019_init (21 RCLK + 384 BIN + load_first)...\r\n");
+    icnd3019_init();   /* ICND3019 RCLK 配置 + chain clear + load_first */
+    xil_printf("[led_panel] icnd3019_init done. AIN=%u BIN=%u CIN=%u (post-init mirror)\r\n",
+               (unsigned)((gpio_mirror >> LED_BIT_AIN) & 1),
+               (unsigned)((gpio_mirror >> LED_BIT_BIN) & 1),
+               (unsigned)((gpio_mirror >> LED_BIT_CIN) & 1));
+    /* 不跑 icnd1069_init: 它会写 SCAN=53 (1/54) + 提前 EN_OP, 跟 Mode A 测试冲突.
+     * 让 multi_mode_diag 各 mode 自己决定 ICND1069 init 是否做 / 做哪些. */
     led_panel_clear();
-    xil_printf("[led_panel] ICND3019 + ICND1069 init done\r\n");
+    xil_printf("[led_panel] boot init done (skipped icnd1069_init — multi_mode 各自处理)\r\n");
 }
 
 void led_panel_set_pixel(int x, int y, u8 r, u8 g, u8 b)

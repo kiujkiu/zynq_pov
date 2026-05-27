@@ -13,7 +13,7 @@
 						"AP_START": { "actual": "ap_start"}
 					}
 				},
-				"grp_pov_project_batch_Pipeline_LOAD_MODEL_fu_210/grp_pov_project_batch_Pipeline_LOAD_MODEL_fu_210_activity": {
+				"grp_pov_project_batch_Pipeline_DEPTH_CLEAR_fu_329/grp_pov_project_batch_Pipeline_DEPTH_CLEAR_fu_329_activity": {
 					"interface": "xilinx.com:interface:internal_hls_dataflow:1.0",
 					"ports": {
 						"AP_CLK": { "actual": "ap_clk"},
@@ -23,7 +23,37 @@
 						"AP_START": { "actual": "ap_start"}
 					}
 				},
-				"grp_pov_project_batch_Pipeline_SLICES_LOOP_POINTS_IN_SLICE_fu_227/grp_pov_project_batch_Pipeline_SLICES_LOOP_POINTS_IN_SLICE_fu_227_activity": {
+				"grp_pov_project_batch_Pipeline_LOAD_MODEL_fu_302/grp_pov_project_batch_Pipeline_LOAD_MODEL_fu_302_activity": {
+					"interface": "xilinx.com:interface:internal_hls_dataflow:1.0",
+					"ports": {
+						"AP_CLK": { "actual": "ap_clk"},
+						"AP_DONE": { "actual": "ap_done"},
+						"AP_READY": { "actual": "ap_ready"},
+						"AP_RESET": { "actual": "ap_rst"},
+						"AP_START": { "actual": "ap_start"}
+					}
+				},
+				"grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334_activity": {
+					"interface": "xilinx.com:interface:internal_hls_dataflow:1.0",
+					"ports": {
+						"AP_CLK": { "actual": "ap_clk"},
+						"AP_DONE": { "actual": "ap_done"},
+						"AP_READY": { "actual": "ap_ready"},
+						"AP_RESET": { "actual": "ap_rst"},
+						"AP_START": { "actual": "ap_start"}
+					}
+				},
+				"grp_pov_project_batch_Pipeline_SLOT_BURST_WRITE_fu_358/grp_pov_project_batch_Pipeline_SLOT_BURST_WRITE_fu_358_activity": {
+					"interface": "xilinx.com:interface:internal_hls_dataflow:1.0",
+					"ports": {
+						"AP_CLK": { "actual": "ap_clk"},
+						"AP_DONE": { "actual": "ap_done"},
+						"AP_READY": { "actual": "ap_ready"},
+						"AP_RESET": { "actual": "ap_rst"},
+						"AP_START": { "actual": "ap_start"}
+					}
+				},
+				"grp_pov_project_batch_Pipeline_SLOT_LOCAL_CLEAR_fu_319/grp_pov_project_batch_Pipeline_SLOT_LOCAL_CLEAR_fu_319_activity": {
 					"interface": "xilinx.com:interface:internal_hls_dataflow:1.0",
 					"ports": {
 						"AP_CLK": { "actual": "ap_clk"},

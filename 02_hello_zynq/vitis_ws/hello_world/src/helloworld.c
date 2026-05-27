@@ -2186,7 +2186,11 @@ int main(void)
      * Phase 3 验证: 每 100ms 发一次 init + RD_CFG sequence, 用逻辑分析仪
      * 看 chip 是否在 SDO 输出 reg 值. 如果 SDO 死 → chip 没被正确寻址 /
      * chain 数错; 如果 SDO 有数据但值不对 → 寄存器 init 失败. */
-    xil_printf("[led_panel] PL IP FORCE_ALL_WHITE: panel_seq IP @ 0x40010000, 7.5 MHz DCLK\r\n");
+    xil_printf("[led_panel] Multi-mode diag: 5s/mode × 5 modes 轮换\r\n");
+    while (1) {
+        led_panel_multi_mode_diag();
+    }
+    /* unreachable */
     while (1) {
         led_panel_force_all_white_test();
     }

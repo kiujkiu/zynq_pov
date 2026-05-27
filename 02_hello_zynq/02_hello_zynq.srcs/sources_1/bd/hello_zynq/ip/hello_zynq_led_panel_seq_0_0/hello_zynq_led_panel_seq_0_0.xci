@@ -8,11 +8,11 @@
     "gen_directory": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_led_panel_seq_0_0",
     "parameters": {
       "component_parameters": {
-        "DCLK_DIV": [ { "value": "10", "resolve_type": "user", "format": "long", "usage": "all" } ],
+        "DCLK_DIV": [ { "value": "6", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "Component_Name": [ { "value": "hello_zynq_led_panel_seq_0_0", "resolve_type": "user", "usage": "all" } ]
       },
       "model_parameters": {
-        "DCLK_DIV": [ { "value": "10", "resolve_type": "generated", "format": "long", "usage": "all" } ]
+        "DCLK_DIV": [ { "value": "6", "resolve_type": "generated", "format": "long", "usage": "all" } ]
       },
       "project_parameters": {
         "ARCHITECTURE": [ { "value": "zynq" } ],
@@ -64,7 +64,10 @@
         "dclk_out": [ { "direction": "out" } ],
         "le_out": [ { "direction": "out" } ],
         "sdi_out": [ { "direction": "out", "size_left": "8", "size_right": "0" } ],
-        "row_out": [ { "direction": "out" } ]
+        "row_out": [ { "direction": "out" } ],
+        "icnd_sdi_out": [ { "direction": "out" } ],
+        "icnd_dclk_out": [ { "direction": "out" } ],
+        "icnd_rclk_out": [ { "direction": "out" } ]
       },
       "interfaces": {
         "s_axi": {

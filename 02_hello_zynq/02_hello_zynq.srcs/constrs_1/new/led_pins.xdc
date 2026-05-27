@@ -60,9 +60,12 @@ set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS33 } [get_ports { panel_s
 set_property -dict { PACKAGE_PIN AB19 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[6] }];  # R3
 set_property -dict { PACKAGE_PIN AA18 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[7] }];  # G3
 set_property -dict { PACKAGE_PIN AB20 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[8] }];  # B3
-set_property -dict { PACKAGE_PIN W18  IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[12] }];  # AIN
-set_property -dict { PACKAGE_PIN W17  IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[13] }];  # BIN
-set_property -dict { PACKAGE_PIN W16  IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[14] }];  # CIN
+# 2026-05-27: ICND3019 SDI/DCLK/RCLK 移到 PL IP led_panel_seq 直驱
+# 用户确认: CIN (W16) = ICND3019 SDI/DIN. AIN (W18) = DCLK (bin 反解: 行进 narrow pulses).
+# BIN (W17) = RCLK (config clock).
+set_property -dict { PACKAGE_PIN W18  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_icnd_dclk }];  # ICND3019 DCLK (原 AIN 标)
+set_property -dict { PACKAGE_PIN W17  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_icnd_rclk }];  # ICND3019 RCLK (原 BIN 标)
+set_property -dict { PACKAGE_PIN W16  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_icnd_sdi  }];  # ICND3019 SDI/DIN (原 CIN 标)
 set_property -dict { PACKAGE_PIN AA17 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[15] }];  # SPI_CLK
 set_property -dict { PACKAGE_PIN AB17 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[16] }];  # SPI_CS
 set_property -dict { PACKAGE_PIN AA16 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[17] }];  # SPI_MOSI

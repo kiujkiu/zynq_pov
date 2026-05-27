@@ -3,7 +3,7 @@
         <clock name="default" period="6.67" default="false"/>
     </clockList>
     <config>
-        <config_export description="POV 3D projection engine" display_name="POV Project Engine" format="ip_catalog" library="user" output="pov_project_ip.zip" vendor="povlab" version="1.0"/>
+        <config_export description="POV 3D projection engine v1.10: z-buffer per-pixel depth test + depth-fade" display_name="POV Project Engine" format="ip_catalog" library="user" output="pov_project_ip.zip" vendor="povlab" version="1.10"/>
     </config>
     <name>
         <value string="solution1"/>

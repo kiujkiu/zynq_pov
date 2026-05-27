@@ -79,6 +79,7 @@ void led_panel_spi_read_flash_jedec(void);  /* dump panel SPI flash JEDEC ID + �
 void led_panel_icnd3019_slow_scan(void);    /* 慢速 (200ms/step) chain advance, 不动 ICND1069, 测 OUT 用 */
 void led_panel_rd_cfg_test_burst(void);     /* 反推: PRE_ACT + init + RD_CFG, 100ms 沉默后重复, 用逻辑分析仪看 SDO 是否有回应 */
 void led_panel_force_all_white_test(void);  /* 暴力全亮: 最简 init + 全 0xFFFF + OE 强制低, 跳过 scan ratio + ROW pulse */
+void led_panel_multi_mode_diag(void);       /* 多模式诊断 loop: 每 5s 切 1 个模式, 5 个变体 */
 void led_panel_max_dclk_speed_test(void);   /* 测 ARM 极限 DCLK 速度 */
 
 #endif /* LED_PANEL_H_ */

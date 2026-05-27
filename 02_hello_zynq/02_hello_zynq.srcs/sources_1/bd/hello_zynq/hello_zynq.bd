@@ -1,7 +1,7 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0x4F169A6B2A9AF36A",
+      "boundary_crc": "0x14FBE95EE98CDA00",
       "device": "xc7z020clg484-2",
       "gen_directory": "../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq",
       "name": "hello_zynq",
@@ -348,6 +348,15 @@
         "right": "0"
       },
       "panel_seq_row": {
+        "direction": "O"
+      },
+      "panel_seq_icnd_sdi": {
+        "direction": "O"
+      },
+      "panel_seq_icnd_dclk": {
+        "direction": "O"
+      },
+      "panel_seq_icnd_rclk": {
         "direction": "O"
       }
     },
@@ -2820,6 +2829,15 @@
           },
           "row_out": {
             "direction": "O"
+          },
+          "icnd_sdi_out": {
+            "direction": "O"
+          },
+          "icnd_dclk_out": {
+            "direction": "O"
+          },
+          "icnd_rclk_out": {
+            "direction": "O"
           }
         }
       }
@@ -2993,6 +3011,24 @@
         "ports": [
           "led_panel_seq_0/dclk_out",
           "panel_seq_dclk"
+        ]
+      },
+      "led_panel_seq_0_icnd_dclk_out": {
+        "ports": [
+          "led_panel_seq_0/icnd_dclk_out",
+          "panel_seq_icnd_dclk"
+        ]
+      },
+      "led_panel_seq_0_icnd_rclk_out": {
+        "ports": [
+          "led_panel_seq_0/icnd_rclk_out",
+          "panel_seq_icnd_rclk"
+        ]
+      },
+      "led_panel_seq_0_icnd_sdi_out": {
+        "ports": [
+          "led_panel_seq_0/icnd_sdi_out",
+          "panel_seq_icnd_sdi"
         ]
       },
       "led_panel_seq_0_le_out": {

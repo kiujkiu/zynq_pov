@@ -340,16 +340,34 @@ void led_panel_multi_mode_diag(void)
 static void icnd3019_advance_row(int inject_one);   /* fwd decl */
 static void mode_a_minimal(void)
 {
-    /* 2026-05-27 16:55 confirmed working state (image o2ja 整片红 + 斜线):
-     * 每帧重发 init (没 init_done flag), 20 行 × 16 LATCH × SDI=1 每行. */
-    vsync_pulse();                       /* LE=3 VSYNC */
-    en_op();                             /* LE=11 EN_OP */
-    pre_act();                           /* LE=14 PRE_ACT */
-    wr_cfg(REG_PASSWORD_A, 0xAA);        /* LE=5 #1 */
-    wr_cfg(REG_PASSWORD_B, 0xAA);        /* LE=5 #2 */
-    wr_cfg(0x20, 0x09);                  /* LE=5 #3 magic */
-    wr_cfg(REG_PASSWORD_A, 0x55);        /* LE=5 #4 */
-    wr_cfg(REG_PASSWORD_B, 0x55);        /* LE=5 #5 */
+    /* 2026-05-27 22:30: chip 卡死救援 — 显式重写所有寄存器到 datasheet 默认值
+     * (之前 SCAN=19 / GAIN=0xFF 错值留在 chip RAM, 上电不复位). */
+    static int recovery_done = 0;
+    if (!recovery_done) {
+        vsync_pulse();
+        en_op();
+        pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA);        /* 开 password */
+        wr_cfg(REG_PASSWORD_B, 0xAA);
+        /* 显式写回所有寄存器默认值 (per ICND1069 V1.2 manual) */
+        wr_cfg(0x02, 19);                    /* SCAN: 1/20 scan = 20-1 */
+        wr_cfg(0x03, 0x00);                  /* GROUPS: 1 sub-frame */
+        wr_cfg(0x04, 0x02);                  /* PLL_PRE_DIV default */
+        wr_cfg(0x05, 0x04);                  /* PLL_LOOP_DIV default */
+        wr_cfg(0x06, 0x01);                  /* PLL_POST_DIV default */
+        wr_cfg(0x07, 0x20);                  /* GCLK/row default 128 */
+        wr_cfg(0x0D, 0x02);                  /* 消隐时间 default */
+        wr_cfg(0x0E, 0x06);                  /* 第一行暗补偿 default */
+        wr_cfg(0x1C, 0xC0);                  /* GAIN default (不是 0xFF!) */
+        wr_cfg(0x1D, 0xA6);                  /* 慢速开启 + 拐点电压 default */
+        wr_cfg(0x20, 0x09);                  /* magic reg */
+        wr_cfg(0x26, 0xAA);                  /* 写使能 password 部分 default */
+        wr_cfg(REG_PASSWORD_A, 0x55);        /* 关 password */
+        wr_cfg(REG_PASSWORD_B, 0x55);
+        recovery_done = 1;
+    }
+    /* 之后每帧只 VSYNC + ROW + LATCH */
+    vsync_pulse();
     panel_seq_dclk_keepalive(200);
 
     for (int row = 0; row < 20; row++) {

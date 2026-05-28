@@ -370,19 +370,27 @@ static void mode_a_minimal(void)
     vsync_pulse();
     panel_seq_dclk_keepalive(200);
 
-    /* CHAIN MAPPING TEST: 循环 9 个 single-chain mask, 看每路 chain 物理 region. */
+    /* ICND3019 CHAIN PROBE (2026-05-28): 循环 4 个 SDI 策略 verify 行扫描.
+     * mask 固定全亮 (白色), 重点测哪些物理行被 3019 chain 选通.
+     *   phase 0: SDI=1 only at row 0 (current behavior, '1' walks chain)
+     *   phase 1: SDI=1 always (all chain pos = 1, 全部 row 通道 enable)
+     *   phase 2: SDI=0 always (no row 通道 enable → 应全黑, sanity check)
+     *   phase 3: SDI=1 first 8 row, 0 else (前 8 chain pos=1, 看是否亮 8 区)
+     * 30 帧每 phase = 0.12s, 肉眼可辨. */
     static u32 frame_count = 0;
     frame_count++;
-    static const u32 chain_masks[9] = {
-        0x001, 0x002, 0x004,   /* R1, G1, B1 */
-        0x008, 0x010, 0x020,   /* R2, G2, B2 */
-        0x040, 0x080, 0x100,   /* R3, G3, B3 */
-    };
-    u32 mask = chain_masks[(frame_count / 60) % 9];
-    panel_seq_set_sdi_mask(mask);
+    panel_seq_set_sdi_mask(0x1FF);   /* all chains, white */
 
+    u32 phase = (frame_count / 30) % 4;
     for (int row = 0; row < 384; row++) {
-        icnd3019_advance_row(row == 0 ? 1 : 0);
+        u32 sdi_bit = 0;
+        switch (phase) {
+            case 0: sdi_bit = (row == 0) ? 1 : 0; break;
+            case 1: sdi_bit = 1; break;
+            case 2: sdi_bit = 0; break;
+            case 3: sdi_bit = (row < 8) ? 1 : 0; break;
+        }
+        icnd3019_advance_row(sdi_bit);
         panel_seq_row_pulse(row == 0 ? 12 : 4);
         if (CHIPS_PER_CHAIN > 1) {
             panel_seq_burst_word(0xFFFF, 0, CHIPS_PER_CHAIN - 2);

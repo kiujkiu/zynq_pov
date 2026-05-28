@@ -410,6 +410,53 @@ static void icnd3019_advance_row(int inject_one)
     panel_seq_icnd_advance(inject_one ? 1u : 0u);
 }
 
+/* mode_perchain_bars: V3 per-chain SDI 测试. 3 段竖条 R/G/B.
+ * 需要 PL IP V3 (mode 2'b11 + chain_data buffer). 同 init 同 row scan,
+ * 区别: LATCH 用 panel_seq_word_perchain 写每 chain 独立数据. */
+static void mode_perchain_bars(void)
+{
+    static int recovery_done = 0;
+    if (!recovery_done) {
+        vsync_pulse();
+        en_op();
+        pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA);
+        wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55);
+        wr_cfg(REG_PASSWORD_B, 0x55);
+        recovery_done = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    /* 3 段竖条: region1=R, region2=G, region3=B */
+    panel_seq_set_chain_data(0, 0xFFFF);  /* R1 ON */
+    panel_seq_set_chain_data(1, 0x0000);  /* G1 */
+    panel_seq_set_chain_data(2, 0x0000);  /* B1 */
+    panel_seq_set_chain_data(3, 0x0000);  /* R2 */
+    panel_seq_set_chain_data(4, 0xFFFF);  /* G2 ON */
+    panel_seq_set_chain_data(5, 0x0000);  /* B2 */
+    panel_seq_set_chain_data(6, 0x0000);  /* R3 */
+    panel_seq_set_chain_data(7, 0x0000);  /* G3 */
+    panel_seq_set_chain_data(8, 0xFFFF);  /* B3 ON */
+
+    for (int row = 0; row < 384; row++) {
+        icnd3019_advance_row(row == 0 ? 1 : 0);
+        panel_seq_row_pulse(row == 0 ? 12 : 4);
+        /* per-chain mode: 12 word shift (12 chip cascade), LE on last */
+        for (int chip = 0; chip < CHIPS_PER_CHAIN - 1; chip++) {
+            panel_seq_word_perchain(0);
+        }
+        panel_seq_word_perchain(1);
+        panel_seq_word(0, 0);
+    }
+}
+
 /* Mode B: 显式 GAIN=0xFF, 余同 mode A */
 static void mode_b_gain_max(void)
 {

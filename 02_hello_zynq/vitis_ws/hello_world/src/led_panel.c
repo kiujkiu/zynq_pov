@@ -583,8 +583,8 @@ static void mode_single_pixel(void)
      * row 80 → row band = 80/53 = 1 → middle row band → chain group 1
      * Red → chain = 1*3 + 0 = 3 (R2)
      * row_iter 范围: row 80 / 160 * 384 = 192, ±3 区间 */
-    const int target_row_iter_lo = 190;
-    const int target_row_iter_hi = 194;
+    const int target_row_iter_lo = 188;
+    const int target_row_iter_hi = 196;
     const int target_chip = 5;
     const u16 target_bit_mask = 0x0001;  /* bit 0 only */
     const int target_chain = 3;          /* R of middle row band */

@@ -309,6 +309,7 @@ void led_panel_force_all_white_test(void)
 static void mode_a_minimal(void);
 static void mode_perchain_bars(void);
 static void mode_chip_sweep(void);
+static void mode_bit_sweep(void);
 static void mode_b_gain_max(void);
 static void mode_c_scan_20(void);
 static void mode_d_alt_data(void);
@@ -328,7 +329,7 @@ void led_panel_multi_mode_diag(void)
         xil_printf("\r\n=== LOCKED MODE A: 无 init, 仅 LATCH 0xFFFF + EN_OP (持续) ===\r\n");
         announced = 1;
     }
-    for (u32 i = 0; i < 5000; i++) mode_chip_sweep();
+    for (u32 i = 0; i < 5000; i++) mode_bit_sweep();
     return;
     /* 旧的 9 模式轮换 (已禁用):
      * static int mode = 0; ... */
@@ -410,6 +411,51 @@ static void mode_a_minimal(void)
 static void icnd3019_advance_row(int inject_one)
 {
     panel_seq_icnd_advance(inject_one ? 1u : 0u);
+}
+
+/* mode_bit_sweep: 锁定 chain 0 + chip 5, 循环 16 bit 位置看亮点哪边走.
+ * - 横向移动 → bit 控制 col within chip
+ * - 纵向移动 → bit 控制 row within chip stripe */
+static void mode_bit_sweep(void)
+{
+    static int init = 0;
+    if (!init) {
+        vsync_pulse(); en_op(); pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA); wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55); wr_cfg(REG_PASSWORD_B, 0x55);
+        init = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    static u32 frame = 0;
+    frame++;
+    /* 16 bit position cycle (30 帧每位 = 0.25s) */
+    u32 target_bit = (frame / 30) % 16;
+    /* 锁定 chip 5 (中间, 不偏顶/底) on chain 0 (R1=右区 red) */
+    const u32 TARGET_CHIP = 5;
+    const u32 target_latch = (u32)(CHIPS_PER_CHAIN - 1) - TARGET_CHIP;
+
+    /* 全 chain 默认 0 */
+    for (int c = 0; c < 9; c++) panel_seq_set_chain_data(c, 0);
+
+    for (int row = 0; row < 384; row++) {
+        icnd3019_advance_row(row == 0 ? 1 : 0);
+        panel_seq_row_pulse(row == 0 ? 12 : 4);
+        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
+            /* chain 0 only, target latch = (1<<bit), 其他 = 0 */
+            u16 v = (latch == target_latch) ? (u16)(1u << target_bit) : 0;
+            panel_seq_set_chain_data(0, v);
+            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
+            panel_seq_word_perchain(le);
+        }
+        panel_seq_word(0, 0);
+    }
 }
 
 /* mode_chip_sweep: 单 chip-position 探针. 每 60 帧切一个 chip (0..11),

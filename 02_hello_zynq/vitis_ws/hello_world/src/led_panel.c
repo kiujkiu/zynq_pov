@@ -313,6 +313,8 @@ static void mode_chip_sweep(void);
 static void mode_bit_sweep(void);
 static void mode_color_grid(void);
 static void mode_smiley(void);
+static void mode_chip_id(void);
+static void mode_mosaic(void);
 static void mode_b_gain_max(void);
 static void mode_c_scan_20(void);
 static void mode_d_alt_data(void);
@@ -332,7 +334,7 @@ void led_panel_multi_mode_diag(void)
         xil_printf("\r\n=== LOCKED MODE A: 无 init, 仅 LATCH 0xFFFF + EN_OP (持续) ===\r\n");
         announced = 1;
     }
-    for (u32 i = 0; i < 5000; i++) mode_smiley();
+    for (u32 i = 0; i < 5000; i++) mode_mosaic();
     return;
     /* 旧的 9 模式轮换 (已禁用):
      * static int mode = 0; ... */
@@ -414,6 +416,107 @@ static void mode_a_minimal(void)
 static void icnd3019_advance_row(int inject_one)
 {
     panel_seq_icnd_advance(inject_one ? 1u : 0u);
+}
+
+/* mode_mosaic: 3 col region × 8 chip row = 24 cell RGB 马赛克.
+ * 每 cell 一个 R/G/B 色, 用 0xFFFF 或 0 选 chain.
+ * RGB pattern 模拟 anime 配色 (sky/face/body 风格). */
+static void mode_mosaic(void)
+{
+    static int init = 0;
+    if (!init) {
+        vsync_pulse(); en_op(); pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA); wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55); wr_cfg(REG_PASSWORD_B, 0x55);
+        init = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    /* 3 col region (left/mid/right) × 8 chip row, 24 cell, 每 cell RGB 三色
+     * 0=K, 1=R, 2=G, 3=Y(R+G), 4=B, 5=M(R+B), 6=C(G+B), 7=W(R+G+B). */
+    static const u8 pal[8][3] = {
+        /* 每行 = 一个 chip row (0=top..7=bot), 3 col = [left, mid, right] */
+        {4, 4, 4},  /* row 0 (top): 全 blue sky */
+        {4, 7, 4},  /* row 1: blue + white (cloud) + blue */
+        {7, 3, 7},  /* row 2: white + yellow (face) + white */
+        {3, 3, 3},  /* row 3: yellow face row */
+        {1, 7, 1},  /* row 4: red (eyes/mouth) + white + red */
+        {3, 3, 3},  /* row 5: yellow face */
+        {6, 2, 6},  /* row 6: cyan + green body + cyan */
+        {2, 2, 2},  /* row 7 (bot): all green ground */
+    };
+
+    for (int row_iter = 0; row_iter < 384; row_iter++) {
+        icnd3019_advance_row(row_iter == 0 ? 1 : 0);
+        panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
+
+        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
+            int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
+            /* 9 chains: idx 0..2 = right(R,G,B), 3..5 = mid, 6..8 = left */
+            u16 vals[9] = {0};
+            if (chip < 8) {
+                int row = chip;
+                /* pal[row][0] = left, [1] = mid, [2] = right */
+                for (int col_region = 0; col_region < 3; col_region++) {
+                    u8 c = pal[row][col_region];
+                    /* col_region 0=left → chain 6,7,8; 1=mid → 3,4,5; 2=right → 0,1,2 */
+                    int base_chain;
+                    if (col_region == 0) base_chain = 6;
+                    else if (col_region == 1) base_chain = 3;
+                    else base_chain = 0;
+                    vals[base_chain + 0] = (c & 1) ? 0xFFFF : 0;  /* R */
+                    vals[base_chain + 1] = (c & 2) ? 0xFFFF : 0;  /* G */
+                    vals[base_chain + 2] = (c & 4) ? 0xFFFF : 0;  /* B */
+                }
+            }
+            for (int c = 0; c < 9; c++) panel_seq_set_chain_data(c, vals[c]);
+            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
+            panel_seq_word_perchain(le);
+        }
+        panel_seq_word(0, 0);
+    }
+}
+
+/* mode_chip_id: 循环点亮单个 chip (60帧每 chip), 配 cap 输出找 chip→row 映射 */
+static void mode_chip_id(void)
+{
+    static int init = 0;
+    if (!init) {
+        vsync_pulse(); en_op(); pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA); wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55); wr_cfg(REG_PASSWORD_B, 0x55);
+        init = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    static u32 frame = 0;
+    frame++;
+    u32 target_chip = (frame / 60) % CHIPS_PER_CHAIN;
+
+    for (int row_iter = 0; row_iter < 384; row_iter++) {
+        icnd3019_advance_row(row_iter == 0 ? 1 : 0);
+        panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
+        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
+            int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
+            u16 v = (chip == (int)target_chip) ? 0xFFFF : 0;
+            for (int c = 0; c < 9; c++) panel_seq_set_chain_data(c, v);
+            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
+            panel_seq_word_perchain(le);
+        }
+        panel_seq_word(0, 0);
+    }
 }
 
 /* mode_smiley: 48 col × 8 row bitmap, panel 上画笑脸. 用 16-bit chain_data

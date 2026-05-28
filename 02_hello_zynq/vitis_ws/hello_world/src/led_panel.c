@@ -319,6 +319,8 @@ static void mode_verify(void);
 static void mode_ring(void);
 static void mode_row_probe(void);
 static void mode_circle(void);
+static void mode_calib(void);
+static void mode_oval(void);
 static void mode_b_gain_max(void);
 static void mode_c_scan_20(void);
 static void mode_d_alt_data(void);
@@ -338,7 +340,7 @@ void led_panel_multi_mode_diag(void)
         xil_printf("\r\n=== LOCKED MODE A: 无 init, 仅 LATCH 0xFFFF + EN_OP (持续) ===\r\n");
         announced = 1;
     }
-    for (u32 i = 0; i < 5000; i++) mode_circle();
+    for (u32 i = 0; i < 5000; i++) mode_oval();
     return;
     /* 旧的 9 模式轮换 (已禁用):
      * static int mode = 0; ... */
@@ -554,6 +556,121 @@ static void mode_circle(void)
         panel_seq_word(0, 0);
     }
 }
+/* mode_oval: 用新理解 chip*16+bit = row, chain group = col region 画椭圆.
+ * 128 logical row × 3 region. Ring at logical center (64, 1), inner r=2, outer r=4. */
+static void mode_oval(void)
+{
+    static int init = 0;
+    if (!init) {
+        vsync_pulse(); en_op(); pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA); wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55); wr_cfg(REG_PASSWORD_B, 0x55);
+        init = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    /* Pre-compute chip mask per region: 128 row × 3 region 椭圆 ring */
+    u16 chip_mask[8][3];   /* [chip][region 0=left, 1=mid, 2=right] */
+    const int cy = 64;        /* row center (chip 4 bit 0) */
+    const int r_in = 25;      /* ring inner radius (row units) */
+    const int r_out = 35;     /* ring outer radius */
+    for (int chip = 0; chip < 8; chip++) {
+        for (int region = 0; region < 3; region++) {
+            u16 m = 0;
+            for (int bit = 0; bit < 16; bit++) {
+                int row = chip * 16 + bit;
+                int dx = region - 1;          /* -1, 0, 1 (3 col positions) */
+                int dy = row - cy;
+                /* 椭圆: (dx * 20)^2 + dy^2 — scale dx 大 让圆变扁形 fit 3 region */
+                int d2 = dx*20*dx*20 + dy*dy;
+                if (d2 >= r_in*r_in && d2 <= r_out*r_out) {
+                    m |= (u16)(1u << bit);
+                }
+            }
+            chip_mask[chip][region] = m;
+        }
+    }
+
+    for (int row_iter = 0; row_iter < 384; row_iter++) {
+        icnd3019_advance_row(row_iter == 0 ? 1 : 0);
+        panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
+        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
+            int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
+            u16 vals[9] = {0};
+            if (chip < 8) {
+                /* region 0=left → chain 6-8; 1=mid → 3-5; 2=right → 0-2 */
+                u16 left = chip_mask[chip][0];
+                u16 mid  = chip_mask[chip][1];
+                u16 right= chip_mask[chip][2];
+                vals[0] = vals[1] = vals[2] = right;
+                vals[3] = vals[4] = vals[5] = mid;
+                vals[6] = vals[7] = vals[8] = left;
+            }
+            for (int c = 0; c < 9; c++) panel_seq_set_chain_data(c, vals[c]);
+            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
+            panel_seq_word_perchain(le);
+        }
+        panel_seq_word(0, 0);
+    }
+}
+
+/* mode_calib: 完整标定. 24 phase × 60 帧 = 1s each.
+ *   phase 0..7   : chip C 全 16 bit on (chain 0 only) → 看 chip C 在 panel 哪一行
+ *   phase 8..23  : bit B (1<<b) on for ALL chips (chain 0 only) → 看 bit B 在 panel 哪一列
+ * 用 cap_cv.py 配 0.5s/snap × 48 = 24s 抓全套. */
+static void mode_calib(void)
+{
+    static int init = 0;
+    if (!init) {
+        vsync_pulse(); en_op(); pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA); wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55); wr_cfg(REG_PASSWORD_B, 0x55);
+        init = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    static u32 frame = 0;
+    frame++;
+    u32 phase = (frame / 60) % 24;
+    int target_chip = (phase < 8) ? (int)phase : -1;
+    int target_bit = (phase >= 8) ? (int)(phase - 8) : -1;
+
+    for (int row_iter = 0; row_iter < 384; row_iter++) {
+        icnd3019_advance_row(row_iter == 0 ? 1 : 0);
+        panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
+
+        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
+            int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
+            u16 v = 0;
+            if (target_chip >= 0) {
+                /* phase 0..7: only this chip, all 16 bits */
+                v = (chip == target_chip) ? 0xFFFF : 0;
+            } else {
+                /* phase 8..23: only this bit, all chips */
+                v = (chip < 8) ? (u16)(1u << target_bit) : 0;
+            }
+            /* only chain 0 (R1 = right region red), other chains off */
+            panel_seq_set_chain_data(0, v);
+            for (int c = 1; c < 9; c++) panel_seq_set_chain_data(c, 0);
+            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
+            panel_seq_word_perchain(le);
+        }
+        panel_seq_word(0, 0);
+    }
+}
+
 /* mode_row_probe: row_iter 前半 chain_data=0xFFFF, 后半 0. 验证 row_iter
  * → 物理 row 映射. 期望: 上半 panel 白, 下半黑. */
 static void mode_row_probe(void)

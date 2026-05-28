@@ -447,7 +447,7 @@ static void mode_chip_sweep(void)
         panel_seq_row_pulse(row == 0 ? 12 : 4);
 
         for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
-            panel_seq_wait_can_accept();
+            /* V4: snapshot at queue time → 不再需要 wait_can_accept */
             u16 v = (latch >= lit_lo && latch <= lit_hi) ? 0xFFFF : 0x0000;
             for (int c = 0; c < 9; c++) panel_seq_set_chain_data(c, v);
             u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;

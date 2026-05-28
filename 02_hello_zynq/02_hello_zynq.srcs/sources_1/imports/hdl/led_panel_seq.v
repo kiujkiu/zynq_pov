@@ -102,9 +102,12 @@ module led_panel_seq #(
     reg [15:0] pending_burst;
 
     /* 2026-05-28 v3: per-chain SDI 独立数据 buffer + shift register.
-     * Mode 2'b11 = per-chain word: 每 chain 用 chain_data[N] 独立 shift. */
-    reg [15:0] chain_data [0:8];      // ARM 预写, 9 chain 各自 16-bit
-    reg [15:0] chain_shift [0:8];     // mid-shift state for each chain
+     * Mode 2'b11 = per-chain word: 每 chain 用 chain_data[N] 独立 shift.
+     * v4 (2026-05-28): cmd queue 时 snapshot chain_data → pending_chain_data.
+     * 这样 ARM 写下 cmd 后立刻可以改 chain_data 给下个 cmd 用, 无 race. */
+    reg [15:0] chain_data [0:8];           // ARM 预写, 9 chain 各自 16-bit
+    reg [15:0] pending_chain_data [0:8];   // snapshot at start_pulse (V4)
+    reg [15:0] chain_shift [0:8];          // mid-shift state for each chain
 
     //---------- ICND3019 sub-FSM state (declarations) ----------
     // AXI addr 0x08 写: bit[31]=cmd_type (0=advance, 1=config),
@@ -228,6 +231,7 @@ module led_panel_seq #(
             pending_burst <= 16'b0;
             for (chk = 0; chk < 9; chk = chk + 1) begin
                 chain_shift[chk] <= 16'b0;
+                pending_chain_data[chk] <= 16'b0;
             end
         end else begin
             if (dclk_will_fall) begin
@@ -255,22 +259,22 @@ module led_panel_seq #(
                                 row_out   <= 1'b1;
                                 sdi_out   <= 9'b0;
                             end
-                            2'b11: begin   // per-chain word (NEW)
+                            2'b11: begin   // per-chain word (V4: use snapshot)
                                 bits_left <= 7'd16;
-                                /* load 9 chain shift regs from chain_data buffers */
-                                chain_shift[0] <= chain_data[0];
-                                chain_shift[1] <= chain_data[1];
-                                chain_shift[2] <= chain_data[2];
-                                chain_shift[3] <= chain_data[3];
-                                chain_shift[4] <= chain_data[4];
-                                chain_shift[5] <= chain_data[5];
-                                chain_shift[6] <= chain_data[6];
-                                chain_shift[7] <= chain_data[7];
-                                chain_shift[8] <= chain_data[8];
+                                /* load 9 chain shift regs from snapshot (race-free) */
+                                chain_shift[0] <= pending_chain_data[0];
+                                chain_shift[1] <= pending_chain_data[1];
+                                chain_shift[2] <= pending_chain_data[2];
+                                chain_shift[3] <= pending_chain_data[3];
+                                chain_shift[4] <= pending_chain_data[4];
+                                chain_shift[5] <= pending_chain_data[5];
+                                chain_shift[6] <= pending_chain_data[6];
+                                chain_shift[7] <= pending_chain_data[7];
+                                chain_shift[8] <= pending_chain_data[8];
                                 /* MSB to sdi_out, ANDed with mask */
-                                sdi_out <= {chain_data[8][15], chain_data[7][15], chain_data[6][15],
-                                            chain_data[5][15], chain_data[4][15], chain_data[3][15],
-                                            chain_data[2][15], chain_data[1][15], chain_data[0][15]} & sdi_mask;
+                                sdi_out <= {pending_chain_data[8][15], pending_chain_data[7][15], pending_chain_data[6][15],
+                                            pending_chain_data[5][15], pending_chain_data[4][15], pending_chain_data[3][15],
+                                            pending_chain_data[2][15], pending_chain_data[1][15], pending_chain_data[0][15]} & sdi_mask;
                                 le_out  <= (pending_le >= 7'd16);
                                 row_out <= 1'b0;
                             end
@@ -336,6 +340,23 @@ module led_panel_seq #(
                                 row_out   <= 1'b1;
                                 sdi_out   <= 9'b0;
                             end
+                            2'b11: begin   // per-chain word (V4 race-free)
+                                bits_left <= 7'd16;
+                                chain_shift[0] <= pending_chain_data[0];
+                                chain_shift[1] <= pending_chain_data[1];
+                                chain_shift[2] <= pending_chain_data[2];
+                                chain_shift[3] <= pending_chain_data[3];
+                                chain_shift[4] <= pending_chain_data[4];
+                                chain_shift[5] <= pending_chain_data[5];
+                                chain_shift[6] <= pending_chain_data[6];
+                                chain_shift[7] <= pending_chain_data[7];
+                                chain_shift[8] <= pending_chain_data[8];
+                                sdi_out <= {pending_chain_data[8][15], pending_chain_data[7][15], pending_chain_data[6][15],
+                                            pending_chain_data[5][15], pending_chain_data[4][15], pending_chain_data[3][15],
+                                            pending_chain_data[2][15], pending_chain_data[1][15], pending_chain_data[0][15]} & sdi_mask;
+                                le_out  <= (pending_le >= 7'd16);
+                                row_out <= 1'b0;
+                            end
                             default: begin
                                 bits_left <= 7'd16;
                                 sdi_out   <= {9{pending_data[15]}} & sdi_mask;
@@ -383,6 +404,16 @@ module led_panel_seq #(
                 pending_mode  <= s_axi_wdata[25:24];
                 pending_le    <= s_axi_wdata[22:16];
                 pending_burst <= burst_reg;
+                /* V4: snapshot chain_data at queue time → race-free per-chain mode */
+                pending_chain_data[0] <= chain_data[0];
+                pending_chain_data[1] <= chain_data[1];
+                pending_chain_data[2] <= chain_data[2];
+                pending_chain_data[3] <= chain_data[3];
+                pending_chain_data[4] <= chain_data[4];
+                pending_chain_data[5] <= chain_data[5];
+                pending_chain_data[6] <= chain_data[6];
+                pending_chain_data[7] <= chain_data[7];
+                pending_chain_data[8] <= chain_data[8];
                 cmd_pending   <= 1'b1;
                 busy          <= 1'b1;
             end

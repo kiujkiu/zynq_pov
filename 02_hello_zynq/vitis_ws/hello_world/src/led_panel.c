@@ -321,6 +321,7 @@ static void mode_row_probe(void);
 static void mode_circle(void);
 static void mode_calib(void);
 static void mode_oval(void);
+static void mode_single_pixel(void);
 static void mode_b_gain_max(void);
 static void mode_c_scan_20(void);
 static void mode_d_alt_data(void);
@@ -340,7 +341,7 @@ void led_panel_multi_mode_diag(void)
         xil_printf("\r\n=== LOCKED MODE A: 无 init, 仅 LATCH 0xFFFF + EN_OP (持续) ===\r\n");
         announced = 1;
     }
-    for (u32 i = 0; i < 5000; i++) mode_oval();
+    for (u32 i = 0; i < 5000; i++) mode_single_pixel();
     return;
     /* 旧的 9 模式轮换 (已禁用):
      * static int mode = 0; ... */
@@ -556,6 +557,61 @@ static void mode_circle(void)
         panel_seq_word(0, 0);
     }
 }
+/* mode_single_pixel: 测真单像素. block 架构 1 chip = 15 col × ~53 row.
+ * target: col 75, row 80, 红色 → chip=5, bit=0, region=1 (mid), chain=3 (R2).
+ * 只在 row_iter ~ 80 时 set chain_data. 期望: panel 显示 ONE 小红点. */
+static void mode_single_pixel(void)
+{
+    static int init = 0;
+    if (!init) {
+        vsync_pulse(); en_op(); pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA); wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55); wr_cfg(REG_PASSWORD_B, 0x55);
+        init = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    /* Target pixel: col 75, row 80
+     * col 75 → block_idx = 75/15 = 5 → cascade chip 5
+     * col within block = 75%15 = 0 → bit 0
+     * row 80 → row band = 80/53 = 1 → middle row band → chain group 1
+     * Red → chain = 1*3 + 0 = 3 (R2)
+     * row_iter 范围: row 80 / 160 * 384 = 192, ±3 区间 */
+    const int target_row_iter_lo = 190;
+    const int target_row_iter_hi = 194;
+    const int target_chip = 5;
+    const u16 target_bit_mask = 0x0001;  /* bit 0 only */
+    const int target_chain = 3;          /* R of middle row band */
+
+    for (int row_iter = 0; row_iter < 384; row_iter++) {
+        icnd3019_advance_row(row_iter == 0 ? 1 : 0);
+        panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
+
+        int in_target_row = (row_iter >= target_row_iter_lo && row_iter <= target_row_iter_hi);
+
+        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
+            int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
+            u16 v = 0;
+            if (in_target_row && chip == target_chip) {
+                v = target_bit_mask;
+            }
+            /* Set ONLY target chain, rest 0 */
+            for (int c = 0; c < 9; c++) {
+                panel_seq_set_chain_data(c, (c == target_chain) ? v : 0);
+            }
+            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
+            panel_seq_word_perchain(le);
+        }
+        panel_seq_word(0, 0);
+    }
+}
+
 /* mode_oval: 用新理解 chip*16+bit = row, chain group = col region 画椭圆.
  * 128 logical row × 3 region. Ring at logical center (64, 1), inner r=2, outer r=4. */
 static void mode_oval(void)

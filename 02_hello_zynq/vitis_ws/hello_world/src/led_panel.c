@@ -440,17 +440,30 @@ static void mode_mosaic(void)
 
     /* 3 col region (left/mid/right) × 8 chip row, 24 cell, 每 cell RGB 三色
      * 0=K, 1=R, 2=G, 3=Y(R+G), 4=B, 5=M(R+B), 6=C(G+B), 7=W(R+G+B). */
-    static const u8 pal[8][3] = {
-        /* 每行 = 一个 chip row (0=top..7=bot), 3 col = [left, mid, right] */
-        {4, 4, 4},  /* row 0 (top): 全 blue sky */
-        {4, 7, 4},  /* row 1: blue + white (cloud) + blue */
-        {7, 3, 7},  /* row 2: white + yellow (face) + white */
-        {3, 3, 3},  /* row 3: yellow face row */
-        {1, 7, 1},  /* row 4: red (eyes/mouth) + white + red */
-        {3, 3, 3},  /* row 5: yellow face */
-        {6, 2, 6},  /* row 6: cyan + green body + cyan */
-        {2, 2, 2},  /* row 7 (bot): all green ground */
+    /* 4-frame "anime" animation: blinking + color cycle. */
+    static u32 anim_frame = 0;
+    anim_frame++;
+    u32 phase = (anim_frame / 30) % 4;   /* 4 phases × 0.25s = 1s loop */
+
+    static const u8 frames[4][8][3] = {
+        { /* phase 0: open eyes, blue sky */
+            {4, 4, 4}, {4, 7, 4}, {7, 3, 7}, {3, 3, 3},
+            {1, 7, 1}, {3, 3, 3}, {6, 2, 6}, {2, 2, 2},
+        },
+        { /* phase 1: closed eyes (red→yellow), pink sky */
+            {5, 5, 5}, {5, 7, 5}, {7, 3, 7}, {3, 3, 3},
+            {3, 7, 3}, {3, 3, 3}, {6, 2, 6}, {2, 2, 2},
+        },
+        { /* phase 2: open eyes, sunset orange sky */
+            {1, 1, 1}, {3, 7, 3}, {7, 3, 7}, {3, 3, 3},
+            {5, 7, 5}, {3, 3, 3}, {6, 2, 6}, {2, 2, 2},
+        },
+        { /* phase 3: surprised (white eyes), night sky */
+            {0, 0, 0}, {0, 7, 0}, {7, 3, 7}, {3, 3, 3},
+            {7, 7, 7}, {3, 3, 3}, {6, 2, 6}, {2, 2, 2},
+        },
     };
+    const u8 (*pal)[3] = frames[phase];
 
     for (int row_iter = 0; row_iter < 384; row_iter++) {
         icnd3019_advance_row(row_iter == 0 ? 1 : 0);

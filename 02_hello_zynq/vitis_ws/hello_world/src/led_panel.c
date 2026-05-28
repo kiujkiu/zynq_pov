@@ -500,9 +500,10 @@ static void mode_mosaic(void)
     }
 }
 
-/* mode_circle: 真圆环! row_iter 当 y (0..383 linear map 物理 row),
- * chain_data bit position 当 x. 圆心 (192, 24), inner r=80, outer r=110.
- * Each row 计算该行哪些 bit 落在 ring 内 → 设 mask. */
+/* mode_frame: rectangular frame ring at row_iter precision.
+ * 上下边: row_iter 0..29 + 354..383 → chain_data 全 1 (full row)
+ * 左右边: row_iter 30..353 → 只 chain_data 最低/最高 bit (= panel 左右边缘)
+ * 这是真"圆环 / hollow frame", 不是散乱点. */
 static void mode_circle(void)
 {
     static int init = 0;
@@ -520,48 +521,31 @@ static void mode_circle(void)
     vsync_pulse();
     panel_seq_set_sdi_mask(0x1FF);
 
-    /* Circle params:
-     * row_iter range 0..383 ≈ panel height
-     * effective col range 0..47 (16 bit × 3 region), 我们关心比例
-     * Aspect: 384 rowy ≈ 160 phys row, 48 colx ≈ 180 phys col
-     *   → row : col 比 = (384/160) : (48/180) ≈ 2.4 : 0.267 → row_iter 比 col 大 9x
-     *   → scale dy = (row_iter - cy) / 9 让圆变正圆 */
-    const int cy = 192;
-    const int cx = 24;
-    const int r_outer = 18;   /* col units */
-    const int r_inner = 13;
-
     for (int row_iter = 0; row_iter < 384; row_iter++) {
         icnd3019_advance_row(row_iter == 0 ? 1 : 0);
         panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
 
-        int dy_scaled = (row_iter - cy) / 9;
-        int dy2 = dy_scaled * dy_scaled;
+        /* 上下边带 (前后 30 row_iter) → 全 chain 全 bit */
+        int is_edge_row = (row_iter < 30) || (row_iter >= 354);
+        u16 left_data, mid_data, right_data;
+        if (is_edge_row) {
+            /* 顶/底边: 全 panel 宽白线 */
+            left_data = mid_data = right_data = 0xFFFF;
+        } else {
+            /* 中段: 只左右最外 chain (chain 6,7,8=left edge 和 chain 0,1,2=right edge)
+             * 中间 chain 全 0 → 中间空 */
+            left_data = 0xFFFF;     /* 整个左 region 亮 */
+            mid_data = 0;            /* 中 region 全黑 */
+            right_data = 0xFFFF;    /* 右 region 亮 */
+        }
 
         for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
             int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
             u16 vals[9] = {0};
             if (chip < 8) {
-                /* compute mask for each region */
-                for (int region = 0; region < 3; region++) {
-                    u16 mask = 0;
-                    for (int bit = 0; bit < 16; bit++) {
-                        int colx = region * 16 + bit;
-                        int dx = colx - cx;
-                        int d2 = dx*dx + dy2;
-                        if (d2 >= r_inner*r_inner && d2 <= r_outer*r_outer) {
-                            mask |= (u16)(1u << bit);
-                        }
-                    }
-                    /* region 0=left, 1=mid, 2=right; chain layout: 0..2=right, 3..5=mid, 6..8=left */
-                    int chain_base;
-                    if (region == 0) chain_base = 6;
-                    else if (region == 1) chain_base = 3;
-                    else chain_base = 0;
-                    vals[chain_base + 0] = mask;  /* R */
-                    vals[chain_base + 1] = mask;  /* G */
-                    vals[chain_base + 2] = mask;  /* B */
-                }
+                vals[0] = vals[1] = vals[2] = right_data;  /* right region */
+                vals[3] = vals[4] = vals[5] = mid_data;    /* mid region */
+                vals[6] = vals[7] = vals[8] = left_data;   /* left region */
             }
             for (int c = 0; c < 9; c++) panel_seq_set_chain_data(c, vals[c]);
             u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
@@ -570,7 +554,6 @@ static void mode_circle(void)
         panel_seq_word(0, 0);
     }
 }
-
 /* mode_row_probe: row_iter 前半 chain_data=0xFFFF, 后半 0. 验证 row_iter
  * → 物理 row 映射. 期望: 上半 panel 白, 下半黑. */
 static void mode_row_probe(void)

@@ -310,6 +310,7 @@ static void mode_a_minimal(void);
 static void mode_perchain_bars(void);
 static void mode_chip_sweep(void);
 static void mode_bit_sweep(void);
+static void mode_color_grid(void);
 static void mode_b_gain_max(void);
 static void mode_c_scan_20(void);
 static void mode_d_alt_data(void);
@@ -329,7 +330,7 @@ void led_panel_multi_mode_diag(void)
         xil_printf("\r\n=== LOCKED MODE A: 无 init, 仅 LATCH 0xFFFF + EN_OP (持续) ===\r\n");
         announced = 1;
     }
-    for (u32 i = 0; i < 5000; i++) mode_bit_sweep();
+    for (u32 i = 0; i < 5000; i++) mode_color_grid();
     return;
     /* 旧的 9 模式轮换 (已禁用):
      * static int mode = 0; ... */
@@ -411,6 +412,55 @@ static void mode_a_minimal(void)
 static void icnd3019_advance_row(int inject_one)
 {
     panel_seq_icnd_advance(inject_one ? 1u : 0u);
+}
+
+/* mode_color_grid: 9 chain × 12 chip = 108 cell 图像测试.
+ * 每行 chip 控制不同 row band, 每 row band 一个色:
+ *   chip 0..3 (top 4 stripe)    = RED
+ *   chip 4..7 (middle 4 stripe) = GREEN
+ *   chip 8..11 (bottom 4 stripe) = BLUE
+ * panel 应显示 3 段横向色带 (top红 / mid绿 / bot蓝). 全 9 chain 全亮.
+ * 验证 per-row chain_data 切换 = image-like display 能力. */
+static void mode_color_grid(void)
+{
+    static int init = 0;
+    if (!init) {
+        vsync_pulse(); en_op(); pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA); wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55); wr_cfg(REG_PASSWORD_B, 0x55);
+        init = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    for (int row_iter = 0; row_iter < 384; row_iter++) {
+        icnd3019_advance_row(row_iter == 0 ? 1 : 0);
+        panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
+
+        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
+            /* cascade chip index: chip 0 = LATCH 11 (last), chip 11 = LATCH 0 (first) */
+            int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
+            /* 3 row bands: 0..3 R, 4..7 G, 8..11 B */
+            int row_band = (chip < 4) ? 0 : (chip < 8) ? 1 : 2;
+            u16 r_val = (row_band == 0) ? 0xFFFF : 0;
+            u16 g_val = (row_band == 1) ? 0xFFFF : 0;
+            u16 b_val = (row_band == 2) ? 0xFFFF : 0;
+            /* all 3 col regions 同色 */
+            for (int region = 0; region < 3; region++) {
+                panel_seq_set_chain_data(region * 3 + 0, r_val);
+                panel_seq_set_chain_data(region * 3 + 1, g_val);
+                panel_seq_set_chain_data(region * 3 + 2, b_val);
+            }
+            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
+            panel_seq_word_perchain(le);
+        }
+        panel_seq_word(0, 0);
+    }
 }
 
 /* mode_bit_sweep: 锁定 chain 0 + chip 5, 循环 16 bit 位置看亮点哪边走.

@@ -370,27 +370,19 @@ static void mode_a_minimal(void)
     vsync_pulse();
     panel_seq_dclk_keepalive(200);
 
-    /* 2026-05-28 R/G/B cycle test: 每 50 帧切一色, 4 phase 循环 = R/G/B/白. */
-    static u32 frame_count = 0;
-    frame_count++;
-    u32 mask;
-    switch ((frame_count / 50) % 4) {
-        case 0: mask = 0x049; break;  /* R only (bits 0,3,6) */
-        case 1: mask = 0x092; break;  /* G only (bits 1,4,7) */
-        case 2: mask = 0x124; break;  /* B only (bits 2,5,8) */
-        default: mask = 0x1FF; break; /* all = white */
-    }
-    panel_seq_set_sdi_mask(mask);
-
-    /* Test 1: 384 advance per frame, 首 SDI=1 其他 0 → 1 "1" 周游 chain → 真扫描. */
+    /* DEBUG: mask 每行循环 R/G/B → 看 chain 位置跟 panel row 映射 */
+    static const u32 mask_cycle[3] = {0x049, 0x092, 0x124};
     for (int row = 0; row < 384; row++) {
         icnd3019_advance_row(row == 0 ? 1 : 0);
         panel_seq_row_pulse(row == 0 ? 12 : 4);
+        panel_seq_wait_idle();
+        panel_seq_set_sdi_mask(mask_cycle[row % 3]);
         if (CHIPS_PER_CHAIN > 1) {
             panel_seq_burst_word(0xFFFF, 0, CHIPS_PER_CHAIN - 2);
         }
         panel_seq_word(0xFFFF, 1);
         panel_seq_word(0, 0);
+        panel_seq_wait_idle();
     }
 }
 

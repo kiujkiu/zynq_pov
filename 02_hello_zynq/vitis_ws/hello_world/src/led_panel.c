@@ -370,6 +370,18 @@ static void mode_a_minimal(void)
     vsync_pulse();
     panel_seq_dclk_keepalive(200);
 
+    /* 2026-05-28 R/G/B cycle test: 每 50 帧切一色, 4 phase 循环 = R/G/B/白. */
+    static u32 frame_count = 0;
+    frame_count++;
+    u32 mask;
+    switch ((frame_count / 50) % 4) {
+        case 0: mask = 0x049; break;  /* R only (bits 0,3,6) */
+        case 1: mask = 0x092; break;  /* G only (bits 1,4,7) */
+        case 2: mask = 0x124; break;  /* B only (bits 2,5,8) */
+        default: mask = 0x1FF; break; /* all = white */
+    }
+    panel_seq_set_sdi_mask(mask);
+
     /* Test 1: 384 advance per frame, 首 SDI=1 其他 0 → 1 "1" 周游 chain → 真扫描. */
     for (int row = 0; row < 384; row++) {
         icnd3019_advance_row(row == 0 ? 1 : 0);

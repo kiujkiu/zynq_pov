@@ -15,10 +15,11 @@
 #include "xil_io.h"
 #include "xil_types.h"
 
-#define PANEL_SEQ_BASE  0x40010000UL
-#define PANEL_SEQ_CMD   0x00
-#define PANEL_SEQ_BURST 0x04
-#define PANEL_SEQ_ICND  0x08   /* ICND3019 cmd: bit[31]=type (0=adv,1=cfg), bit[0]=SDI, bit[3:0]=reg */
+#define PANEL_SEQ_BASE      0x40010000UL
+#define PANEL_SEQ_CMD       0x00
+#define PANEL_SEQ_BURST     0x04
+#define PANEL_SEQ_ICND      0x08   /* ICND3019 cmd: bit[31]=type (0=adv,1=cfg), bit[0]=SDI, bit[3:0]=reg */
+#define PANEL_SEQ_SDI_MASK  0x0C   /* 9-bit per-chain SDI enable mask, default 0x1FF */
 
 #define PANEL_SEQ_ST_BUSY      0x1u
 #define PANEL_SEQ_ST_PENDING   0x2u
@@ -70,6 +71,13 @@ static inline void panel_seq_row_pulse(u8 n_dclks) {
 /* DCLK keepalive: free-running DCLK 后理论上不需要, 留作 no-op 安全保留. */
 static inline void panel_seq_dclk_keepalive(int n_dclks) {
     (void)n_dclks;   /* DCLK 永远跑, no-op */
+}
+
+/* SDI 9-bit per-chain mask. 1 = chain enabled, 0 = chain forced 0.
+ * bit[0]=R1, [1]=G1, [2]=B1, [3]=R2, [4]=G2, [5]=B2, [6]=R3, [7]=G3, [8]=B3
+ * 例: 0x049 = R-only, 0x092 = G-only, 0x124 = B-only, 0x1FF = all (white) */
+static inline void panel_seq_set_sdi_mask(u32 mask) {
+    Xil_Out32(PANEL_SEQ_BASE + PANEL_SEQ_SDI_MASK, mask & 0x1FFu);
 }
 
 /* ICND3019 helpers ----------------------------------------------------------- */

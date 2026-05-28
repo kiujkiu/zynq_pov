@@ -117,6 +117,7 @@ module led_panel_seq #(
     //---------- AXI-Lite WRITE FSM ----------
     reg start_pulse;
     reg [15:0] burst_reg;
+    reg [8:0]  sdi_mask;          // 2026-05-28: per-chain SDI enable mask, default all 1
 
     always @(posedge s_axi_aclk) begin
         if (!s_axi_aresetn) begin
@@ -130,6 +131,7 @@ module led_panel_seq #(
             icnd_pending_type <= 1'b0;
             icnd_pending_sdi  <= 1'b0;
             icnd_pending_reg  <= 4'b0;
+            sdi_mask          <= 9'b111_111_111;  /* default 全 9 路 enable */
         end else begin
             start_pulse      <= 1'b0;
             icnd_start_pulse <= 1'b0;
@@ -149,6 +151,9 @@ module led_panel_seq #(
                     icnd_pending_type <= s_axi_wdata[31];
                     icnd_pending_sdi  <= s_axi_wdata[0];
                     icnd_pending_reg  <= s_axi_wdata[3:0];
+                end else if (s_axi_awaddr[3:2] == 2'b11) begin
+                    // 0x0C = SDI mask (bit[8:0] = per-chain enable)
+                    sdi_mask <= s_axi_wdata[8:0];
                 end
                 s_axi_bvalid <= 1'b1;
                 s_axi_bresp  <= 2'b00;
@@ -233,7 +238,7 @@ module led_panel_seq #(
                             end
                             default: begin // word
                                 bits_left <= 7'd16;
-                                sdi_out   <= {9{pending_data[15]}};
+                                sdi_out   <= {9{pending_data[15]}} & sdi_mask;
                                 le_out    <= (pending_le >= 7'd16);
                                 row_out   <= 1'b0;
                             end
@@ -265,7 +270,7 @@ module led_panel_seq #(
                             end
                             default: begin
                                 bits_left <= 7'd16;
-                                sdi_out   <= {9{data_latched[15]}};
+                                sdi_out   <= {9{data_latched[15]}} & sdi_mask;
                                 le_out    <= (le_latched >= 7'd16);
                                 row_out   <= 1'b0;
                             end
@@ -295,7 +300,7 @@ module led_panel_seq #(
                             end
                             default: begin
                                 bits_left <= 7'd16;
-                                sdi_out   <= {9{pending_data[15]}};
+                                sdi_out   <= {9{pending_data[15]}} & sdi_mask;
                                 le_out    <= (pending_le >= 7'd16);
                                 row_out   <= 1'b0;
                             end
@@ -312,7 +317,7 @@ module led_panel_seq #(
                     bits_left <= bits_left - 1;
                     if (mode_reg == 2'b00) begin
                         data_shift <= {data_shift[14:0], 1'b0};
-                        sdi_out    <= {9{data_shift[14]}};
+                        sdi_out    <= {9{data_shift[14]}} & sdi_mask;
                         le_out     <= ((bits_left - 1) <= le_count_reg);
                     end
                     // marker_LE / marker_ROW: 保持 le_out/row_out, sdi=0

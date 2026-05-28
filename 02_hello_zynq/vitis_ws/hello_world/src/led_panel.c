@@ -583,11 +583,14 @@ static void mode_single_pixel(void)
      * row 80 → row band = 80/53 = 1 → middle row band → chain group 1
      * Red → chain = 1*3 + 0 = 3 (R2)
      * row_iter 范围: row 80 / 160 * 384 = 192, ±3 区间 */
-    const int target_row_iter_lo = 188;
-    const int target_row_iter_hi = 196;
-    const int target_chip = 5;
-    const u16 target_bit_mask = 0x0001;  /* bit 0 only */
-    const int target_chain = 3;          /* R of middle row band */
+    /* CHIP SWEEP: 12 chip × 60 帧, 看每 chip 在哪 (cascade↔panel pos) */
+    static u32 frame_x = 0;
+    frame_x++;
+    int target_chip = (int)((frame_x / 60) % CHIPS_PER_CHAIN);
+    const int target_row_iter_lo = 0;     /* 全 row_iter, 让所有 sub-row 都可见 */
+    const int target_row_iter_hi = 383;
+    const u16 target_bit_mask = 0x0001;
+    const int target_chain = 0;
 
     for (int row_iter = 0; row_iter < 384; row_iter++) {
         icnd3019_advance_row(row_iter == 0 ? 1 : 0);

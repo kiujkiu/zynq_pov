@@ -72,7 +72,8 @@
 
 /* Cascade chips per chain. 官方 dsl 解出来 = 1 (每命令 16 DCLK). 完全模仿. */
 #ifndef CHIPS_PER_CHAIN
-/* 2026-05-27 v9: 回 cascade=12 + 恢复 init */
+/* 12 保持原值 - 实测改 10 BLUE 仍不出, panel cascade 实际可见 chip < 12, 但
+ * 12 也工作 (extra LATCH 无害). */
 #  define CHIPS_PER_CHAIN  12
 #endif
 
@@ -311,6 +312,7 @@ static void mode_perchain_bars(void);
 static void mode_chip_sweep(void);
 static void mode_bit_sweep(void);
 static void mode_color_grid(void);
+static void mode_smiley(void);
 static void mode_b_gain_max(void);
 static void mode_c_scan_20(void);
 static void mode_d_alt_data(void);
@@ -330,7 +332,7 @@ void led_panel_multi_mode_diag(void)
         xil_printf("\r\n=== LOCKED MODE A: 无 init, 仅 LATCH 0xFFFF + EN_OP (持续) ===\r\n");
         announced = 1;
     }
-    for (u32 i = 0; i < 5000; i++) mode_color_grid();
+    for (u32 i = 0; i < 5000; i++) mode_smiley();
     return;
     /* 旧的 9 模式轮换 (已禁用):
      * static int mode = 0; ... */
@@ -414,6 +416,69 @@ static void icnd3019_advance_row(int inject_one)
     panel_seq_icnd_advance(inject_one ? 1u : 0u);
 }
 
+/* mode_smiley: 48 col × 8 row bitmap, panel 上画笑脸. 用 16-bit chain_data
+ * 控制每 region 16 sub-col, 3 region × 16 = 48 effective col. chip 0..7 = 8 row. */
+static void mode_smiley(void)
+{
+    static int init = 0;
+    if (!init) {
+        vsync_pulse(); en_op(); pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA); wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55); wr_cfg(REG_PASSWORD_B, 0x55);
+        init = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    /* 48-bit smiley (8 row × 48 col). bit 47=最右 col, bit 0=最左 col.
+     * 左 16 bit = left region; mid 16 = middle; right 16 = right region. */
+    static const unsigned long long smiley[8] = {
+        0x000000000000ULL,                /* row 0 (top) - empty */
+        0x000700038000ULL,                /* row 1 - eyes top */
+        0x000F8007C000ULL,                /* row 2 - eyes */
+        0x000F8007C000ULL,                /* row 3 - eyes */
+        0x000700038000ULL,                /* row 4 - eyes bottom */
+        0x000000000000ULL,                /* row 5 - empty */
+        0x600000000003ULL,                /* row 6 - mouth corners */
+        0x7FFFFFFFFFFEULL,                /* row 7 (bottom) - smile line */
+    };
+
+    for (int row_iter = 0; row_iter < 384; row_iter++) {
+        icnd3019_advance_row(row_iter == 0 ? 1 : 0);
+        panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
+
+        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
+            int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
+            u16 right_bits = 0, mid_bits = 0, left_bits = 0;
+            if (chip < 8) {
+                unsigned long long pat = smiley[chip];
+                left_bits  = (u16)((pat >>  0) & 0xFFFFULL);
+                mid_bits   = (u16)((pat >> 16) & 0xFFFFULL);
+                right_bits = (u16)((pat >> 32) & 0xFFFFULL);
+            }
+            /* white pixels: R+G+B for each region */
+            panel_seq_set_chain_data(0, right_bits);  /* R1 */
+            panel_seq_set_chain_data(1, right_bits);  /* G1 */
+            panel_seq_set_chain_data(2, right_bits);  /* B1 */
+            panel_seq_set_chain_data(3, mid_bits);    /* R2 */
+            panel_seq_set_chain_data(4, mid_bits);    /* G2 */
+            panel_seq_set_chain_data(5, mid_bits);    /* B2 */
+            panel_seq_set_chain_data(6, left_bits);   /* R3 */
+            panel_seq_set_chain_data(7, left_bits);   /* G3 */
+            panel_seq_set_chain_data(8, left_bits);   /* B3 */
+
+            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
+            panel_seq_word_perchain(le);
+        }
+        panel_seq_word(0, 0);
+    }
+}
+
 /* mode_color_grid: 9 chain × 12 chip = 108 cell 图像测试.
  * 每行 chip 控制不同 row band, 每 row band 一个色:
  *   chip 0..3 (top 4 stripe)    = RED
@@ -445,7 +510,7 @@ static void mode_color_grid(void)
         for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
             /* cascade chip index: chip 0 = LATCH 11 (last), chip 11 = LATCH 0 (first) */
             int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
-            /* 3 row bands: 0..3 R, 4..7 G, 8..11 B */
+            /* 3 row bands: chip 0..3 R / 4..7 G / 8..11 B (panel 可能只显 R/G) */
             int row_band = (chip < 4) ? 0 : (chip < 8) ? 1 : 2;
             u16 r_val = (row_band == 0) ? 0xFFFF : 0;
             u16 g_val = (row_band == 1) ? 0xFFFF : 0;

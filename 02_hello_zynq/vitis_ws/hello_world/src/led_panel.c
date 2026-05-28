@@ -307,6 +307,8 @@ void led_panel_force_all_white_test(void)
  * scope 接 ICND1069 任意 chip OUT pin (常亮 / 微闪 / 完全黑) + ICND3019 OUT0 (LOW=选中).
  * panel 直视 — 任何 mode 看到 LED 亮哪怕 1 颗都报回. */
 static void mode_a_minimal(void);
+static void mode_perchain_bars(void);
+static void mode_chip_sweep(void);
 static void mode_b_gain_max(void);
 static void mode_c_scan_20(void);
 static void mode_d_alt_data(void);
@@ -326,7 +328,7 @@ void led_panel_multi_mode_diag(void)
         xil_printf("\r\n=== LOCKED MODE A: 无 init, 仅 LATCH 0xFFFF + EN_OP (持续) ===\r\n");
         announced = 1;
     }
-    for (u32 i = 0; i < 5000; i++) mode_a_minimal();
+    for (u32 i = 0; i < 5000; i++) mode_chip_sweep();
     return;
     /* 旧的 9 模式轮换 (已禁用):
      * static int mode = 0; ... */
@@ -408,6 +410,51 @@ static void mode_a_minimal(void)
 static void icnd3019_advance_row(int inject_one)
 {
     panel_seq_icnd_advance(inject_one ? 1u : 0u);
+}
+
+/* mode_chip_sweep: 单 chip-position 探针. 每 60 帧切一个 chip (0..11),
+ * 只让该 chip 的 16 输出全亮 (chain_data 在该 LATCH 时 = 0xFFFF, 其他 = 0).
+ * 看 panel 红色光带在右 1/3 region 内的位置 → 确定 chip ↔ 物理列 group 映射. */
+static void mode_chip_sweep(void)
+{
+    static int init = 0;
+    if (!init) {
+        vsync_pulse(); en_op(); pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA); wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55); wr_cfg(REG_PASSWORD_B, 0x55);
+        init = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    static u32 frame = 0;
+    frame++;
+    /* 4 phase, 60 帧切, 每 phase 点 3 个相邻 chip 增亮: 0-2 / 3-5 / 6-8 / 9-11 */
+    u32 phase = (frame / 60) % 4;
+    u32 lit_lo = phase * 3;
+    u32 lit_hi = lit_lo + 2;
+
+    /* 全部 9 chain 都点 (亮度 max), 全色白 */
+    for (int c = 0; c < 9; c++) panel_seq_set_chain_data(c, 0);
+
+    for (int row = 0; row < 384; row++) {
+        icnd3019_advance_row(row == 0 ? 1 : 0);
+        panel_seq_row_pulse(row == 0 ? 12 : 4);
+
+        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
+            panel_seq_wait_can_accept();
+            u16 v = (latch >= lit_lo && latch <= lit_hi) ? 0xFFFF : 0x0000;
+            for (int c = 0; c < 9; c++) panel_seq_set_chain_data(c, v);
+            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
+            panel_seq_word_perchain(le);
+        }
+        panel_seq_word(0, 0);
+    }
 }
 
 /* mode_perchain_bars: V3 per-chain SDI 测试. 3 段竖条 R/G/B.

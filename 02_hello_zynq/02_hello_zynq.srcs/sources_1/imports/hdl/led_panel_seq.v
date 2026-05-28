@@ -101,6 +101,11 @@ module led_panel_seq #(
     reg [6:0]  pending_le;
     reg [15:0] pending_burst;
 
+    /* 2026-05-28 v3: per-chain SDI 独立数据 buffer + shift register.
+     * Mode 2'b11 = per-chain word: 每 chain 用 chain_data[N] 独立 shift. */
+    reg [15:0] chain_data [0:8];      // ARM 预写, 9 chain 各自 16-bit
+    reg [15:0] chain_shift [0:8];     // mid-shift state for each chain
+
     //---------- ICND3019 sub-FSM state (declarations) ----------
     // AXI addr 0x08 写: bit[31]=cmd_type (0=advance, 1=config),
     //                   bit[0]=SDI (for advance), bit[3:0]=reg<3:0> (for config)
@@ -119,6 +124,7 @@ module led_panel_seq #(
     reg [15:0] burst_reg;
     reg [8:0]  sdi_mask;          // 2026-05-28: per-chain SDI enable mask, default all 1
 
+    integer ci;
     always @(posedge s_axi_aclk) begin
         if (!s_axi_aresetn) begin
             s_axi_awready    <= 1'b0;
@@ -132,6 +138,8 @@ module led_panel_seq #(
             icnd_pending_sdi  <= 1'b0;
             icnd_pending_reg  <= 4'b0;
             sdi_mask          <= 9'b111_111_111;  /* default 全 9 路 enable */
+            for (ci = 0; ci < 9; ci = ci + 1)
+                chain_data[ci] <= 16'b0;
         end else begin
             start_pulse      <= 1'b0;
             icnd_start_pulse <= 1'b0;
@@ -152,8 +160,15 @@ module led_panel_seq #(
                     icnd_pending_sdi  <= s_axi_wdata[0];
                     icnd_pending_reg  <= s_axi_wdata[3:0];
                 end else if (s_axi_awaddr[3:2] == 2'b11) begin
-                    // 0x0C = SDI mask (bit[8:0] = per-chain enable)
-                    sdi_mask <= s_axi_wdata[8:0];
+                    // 0x0C multi-purpose: wdata[31:30] subcmd
+                    //   00 = write sdi_mask, wdata[8:0]
+                    //   01 = write chain_data[idx], wdata[19:16]=idx (0-8), wdata[15:0]=data
+                    if (s_axi_wdata[31:30] == 2'b00) begin
+                        sdi_mask <= s_axi_wdata[8:0];
+                    end else if (s_axi_wdata[31:30] == 2'b01) begin
+                        if (s_axi_wdata[19:16] < 4'd9)
+                            chain_data[s_axi_wdata[19:16]] <= s_axi_wdata[15:0];
+                    end
                 end
                 s_axi_bvalid <= 1'b1;
                 s_axi_bresp  <= 2'b00;
@@ -191,6 +206,7 @@ module led_panel_seq #(
     end
 
     //---------- Sequencer (event-driven on dclk_will_fall) ----------
+    integer chk;
     always @(posedge s_axi_aclk) begin
         if (!s_axi_aresetn) begin
             busy          <= 1'b0;
@@ -210,6 +226,9 @@ module led_panel_seq #(
             pending_mode  <= 2'b0;
             pending_le    <= 7'b0;
             pending_burst <= 16'b0;
+            for (chk = 0; chk < 9; chk = chk + 1) begin
+                chain_shift[chk] <= 16'b0;
+            end
         end else begin
             if (dclk_will_fall) begin
                 if (bits_left == 7'd0) begin
@@ -236,7 +255,26 @@ module led_panel_seq #(
                                 row_out   <= 1'b1;
                                 sdi_out   <= 9'b0;
                             end
-                            default: begin // word
+                            2'b11: begin   // per-chain word (NEW)
+                                bits_left <= 7'd16;
+                                /* load 9 chain shift regs from chain_data buffers */
+                                chain_shift[0] <= chain_data[0];
+                                chain_shift[1] <= chain_data[1];
+                                chain_shift[2] <= chain_data[2];
+                                chain_shift[3] <= chain_data[3];
+                                chain_shift[4] <= chain_data[4];
+                                chain_shift[5] <= chain_data[5];
+                                chain_shift[6] <= chain_data[6];
+                                chain_shift[7] <= chain_data[7];
+                                chain_shift[8] <= chain_data[8];
+                                /* MSB to sdi_out, ANDed with mask */
+                                sdi_out <= {chain_data[8][15], chain_data[7][15], chain_data[6][15],
+                                            chain_data[5][15], chain_data[4][15], chain_data[3][15],
+                                            chain_data[2][15], chain_data[1][15], chain_data[0][15]} & sdi_mask;
+                                le_out  <= (pending_le >= 7'd16);
+                                row_out <= 1'b0;
+                            end
+                            default: begin // word broadcast (2'b00)
                                 bits_left <= 7'd16;
                                 sdi_out   <= {9{pending_data[15]}} & sdi_mask;
                                 le_out    <= (pending_le >= 7'd16);
@@ -319,6 +357,21 @@ module led_panel_seq #(
                         data_shift <= {data_shift[14:0], 1'b0};
                         sdi_out    <= {9{data_shift[14]}} & sdi_mask;
                         le_out     <= ((bits_left - 1) <= le_count_reg);
+                    end else if (mode_reg == 2'b11) begin
+                        // per-chain shift: each chain independently
+                        chain_shift[0] <= {chain_shift[0][14:0], 1'b0};
+                        chain_shift[1] <= {chain_shift[1][14:0], 1'b0};
+                        chain_shift[2] <= {chain_shift[2][14:0], 1'b0};
+                        chain_shift[3] <= {chain_shift[3][14:0], 1'b0};
+                        chain_shift[4] <= {chain_shift[4][14:0], 1'b0};
+                        chain_shift[5] <= {chain_shift[5][14:0], 1'b0};
+                        chain_shift[6] <= {chain_shift[6][14:0], 1'b0};
+                        chain_shift[7] <= {chain_shift[7][14:0], 1'b0};
+                        chain_shift[8] <= {chain_shift[8][14:0], 1'b0};
+                        sdi_out <= {chain_shift[8][14], chain_shift[7][14], chain_shift[6][14],
+                                    chain_shift[5][14], chain_shift[4][14], chain_shift[3][14],
+                                    chain_shift[2][14], chain_shift[1][14], chain_shift[0][14]} & sdi_mask;
+                        le_out  <= ((bits_left - 1) <= le_count_reg);
                     end
                     // marker_LE / marker_ROW: 保持 le_out/row_out, sdi=0
                 end

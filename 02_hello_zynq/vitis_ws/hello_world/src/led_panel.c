@@ -370,19 +370,25 @@ static void mode_a_minimal(void)
     vsync_pulse();
     panel_seq_dclk_keepalive(200);
 
-    /* DEBUG: mask 每行循环 R/G/B → 看 chain 位置跟 panel row 映射 */
-    static const u32 mask_cycle[3] = {0x049, 0x092, 0x124};
+    /* CHAIN MAPPING TEST: 循环 9 个 single-chain mask, 看每路 chain 物理 region. */
+    static u32 frame_count = 0;
+    frame_count++;
+    static const u32 chain_masks[9] = {
+        0x001, 0x002, 0x004,   /* R1, G1, B1 */
+        0x008, 0x010, 0x020,   /* R2, G2, B2 */
+        0x040, 0x080, 0x100,   /* R3, G3, B3 */
+    };
+    u32 mask = chain_masks[(frame_count / 60) % 9];
+    panel_seq_set_sdi_mask(mask);
+
     for (int row = 0; row < 384; row++) {
         icnd3019_advance_row(row == 0 ? 1 : 0);
         panel_seq_row_pulse(row == 0 ? 12 : 4);
-        panel_seq_wait_idle();
-        panel_seq_set_sdi_mask(mask_cycle[row % 3]);
         if (CHIPS_PER_CHAIN > 1) {
             panel_seq_burst_word(0xFFFF, 0, CHIPS_PER_CHAIN - 2);
         }
         panel_seq_word(0xFFFF, 1);
         panel_seq_word(0, 0);
-        panel_seq_wait_idle();
     }
 }
 

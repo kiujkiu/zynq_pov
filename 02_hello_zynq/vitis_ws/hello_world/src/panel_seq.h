@@ -77,7 +77,25 @@ static inline void panel_seq_dclk_keepalive(int n_dclks) {
  * bit[0]=R1, [1]=G1, [2]=B1, [3]=R2, [4]=G2, [5]=B2, [6]=R3, [7]=G3, [8]=B3
  * 例: 0x049 = R-only, 0x092 = G-only, 0x124 = B-only, 0x1FF = all (white) */
 static inline void panel_seq_set_sdi_mask(u32 mask) {
+    /* wdata[31:30]=00 → write sdi_mask */
     Xil_Out32(PANEL_SEQ_BASE + PANEL_SEQ_SDI_MASK, mask & 0x1FFu);
+}
+
+/* 写 per-chain data buffer (chain idx 0-8, 16-bit value).
+ * 2026-05-28 v3: 配合 panel_seq_word_perchain() 实现任意 per-pixel 色. */
+static inline void panel_seq_set_chain_data(u8 chain, u16 data) {
+    /* wdata[31:30]=01 → write chain_data[idx], idx in [19:16], data in [15:0] */
+    u32 w = 0x40000000u | ((u32)(chain & 0xFu) << 16) | data;
+    Xil_Out32(PANEL_SEQ_BASE + PANEL_SEQ_SDI_MASK, w);
+}
+
+/* per-chain word mode: 用 chain_data[0..8] buffer 各自 shift 16 DCLK,
+ * 最后 le_count 个 DCLK 拉高 LE. 调用前先用 panel_seq_set_chain_data(N, ...) 设 9 chain. */
+static inline void panel_seq_word_perchain(u8 le_count) {
+    panel_seq_wait_can_accept();
+    /* mode = 2'b11 (per-chain word), data field unused */
+    u32 cmd = (3u << 24) | ((u32)(le_count & 0x7Fu) << 16);
+    Xil_Out32(PANEL_SEQ_BASE + PANEL_SEQ_CMD, cmd);
 }
 
 /* ICND3019 helpers ----------------------------------------------------------- */

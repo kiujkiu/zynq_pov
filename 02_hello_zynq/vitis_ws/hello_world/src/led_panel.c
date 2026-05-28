@@ -317,6 +317,8 @@ static void mode_chip_id(void);
 static void mode_mosaic(void);
 static void mode_verify(void);
 static void mode_ring(void);
+static void mode_row_probe(void);
+static void mode_circle(void);
 static void mode_b_gain_max(void);
 static void mode_c_scan_20(void);
 static void mode_d_alt_data(void);
@@ -336,7 +338,7 @@ void led_panel_multi_mode_diag(void)
         xil_printf("\r\n=== LOCKED MODE A: 无 init, 仅 LATCH 0xFFFF + EN_OP (持续) ===\r\n");
         announced = 1;
     }
-    for (u32 i = 0; i < 5000; i++) mode_ring();
+    for (u32 i = 0; i < 5000; i++) mode_circle();
     return;
     /* 旧的 9 模式轮换 (已禁用):
      * static int mode = 0; ... */
@@ -491,6 +493,122 @@ static void mode_mosaic(void)
                 }
             }
             for (int c = 0; c < 9; c++) panel_seq_set_chain_data(c, vals[c]);
+            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
+            panel_seq_word_perchain(le);
+        }
+        panel_seq_word(0, 0);
+    }
+}
+
+/* mode_circle: 真圆环! row_iter 当 y (0..383 linear map 物理 row),
+ * chain_data bit position 当 x. 圆心 (192, 24), inner r=80, outer r=110.
+ * Each row 计算该行哪些 bit 落在 ring 内 → 设 mask. */
+static void mode_circle(void)
+{
+    static int init = 0;
+    if (!init) {
+        vsync_pulse(); en_op(); pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA); wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55); wr_cfg(REG_PASSWORD_B, 0x55);
+        init = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    /* Circle params:
+     * row_iter range 0..383 ≈ panel height
+     * effective col range 0..47 (16 bit × 3 region), 我们关心比例
+     * Aspect: 384 rowy ≈ 160 phys row, 48 colx ≈ 180 phys col
+     *   → row : col 比 = (384/160) : (48/180) ≈ 2.4 : 0.267 → row_iter 比 col 大 9x
+     *   → scale dy = (row_iter - cy) / 9 让圆变正圆 */
+    const int cy = 192;
+    const int cx = 24;
+    const int r_outer = 18;   /* col units */
+    const int r_inner = 13;
+
+    for (int row_iter = 0; row_iter < 384; row_iter++) {
+        icnd3019_advance_row(row_iter == 0 ? 1 : 0);
+        panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
+
+        int dy_scaled = (row_iter - cy) / 9;
+        int dy2 = dy_scaled * dy_scaled;
+
+        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
+            int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
+            u16 vals[9] = {0};
+            if (chip < 8) {
+                /* compute mask for each region */
+                for (int region = 0; region < 3; region++) {
+                    u16 mask = 0;
+                    for (int bit = 0; bit < 16; bit++) {
+                        int colx = region * 16 + bit;
+                        int dx = colx - cx;
+                        int d2 = dx*dx + dy2;
+                        if (d2 >= r_inner*r_inner && d2 <= r_outer*r_outer) {
+                            mask |= (u16)(1u << bit);
+                        }
+                    }
+                    /* region 0=left, 1=mid, 2=right; chain layout: 0..2=right, 3..5=mid, 6..8=left */
+                    int chain_base;
+                    if (region == 0) chain_base = 6;
+                    else if (region == 1) chain_base = 3;
+                    else chain_base = 0;
+                    vals[chain_base + 0] = mask;  /* R */
+                    vals[chain_base + 1] = mask;  /* G */
+                    vals[chain_base + 2] = mask;  /* B */
+                }
+            }
+            for (int c = 0; c < 9; c++) panel_seq_set_chain_data(c, vals[c]);
+            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
+            panel_seq_word_perchain(le);
+        }
+        panel_seq_word(0, 0);
+    }
+}
+
+/* mode_row_probe: row_iter 前半 chain_data=0xFFFF, 后半 0. 验证 row_iter
+ * → 物理 row 映射. 期望: 上半 panel 白, 下半黑. */
+static void mode_row_probe(void)
+{
+    static int init = 0;
+    if (!init) {
+        vsync_pulse(); en_op(); pre_act();
+        wr_cfg(REG_PASSWORD_A, 0xAA); wr_cfg(REG_PASSWORD_B, 0xAA);
+        wr_cfg(0x02, 19);   wr_cfg(0x03, 0x00);
+        wr_cfg(0x04, 0x02); wr_cfg(0x05, 0x04); wr_cfg(0x06, 0x01);
+        wr_cfg(0x07, 0x20); wr_cfg(0x0D, 0x02); wr_cfg(0x0E, 0x06);
+        wr_cfg(0x1C, 0xC0); wr_cfg(0x1D, 0xA6);
+        wr_cfg(0x20, 0x09); wr_cfg(0x26, 0xAA);
+        wr_cfg(REG_PASSWORD_A, 0x55); wr_cfg(REG_PASSWORD_B, 0x55);
+        init = 1;
+    }
+    vsync_pulse();
+    panel_seq_set_sdi_mask(0x1FF);
+
+    static u32 frame = 0;
+    frame++;
+    /* 4 phase 切, 测 row_iter 不同分割点 */
+    u32 phase = (frame / 60) % 4;
+    int cutoff;
+    switch (phase) {
+        case 0: cutoff = 96;  break;   /* row_iter < 96 on (1/4) */
+        case 1: cutoff = 192; break;   /* row_iter < 192 on (1/2) */
+        case 2: cutoff = 288; break;   /* row_iter < 288 on (3/4) */
+        default: cutoff = 384; break;  /* all on */
+    }
+
+    for (int row_iter = 0; row_iter < 384; row_iter++) {
+        icnd3019_advance_row(row_iter == 0 ? 1 : 0);
+        panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
+
+        u16 v = (row_iter < cutoff) ? 0xFFFF : 0;
+        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
+            for (int c = 0; c < 9; c++) panel_seq_set_chain_data(c, v);
             u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
             panel_seq_word_perchain(le);
         }

@@ -2157,6 +2157,17 @@ int main(void)
         }
     }
 
+#ifndef ENABLE_HUB75E_TEST
+#define ENABLE_HUB75E_TEST 0
+#endif
+#if ENABLE_HUB75E_TEST
+    /* HUB75E FM6124 panel Phase 1 bring-up via PL IP. 不返回. */
+    extern void hub75e_bringup_main(void);
+    xil_printf("[main] ENABLE_HUB75E_TEST=1, jumping to hub75e_bringup_main()\r\n");
+    hub75e_bringup_main();
+    while (1) ;
+#endif
+
 #if ENABLE_LED_PANEL_TEST
     /* HUB75 LED panel bring-up bit-bang. 不返回. */
     xil_printf("[main] ENABLE_LED_PANEL_TEST=1\r\n");

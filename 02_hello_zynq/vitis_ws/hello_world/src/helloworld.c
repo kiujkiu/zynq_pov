@@ -2190,10 +2190,6 @@ int main(void)
     while (1) {
         led_panel_multi_mode_diag();
     }
-    /* unreachable */
-    while (1) {
-        led_panel_force_all_white_test();
-    }
 #endif
     /* unreachable */
 #endif

@@ -31,12 +31,18 @@ puts "================================================================"
 puts " HUB75E FM6124 panel BD integration"
 puts "================================================================"
 
+# 0. open project (batch 模式必需)
+if {[catch {current_project} _proj] || $_proj eq ""} {
+    open_project 02_hello_zynq.xpr
+}
+puts "\[INFO\] opened project: [current_project]"
+
 # 1. open BD
 if {[catch {current_bd_design} _bd] || $_bd eq ""} {
     open_bd_design [get_files ${bd_name}.bd]
 }
 current_bd_design [get_bd_designs $bd_name]
-puts "[INFO] opened BD: $bd_name"
+puts "\[INFO\] opened BD: $bd_name"
 
 # 2. 添加 Verilog source (如未加)
 set hdl_file "02_hello_zynq.srcs/sources_1/imports/hdl/hub75e_panel_seq.v"
@@ -45,27 +51,27 @@ if {![file exists $hdl_file]} {
 }
 if {[llength [get_files -quiet hub75e_panel_seq.v]] == 0} {
     add_files -norecurse $hdl_file
-    puts "[INFO] added source: $hdl_file"
+    puts "\[INFO\] added source: $hdl_file"
 } else {
-    puts "[INFO] source already in project: hub75e_panel_seq.v"
+    puts "\[INFO\] source already in project: hub75e_panel_seq.v"
 }
 update_compile_order -fileset sources_1
 
 # 3. 删旧 led_panel_seq cell + 外部 port
 if {[llength [get_bd_cells -quiet $old_inst]] > 0} {
-    puts "[INFO] removing old cell: $old_inst"
+    puts "\[INFO\] removing old cell: $old_inst"
     delete_bd_objs [get_bd_cells $old_inst]
 }
 foreach p {panel_seq_dclk panel_seq_le panel_seq_row panel_seq_sdi \
            panel_seq_icnd_dclk panel_seq_icnd_rclk panel_seq_icnd_sdi} {
     if {[llength [get_bd_ports -quiet $p]] > 0} {
         delete_bd_objs [get_bd_ports $p]
-        puts "[INFO] deleted port: $p"
+        puts "\[INFO\] deleted port: $p"
     }
 }
 
 # 4. 创建 hub75e_panel_seq cell (module_ref)
-puts "[INFO] creating cell: $ip_inst (module_ref to hub75e_panel_seq)"
+puts "\[INFO\] creating cell: $ip_inst (module_ref to hub75e_panel_seq)"
 create_bd_cell -type module -reference $ip_name $ip_inst
 
 # 5. AXI-Lite 连接到 ps7_axi_periph
@@ -75,20 +81,26 @@ if {[llength $axi_interconn] == 0} {
     set axi_interconn [get_bd_cells -filter {VLNV =~ "*axi_interconnect*" || VLNV =~ "*smartconnect*"}]
     set axi_interconn [lindex $axi_interconn 0]
 }
-puts "[INFO] AXI interconnect: [get_property NAME $axi_interconn]"
+puts "\[INFO\] AXI interconnect: [get_property NAME $axi_interconn]"
 
 # 给 interconnect 加一个 master port
 # 先看现有 master count
 set current_num_mi [get_property CONFIG.NUM_MI $axi_interconn]
-puts "[INFO] current NUM_MI = $current_num_mi"
+puts "\[INFO\] current NUM_MI = $current_num_mi"
 set new_mi_idx $current_num_mi
 set_property CONFIG.NUM_MI [expr $current_num_mi + 1] $axi_interconn
 
-# 连 AXI clock / aresetn — 复用现有 FCLK_CLK0 跟 reset
-set fclk_net [get_bd_nets -of_objects [get_bd_pins -filter {NAME == "FCLK_CLK0"} -of_objects [get_bd_cells "processing_system7_0"]]]
-set rstn_net [get_bd_nets -of_objects [get_bd_pins -filter {NAME == "peripheral_aresetn"} -of_objects [get_bd_cells -filter {VLNV =~ "*proc_sys_reset*"}]]]
-puts "[INFO] FCLK net = $fclk_net"
-puts "[INFO] aresetn net = $rstn_net"
+# AXI clock / aresetn: 用 FCLK_CLK1 (沿用 75 MHz, 之前 led_panel_seq 设置)
+# + proc_sys_reset_0 (跟 FCLK1 同步).
+# DCLK = 75 / DCLK_DIV(4) = 18.75 MHz (Phase 1 看波形足够; 后续手动 GUI 调
+# FCLK1 → 60/90/120 MHz 拿更高 DCLK).
+set ps7_fclk1 [get_property CONFIG.PCW_FPGA1_PERIPHERAL_FREQMHZ [get_bd_cells processing_system7_0]]
+puts "\[INFO\] PS7 FCLK_CLK1 = $ps7_fclk1 MHz (DCLK 将 = $ps7_fclk1/4 MHz)"
+
+set fclk_net [get_bd_nets -of_objects [get_bd_pins processing_system7_0/FCLK_CLK1]]
+set rstn_net [get_bd_nets -of_objects [get_bd_pins proc_sys_reset_0/peripheral_aresetn]]
+puts "\[INFO\] FCLK net = $fclk_net"
+puts "\[INFO\] aresetn net = $rstn_net"
 
 # 连 hub75e cell 的 AXI clk / rst
 connect_bd_net -net $fclk_net [get_bd_pins $ip_inst/s_axi_aclk]
@@ -98,12 +110,11 @@ connect_bd_net -net $rstn_net [get_bd_pins $ip_inst/s_axi_aresetn]
 set new_mi_name "M[format %02d $new_mi_idx]_AXI"
 connect_bd_intf_net [get_bd_intf_pins $axi_interconn/$new_mi_name] \
                     [get_bd_intf_pins $ip_inst/S_AXI]
-# 连 master clock + reset
-connect_bd_net $fclk_net [get_bd_pins $axi_interconn/${new_mi_name}_ACLK]
-connect_bd_net $rstn_net [get_bd_pins $axi_interconn/${new_mi_name}_ARESETN]
+# axi_smc 是 smartconnect (非 axi_interconnect), 没有 per-master ACLK/ARESETN pin,
+# 全局 aclk/aresetn 已经接好, 跳过这步.
 
 # 6. 暴露外部 panel port
-puts "[INFO] making external ports for panel signals"
+puts "\[INFO\] making external ports for panel signals"
 foreach {pin port_name port_width} {
     hub75e_rgb_out  hub75e_rgb   6
     hub75e_dclk_out hub75e_dclk  1
@@ -127,7 +138,7 @@ assign_bd_address -target_address_space /processing_system7_0/Data \
 # 8. validate + save
 validate_bd_design
 save_bd_design
-puts "[INFO] BD saved."
+puts "\[INFO\] BD saved."
 
 # 9. xdc 文件加进 constraints
 set xdc_file "02_hello_zynq.srcs/constrs_1/new/hub75e_pins.xdc"
@@ -136,9 +147,9 @@ if {![file exists $xdc_file]} {
 }
 if {[llength [get_files -quiet hub75e_pins.xdc]] == 0} {
     add_files -fileset constrs_1 -norecurse $xdc_file
-    puts "[INFO] added constraint: hub75e_pins.xdc"
+    puts "\[INFO\] added constraint: hub75e_pins.xdc"
 } else {
-    puts "[INFO] xdc already in project"
+    puts "\[INFO\] xdc already in project"
 }
 
 # 10. 旧 led_pins.xdc 可能跟新 hub75e_pins.xdc 重复声明引脚 (AA22 等)
@@ -146,14 +157,14 @@ if {[llength [get_files -quiet hub75e_pins.xdc]] == 0} {
 set old_xdc [get_files -quiet led_pins.xdc]
 if {[llength $old_xdc] > 0} {
     puts ""
-    puts "[WARN] !!! 旧 led_pins.xdc 还在 constraint set 里 !!!"
-    puts "[WARN] 它会跟 hub75e_pins.xdc 抢同样的 PACKAGE_PIN, 引起冲突."
-    puts "[WARN] 手动操作: 在 Sources panel 把 led_pins.xdc 右键 → Disable"
-    puts "[WARN] 或运行: set_property IS_ENABLED 0 \[get_files led_pins.xdc\]"
+    puts "\[WARN\] !!! 旧 led_pins.xdc 还在 constraint set 里 !!!"
+    puts "\[WARN\] 它会跟 hub75e_pins.xdc 抢同样的 PACKAGE_PIN, 引起冲突."
+    puts "\[WARN\] 手动操作: 在 Sources panel 把 led_pins.xdc 右键 → Disable"
+    puts "\[WARN\] 或运行: set_property IS_ENABLED 0 \[get_files led_pins.xdc\]"
 }
 
 # 11. wrapper 重新生成
-puts "[INFO] regenerating wrapper..."
+puts "\[INFO\] regenerating wrapper..."
 set wrapper_file [make_wrapper -files [get_files ${bd_name}.bd] -top -force]
 add_files -norecurse $wrapper_file
 update_compile_order -fileset sources_1

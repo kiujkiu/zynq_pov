@@ -80,7 +80,45 @@ void hub75e_bringup_main(void) {
         sleep(3);
     }
 
-    /* 4. 死循环停在最后一个 mode (全亮白色, 烤机模式) */
+    /* 4. Framebuffer demo (use_fb mode) */
+    xil_printf("[hub75e] phase C: framebuffer demo\r\n");
+
+    xil_printf("[hub75e]  fb fill 100%% RED\r\n");
+    hub75e_fb_fill(0x0000FF);
+    hub75e_set_mode(HUB75E_MODE_SOLID);   /* mode 不变, use_fb 接管 */
+    hub75e_use_fb(1);
+    sleep(3);
+
+    xil_printf("[hub75e]  fb fill 50%% GREEN\r\n");
+    hub75e_fb_fill(0x008000);
+    sleep(3);
+
+    xil_printf("[hub75e]  fb fill 25%% BLUE\r\n");
+    hub75e_fb_fill(0x400000);
+    sleep(3);
+
+    xil_printf("[hub75e]  fb vstripe 8 颜色 (BCM 真彩)\r\n");
+    hub75e_fb_demo_vstripe();
+    sleep(5);
+
+    xil_printf("[hub75e]  fb 渐变 R/G/B 三色横分 (每 21 行一色, 灰阶横向)\r\n");
+    for (u32 y = 0; y < 64; y++) {
+        u32 chan = (y / 22) & 3;   /* 0=R, 1=G, 2=B */
+        for (u32 x = 0; x < 128; x++) {
+            u32 grad = (x * 255) / 127;
+            u32 rgb = (chan == 0) ? grad
+                    : (chan == 1) ? (grad << 8)
+                    : (grad << 16);
+            hub75e_fb_set(x, y, rgb);
+        }
+    }
+    sleep(5);
+
+    /* 切回 LUT mode 显示 full white 烤机 */
+    hub75e_use_fb(0);
+    hub75e_set_mode(HUB75E_MODE_FULL_WHITE);
+
+    /* 5. 死循环停在 FULL WHITE 烤机模式 */
     xil_printf("[hub75e] done. holding FULL WHITE. STATUS poll every 5s.\r\n");
     while (1) {
         sleep(5);

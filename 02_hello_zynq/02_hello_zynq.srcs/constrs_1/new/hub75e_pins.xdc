@@ -8,14 +8,16 @@
 ## 接线: panel HUB75E 标准 IDC 2x8 (16 pin)
 ## ============================================================================
 
-## --- 6 RGB SDI (Phase 1 = panel HUB75 chain 0 上半下半 R1/G1/B1/R2/G2/B2) ---
-## Phase 2 这 6 根 = chain c0 SDI, 不动. 多出来的 chain c1..c7 走其他 IO.
-set_property -dict { PACKAGE_PIN AA22 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[0] }]; # R1 (J1.8  / GPIO1.8)
-set_property -dict { PACKAGE_PIN AB22 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[1] }]; # G1 (J1.7  / GPIO1.7)
-set_property -dict { PACKAGE_PIN AA21 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[2] }]; # B1 (J1.10 / GPIO1.10)
-set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[3] }]; # R2 (J1.9  / GPIO1.9)
-set_property -dict { PACKAGE_PIN Y20  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[4] }]; # G2 (J1.6  / GPIO1.6)
-set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[5] }]; # B2 (J1.5  / GPIO1.5)
+## --- 6 RGB SDI (panel 是 GRB 顺序, 软件 swap: R/G 在 PACKAGE_PIN 互换) ---
+## 信号意义: hub75e_rgb[0]=R1, [1]=G1, [2]=B1, [3]=R2, [4]=G2, [5]=B2 (PL 内)
+## panel 物理: panel.1=G chip, panel.2=R chip (panel.5/6 同理), panel.3/7=B 不变
+## → R 信号走 panel.2 (AB22 / AB21), G 信号走 panel.1 (AA22 / Y20)
+set_property -dict { PACKAGE_PIN AB22 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[0] }]; # R1 → panel.2 (GRB swap, AB22)
+set_property -dict { PACKAGE_PIN AA22 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[1] }]; # G1 → panel.1 (GRB swap, AA22)
+set_property -dict { PACKAGE_PIN AA21 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[2] }]; # B1 → panel.3 (AA21)
+set_property -dict { PACKAGE_PIN Y20  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[3] }]; # R2 → panel.6 (GRB swap, Y20)
+set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[4] }]; # G2 → panel.5 (GRB swap, AB21)
+set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[5] }]; # B2 → panel.7 (Y21)
 
 ## --- 时钟控制 broadcast (Phase 1 + Phase 2 不变) ---
 set_property -dict { PACKAGE_PIN Y18  IOSTANDARD LVCMOS33 } [get_ports { hub75e_dclk }];   # CLK  (J1.17 / GPIO1.17, MRCC)

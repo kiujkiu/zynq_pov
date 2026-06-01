@@ -1,7 +1,7 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0x14FBE95EE98CDA00",
+      "boundary_crc": "0xD39CEDD565712B04",
       "device": "xc7z020clg484-2",
       "gen_directory": "../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq",
       "name": "hello_zynq",
@@ -29,7 +29,7 @@
       "pov_project_batch_0": "",
       "sc_pov_axilite": "",
       "axi_gpio_panel": "",
-      "led_panel_seq_0": ""
+      "hub75e_panel_seq_0": ""
     },
     "interface_ports": {
       "DDR": {
@@ -336,28 +336,24 @@
         "left": "0",
         "right": "0"
       },
-      "panel_seq_dclk": {
-        "direction": "O"
-      },
-      "panel_seq_le": {
-        "direction": "O"
-      },
-      "panel_seq_sdi": {
+      "hub75e_rgb": {
         "direction": "O",
-        "left": "8",
+        "left": "5",
         "right": "0"
       },
-      "panel_seq_row": {
+      "hub75e_dclk": {
         "direction": "O"
       },
-      "panel_seq_icnd_sdi": {
+      "hub75e_lat": {
         "direction": "O"
       },
-      "panel_seq_icnd_dclk": {
+      "hub75e_oe": {
         "direction": "O"
       },
-      "panel_seq_icnd_rclk": {
-        "direction": "O"
+      "hub75e_addr": {
+        "direction": "O",
+        "left": "4",
+        "right": "0"
       }
     },
     "components": {
@@ -1736,7 +1732,7 @@
             "value": "2"
           },
           "NUM_MI": {
-            "value": "6"
+            "value": "7"
           },
           "NUM_SI": {
             "value": "1"
@@ -1761,7 +1757,8 @@
               "M02_AXI",
               "M03_AXI",
               "M04_AXI",
-              "M05_AXI"
+              "M05_AXI",
+              "M06_AXI"
             ]
           },
           "M00_AXI": {
@@ -1896,6 +1893,11 @@
             }
           },
           "M05_AXI": {
+            "mode": "Master",
+            "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0"
+          },
+          "M06_AXI": {
             "mode": "Master",
             "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
@@ -2550,15 +2552,15 @@
           }
         }
       },
-      "led_panel_seq_0": {
-        "vlnv": "xilinx.com:module_ref:led_panel_seq:1.0",
+      "hub75e_panel_seq_0": {
+        "vlnv": "xilinx.com:module_ref:hub75e_panel_seq:1.0",
         "ip_revision": "1",
-        "xci_name": "hello_zynq_led_panel_seq_0_0",
-        "xci_path": "ip\\hello_zynq_led_panel_seq_0_0\\hello_zynq_led_panel_seq_0_0.xci",
-        "inst_hier_path": "led_panel_seq_0",
+        "xci_name": "hello_zynq_hub75e_panel_seq_0_11",
+        "xci_path": "ip\\hello_zynq_hub75e_panel_seq_0_11\\hello_zynq_hub75e_panel_seq_0_11.xci",
+        "inst_hier_path": "hub75e_panel_seq_0",
         "reference_info": {
           "ref_type": "hdl",
-          "ref_name": "led_panel_seq",
+          "ref_name": "hub75e_panel_seq",
           "boundary_crc": "0x0"
         },
         "interface_ports": {
@@ -2584,7 +2586,7 @@
                 "value_src": "constant"
               },
               "ADDR_WIDTH": {
-                "value": "4",
+                "value": "5",
                 "value_src": "constant"
               },
               "AWUSER_WIDTH": {
@@ -2689,7 +2691,7 @@
               "AWADDR": {
                 "physical_name": "s_axi_awaddr",
                 "direction": "I",
-                "left": "3",
+                "left": "4",
                 "right": "0"
               },
               "AWPROT": {
@@ -2743,7 +2745,7 @@
               "ARADDR": {
                 "physical_name": "s_axi_araddr",
                 "direction": "I",
-                "left": "3",
+                "left": "4",
                 "right": "0"
               },
               "ARPROT": {
@@ -2816,28 +2818,24 @@
               }
             }
           },
-          "dclk_out": {
-            "direction": "O"
-          },
-          "le_out": {
-            "direction": "O"
-          },
-          "sdi_out": {
+          "hub75e_rgb_out": {
             "direction": "O",
-            "left": "8",
+            "left": "5",
             "right": "0"
           },
-          "row_out": {
+          "hub75e_dclk_out": {
             "direction": "O"
           },
-          "icnd_sdi_out": {
+          "hub75e_lat_out": {
             "direction": "O"
           },
-          "icnd_dclk_out": {
+          "hub75e_oe_out": {
             "direction": "O"
           },
-          "icnd_rclk_out": {
-            "direction": "O"
+          "hub75e_addr_out": {
+            "direction": "O",
+            "left": "4",
+            "right": "0"
           }
         }
       }
@@ -2879,10 +2877,10 @@
           "axi_gpio_panel/S_AXI"
         ]
       },
-      "axi_smc_M05_AXI": {
+      "axi_smc_M06_AXI": {
         "interface_ports": [
-          "axi_smc/M05_AXI",
-          "led_panel_seq_0/s_axi"
+          "axi_smc/M06_AXI",
+          "hub75e_panel_seq_0/s_axi"
         ]
       },
       "axi_smc_hp_M00_AXI": {
@@ -3007,46 +3005,34 @@
           "eth_rstn"
         ]
       },
-      "led_panel_seq_0_dclk_out": {
+      "hub75e_panel_seq_0_hub75e_addr_out1": {
         "ports": [
-          "led_panel_seq_0/dclk_out",
-          "panel_seq_dclk"
+          "hub75e_panel_seq_0/hub75e_addr_out",
+          "hub75e_addr"
         ]
       },
-      "led_panel_seq_0_icnd_dclk_out": {
+      "hub75e_panel_seq_0_hub75e_dclk_out1": {
         "ports": [
-          "led_panel_seq_0/icnd_dclk_out",
-          "panel_seq_icnd_dclk"
+          "hub75e_panel_seq_0/hub75e_dclk_out",
+          "hub75e_dclk"
         ]
       },
-      "led_panel_seq_0_icnd_rclk_out": {
+      "hub75e_panel_seq_0_hub75e_lat_out1": {
         "ports": [
-          "led_panel_seq_0/icnd_rclk_out",
-          "panel_seq_icnd_rclk"
+          "hub75e_panel_seq_0/hub75e_lat_out",
+          "hub75e_lat"
         ]
       },
-      "led_panel_seq_0_icnd_sdi_out": {
+      "hub75e_panel_seq_0_hub75e_oe_out1": {
         "ports": [
-          "led_panel_seq_0/icnd_sdi_out",
-          "panel_seq_icnd_sdi"
+          "hub75e_panel_seq_0/hub75e_oe_out",
+          "hub75e_oe"
         ]
       },
-      "led_panel_seq_0_le_out": {
+      "hub75e_panel_seq_0_hub75e_rgb_out1": {
         "ports": [
-          "led_panel_seq_0/le_out",
-          "panel_seq_le"
-        ]
-      },
-      "led_panel_seq_0_row_out": {
-        "ports": [
-          "led_panel_seq_0/row_out",
-          "panel_seq_row"
-        ]
-      },
-      "led_panel_seq_0_sdi_out": {
-        "ports": [
-          "led_panel_seq_0/sdi_out",
-          "panel_seq_sdi"
+          "hub75e_panel_seq_0/hub75e_rgb_out",
+          "hub75e_rgb"
         ]
       },
       "panel_spi_miso_tri_i_1": {
@@ -3067,7 +3053,7 @@
           "axi_vdma_0/axi_resetn",
           "axi_smc_hp/aresetn",
           "axi_gpio_panel/s_axi_aresetn",
-          "led_panel_seq_0/s_axi_aresetn"
+          "hub75e_panel_seq_0/s_axi_aresetn"
         ]
       },
       "proc_sys_reset_pov_peripheral_aresetn": {
@@ -3101,7 +3087,7 @@
           "axi_smc_hp/aclk",
           "processing_system7_0/S_AXI_HP0_ACLK",
           "axi_gpio_panel/s_axi_aclk",
-          "led_panel_seq_0/s_axi_aclk"
+          "hub75e_panel_seq_0/s_axi_aclk"
         ]
       },
       "processing_system7_0_FCLK_CLK2": {
@@ -3163,10 +3149,10 @@
                 "offset": "0x43C10000",
                 "range": "64K"
               },
-              "SEG_led_panel_seq_0_reg0": {
-                "address_block": "/led_panel_seq_0/s_axi/reg0",
-                "offset": "0x40010000",
-                "range": "4K"
+              "SEG_hub75e_panel_seq_0_reg0": {
+                "address_block": "/hub75e_panel_seq_0/s_axi/reg0",
+                "offset": "0x40020000",
+                "range": "64K"
               },
               "SEG_pov_project_batch_0_Reg": {
                 "address_block": "/pov_project_batch_0/s_axi_control/Reg",

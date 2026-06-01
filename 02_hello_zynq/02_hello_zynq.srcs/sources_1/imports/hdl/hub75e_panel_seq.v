@@ -1,82 +1,54 @@
 //-----------------------------------------------------------------------------
-// hub75e_panel_seq.v - 128x64 HUB75E FM6124 panel PL driver
+// hub75e_panel_seq.v - 128x64 HUB75E FM6124 panel PL driver (BCM 8-bit)
 //
-// 目标 panel: 128×64 HUB75E, FM6124 cascade 8 颗/chain × 6 RGB chain
-//             1/32 scan (PANEL_FIELD_HEIGHT = 32)
+// Phase 1+A: 8-bit per channel BCM (256 灰度), 24-bit true color
+//            DCLK_DIV=2 @ 50 MHz aclk → 25 MHz DCLK 50% duty
+//            8 plane per row × 32 row = ~75 Hz @ T_unit 1.28 µs
 //
-// 双模式 ADDR (运行时 reg_ctrl[5:4] 切换, 引脚位置不变):
-//   ADDR_MODE = 0: 标准 HUB75E ABCDE 5-bit 行解码 (74HC138 + MOSFET 等)
-//                  addr_out[4:0] = {E, D, C, B, A} = row 0..31 二进制
-//   ADDR_MODE = 1: multivox vortex 风格 32-bit shift register row driver
-//                  addr_out[0] = ADDR_CLK
-//                  addr_out[1] = ADDR_DAT
-//                  addr_out[2] = ADDR_EN (低有效 → 行 driver 使能)
-//                  addr_out[4:3] = 0 (留空, panel 那边接 GND)
-//                  推 32 个 bit, "1" 在第 row 位 → 点亮第 row 行
+// 双模式 ADDR (运行时 reg_ctrl[4] 切换):
+//   0 = 标准 ABCDE 5-bit 行解码
+//   1 = multivox shift register 32-bit
 //
-// FM6124 datasheet (V1.0 / S&CIC1501) 关键时序 (page 5):
-//   ┌─────────────────────────────────────────────────────────────┐
-//   │ 符号       描述              min  typ  max  unit            │
-//   ├─────────────────────────────────────────────────────────────┤
-//   │ FCLK      数据传输频率              30  MHz   ← 用户目标     │
-//   │ TWCLK     CLK H/L 半宽       20            ns  ⚠ 30M=16.7ns │
-//   │ TWLE      LE 高脉冲宽        20            ns                │
-//   │ TWOE      OE 脉冲宽          30            ns (REXT=890Ω)   │
-//   │ THOLD1/2  保持时间            5            ns                │
-//   │ TSETUP1/2 建立时间            5            ns                │
-//   │ TR / TF   CLK 最大上升/下降       500     ns                 │
-//   └─────────────────────────────────────────────────────────────┘
-//   chip 行为 (pin description + timing diag 2):
-//     - CLK 上升沿 shift SIN 进 16-bit shift register (MSB first)
-//     - LE 高电平 → shift register → output latch
-//     - OE 低 → output 显示 latched data; OE 高 → output OFF
-//     - 双缓存: OE 下降沿时 latch1→latch2, 显示期间可 shift 下一帧
+// AXI-Lite 寄存器:
+//   0x00 CTRL   [0]=en [3:1]=mode [4]=addr_sr [12:8]=addr_bits
+//   0x04 COLOR  [23:0] 顶半 24-bit RGB (R[7:0] | G[15:8] | B[23:16])
+//   0x08 PARAM  [11:0]=width-1 [23:16]=stripe_w [31:24]=walk_speed
+//   0x0C STATUS [0]=running [12:8]=cur_addr [15:13]=cur_plane [31:16]=frame_count
+//   0x10 COLOR_BOT [23:0] 底半 24-bit RGB (mode 0 用; 0 时跟 COLOR 同色)
+//   0x14 BCM_TUNIT [7:0] (默认 64 cycle ≈ 1.28 µs @ 50 MHz)
 //
-// 参考: multivox/src/driver/vortex.c 主循环 + set_matrix_row()
-//       128×64 1/32 scan, R1/G1/B1 推顶半 32 行, R2/G2/B2 推底半 32 行
+// FM6124 datasheet (V1.0 / S&CIC1501):
+//   FCLK max 30 MHz, TWCLK ≥ 20 ns, TWLE ≥ 20 ns, TWOE ≥ 30 ns, setup/hold ≥ 5 ns
 //
-// AXI-Lite 寄存器 (offset, R/W):
-//   0x00 CTRL
-//     [0]      enable          (0=blank panel/IP idle, 1=run)
-//     [3:1]    test_mode (0-7)
-//     [5:4]    addr_mode       (0=ABCDE, 1=shift_register)
-//     [7:6]    reserved
-//     [12:8]   addr_bits_use   (0→默认 5=1/32; 4=1/16; 3=1/8)
-//   0x04 COLOR  [5:0] = {B2,G2,R2,B1,G1,R1} (mode 0/1 主色, 1-bit per channel)
-//   0x08 PARAM
-//     [11:0]   panel_width-1   (默认 127 = 128 cols)
-//     [23:16]  stripe_width    (mode 1/2 条纹宽, 默认 8)
-//     [31:24]  walk_speed      (mode 4/5 walk 速度, 默认 10)
-//   0x0C STATUS (R/O)
-//     [0]      running
-//     [12:8]   cur_addr
-//     [31:16]  frame_count
-//
-// 时钟: s_axi_aclk = 120 MHz (FCLK1 from PS PLL, IO_PLL/9 = 1080/9)
-//       DCLK_DIV = 4 → DCLK = 30 MHz, 占空比 50% (2 high + 2 low aclk cycle)
-//       Setup: SDI 在 sub=0 settle, DCLK↑ 在 sub=2 → 16.67 ns setup ✓
-//       Hold:  DCLK↑→ SDI next change = 2 aclk cycle = 16.67 ns ✓
-//
-// 性能 (1/32 scan, 128 col, ABCDE 模式):
-//   S_SHIFT=4.27 µs + S_BLANK/LATCH/ADDR ≈ 100 ns + S_DISPLAY 10 µs = ~14.4 µs/row
-//   32 row/frame ≈ 460 µs;  refresh ≈ 2.2 kHz (1-bit 色深)
+// BCM 原理:
+//   - 24-bit RGB → 8 个 1-bit plane (bit 0..7)
+//   - plane N 显示时长 = T_unit × 2^N
+//   - 8 plane 总显示 = 255 × T_unit
+//   - shift 时间每 plane = 128 col × DCLK_DIV aclk
 //-----------------------------------------------------------------------------
 
 `timescale 1ns / 1ps
 
+// AXI 地址布局 (16-bit, 64 KB):
+//   0x0000-0x001F : 控制寄存器区 (bit[15]=0, 用 bit[4:2] 选 6 reg)
+//   0x8000-0xFFFF : framebuffer 区 (bit[15]=1, 用 bit[14:2] = pixel index 0..8191)
+//   每 pixel 32-bit aligned, 低 24-bit = RGB (R[7:0] G[15:8] B[23:16])
+//   total 8192 pixel × 24-bit = 196608 bit = 6 个 36Kb BRAM
 module hub75e_panel_seq #(
-    parameter integer DCLK_DIV     = 4,    // ACLK/DCLK_DIV = DCLK 周期; 120M/4=30M
+    parameter integer DCLK_DIV     = 4,    // 75 MHz / 4 = 18.75 MHz DCLK 50% duty
     parameter integer PANEL_WIDTH  = 128,
-    parameter integer ADDR_BITS    = 5,    // 1/2^N scan (default 1/32)
-    parameter integer DISP_CYCLES  = 1200, // OE-low 持续 aclk 拍数 (120M*10us=1200)
-    parameter integer LATCH_CYC    = 4,    // LE 高 cycle 数 (33 ns @ 120M, ≥20 ns spec)
-    parameter integer BLANK_CYC    = 5,    // OE 高 blank cycle (42 ns ≥30 ns spec)
-    parameter integer ADDR_SET_CYC = 3     // ABCDE 设值后稳定 cycle
+    parameter integer ADDR_BITS    = 5,    // 1/32 scan
+    parameter integer BCM_PLANES   = 8,    // 8-bit per channel
+    parameter integer T_UNIT_DEF   = 96,   // plane 0 display cycles (~1.28 µs @ 75 MHz)
+    parameter integer DISP_CYCLES  = 1000, // (legacy compat)
+    parameter integer LATCH_CYC    = 4,
+    parameter integer BLANK_CYC    = 5,
+    parameter integer ADDR_SET_CYC = 3,
+    parameter integer FB_DEPTH     = 8192  // 128×64 pixel
 )(
-    // AXI-Lite slave
     input  wire        s_axi_aclk,
     input  wire        s_axi_aresetn,
-    input  wire [4:0]  s_axi_awaddr,
+    input  wire [15:0] s_axi_awaddr,
     input  wire [2:0]  s_axi_awprot,
     input  wire        s_axi_awvalid,
     output reg         s_axi_awready,
@@ -87,7 +59,7 @@ module hub75e_panel_seq #(
     output reg [1:0]   s_axi_bresp,
     output reg         s_axi_bvalid,
     input  wire        s_axi_bready,
-    input  wire [4:0]  s_axi_araddr,
+    input  wire [15:0] s_axi_araddr,
     input  wire [2:0]  s_axi_arprot,
     input  wire        s_axi_arvalid,
     output reg         s_axi_arready,
@@ -96,33 +68,55 @@ module hub75e_panel_seq #(
     output reg         s_axi_rvalid,
     input  wire        s_axi_rready,
 
-    // HUB75E panel
-    output reg [5:0]   hub75e_rgb_out,    // {B2,G2,R2,B1,G1,R1}
-    output reg         hub75e_dclk_out,   // FM6124 CLK 30 MHz
-    output reg         hub75e_lat_out,    // FM6124 LE (高 latch)
-    output reg         hub75e_oe_out,     // FM6124 OE (低=亮, 高=灭)
-    output reg [4:0]   hub75e_addr_out    // ABCDE / {x,x,EN,DAT,CLK}
+    output reg [5:0]   hub75e_rgb_out,
+    output reg         hub75e_dclk_out,
+    output reg         hub75e_lat_out,
+    output reg         hub75e_oe_out,
+    output reg [4:0]   hub75e_addr_out
 );
 
     //==========================================================================
-    // AXI-Lite write/read 状态机
+    // AXI-Lite 寄存器
     //==========================================================================
     reg [31:0] reg_ctrl;
-    reg [31:0] reg_color;
+    reg [31:0] reg_color;       // 0x04 top color
     reg [31:0] reg_param;
+    reg [31:0] reg_color_bot;   // 0x10 bot color
+    reg [31:0] reg_tunit;       // 0x14 T_unit
 
     wire        enable        = reg_ctrl[0];
     wire [2:0]  test_mode     = reg_ctrl[3:1];
-    wire        addr_mode_sr  = reg_ctrl[4];    // 0=ABCDE, 1=shift register
+    wire        addr_mode_sr  = reg_ctrl[4];
+    wire        use_fb        = reg_ctrl[5];   // 1=从 framebuffer 取 pixel, 0=用 pattern LUT
     wire [4:0]  addr_bits_cfg = (reg_ctrl[12:8] == 5'd0) ? 5'd5 : reg_ctrl[12:8];
     wire [4:0]  row_max       = (5'd1 << addr_bits_cfg) - 5'd1;
-    wire [5:0]  user_color    = reg_color[5:0];
+    wire [23:0] user_color_top = reg_color[23:0];
+    wire [23:0] user_color_bot = (reg_color_bot[23:0] == 24'h0 && reg_color[23:0] != 24'h0)
+                                  ? reg_color[23:0] : reg_color_bot[23:0];
     wire [11:0] width_max     = (reg_param[11:0] == 12'd0) ? PANEL_WIDTH-1 : reg_param[11:0];
     wire [7:0]  stripe_w      = (reg_param[23:16] == 8'd0) ? 8'd8 : reg_param[23:16];
     wire [7:0]  walk_speed    = (reg_param[31:24] == 8'd0) ? 8'd10 : reg_param[31:24];
+    wire [7:0]  t_unit        = (reg_tunit[7:0] == 8'd0) ? T_UNIT_DEF[7:0] : reg_tunit[7:0];
 
-    reg [4:0] aw_addr_q;
-    reg       aw_done, w_done;
+    // Framebuffer 用 sdp_bram helper module 实例化 (Xilinx UG901 标准 SDP 模板)
+    // 之前 inferred BRAM in main module 不稳, 实例化 sub-module 强制 SDP 行为
+    wire fb_top_we_main;
+    wire fb_bot_we_main;
+    wire [11:0] fb_waddr_main = cur_aw_addr[13:2];
+    wire [23:0] fb_wdata_main = s_axi_wdata[23:0];
+    assign fb_top_we_main = (s_axi_wvalid && !w_done && (aw_done || s_axi_awvalid) &&
+                              cur_aw_addr[15] && !cur_aw_addr[14]);
+    assign fb_bot_we_main = (s_axi_wvalid && !w_done && (aw_done || s_axi_awvalid) &&
+                              cur_aw_addr[15] && cur_aw_addr[14]);
+
+    // DEBUG: 任何 AXI W handshake 都触发 fb_top_we (用来验证 ARM 写 AXI 是否真到 IP)
+    // 实际 BRAM write 在 main always block 嵌套 if 里, 这只是 debug counter
+    wire fb_top_we = s_axi_wvalid && !w_done && (aw_done || s_axi_awvalid);
+
+    reg [15:0] aw_addr_q;
+    reg        aw_done, w_done;
+    // Verilog 不支持 (ternary)[bit slice], 用 wire 包一层
+    wire [15:0] cur_aw_addr = aw_done ? aw_addr_q : s_axi_awaddr;
     always @(posedge s_axi_aclk) begin
         if (!s_axi_aresetn) begin
             s_axi_awready <= 1'b0;
@@ -134,6 +128,8 @@ module hub75e_panel_seq #(
             reg_ctrl      <= 32'b0;
             reg_color     <= 32'b0;
             reg_param     <= 32'b0;
+            reg_color_bot <= 32'b0;
+            reg_tunit     <= 32'b0;
         end else begin
             if (!aw_done && s_axi_awvalid) begin
                 s_axi_awready <= 1'b1;
@@ -146,12 +142,17 @@ module hub75e_panel_seq #(
                 s_axi_wready <= 1'b1;
                 w_done       <= 1'b1;
                 if (aw_done || s_axi_awvalid) begin
-                    case ((aw_done ? aw_addr_q : s_axi_awaddr) >> 2)
-                        3'd0: reg_ctrl  <= s_axi_wdata;
-                        3'd1: reg_color <= s_axi_wdata;
-                        3'd2: reg_param <= s_axi_wdata;
-                        default: ;
-                    endcase
+                    // Framebuffer write 由 sdp_bram instance 处理 (上面 fb_top/bot_we_main)
+                    if (!cur_aw_addr[15]) begin
+                        case (cur_aw_addr[4:2])
+                            3'd0: reg_ctrl      <= s_axi_wdata;
+                            3'd1: reg_color     <= s_axi_wdata;
+                            3'd2: reg_param     <= s_axi_wdata;
+                            3'd4: reg_color_bot <= s_axi_wdata;
+                            3'd5: reg_tunit     <= s_axi_wdata;
+                            default: ;
+                        endcase
+                    end
                 end
             end else begin
                 s_axi_wready <= 1'b0;
@@ -176,11 +177,17 @@ module hub75e_panel_seq #(
         end else begin
             if (!s_axi_rvalid && s_axi_arvalid && !s_axi_arready) begin
                 s_axi_arready <= 1'b1;
-                case (s_axi_araddr >> 2)
+                if (s_axi_araddr[15]) begin
+                    // framebuffer write-only (combinational BRAM read 让 Vivado 推 LUTRAM
+                    // + constant propagation 删 RAM). AXI read fb 永远返回 0.
+                    s_axi_rdata <= 32'h0;
+                end else case (s_axi_araddr[4:2])
                     3'd0: s_axi_rdata <= reg_ctrl;
                     3'd1: s_axi_rdata <= reg_color;
                     3'd2: s_axi_rdata <= reg_param;
                     3'd3: s_axi_rdata <= status_word;
+                    3'd4: s_axi_rdata <= reg_color_bot;
+                    3'd5: s_axi_rdata <= reg_tunit;
                     default: s_axi_rdata <= 32'h0;
                 endcase
                 s_axi_rvalid <= 1'b1;
@@ -200,78 +207,144 @@ module hub75e_panel_seq #(
         S_SHIFT      = 4'd1,
         S_BLANK      = 4'd2,
         S_LATCH      = 4'd3,
-        S_ADDR_ABCDE = 4'd4,   // ABCDE mode: 设 5-bit row index
-        S_ADDR_SR    = 4'd5,   // shift-reg mode: 推 32 个 ADDR_CLK
+        S_ADDR_ABCDE = 4'd4,
+        S_ADDR_SR    = 4'd5,
         S_DISPLAY    = 4'd6;
 
     reg [3:0]  state;
     reg [11:0] col_idx;
     reg [4:0]  row_idx;
     reg [4:0]  row_displayed;
+    reg [2:0]  plane;            // BCM plane 0..7
     reg [15:0] frame_count;
     reg [7:0]  walk_pos;
     reg [7:0]  walk_div_count;
-    reg [13:0] disp_count;
+    reg [15:0] disp_count;       // display cycle counter (up to 256*T_unit)
+    reg [15:0] disp_target;      // target = t_unit << plane
     reg [3:0]  ctrl_count;
     reg [$clog2(DCLK_DIV):0] sub_count;
 
-    // Shift-register ADDR state
-    reg [5:0]  sr_bit_idx;       // 0..31 推 32 个 bit
-    reg [1:0]  sr_sub;           // ADDR_CLK 半周期计数
+    reg [5:0]  sr_bit_idx;
+    reg [1:0]  sr_sub;
     reg        sr_clk;
     reg        sr_dat;
+    reg        sr_en;
+    reg [4:0]  addr_abcde_lat;
 
-    wire [31:0] status_word = {frame_count, 3'b0, row_displayed, 7'b0, (state != S_IDLE)};
+    // DEBUG: 计 fb_top_we 触发次数, ARM 可读. ARM 写 fb 后 we_count 应该涨.
+    //         0 = AXI write 完全没触发 we; ≥ 1 = we 路径 OK
+    reg [15:0] fb_we_count;
+    always @(posedge s_axi_aclk) begin
+        if (!s_axi_aresetn) fb_we_count <= 16'h0;
+        else if (fb_top_we) fb_we_count <= fb_we_count + 16'h1;
+    end
+    // DEBUG: [31:24] fb_top_dout[7:0] (R byte), [23:16] fb_we_count[7:0]
+    wire [31:0] status_word = {fb_top_dout[7:0], fb_we_count[7:0], plane, row_displayed, 7'b0, (state != S_IDLE)};
 
     //==========================================================================
-    // Pattern generator (组合)
-    // RGB bit order: [0]=R1 [1]=G1 [2]=B1 [3]=R2 [4]=G2 [5]=B2
+    // Pattern generator: 24-bit per RGB → plane slice → 6-bit out
+    // pattern_24_top/_bot 是组合, 取决于 mode + (col, row)
+    // 输出 pattern_rgb = {B2[p], G2[p], R2[p], B1[p], G1[p], R1[p]}
     //==========================================================================
-    reg [5:0] pattern_rgb;
+    reg [23:0] pattern_24_top_lut;
+    reg [23:0] pattern_24_bot_lut;
+
+    // PL 端 BRAM read addr
+    wire [11:0] fb_raddr = {row_idx[4:0], col_idx[6:0]};
+    wire [23:0] fb_top_dout, fb_bot_dout;
+
+    // 实例化 sdp_bram helper module (UG901 标准 SDP 模板, 保证 BRAM 推断 + read port enabled)
+    sdp_bram #(.WIDTH(24), .DEPTH(4096), .ADDR_W(12)) u_fb_top (
+        .clk   (s_axi_aclk),
+        .we    (fb_top_we_main),
+        .waddr (fb_waddr_main),
+        .wdata (fb_wdata_main),
+        .raddr (fb_raddr),
+        .rdata (fb_top_dout)
+    );
+    sdp_bram #(.WIDTH(24), .DEPTH(4096), .ADDR_W(12)) u_fb_bot (
+        .clk   (s_axi_aclk),
+        .we    (fb_bot_we_main),
+        .waddr (fb_waddr_main),
+        .wdata (fb_wdata_main),
+        .raddr (fb_raddr),
+        .rdata (fb_bot_dout)
+    );
+
+    // pattern_24 = LUT (use_fb=0) vs framebuffer 读 (use_fb=1)
+    // BRAM write 改成独立 always block 后 (UG901 SDP 标准), fb_dout 应该有 ARM 写的 data
+    wire [23:0] pattern_24_top = use_fb ? fb_top_dout : pattern_24_top_lut;
+    wire [23:0] pattern_24_bot = use_fb ? fb_bot_dout : pattern_24_bot_lut;
+
+    // 8 色 LUT (R, G, B, W, Y, M, C, K) — R in low byte
+    function [23:0] color_lut;
+        input [2:0] i;
+        begin
+            case (i)
+                3'd0: color_lut = 24'h0000FF;  // R
+                3'd1: color_lut = 24'h00FF00;  // G
+                3'd2: color_lut = 24'hFF0000;  // B
+                3'd3: color_lut = 24'hFFFFFF;  // W
+                3'd4: color_lut = 24'h00FFFF;  // Y (R+G)
+                3'd5: color_lut = 24'hFF00FF;  // M (R+B)
+                3'd6: color_lut = 24'hFFFF00;  // C (G+B)
+                default: color_lut = 24'h000000; // K
+            endcase
+        end
+    endfunction
+
     always @(*) begin
         case (test_mode)
-            3'd0: pattern_rgb = user_color;
+            3'd0: begin
+                pattern_24_top_lut = user_color_top;
+                pattern_24_bot_lut = user_color_bot;
+            end
             3'd1: begin
-                case ((row_idx / stripe_w[4:0]) & 3'h7)
-                    3'd0:    pattern_rgb = 6'b001_001;
-                    3'd1:    pattern_rgb = 6'b010_010;
-                    3'd2:    pattern_rgb = 6'b100_100;
-                    3'd3:    pattern_rgb = 6'b111_111;
-                    3'd4:    pattern_rgb = 6'b011_011;
-                    3'd5:    pattern_rgb = 6'b101_101;
-                    3'd6:    pattern_rgb = 6'b110_110;
-                    default: pattern_rgb = 6'b000_000;
-                endcase
+                pattern_24_top_lut = color_lut((row_idx / stripe_w[4:0]) & 3'h7);
+                pattern_24_bot_lut = pattern_24_top_lut;
             end
             3'd2: begin
-                case ((col_idx[10:0] / stripe_w) & 3'h7)
-                    3'd0:    pattern_rgb = 6'b001_001;
-                    3'd1:    pattern_rgb = 6'b010_010;
-                    3'd2:    pattern_rgb = 6'b100_100;
-                    3'd3:    pattern_rgb = 6'b111_111;
-                    3'd4:    pattern_rgb = 6'b011_011;
-                    3'd5:    pattern_rgb = 6'b101_101;
-                    3'd6:    pattern_rgb = 6'b110_110;
-                    default: pattern_rgb = 6'b000_000;
-                endcase
+                pattern_24_top_lut = color_lut((col_idx[10:0] / stripe_w) & 3'h7);
+                pattern_24_bot_lut = pattern_24_top_lut;
             end
-            3'd3: pattern_rgb = (col_idx[3] ^ row_idx[2]) ? 6'b001_100 : 6'b100_001;
-            3'd4: pattern_rgb = (row_idx == walk_pos[4:0]) ? 6'b000_111 : 6'b000_000;
-            3'd5: pattern_rgb = (col_idx[7:0] == walk_pos) ? 6'b111_111 : 6'b000_000;
-            3'd6: pattern_rgb = {col_idx[2:0], col_idx[2:0]};
-            default: pattern_rgb = 6'b111_111;
+            3'd3: begin
+                pattern_24_top_lut = (col_idx[3] ^ row_idx[2]) ? 24'h0000FF : 24'h00FF00;
+                pattern_24_bot_lut = (col_idx[3] ^ row_idx[2]) ? 24'h00FF00 : 24'h0000FF;
+            end
+            3'd4: begin
+                pattern_24_top_lut = (row_idx == walk_pos[4:0]) ? 24'hFFFFFF : 24'h000000;
+                pattern_24_bot_lut = pattern_24_top_lut;
+            end
+            3'd5: begin
+                pattern_24_top_lut = (col_idx[7:0] == walk_pos) ? 24'hFFFFFF : 24'h000000;
+                pattern_24_bot_lut = pattern_24_top_lut;
+            end
+            3'd6: begin
+                // 渐变: col 低 8 bit 作 R, col 中 G, col 高 B
+                pattern_24_top_lut = {col_idx[7:0], col_idx[7:0], col_idx[7:0]};
+                pattern_24_bot_lut = pattern_24_top_lut;
+            end
+            default: begin   // mode 7 FULL WHITE
+                pattern_24_top_lut = 24'hFFFFFF;
+                pattern_24_bot_lut = 24'hFFFFFF;
+            end
         endcase
     end
 
-    //==========================================================================
-    // ADDR 输出 mux (组合): mode 决定 addr_out[4:0] 来源
-    //   ABCDE mode:  addr_out[4:0] = row_displayed (在 S_DISPLAY 时)
-    //   shift mode:  addr_out = {2'b00, EN, DAT, CLK}
-    //   非 S_DISPLAY 时, EN 拉高灭, ABCDE 保持上次值
-    //==========================================================================
-    reg        sr_en;             // shift register ADDR_EN (低=显示)
-    reg [4:0]  addr_abcde_lat;    // ABCDE 模式锁存值
+    // BCM slice: 取 plane 位的 R/G/B bit
+    // BCM plane bit slice (修复: 之前 3'd0 + 3'd8 expression 不正确算 bit index)
+    wire [4:0] plane_ext = {2'b0, plane};
+    wire r1_bit = pattern_24_top[plane_ext];
+    wire g1_bit = pattern_24_top[plane_ext + 5'd8];
+    wire b1_bit = pattern_24_top[plane_ext + 5'd16];
+    wire r2_bit = pattern_24_bot[plane_ext];
+    wire g2_bit = pattern_24_bot[plane_ext + 5'd8];
+    wire b2_bit = pattern_24_bot[plane_ext + 5'd16];
+    wire [5:0] plane_rgb = {b2_bit, g2_bit, r2_bit, b1_bit, g1_bit, r1_bit};
 
+    //==========================================================================
+    // ADDR 输出 mux
+    //==========================================================================
     always @(*) begin
         if (addr_mode_sr) begin
             hub75e_addr_out = {2'b00, sr_en, sr_dat, sr_clk};
@@ -281,7 +354,7 @@ module hub75e_panel_seq #(
     end
 
     //==========================================================================
-    // 主 FSM
+    // 主 FSM (BCM: 每 row 跑 8 plane)
     //==========================================================================
     always @(posedge s_axi_aclk) begin
         if (!s_axi_aresetn) begin
@@ -289,9 +362,11 @@ module hub75e_panel_seq #(
             col_idx         <= 12'd0;
             row_idx         <= 5'd0;
             row_displayed   <= 5'd0;
+            plane           <= 3'd0;
             sub_count       <= 0;
             ctrl_count      <= 4'd0;
-            disp_count      <= 14'd0;
+            disp_count      <= 16'd0;
+            disp_target     <= 16'd0;
             frame_count     <= 16'd0;
             walk_pos        <= 8'd0;
             walk_div_count  <= 8'd0;
@@ -304,10 +379,9 @@ module hub75e_panel_seq #(
             sr_sub          <= 2'd0;
             sr_clk          <= 1'b0;
             sr_dat          <= 1'b0;
-            sr_en           <= 1'b1;       // 上电默认禁用 row driver
+            sr_en           <= 1'b1;
         end else begin
             case (state)
-                //--------------------------------------------------------------
                 S_IDLE: begin
                     hub75e_oe_out   <= 1'b1;
                     hub75e_lat_out  <= 1'b0;
@@ -317,18 +391,15 @@ module hub75e_panel_seq #(
                     sr_clk          <= 1'b0;
                     col_idx         <= 12'd0;
                     row_idx         <= 5'd0;
+                    plane           <= 3'd0;
                     sub_count       <= 0;
                     if (enable) state <= S_SHIFT;
                 end
 
-                //--------------------------------------------------------------
-                // S_SHIFT: DCLK 30 MHz, sub=0..1 DCLK 低 (RGB setup),
-                //          sub=2..3 DCLK 高 (chip 上升沿采样).
-                //--------------------------------------------------------------
                 S_SHIFT: begin
                     hub75e_oe_out  <= 1'b1;
                     hub75e_lat_out <= 1'b0;
-                    hub75e_rgb_out <= pattern_rgb;
+                    hub75e_rgb_out <= plane_rgb;
 
                     if (sub_count == (DCLK_DIV/2 - 1)) begin
                         hub75e_dclk_out <= 1'b1;
@@ -348,13 +419,10 @@ module hub75e_panel_seq #(
                     end
                 end
 
-                //--------------------------------------------------------------
-                // S_BLANK: OE 拉高 BLANK_CYC 拍 (≥30 ns spec) 准备 LATCH
-                //--------------------------------------------------------------
                 S_BLANK: begin
                     hub75e_dclk_out <= 1'b0;
                     hub75e_oe_out   <= 1'b1;
-                    sr_en           <= 1'b1;       // shift mode 同时禁 row driver
+                    sr_en           <= 1'b1;
                     if (ctrl_count == BLANK_CYC[3:0] - 1) begin
                         ctrl_count <= 4'd0;
                         state <= S_LATCH;
@@ -363,17 +431,12 @@ module hub75e_panel_seq #(
                     end
                 end
 
-                //--------------------------------------------------------------
-                // S_LATCH: LE 高 LATCH_CYC 拍 (≥20 ns spec)
-                //--------------------------------------------------------------
                 S_LATCH: begin
                     hub75e_lat_out <= 1'b1;
                     if (ctrl_count == LATCH_CYC[3:0] - 1) begin
                         hub75e_lat_out <= 1'b0;
                         ctrl_count <= 4'd0;
-                        // 跳到对应 ADDR mode
                         state <= addr_mode_sr ? S_ADDR_SR : S_ADDR_ABCDE;
-                        // shift mode: 初始化推 32 bit
                         sr_bit_idx <= 6'd0;
                         sr_sub     <= 2'd0;
                         sr_clk     <= 1'b0;
@@ -383,50 +446,38 @@ module hub75e_panel_seq #(
                     end
                 end
 
-                //--------------------------------------------------------------
-                // S_ADDR_ABCDE: 设 5-bit row, ADDR_SET_CYC 稳定
-                //--------------------------------------------------------------
                 S_ADDR_ABCDE: begin
                     hub75e_lat_out  <= 1'b0;
                     addr_abcde_lat  <= row_idx;
                     row_displayed   <= row_idx;
                     if (ctrl_count == ADDR_SET_CYC[3:0] - 1) begin
                         ctrl_count <= 4'd0;
-                        disp_count <= 14'd0;
+                        disp_count <= 16'd0;
+                        // BCM 时长 = t_unit << plane
+                        disp_target <= {8'd0, t_unit} << plane;
                         state <= S_DISPLAY;
                     end else begin
                         ctrl_count <= ctrl_count + 1;
                     end
                 end
 
-                //--------------------------------------------------------------
-                // S_ADDR_SR: multivox-style. 推 32 个 bit 进 ADDR shift register.
-                //   "1" 位 在 row 那一拍 推入, 其他都推 0.
-                //   sr_sub: 0=DAT setup + CLK low, 1=CLK high, 2=CLK low, 3=advance
-                //--------------------------------------------------------------
                 S_ADDR_SR: begin
-                    sr_en <= 1'b1;     // shift 期间禁 row driver
+                    sr_en <= 1'b1;
                     case (sr_sub)
                         2'd0: begin
                             sr_clk <= 1'b0;
                             sr_dat <= (sr_bit_idx[4:0] == row_idx) ? 1'b1 : 1'b0;
                             sr_sub <= 2'd1;
                         end
-                        2'd1: begin
-                            sr_clk <= 1'b1;       // rising edge
-                            sr_sub <= 2'd2;
-                        end
-                        2'd2: begin
-                            sr_clk <= 1'b0;
-                            sr_sub <= 2'd3;
-                        end
+                        2'd1: begin sr_clk <= 1'b1; sr_sub <= 2'd2; end
+                        2'd2: begin sr_clk <= 1'b0; sr_sub <= 2'd3; end
                         2'd3: begin
                             sr_sub <= 2'd0;
                             if (sr_bit_idx == 6'd31) begin
-                                // 完成 32 bit shift
                                 sr_dat        <= 1'b0;
                                 row_displayed <= row_idx;
-                                disp_count    <= 14'd0;
+                                disp_count    <= 16'd0;
+                                disp_target   <= {8'd0, t_unit} << plane;
                                 state         <= S_DISPLAY;
                             end else begin
                                 sr_bit_idx <= sr_bit_idx + 1;
@@ -435,31 +486,34 @@ module hub75e_panel_seq #(
                     endcase
                 end
 
-                //--------------------------------------------------------------
-                // S_DISPLAY: OE 低 (亮) DISP_CYCLES 拍
-                //--------------------------------------------------------------
                 S_DISPLAY: begin
                     hub75e_oe_out <= enable ? 1'b0 : 1'b1;
-                    sr_en         <= 1'b0;     // shift mode: 使能 row driver
-                    if (disp_count == DISP_CYCLES[13:0]) begin
+                    sr_en         <= 1'b0;
+                    if (disp_count >= disp_target) begin
                         hub75e_oe_out <= 1'b1;
                         sr_en         <= 1'b1;
-                        disp_count    <= 14'd0;
-                        if (row_idx == row_max) begin
-                            row_idx <= 5'd0;
-                            frame_count <= frame_count + 1;
-                            if (walk_div_count == walk_speed - 1) begin
-                                walk_div_count <= 8'd0;
-                                if (test_mode == 3'd4) begin
-                                    walk_pos <= (walk_pos == row_max) ? 8'd0 : walk_pos + 1;
-                                end else if (test_mode == 3'd5) begin
-                                    walk_pos <= (walk_pos == width_max[7:0]) ? 8'd0 : walk_pos + 1;
+                        disp_count    <= 16'd0;
+                        // plane++ 在 row 内, plane=7 后 row++
+                        if (plane == BCM_PLANES[2:0] - 3'd1) begin
+                            plane <= 3'd0;
+                            if (row_idx == row_max) begin
+                                row_idx <= 5'd0;
+                                frame_count <= frame_count + 1;
+                                if (walk_div_count == walk_speed - 1) begin
+                                    walk_div_count <= 8'd0;
+                                    if (test_mode == 3'd4) begin
+                                        walk_pos <= (walk_pos == row_max) ? 8'd0 : walk_pos + 1;
+                                    end else if (test_mode == 3'd5) begin
+                                        walk_pos <= (walk_pos == width_max[7:0]) ? 8'd0 : walk_pos + 1;
+                                    end
+                                end else begin
+                                    walk_div_count <= walk_div_count + 1;
                                 end
                             end else begin
-                                walk_div_count <= walk_div_count + 1;
+                                row_idx <= row_idx + 1;
                             end
                         end else begin
-                            row_idx <= row_idx + 1;
+                            plane <= plane + 1;
                         end
                         state <= enable ? S_SHIFT : S_IDLE;
                     end else begin
@@ -473,3 +527,30 @@ module hub75e_panel_seq #(
     end
 
 endmodule
+
+
+//-----------------------------------------------------------------------------
+// sdp_bram: Xilinx UG901 标准 Simple Dual-Port BRAM 模板
+//   - 单一 always block: write (条件 if), read (无条件)
+//   - Vivado 保证推 RAMB36/RAMB18 dual-port, port-A 写 port-B 读
+//-----------------------------------------------------------------------------
+module sdp_bram #(
+    parameter integer WIDTH  = 24,
+    parameter integer DEPTH  = 4096,
+    parameter integer ADDR_W = 12
+)(
+    input  wire              clk,
+    input  wire              we,
+    input  wire [ADDR_W-1:0] waddr,
+    input  wire [WIDTH-1:0]  wdata,
+    input  wire [ADDR_W-1:0] raddr,
+    output reg  [WIDTH-1:0]  rdata
+);
+    (* ram_style = "block" *) reg [WIDTH-1:0] mem [0:DEPTH-1];
+
+    always @(posedge clk) begin
+        if (we) mem[waddr] <= wdata;
+        rdata <= mem[raddr];   // 无条件 read, Vivado SDP 标准
+    end
+endmodule
+

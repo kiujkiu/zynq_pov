@@ -2553,14 +2553,14 @@
         }
       },
       "hub75e_panel_seq_0": {
-        "vlnv": "xilinx.com:module_ref:hub75e_panel_seq:1.0",
+        "vlnv": "xilinx.com:module_ref:hub75e_panel_seq_v2:1.0",
         "ip_revision": "1",
-        "xci_name": "hello_zynq_hub75e_panel_seq_0_11",
-        "xci_path": "ip\\hello_zynq_hub75e_panel_seq_0_11\\hello_zynq_hub75e_panel_seq_0_11.xci",
+        "xci_name": "hello_zynq_hub75e_panel_seq_0_1",
+        "xci_path": "ip\\hello_zynq_hub75e_panel_seq_0_1\\hello_zynq_hub75e_panel_seq_0_1.xci",
         "inst_hier_path": "hub75e_panel_seq_0",
         "reference_info": {
           "ref_type": "hdl",
-          "ref_name": "hub75e_panel_seq",
+          "ref_name": "hub75e_panel_seq_v2",
           "boundary_crc": "0x0"
         },
         "interface_ports": {
@@ -2586,7 +2586,7 @@
                 "value_src": "constant"
               },
               "ADDR_WIDTH": {
-                "value": "5",
+                "value": "16",
                 "value_src": "constant"
               },
               "AWUSER_WIDTH": {
@@ -2691,7 +2691,7 @@
               "AWADDR": {
                 "physical_name": "s_axi_awaddr",
                 "direction": "I",
-                "left": "4",
+                "left": "15",
                 "right": "0"
               },
               "AWPROT": {
@@ -2745,7 +2745,7 @@
               "ARADDR": {
                 "physical_name": "s_axi_araddr",
                 "direction": "I",
-                "left": "4",
+                "left": "15",
                 "right": "0"
               },
               "ARPROT": {

@@ -34,7 +34,7 @@
 //   0x8000-0xFFFF : framebuffer 区 (bit[15]=1, 用 bit[14:2] = pixel index 0..8191)
 //   每 pixel 32-bit aligned, 低 24-bit = RGB (R[7:0] G[15:8] B[23:16])
 //   total 8192 pixel × 24-bit = 196608 bit = 6 个 36Kb BRAM
-module hub75e_panel_seq #(
+module hub75e_panel_seq_v2 #(
     parameter integer DCLK_DIV     = 4,    // 75 MHz / 4 = 18.75 MHz DCLK 50% duty
     parameter integer PANEL_WIDTH  = 128,
     parameter integer ADDR_BITS    = 5,    // 1/32 scan
@@ -130,6 +130,9 @@ module hub75e_panel_seq #(
             reg_param     <= 32'b0;
             reg_color_bot <= 32'b0;
             reg_tunit     <= 32'b0;
+            fb_we_count   <= 16'h0;
+            last_fb_wdata <= 24'h0;
+            last_fb_waddr <= 12'h0;
         end else begin
             if (!aw_done && s_axi_awvalid) begin
                 s_axi_awready <= 1'b1;
@@ -142,8 +145,12 @@ module hub75e_panel_seq #(
                 s_axi_wready <= 1'b1;
                 w_done       <= 1'b1;
                 if (aw_done || s_axi_awvalid) begin
-                    // Framebuffer write 由 sdp_bram instance 处理 (上面 fb_top/bot_we_main)
-                    if (!cur_aw_addr[15]) begin
+                    if (cur_aw_addr[15]) begin
+                        // DEBUG: 把 fb wdata sample 移到 main always block, 跟 reg_color 完全同条件
+                        last_fb_wdata <= s_axi_wdata[23:0];
+                        last_fb_waddr <= cur_aw_addr[13:2];
+                        fb_we_count   <= fb_we_count + 16'h1;
+                    end else begin
                         case (cur_aw_addr[4:2])
                             3'd0: reg_ctrl      <= s_axi_wdata;
                             3'd1: reg_color     <= s_axi_wdata;
@@ -231,14 +238,13 @@ module hub75e_panel_seq #(
     reg        sr_en;
     reg [4:0]  addr_abcde_lat;
 
-    // DEBUG: 计 fb_top_we 触发次数, ARM 可读. ARM 写 fb 后 we_count 应该涨.
-    //         0 = AXI write 完全没触发 we; ≥ 1 = we 路径 OK
+    // fb_we_count + last_fb_wdata + last_fb_waddr 在 main always block 内 sample
     reg [15:0] fb_we_count;
-    always @(posedge s_axi_aclk) begin
-        if (!s_axi_aresetn) fb_we_count <= 16'h0;
-        else if (fb_top_we) fb_we_count <= fb_we_count + 16'h1;
-    end
-    // DEBUG: [31:24] fb_top_dout[7:0] (R byte), [23:16] fb_we_count[7:0]
+    reg [23:0] last_fb_wdata;
+    reg [11:0] last_fb_waddr;
+    // STATUS [31:24]=fb_top_dout[7:0] (R byte, sweeps as PL scans)
+    //        [23:16]=fb_we_count[7:0] (debug)
+    // 不显示 last_fb_wdata; 用 fb_top_dout 实时反映 BRAM port-B read
     wire [31:0] status_word = {fb_top_dout[7:0], fb_we_count[7:0], plane, row_displayed, 7'b0, (state != S_IDLE)};
 
     //==========================================================================
@@ -253,22 +259,42 @@ module hub75e_panel_seq #(
     wire [11:0] fb_raddr = {row_idx[4:0], col_idx[6:0]};
     wire [23:0] fb_top_dout, fb_bot_dout;
 
-    // 实例化 sdp_bram helper module (UG901 标准 SDP 模板, 保证 BRAM 推断 + read port enabled)
-    sdp_bram #(.WIDTH(24), .DEPTH(4096), .ADDR_W(12)) u_fb_top (
-        .clk   (s_axi_aclk),
-        .we    (fb_top_we_main),
-        .waddr (fb_waddr_main),
-        .wdata (fb_wdata_main),
-        .raddr (fb_raddr),
-        .rdata (fb_top_dout)
+    // Xilinx XPM macro: 100% defined behavior, Vivado 不会 swap/优化掉
+    xpm_memory_sdpram #(
+        .ADDR_WIDTH_A(12), .ADDR_WIDTH_B(12),
+        .BYTE_WRITE_WIDTH_A(24),
+        .CLOCKING_MODE("common_clock"),
+        .MEMORY_PRIMITIVE("block"),
+        .MEMORY_SIZE(98304),       // 4096 entries × 24-bit
+        .READ_DATA_WIDTH_B(24),
+        .READ_LATENCY_B(1),
+        .WRITE_DATA_WIDTH_A(24),
+        .USE_MEM_INIT(0)
+    ) u_fb_top (
+        .clka(s_axi_aclk), .ena(1'b1), .wea(fb_top_we_main),
+        .addra(fb_waddr_main), .dina(fb_wdata_main),
+        .clkb(s_axi_aclk), .enb(1'b1), .regceb(1'b1), .rstb(1'b0),
+        .addrb(fb_raddr), .doutb(fb_top_dout),
+        .injectsbiterra(1'b0), .injectdbiterra(1'b0), .sleep(1'b0),
+        .sbiterrb(), .dbiterrb()
     );
-    sdp_bram #(.WIDTH(24), .DEPTH(4096), .ADDR_W(12)) u_fb_bot (
-        .clk   (s_axi_aclk),
-        .we    (fb_bot_we_main),
-        .waddr (fb_waddr_main),
-        .wdata (fb_wdata_main),
-        .raddr (fb_raddr),
-        .rdata (fb_bot_dout)
+    xpm_memory_sdpram #(
+        .ADDR_WIDTH_A(12), .ADDR_WIDTH_B(12),
+        .BYTE_WRITE_WIDTH_A(24),
+        .CLOCKING_MODE("common_clock"),
+        .MEMORY_PRIMITIVE("block"),
+        .MEMORY_SIZE(98304),
+        .READ_DATA_WIDTH_B(24),
+        .READ_LATENCY_B(1),
+        .WRITE_DATA_WIDTH_A(24),
+        .USE_MEM_INIT(0)
+    ) u_fb_bot (
+        .clka(s_axi_aclk), .ena(1'b1), .wea(fb_bot_we_main),
+        .addra(fb_waddr_main), .dina(fb_wdata_main),
+        .clkb(s_axi_aclk), .enb(1'b1), .regceb(1'b1), .rstb(1'b0),
+        .addrb(fb_raddr), .doutb(fb_bot_dout),
+        .injectsbiterra(1'b0), .injectdbiterra(1'b0), .sleep(1'b0),
+        .sbiterrb(), .dbiterrb()
     );
 
     // pattern_24 = LUT (use_fb=0) vs framebuffer 读 (use_fb=1)
@@ -530,9 +556,10 @@ endmodule
 
 
 //-----------------------------------------------------------------------------
-// sdp_bram: Xilinx UG901 标准 Simple Dual-Port BRAM 模板
-//   - 单一 always block: write (条件 if), read (无条件)
-//   - Vivado 保证推 RAMB36/RAMB18 dual-port, port-A 写 port-B 读
+// sdp_bram: 加 enable signal 防止 Vivado optimize swap we ↔ ce
+// 上版本 (无 re port) Vivado 报 "Swapped enable and write-enable ... to conserve
+// power" — 把 read port enable 接到 we, 让 read 只在 write 时 clock, rdata 锁 0.
+// 加 explicit re=1'b1 input 显式 read enable, 防 swap.
 //-----------------------------------------------------------------------------
 module sdp_bram #(
     parameter integer WIDTH  = 24,
@@ -543,14 +570,18 @@ module sdp_bram #(
     input  wire              we,
     input  wire [ADDR_W-1:0] waddr,
     input  wire [WIDTH-1:0]  wdata,
+    input  wire              re,
     input  wire [ADDR_W-1:0] raddr,
     output reg  [WIDTH-1:0]  rdata
 );
-    (* ram_style = "block" *) reg [WIDTH-1:0] mem [0:DEPTH-1];
+    (* ram_style = "block", keep = "true" *) reg [WIDTH-1:0] mem [0:DEPTH-1];
 
+    // 拆 2 个 always block, port-A write + port-B read 完全独立
     always @(posedge clk) begin
         if (we) mem[waddr] <= wdata;
-        rdata <= mem[raddr];   // 无条件 read, Vivado SDP 标准
+    end
+    always @(posedge clk) begin
+        if (re) rdata <= mem[raddr];
     end
 endmodule
 

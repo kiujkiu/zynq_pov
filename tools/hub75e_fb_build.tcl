@@ -9,6 +9,11 @@ puts "\[INFO\] project opened"
 open_bd_design [get_files hello_zynq.bd]
 current_bd_design [get_bd_designs hello_zynq]
 
+# 0a. 把 PL IP 文件移出后再加回, 强制 Vivado 重 parse module port
+remove_files [get_files hub75e_panel_seq.v]
+add_files -norecurse 02_hello_zynq.srcs/sources_1/imports/hdl/hub75e_panel_seq.v
+update_compile_order -fileset sources_1
+
 # 0. 删旧 hub75e cell + 5 个外部 port, 重新 create_bd_cell 拿新 PL IP port width
 #    (Vivado update_module_reference 不稳, 用 delete+recreate)
 delete_bd_objs [get_bd_cells hub75e_panel_seq_0]
@@ -17,9 +22,10 @@ foreach p {hub75e_rgb hub75e_dclk hub75e_lat hub75e_oe hub75e_addr} {
 }
 puts "\[INFO\] removed old hub75e cell + ports"
 
-# 1. 重新 create cell (会按当前 PL IP 16-bit addr elaborate)
-create_bd_cell -type module -reference hub75e_panel_seq hub75e_panel_seq_0
-puts "\[INFO\] created hub75e_panel_seq_0 cell"
+# 1. 重新 create cell, reference 新 module name hub75e_panel_seq_v2
+#    (rename module 让 Vivado 看作新 module, 强制 fresh elaborate, 旧 xci cache 失效)
+create_bd_cell -type module -reference hub75e_panel_seq_v2 hub75e_panel_seq_0
+puts "\[INFO\] created hub75e_panel_seq_0 cell (ref v2)"
 
 # 2. 连 AXI-Lite 到 axi_smc 现有 M06_AXI (之前 hub75e 用的 master port 还在)
 connect_bd_intf_net [get_bd_intf_pins axi_smc/M06_AXI] [get_bd_intf_pins hub75e_panel_seq_0/s_axi]

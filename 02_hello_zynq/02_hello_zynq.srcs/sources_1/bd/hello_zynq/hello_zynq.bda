@@ -274,7 +274,7 @@
                 "SX": "/hub75e_panel_seq_0",
                 "SI": "s_axi",
                 "SS": "reg0",
-                "SV": "xilinx.com:module_ref:hub75e_panel_seq:1.0",
+                "SV": "xilinx.com:module_ref:hub75e_panel_seq_v2:1.0",
                 "TM": "both",
                 "TU": "register"
             },

@@ -35,7 +35,7 @@
 //   每 pixel 32-bit aligned, 低 24-bit = RGB (R[7:0] G[15:8] B[23:16])
 //   total 8192 pixel × 24-bit = 196608 bit = 6 个 36Kb BRAM
 module hub75e_panel_seq_v2 #(
-    parameter integer DCLK_DIV     = 4,    // 75 MHz / 4 = 18.75 MHz DCLK 50% duty
+    parameter integer DCLK_DIV     = 2,    // 75 MHz / 2 = 37.5 MHz DCLK 50% duty (超 FM6124 spec 30M 25%, 实测)
     parameter integer PANEL_WIDTH  = 128,
     parameter integer ADDR_BITS    = 5,    // 1/32 scan
     parameter integer BCM_PLANES   = 6,    // 6-bit per channel (64 灰度, 帧率 ×4 vs 8-bit)

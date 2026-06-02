@@ -16,8 +16,7 @@ proc measure_fps {label ctrl} {
     puts "$label CTRL=[format 0x%x $ctrl] fps=$delta (STATUS=[format 0x%08x $s1])"
 }
 
-# Common setup: TUNIT=32, use_fb=1 (assume grid fb already loaded)
-mwr 0x40020014 32
+# TUNIT preserved from outside (don't overwrite)
 
 measure_fps "SERIAL " 0x521
 measure_fps "OVERLAP" 0x561

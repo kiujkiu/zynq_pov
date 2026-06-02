@@ -12,8 +12,8 @@ originSessionId: bafc105a-a8db-471f-ae33-42571927b4da
 
 **标准调用模板**：
 ```bash
-rm -rf /mnt/d/workspace/zynq_pov/tools/logs/.Xil /mnt/d/workspace/zynq_pov/tools/logs/*.log /mnt/d/workspace/zynq_pov/tools/logs/*.jou /mnt/d/workspace/zynq_pov/tools/logs/*.out 2>/dev/null
-cmd.exe /c "cd /d D:\\workspace\\zynq_pov\\tools\\logs && D:\\Vivado\\2024.2\\bin\\vivado.bat -mode batch -source D:\\workspace\\zynq_pov\\tools\\<script>.tcl -log vivado.log -journal vivado.jou -notrace" > /mnt/d/workspace/zynq_pov/tools/logs/cmd.out 2>&1 &
+rm -rf /mnt/d/claude_workspace/pov3d/zynq_pov/tools/logs/.Xil /mnt/d/claude_workspace/pov3d/zynq_pov/tools/logs/*.log /mnt/d/claude_workspace/pov3d/zynq_pov/tools/logs/*.jou /mnt/d/claude_workspace/pov3d/zynq_pov/tools/logs/*.out 2>/dev/null
+cmd.exe /c "cd /d D:\\claude_workspace\\pov3d\\zynq_pov\\tools\\logs && D:\\Vivado\\2024.2\\bin\\vivado.bat -mode batch -source D:\\claude_workspace\\pov3d\\zynq_pov\\tools\\<script>.tcl -log vivado.log -journal vivado.jou -notrace" > /mnt/d/claude_workspace/pov3d/zynq_pov/tools/logs/cmd.out 2>&1 &
 ```
 
 **用 run_in_background:true** — Synth+Impl+Bitstream 要 5-10 分钟，用 ScheduleWakeup 调 540-600 秒回来看结果

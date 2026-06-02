@@ -5,7 +5,7 @@ type: reference
 originSessionId: bafc105a-a8db-471f-ae33-42571927b4da
 ---
 ## 现象
-WSL 内直接 `cd /mnt/d/workspace/zynq_pov && git push origin master` 会报：
+WSL 内直接 `cd /mnt/d/claude_workspace/pov3d/zynq_pov && git push origin master` 会报：
 ```
 fatal: could not read Username for 'https://github.com': No such device or address
 ```
@@ -13,7 +13,7 @@ fatal: could not read Username for 'https://github.com': No such device or addre
 
 ## 解决（一行命令）
 ```bash
-cd /mnt/d/workspace/zynq_pov && cmd.exe /c "cd /d D:\workspace\zynq_pov && git push origin master" 2>&1 | tail -15
+cd /mnt/d/claude_workspace/pov3d/zynq_pov && cmd.exe /c "cd /d D:\claude_workspace\pov3d\zynq_pov && git push origin master" 2>&1 | tail -15
 ```
 
 ## 为什么有效

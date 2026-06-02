@@ -4,11 +4,11 @@ description: 每次 Vivado 重新 Export Hardware 后，把新 bit 刷到 Vitis 
 type: reference
 originSessionId: bafc105a-a8db-471f-ae33-42571927b4da
 ---
-**位置**: `/mnt/d/workspace/zynq_pov/tools/refresh_bit.sh`
+**位置**: `/mnt/d/claude_workspace/pov3d/zynq_pov/tools/refresh_bit.sh`
 
 **用法**:
 ```bash
-bash /mnt/d/workspace/zynq_pov/tools/refresh_bit.sh /mnt/d/workspace/zynq_pov/02_hello_zynq
+bash /mnt/d/claude_workspace/pov3d/zynq_pov/tools/refresh_bit.sh /mnt/d/claude_workspace/pov3d/zynq_pov/02_hello_zynq
 ```
 
 **什么时候用**:

@@ -44,12 +44,12 @@ RGMII_0_td[2]:      F22     RGMII_0_td[3]: G20   (SLEW FAST)
 RGMII_0_tx_ctl:     G22     RGMII_0_txc:   D21   (SLEW FAST)
 create_clock -period 8.000 -name RGMII_0_rxc [get_ports RGMII_0_rxc]
 ```
-保存文件：`D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc`
+保存文件：`D:/claude_workspace/pov3d/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc`
 
 **util_vector_logic 配置**：`C_OPERATION=not`, `C_SIZE=1` — 把 FCLK_RESET0_N 低有效翻成高有效给 gmii_to_rgmii 的 rst 输入。
 
 **Tcl 脚本**：
-- 加 ETH：`D:/workspace/zynq_pov/tools/bd_add_ethernet.tcl`
-- 修时钟：`D:/workspace/zynq_pov/tools/bd_fix_eth_clock.tcl`
+- 加 ETH：`D:/claude_workspace/pov3d/zynq_pov/tools/bd_add_ethernet.tcl`
+- 修时钟：`D:/claude_workspace/pov3d/zynq_pov/tools/bd_fix_eth_clock.tcl`
 
 **How to apply**：以后要在别的鹿小班项目里加以太网，两个 Tcl 合起来能照抄。

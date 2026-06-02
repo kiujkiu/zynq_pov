@@ -1,20 +1,89 @@
+- [User role and domain](user_role.md) — FPGA/Zynq engineer building POV-3D display, terse Chinese, drives Windows Vivado/Vitis from WSL
+- [POV3D 项目状态 HTML (团队解释 + 任务认领 + 跨部门)](reference_project_status_html.md) — `D:\claude_workspace\pov3d\project_status.html`, 任务 ID T-Cx/T-Rx/T-Lx + 里程碑 M1-M4 + 7 部门诉求
+- [zynq_pov project (Phase 9 snapshot)](project_zynq_pov.md) — POV-3D pipeline, Phase 8 mesh slice + Phase 9 ABDE 并行 (HLS 4× IP / WiFi / QSPI fix / warm bake)
+- [POV3D anime xsdb 直推路径](project_pov3d_anime_xsdb_path.md) — JTAG 直写 DDR + ANIME_MAGIC 检测 + 32K HLS IP, 绕开 WiFi/UART 通信问题
+- [LED panel 协议踩坑总结](feedback_led_panel_protocol_pitfalls.md) — 5 条: DCLK 不能停 / ICND3019 DCLK ≥500ns / cascade LATCH 是 N×16 一次 / EN_OP 首帧后 / ROW 宽度必精
+- [led_panel_seq PL IP 接口](reference_led_panel_seq_ip.md) — 0x40010000, 3 modes + burst, AXI-Lite, panel_seq.h C API
+- [Vivado BD module_ref 加 port 改 xci JSON](feedback_vivado_bd_module_ref_update.md) — update_module_reference 失败时直接改 xci/bd JSON, 不用 Vivado API
+- [多色 LED panel bring-up 没厂家文档不要盲试](feedback_led_panel_blind_bringup.md) — 协议规范 + panel-specific 参数缺一不可, 没 demo code 不开工
+- [In-repo doc index](reference_docs.md) — where to find HOWTO/STATUS/DEBUG_LOG files inside the cloned repo
+- [Hardware + Windows toolchain](reference_hardware.md) — COM/JTAG/HDMI-capture details, Vivado/Vitis paths called from WSL（本机走 `D:\` 符号链接 → `C:\Xilinx\...`）
+- [Win Python 安装](reference_python_install.md) — Python 3.12.10 在 `%LOCALAPPDATA%\Programs\Python\Python312`，已装 pyserial/trimesh/numpy/pillow/pygltflib/PyQt6/obs-websocket-py/imageio
 - [POV3D 最终目标参数](project_pov3d_final_target.md) — 720 slice × 30 Hz × 160×180，推出 46 μs/slice 硬预算
 - [Phase 4b HLS pov IP 已完成](project_pov3d_hls_ip_done.md) — 基址、性能、限制、优化方向
+- [产品路径决策 (ADR-001)](project_pov3d_path_decision.md) — 锁 A voxel 4× IP, mesh 路径备货等 LED + 精简 BD 时再考虑
+- [slicemap LUT 实验分支](project_slicemap_lut.md) — experiment/slicemap-lut + worktree zynq_pov_slicemap, 设计文档 commit 0d3b4a2, 代码未实现
 - [点云流协议](project_pov3d_stream_protocol.md) — magic PPCL + 16B 头 + point_t 数组
+- [HDMI FB 字节序 = GBR](project_pov3d_hdmi_fb_byte_order.md) — 写 p[0]=g; p[1]=b; p[2]=r 才能显示正确颜色
+- [HDMI 颜色调参](project_pov3d_color_tuning.md) — anime 接近 3D Viewer 的 brighten/gamma/saturation 配置 + 三个固有损失 + Blender PBR bake
+- [Mesh slice B 路径突破](project_mesh_slice_breakthrough.md) — experiment/triangle-mesh: mesh→angle slice host+板端 + 颜色调到 anime 风格
 - [xil_printf 不支持 %lx](feedback_xil_printf_limits.md) — 用 %x + (unsigned)
 - [HLS estimate 乐观 14×](feedback_hls_cycle_estimate_optimistic.md) — m_axi 写 DDR 实测远超 HLS 报告
-- [鹿小班以太网](project_luxiaoban_ethernet.md)
+- [uart_poll_frame 嵌套丢事件](feedback_uart_poll_nested_dispatch.md) — frame_ready 在 cpu_render 内部 poll 时被消费, 主循环看不到
+- [dual-core 启用下 UART rx 协议 desync](feedback_dual_core_uart_desync.md) — ENABLE_DUAL_CORE=1 + send model 失败, model_n 卡 boot 默认; 需 IRQ-driven UART 才能解
+- [USE_PL=1 UART 不稳](feedback_use_pl1_uart_unreliable.md) — anime receive ~50% stuck @ 20K, 推荐 USE_PL=0 或 hybrid mode
+- [HLS ap_done clear-on-read](feedback_hls_ap_done_clear_on_read.md) — 多 IP 并行等 done 必须 latch, 直接每轮读全部 AP_CTRL 会丢 done → timeout
+- [4× pov IP 破坏 HDMI](feedback_pov_4x_ip_breaks_hdmi.md) — solo-fire OK 但同时 fire 让 HDMI 变噪点, 怀疑 axi_smc HP1 仲裁/cache 一致性, USE_PL_4X 暂停用
+- [Zynq SDIO 时钟必须 divisor=0xFF](feedback_zynq_sdio_clock_too_fast.md) — 飞线/焊线 init clock 用 ~390 kHz CMD5 必 timeout, 降到 ~98 kHz 才稳
+- [Zynq SDHCI rst -system 反复后卡死](feedback_zynq_sdhci_stuck_after_rst.md) — 必须物理 power-cycle 才救, 软件 SW reset 救不回来, 改用 rst -processor
+- [Zynq HDMI 反复 rst -processor 后变黑](feedback_zynq_hdmi_stuck_after_rst.md) — fb DDR 有内容但 HDMI 全黑, 必须 power-cycle
+- [ESP32-C5 reason 203/204 ≈ 密码错](feedback_office_ap_blocks_esp32c5_tcp.md) — **翻案**: 不是 AP 阻塞, sdkconfig 密码占位 'undef' 没换 'undefoffice1010', EAPOL 必败长得像 AP 阻塞. 排查先 grep sdkconfig 密码
+- [HLS pov_project 32K resynth 流程](feedback_hls_resynth_full_flow.md) — 删 impl/ 缓存, 升 IP 版本, BD 删冗余 IP, 用 synth_design 不要 launch_runs, xsdb dow -data 注入 anime
+- [HLS ring buffer 不清空 → 残影累积](feedback_hls_ring_no_clear_ghost.md) — HLS 只写点投影像素, ARM 在 fire 前 memset ring (2.75 MB, 2ms) 才能避免多 angle 叠加成 ghost
+- [每帧 memset 整 fb 边界 cache-stale](feedback_fb_full_memset_cache_stale.md) — 2.76MB memset+flush + VDMA 并发让 [958,1280) 偶发 red 散点, 改成 per-row flush 中心+边界 boot-only 清
+- [鹿小班以太网 GEM0+gmii_to_rgmii](project_luxiaoban_ethernet.md)
 - [以太网 TX 硬件卡住](project_luxiaoban_ethernet_blocker.md)
 - [HDMI 时钟选择](project_luxiaoban_hdmi_clocking.md)
 - [ARM 本地渲染](project_luxiaoban_local_rendering.md)
 - [PL LED 闪烁验证](project_luxiaoban_pl_leds.md)
 - [VDMA framebuffer](project_luxiaoban_vdma_framebuffer.md)
-- [HDMI FB 字节序 = GBR](project_pov3d_hdmi_fb_byte_order.md) — 写 p[0]=g; p[1]=b; p[2]=r 才能显示正确颜色
-- [uart_poll_frame 嵌套丢事件](feedback_uart_poll_nested_dispatch.md) — frame_ready 在 cpu_render 内部 poll 时被消费, 主循环看不到
-- [HDMI 颜色调参](project_pov3d_color_tuning.md) — anime 接近 3D Viewer 的 brighten/gamma/saturation 配置 + 三个固有损失
-- [USE_PL=1 UART 不稳](feedback_use_pl1_uart_unreliable.md) — anime receive ~50% stuck @ 20K, 推荐 USE_PL=0 或 hybrid mode
 - [Zynq DDR 配置](project_luxiaoban_zynq_ddr_config.md)
 - [鹿小班 demo 工程参考](reference_luxiaoban_demo_projects.md)
+- [鹿小班 MIO 物理引脚分配](reference_luxiaoban_mio_pinout.md) — MIO1-6=QSPI flash, MIO40-45/47=板载 microSD, 扩展连接器只走 PL 引脚
+- [鹿小班无 USB host 能力](reference_lxb_no_usb_host.md) — MIO 28-39 全悬空 + 无 ULPI PHY + USB-C 只是 CH340E UART, USB WiFi 必须换板 (ALINX/米尔/正点原子)
+- [LXB SDIO WiFi 升级方案 RTL8822CS](project_lxb_sdio_wifi_plan.md) — PetaLinux + SD1 EMIO + rtw88 driver, 接受 200 Mbps SDIO 上限, 取代 ESP32 桥
+- [鹿小班 GPIO1 connector pinout](reference_lxb_gpio1_pinout.md) — GPIO1 2×40 排针 17 对 BANK 33 site → CLG484 PACKAGE_PIN 完整表
+- [鹿小班 boot mode 拨码 = SW3](feedback_lxb_boot_mode_sw3.md) — SW1/SW2 是 PL_KEY 跟 boot 无关; SW3 dual SPST 控制 MIO[2..8] strap, 切 QSPI 需 toggle 配置
+- [鹿小班 QSPI = W25Q256 (32 MB) + W25Q512 升级路径 + Linux 预算](reference_luxiaoban_qspi_flash.md) — 7020 Linux 三档方案 / 32 MB & 64 MB 分区表 / 4-byte 地址改 FSBL+U-Boot+Linux / 量产再换
+- [Zynq Linux vs 裸机 10 维对比](reference_zynq_linux_vs_baremetal.md) — 决策框架: IRQ 延迟/调度/网络/学习曲线; 硬实时必在 PL, Linux 杀手锏在网络+多任务+FS
+- [WiFi 带宽不够先质疑需求再选硬件](feedback_wifi_bandwidth_first_question_demand.md) — 压数据 vs 加硬件; 实测需求 vs 预算上限; 避免为虚高带宽白学 Linux
+- [LED panel 硬件 reference](reference_led_panel_hardware.md) — 160×180 RGB, 24× ICND3019 行 + 108× ICND1069 列 + 8× 74HC245, **VCC=3.8V / VCC_R=2.8V** (datasheet 确认)
+- [ICND1069 协议 reference (V1.2)](reference_icnd1069_protocol.md) — LE 长度编码 / 寄存器配置 4 步流程 / 显示时序 / 关键寄存器默认值
+- [ICND3019 行管 + 1069/3019 系统集成](reference_led_driver_chips.md) — 行管协议、4-bit 寄存器、ROW→DCLK 连法、DCLK 频率差异、74HC245 用途
+- [POV3D LED 驱动选型最终决定 (2026-05-12)](project_pov3d_led_chip_decision.md) — 360×20Hz × 8-bit 锁定: Zynq 7020 CLG484 + 90× MBI5264 + 12× ICND3019 直驱, 101 PL IO, DCLK 30 MHz DDR 超频必需; 预留 9 CPLD / DaVinci 升级路径 ⚠ **行管 ICND3019 NMOS 跟 MBI5264 cathode sink 同侧, 物理不亮, 待改 PMOS** (见 reference_mbi_polarity.md)
+- [MBI 系列全是 cathode sink](reference_mbi_polarity.md) — Macroblock 5050/5152/5252/5253/5254/5264/5353 整条 PWM 灰度线都是 cathode sink, 没 anode source 同类款, 跟 ICND1069 不能直换, 行管必须配第三方 PMOS (DD311/FP9933/AP3402 等)
 - [refresh_bit.sh 说明](reference_refresh_bit_script.md)
 - [Vivado 批处理 Tcl 用法](reference_vivado_batch_tcl.md)
 - [WSL git push 走 cmd.exe](reference_git_push_via_cmd.md) — `cmd.exe /c "cd /d D:\... && git push"` 用 Windows GCM, 不要绕 SSH/PAT
+- [换机首次重建踩坑](feedback_new_machine_setup_gotchas.md) — 7 条: HLS PATH / vivado-library / rgb2dvi 重打包 / BD hdmi_tmds 自杀 / Vitis platform delete-recreate / dl_helloworld 路径切 hello_plat/hw/sdt / OBS Virtual Camera 假帧
+- [ESP32-C5 DevKitC bring-up](project_esp32c5_setup.md) — chip rev v1.0, COM6 (CH340), IDF v6.0 在 `D:\esp-idf` / `C:\Users\kiujkiu\.espressif`
+- [ESP32-C5 SDIO slave 已验证](project_esp32c5_sdio_slave.md) — IDF v6 example 通, 引脚 IOMUX 固定 (CLK9/CMD10/D0-3=8/7/14/13), 4-bit 模式占用 USB-JTAG
+- [ESP32-C5 WiFi 桥已通 (5G HT40 ch161)](project_esp32c5_wifi_bridge_live.md) — 密码改对后 IP 10.168.168.137:8888, Windows TcpTestSucceeded=True, reason 0
+- [POV3D WiFi 数据通路完整跑通](project_pov3d_wifi_data_path_live.md) — PC→TCP→ESP32→SDIO→Zynq 端到端 39 KB/s, anime_stream --host 替代 UART/JTAG
+- [SDIO 4-bit @ 25 MHz 可跑通但非瓶颈](feedback_sdio_4bit_works_but_not_bottleneck.md) — 1-bit/4-bit/12.5MHz/25MHz throughput 都 ~160 KB/s, 真瓶颈在 ARM byte parser
+- [ESP32 SDIO slave 自动 0-padding 错位](feedback_esp32_sdio_padding_corruption.md) — passthrough 非 512B 写被 padding, Zynq PPCL parser 边界错乱 → HDMI 散点; 必须 alignment buf
+- [HLS clear 不破 throughput, ESP32 single-task 真瓶颈](feedback_hls_clear_no_net_throughput_win.md) — v1.4 SLOT_CLEAR 8x 数学胜利但 net 0, 100 KB/s ESP32 RX cap, 要 dual-task 大改造
+- [ESP32-C5 single-core 是 throughput ceiling](feedback_esp32c5_singlecore_ceiling.md) — dual-task 实测 -50%, UDP 同 cap, 100 KB/s 是 RISC-V single-core hardware 上限. 升级路径 ESP32-S3/P4
+- [30 fps 30K progress log](feedback_30fps_progress_log.md) — baseline 0.34→1.94 fps end-to-end. Zynq render 10 fps capable. WiFi env-bound 2 Mbps avg = 真 ceiling. 30 fps 需要 hardware change
+- [ESP32-C5 这台机 CH340 reset 极性](feedback_esp32c5_ch340_reset_polarity.md) — 单 RTS toggle 进不去 normal run, 要 rts=True+dtr=False→True 三步
+- [ESP32-C5 WiFi 吞吐基线 + HT40 突破](project_esp32c5_wifi_throughput.md) — 2.4G/5G HE20/HT40 三档对比 (TCP 18→29→40, UDP 30→48→70), 切 11n HT40 +38%, set_protocols 必须在 wifi_start 之后
+- [IDF v6 iperf CLI + iperf2.exe](reference_idf6_iperf_cli.md) — `sta_connect` 替代 `sta`, `iperf --abort` 停, iperf2 二进制位置, ESP iperf 走 iperf2 协议非 iperf3
+- [UART CH340 PPCL @ 921600 跑 HDMI render 时不通](feedback_uart_ch340_ppcl_fifo_overflow.md) — PS UART RX FIFO 64B 在 scale_blit 12ms 主循环下必溢出, parser sync 不上 → 走 xsdb dow -data 或 ESP32 SDIO 桥
+- [glTF UV v 多翻一次 → HDMI 花斑/迷彩](feedback_glb_uv_v_flip_camouflage.md) — glb_to_points.py 写 `1.0-uv[1]` 是双重翻转, glTF spec v=0 在顶部, 修完才出金发/蓝披风/白铠甲标准色
+- [HLS z-buffer 立体感](feedback_hls_zbuffer_for_depth.md) — voxel last-write 让 depth-fade 失效, 必须加 int8 depth_local BRAM + rz 比较, 立体感才出来
+- [POV3D panel 首次点亮 (2026-05-27)](project_pov3d_panel_lit.md) — 8 个关键 fix 汇总, 当前调试模式所有行同时亮但中间有黑条
+- [POV3D 1728 bar calib sweep (2026-05-28)](project_pov3d_calib_sweep.md) — mode_calib_sweep + cap_sweep.py + analyze_sweep.py 建 (chain,chip,bit)→(x,y) LUT, HDMI FB 桥接前置
+- [POV3D 后续架构: PS Linux + PL 时序 (2026-05-28)](project_pov3d_linux_pl_split.md) — 战略: Linux 解 WiFi, 所有 timing 搬 PL, DDR 是唯一 Linux↔PL 契约, Plan B 从优化变必做
+- [POV3D panel chain→X 映射 (2026-05-28)](reference_pov3d_panel_chain_map.md) — 9 chain → 3 X 区域 × 3 色组对照表, G/B 颜色串扰待修
+- [POV3D panel 静态渲染管线 v1 (2026-05-29)](project_pov3d_panel_render_v1.md) — baremetal 完整 PNG→panel 跑通但目标未对齐 (静态 2D vs POV 3D), 等用户回答 4 个问题
+- [Multivox POV→Zynq 移植 + 48-IO 方案 (2026-05-29)](project_multivox_zynq_port.md) — multivox 项目 (D:\claude_workspace\pov3d\multivox), 拆 daisy 改 48 SDI, 7350 fps × 8-bit BCM, **下次直接开干 Verilog**
+- [LED IC 选型对比 (POV + 静态屏 + DDR)](reference_pov_chip_selection.md) — FM6124/MBI/ICN, BCM vs PWM vs S-PWM 时间预算, ICN2065 SDR 100M 最实用
+- [HUB75E FM6124 panel + v28 overlap+OE_PRE (2026-06-02)](project_hub75e_fm6124_lit.md) — 128×64, CTRL[6]=overlap_en runtime 切换: serial 462 fps / overlap 645 fps (+39%), BCM 6-bit 都保留
+- [HUB75E overlap 翻案: 需 OE-fall setup delay](feedback_hub75e_no_overlap_shift_display.md) — v27 直接 overlap 翻车; v28 加 8 cyc OE_PRE 让 FM6124DJ 缓存 SR → 正常 +39% fps
+- [Vivado BD module_ref ADDR_WIDTH 顽固缓存](feedback_vivado_bd_addr_width_cache.md) — 改 PL IP port width 后 BD 永远按旧 5-bit elaborate. 唯一 fix: rename module + 删 ip cache 目录 + recreate cell
+- [FM6124 引脚 + 关键参数](reference_fm6124_pinout.md) — SSOP24 完整 pin 表, OE pin 21, CLK pin 3, max 30MHz, 真值表, PDF 在 docs/fm/FM6124.pdf
+- [refresh_bit.sh 读 stale xsa 烧老 bit](feedback_refresh_bit_stale_xsa.md) — refresh_bit 读 02_hello_zynq/*.xsa 但 Vivado 写 ../hello_plat/hw/*.xsa, 默默烧老 bit 新 IP 永远 dead
+- [POV3D 自制 Zynq 7020 dev board v1 (2026-06)](project_pov3d_pcb_v1.md) — KiCad 9 工程在 `pcb/zynq7020_dev_v1/`, 200 PL IO 全接出, sym/fp 完成等用户装 KiCad 验证
+- [Vivado IBIS .pkg = BGA pin map 权威源](reference_vivado_ibis_pkg.md) — `C:\Xilinx\Vivado\<ver>\data\parts\xilinx\<family>\public\ibis\pkg\*.pkg` 含 ball→net 全表 (除 GND)
+- [自做 PCB 工具选 KiCad 不选立创EDA](feedback_kicad_vs_lceda.md) — claude 要参与画板就 KiCad (文本工程文件), 立创EDA 只能当顾问
+- [KiCad 10 schematic 生成器 (kicad_sch_lib.py)](reference_kicad_sch_generator.md) — 自建 .kicad_sch 生成器, 解决 extends/grid/label/lib_id 几个坑, 配 kicad-cli erc/svg/pdf 全 CLI 流程

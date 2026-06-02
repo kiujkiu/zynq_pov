@@ -41,4 +41,4 @@ ZYNQ PS:
 **rgb2dvi 配置**：保持默认 `kGenerateSerialClk = True`（让它内部 MMCM 自己生 5× 串行时钟），这样只需要给 PixelClk 一个输入。
 
 **最终 BD 文件模板**：
-`/mnt/d/workspace/zynq_pov/tools/bd_route_b.tcl` 是跑通的 Tcl 脚本，批处理模式下 `vivado -mode batch -source bd_route_b.tcl` 就能从当前工程生成能出图的 bitstream + XSA。
+`/mnt/d/claude_workspace/pov3d/zynq_pov/tools/bd_route_b.tcl` 是跑通的 Tcl 脚本，批处理模式下 `vivado -mode batch -source bd_route_b.tcl` 就能从当前工程生成能出图的 bitstream + XSA。

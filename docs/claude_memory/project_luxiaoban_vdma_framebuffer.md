@@ -45,7 +45,7 @@ AXIS TDATA 24-bit 到 S2V/rgb2dvi：`TDATA[7:0]=B, [15:8]=G, [23:16]=R`
 （我第一版写成 RGB 顺序，监视器显示 R→G、G→B、B→R 错位）
 
 **工具脚本**:
-- `/mnt/d/workspace/zynq_pov/tools/bd_add_vdma.tcl` — 加 VDMA + 删 VTPG 的 BD 改造
-- `/mnt/d/workspace/zynq_pov/tools/bd_add_eth_rstn.tcl` — 顺便加了 PHY hw reset 在 H17
+- `/mnt/d/claude_workspace/pov3d/zynq_pov/tools/bd_add_vdma.tcl` — 加 VDMA + 删 VTPG 的 BD 改造
+- `/mnt/d/claude_workspace/pov3d/zynq_pov/tools/bd_add_eth_rstn.tcl` — 顺便加了 PHY hw reset 在 H17
 
 **用法**: 任何基于鹿小班的 HDMI 应用都可以直接 ARM 代码画到 DDR 0x10000000，内存布局 1280*720*3 BGR → HDMI 自动出。

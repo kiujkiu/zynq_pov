@@ -6,7 +6,7 @@ originSessionId: bafc105a-a8db-471f-ae33-42571927b4da
 ---
 鹿小班 LXB-ZYNQ7000 全部官方资料根目录：
 ```
-/mnt/e/工程软件/ZYNQ7020-484核心板/LXB-ZYNQ7000/
+/mnt/d/芯片资料/zynq7020-484/
 ```
 
 子目录用途：

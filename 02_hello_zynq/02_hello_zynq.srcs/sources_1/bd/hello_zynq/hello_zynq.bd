@@ -389,7 +389,7 @@
             "value": "50.000000"
           },
           "PCW_ACT_FPGA1_PERIPHERAL_FREQMHZ": {
-            "value": "75.000000"
+            "value": "60.000000"
           },
           "PCW_ACT_FPGA2_PERIPHERAL_FREQMHZ": {
             "value": "200.000000"
@@ -479,7 +479,7 @@
             "value": "50000000"
           },
           "PCW_CLK1_FREQ": {
-            "value": "75000000"
+            "value": "60000000"
           },
           "PCW_CLK2_FREQ": {
             "value": "200000000"
@@ -773,7 +773,7 @@
             "value": "50"
           },
           "PCW_FPGA1_PERIPHERAL_FREQMHZ": {
-            "value": "75"
+            "value": "60"
           },
           "PCW_FPGA2_PERIPHERAL_FREQMHZ": {
             "value": "200"
@@ -1766,9 +1766,6 @@
             "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
             "parameters": {
-              "MAX_BURST_LENGTH": {
-                "value": "1"
-              },
               "NUM_READ_OUTSTANDING": {
                 "value": "8"
               },
@@ -1782,9 +1779,6 @@
                 "value": "1"
               },
               "RUSER_BITS_PER_BYTE": {
-                "value": "0"
-              },
-              "SUPPORTS_NARROW_BURST": {
                 "value": "0"
               },
               "WUSER_BITS_PER_BYTE": {
@@ -1797,9 +1791,6 @@
             "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
             "parameters": {
-              "MAX_BURST_LENGTH": {
-                "value": "1"
-              },
               "NUM_READ_OUTSTANDING": {
                 "value": "8"
               },
@@ -1813,9 +1804,6 @@
                 "value": "1"
               },
               "RUSER_BITS_PER_BYTE": {
-                "value": "0"
-              },
-              "SUPPORTS_NARROW_BURST": {
                 "value": "0"
               },
               "WUSER_BITS_PER_BYTE": {
@@ -1828,9 +1816,6 @@
             "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
             "parameters": {
-              "MAX_BURST_LENGTH": {
-                "value": "1"
-              },
               "NUM_READ_OUTSTANDING": {
                 "value": "8"
               },
@@ -1844,9 +1829,6 @@
                 "value": "1"
               },
               "RUSER_BITS_PER_BYTE": {
-                "value": "0"
-              },
-              "SUPPORTS_NARROW_BURST": {
                 "value": "0"
               },
               "WUSER_BITS_PER_BYTE": {
@@ -1890,9 +1872,6 @@
             "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
             "parameters": {
-              "MAX_BURST_LENGTH": {
-                "value": "1"
-              },
               "NUM_READ_OUTSTANDING": {
                 "value": "8"
               },
@@ -1906,9 +1885,6 @@
                 "value": "1"
               },
               "RUSER_BITS_PER_BYTE": {
-                "value": "0"
-              },
-              "SUPPORTS_NARROW_BURST": {
                 "value": "0"
               },
               "WUSER_BITS_PER_BYTE": {
@@ -1926,9 +1902,6 @@
             "vlnv_bus_definition": "xilinx.com:interface:aximm:1.0",
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
             "parameters": {
-              "MAX_BURST_LENGTH": {
-                "value": "1"
-              },
               "NUM_READ_OUTSTANDING": {
                 "value": "8"
               },
@@ -1942,9 +1915,6 @@
                 "value": "1"
               },
               "RUSER_BITS_PER_BYTE": {
-                "value": "0"
-              },
-              "SUPPORTS_NARROW_BURST": {
                 "value": "0"
               },
               "WUSER_BITS_PER_BYTE": {
@@ -2608,7 +2578,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "75000000",
+                "value": "60000000",
                 "value_src": "user_prop"
               },
               "ID_WIDTH": {
@@ -2829,7 +2799,7 @@
                 "value_src": "constant"
               },
               "FREQ_HZ": {
-                "value": "75000000",
+                "value": "60000000",
                 "value_src": "user_prop"
               },
               "CLK_DOMAIN": {
@@ -3074,16 +3044,16 @@
       "proc_sys_reset_0_peripheral_aresetn": {
         "ports": [
           "proc_sys_reset_0/peripheral_aresetn",
-          "axi_smc/aresetn",
           "axi_gpio_0/s_axi_aresetn",
-          "v_tc_0/resetn",
-          "v_tc_0/s_axi_aresetn",
-          "v_axi4s_vid_out_0/aresetn",
-          "rgb2dvi_0/aRst_n",
-          "axi_vdma_0/axi_resetn",
-          "axi_smc_hp/aresetn",
           "axi_gpio_panel/s_axi_aresetn",
-          "hub75e_panel_seq_0/s_axi_aresetn"
+          "axi_smc/aresetn",
+          "axi_smc_hp/aresetn",
+          "axi_vdma_0/axi_resetn",
+          "hub75e_panel_seq_0/s_axi_aresetn",
+          "rgb2dvi_0/aRst_n",
+          "v_axi4s_vid_out_0/aresetn",
+          "v_tc_0/resetn",
+          "v_tc_0/s_axi_aresetn"
         ]
       },
       "proc_sys_reset_pov_peripheral_aresetn": {
@@ -3102,22 +3072,22 @@
       "processing_system7_0_FCLK_CLK1": {
         "ports": [
           "processing_system7_0/FCLK_CLK1",
-          "processing_system7_0/M_AXI_GP0_ACLK",
-          "axi_smc/aclk",
           "axi_gpio_0/s_axi_aclk",
-          "proc_sys_reset_0/slowest_sync_clk",
-          "v_tc_0/clk",
-          "v_tc_0/s_axi_aclk",
-          "v_axi4s_vid_out_0/aclk",
-          "v_axi4s_vid_out_0/vid_io_out_clk",
-          "rgb2dvi_0/PixelClk",
+          "axi_gpio_panel/s_axi_aclk",
+          "axi_smc/aclk",
+          "axi_smc_hp/aclk",
           "axi_vdma_0/s_axi_lite_aclk",
           "axi_vdma_0/m_axi_mm2s_aclk",
           "axi_vdma_0/m_axis_mm2s_aclk",
-          "axi_smc_hp/aclk",
+          "hub75e_panel_seq_0/s_axi_aclk",
+          "proc_sys_reset_0/slowest_sync_clk",
+          "processing_system7_0/M_AXI_GP0_ACLK",
           "processing_system7_0/S_AXI_HP0_ACLK",
-          "axi_gpio_panel/s_axi_aclk",
-          "hub75e_panel_seq_0/s_axi_aclk"
+          "rgb2dvi_0/PixelClk",
+          "v_axi4s_vid_out_0/aclk",
+          "v_axi4s_vid_out_0/vid_io_out_clk",
+          "v_tc_0/clk",
+          "v_tc_0/s_axi_aclk"
         ]
       },
       "processing_system7_0_FCLK_CLK2": {
@@ -3129,20 +3099,20 @@
       "processing_system7_0_FCLK_CLK3": {
         "ports": [
           "processing_system7_0/FCLK_CLK3",
-          "axi_smc/aclk1",
           "axi_smc_pov_hp/aclk",
-          "processing_system7_0/S_AXI_HP1_ACLK",
           "proc_sys_reset_pov/slowest_sync_clk",
           "sc_pov_axilite/aclk",
-          "pov_project_batch_0/ap_clk"
+          "pov_project_batch_0/ap_clk",
+          "axi_smc/aclk1",
+          "processing_system7_0/S_AXI_HP1_ACLK"
         ]
       },
       "processing_system7_0_FCLK_RESET0_N": {
         "ports": [
           "processing_system7_0/FCLK_RESET0_N",
-          "proc_sys_reset_0/ext_reset_in",
           "util_vector_logic_eth/Op1",
-          "proc_sys_reset_pov/ext_reset_in"
+          "proc_sys_reset_pov/ext_reset_in",
+          "proc_sys_reset_0/ext_reset_in"
         ]
       },
       "util_vector_logic_eth_Res": {

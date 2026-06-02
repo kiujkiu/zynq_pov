@@ -2158,7 +2158,7 @@ int main(void)
     }
 
 #ifndef ENABLE_HUB75E_TEST
-#define ENABLE_HUB75E_TEST 0
+#define ENABLE_HUB75E_TEST 0  /* 0 = fall through to HDMI anime; 1 = jump to panel bringup */
 #endif
 #if ENABLE_HUB75E_TEST
     /* HUB75E FM6124 panel Phase 1 bring-up via PL IP. 不返回. */

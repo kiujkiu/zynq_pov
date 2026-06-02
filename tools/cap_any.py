@@ -2,7 +2,7 @@
 import cv2, time, sys
 out = r"D:\claude_workspace\pov3d\zynq_pov\panel_now.jpg"
 exp = float(sys.argv[1]) if len(sys.argv) > 1 else -10.0
-cap = cv2.VideoCapture(0, cv2.CAP_ANY)
+cap = cv2.VideoCapture(1, cv2.CAP_ANY)   # idx 1 = laptop builtin (idx 0 icspring gives black 1920x1080)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)

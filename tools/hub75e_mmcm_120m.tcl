@@ -28,7 +28,7 @@ puts "\[INFO\] cleaned old cells"
 create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_wiz_0
 set_property -dict [list \
     CONFIG.PRIM_IN_FREQ {75.000} \
-    CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {120.000} \
+    CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {100.000} \
     CONFIG.USE_LOCKED {true} \
     CONFIG.USE_RESET {true} \
     CONFIG.RESET_TYPE {ACTIVE_LOW} \
@@ -60,8 +60,8 @@ puts "\[INFO\] axi_clock_converter_0 added"
 
 # 5. 重新 create hub75e_panel_seq_v2 cell
 create_bd_cell -type module -reference hub75e_panel_seq_v2 hub75e_panel_seq_0
-# 连 AXI 走 clock converter
-disconnect_bd_intf_net [get_bd_intf_nets -of_objects [get_bd_intf_pins axi_smc/M06_AXI]]
+# 连 AXI 走 clock converter (hub75e cell 之前已删, M06_AXI 悬空, 不需要 disconnect)
+catch {disconnect_bd_intf_net [get_bd_intf_nets -of_objects [get_bd_intf_pins axi_smc/M06_AXI]]}
 connect_bd_intf_net [get_bd_intf_pins axi_smc/M06_AXI] [get_bd_intf_pins axi_clock_converter_0/S_AXI]
 connect_bd_intf_net [get_bd_intf_pins axi_clock_converter_0/M_AXI] [get_bd_intf_pins hub75e_panel_seq_0/s_axi]
 # hub75e 用 120 MHz domain

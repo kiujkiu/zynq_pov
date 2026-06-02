@@ -10,7 +10,7 @@
 //   1 = multivox shift register 32-bit
 //
 // AXI-Lite 寄存器:
-//   0x00 CTRL   [0]=en [3:1]=mode [4]=addr_sr [12:8]=addr_bits
+//   0x00 CTRL   [0]=en [3:1]=mode [4]=addr_sr [5]=use_fb [6]=overlap_en [12:8]=addr_bits
 //   0x04 COLOR  [23:0] 顶半 24-bit RGB (R[7:0] | G[15:8] | B[23:16])
 //   0x08 PARAM  [11:0]=width-1 [23:16]=stripe_w [31:24]=walk_speed
 //   0x0C STATUS [0]=running [12:8]=cur_addr [15:13]=cur_plane [31:16]=frame_count
@@ -38,12 +38,13 @@ module hub75e_panel_seq_v2 #(
     parameter integer DCLK_DIV     = 4,    // 75 MHz / 4 = 18.75 MHz DCLK 50% duty
     parameter integer PANEL_WIDTH  = 128,
     parameter integer ADDR_BITS    = 5,    // 1/32 scan
-    parameter integer BCM_PLANES   = 8,    // 8-bit per channel
-    parameter integer T_UNIT_DEF   = 96,   // plane 0 display cycles (~1.28 µs @ 75 MHz)
+    parameter integer BCM_PLANES   = 6,    // 6-bit per channel (64 灰度, 帧率 ×4 vs 8-bit)
+    parameter integer T_UNIT_DEF   = 8,    // 默认 TUNIT=8 cycle (用户测试)
     parameter integer DISP_CYCLES  = 1000, // (legacy compat)
     parameter integer LATCH_CYC    = 4,
     parameter integer BLANK_CYC    = 5,
     parameter integer ADDR_SET_CYC = 3,
+    parameter integer OE_PRE_CYC   = 8,    // v28: OE-fall setup before shift, gives FM6124DJ time to cache SR
     parameter integer FB_DEPTH     = 8192  // 128×64 pixel
 )(
     input  wire        s_axi_aclk,
@@ -88,6 +89,7 @@ module hub75e_panel_seq_v2 #(
     wire [2:0]  test_mode     = reg_ctrl[3:1];
     wire        addr_mode_sr  = reg_ctrl[4];
     wire        use_fb        = reg_ctrl[5];   // 1=从 framebuffer 取 pixel, 0=用 pattern LUT
+    wire        overlap_en    = reg_ctrl[6];   // v28: 1=enable shift-while-display overlap (ABCDE only), 0=serial
     wire [4:0]  addr_bits_cfg = (reg_ctrl[12:8] == 5'd0) ? 5'd5 : reg_ctrl[12:8];
     wire [4:0]  row_max       = (5'd1 << addr_bits_cfg) - 5'd1;
     wire [23:0] user_color_top = reg_color[23:0];
@@ -207,7 +209,14 @@ module hub75e_panel_seq_v2 #(
     end
 
     //==========================================================================
-    // FSM
+    // FSM (v28: hybrid - serial + optional overlap with OE_PRE delay)
+    // CTRL[6]=overlap_en chooses path at runtime (ABCDE only, SR mode always serial):
+    //   overlap_en=0: SHIFT → BLANK → LATCH → ADDR → DISPLAY → SHIFT (serial, BCM safe)
+    //   overlap_en=1: SHIFT (initial prime) → BLANK → LATCH → ADDR → OE_PRE → PHASE
+    //                 → BLANK → LATCH → ADDR → OE_PRE → PHASE → ...
+    //                 S_OE_PRE drops OE, waits OE_PRE_CYC for FM6124DJ to cache SR data
+    //                 into display latch (per datasheet OE-falling-edge spec), then
+    //                 S_PHASE shifts next plane while displaying current.
     //==========================================================================
     localparam [3:0]
         S_IDLE       = 4'd0,
@@ -216,18 +225,24 @@ module hub75e_panel_seq_v2 #(
         S_LATCH      = 4'd3,
         S_ADDR_ABCDE = 4'd4,
         S_ADDR_SR    = 4'd5,
-        S_DISPLAY    = 4'd6;
+        S_DISPLAY    = 4'd6,
+        S_OE_PRE     = 4'd7,    // v28 overlap: drop OE, wait for chip cache
+        S_PHASE      = 4'd8;    // v28 overlap: shift next + display current
 
     reg [3:0]  state;
     reg [11:0] col_idx;
     reg [4:0]  row_idx;
     reg [4:0]  row_displayed;
-    reg [2:0]  plane;            // BCM plane 0..7
+    reg [2:0]  plane;
+    reg [4:0]  disp_row;        // v28 overlap: snapshot at LATCH (= currently displayed row)
+    reg [2:0]  disp_plane;      // v28 overlap: snapshot at LATCH (= currently displayed plane)
+    reg        shift_active;    // v28 overlap: 1 = shift still pushing SR
+    reg        disp_active;     // v28 overlap: 1 = OE should be low (display running)
     reg [15:0] frame_count;
     reg [7:0]  walk_pos;
     reg [7:0]  walk_div_count;
-    reg [15:0] disp_count;       // display cycle counter (up to 256*T_unit)
-    reg [15:0] disp_target;      // target = t_unit << plane
+    reg [15:0] disp_count;
+    reg [15:0] disp_target;
     reg [3:0]  ctrl_count;
     reg [$clog2(DCLK_DIV):0] sub_count;
 
@@ -242,10 +257,8 @@ module hub75e_panel_seq_v2 #(
     reg [15:0] fb_we_count;
     reg [23:0] last_fb_wdata;
     reg [11:0] last_fb_waddr;
-    // STATUS [31:24]=fb_top_dout[7:0] (R byte, sweeps as PL scans)
-    //        [23:16]=fb_we_count[7:0] (debug)
-    // 不显示 last_fb_wdata; 用 fb_top_dout 实时反映 BRAM port-B read
-    wire [31:0] status_word = {fb_top_dout[7:0], fb_we_count[7:0], plane, row_displayed, 7'b0, (state != S_IDLE)};
+    // STATUS [31:16]=frame_count [15:13]=plane [12:8]=row_displayed [0]=running
+    wire [31:0] status_word = {frame_count, plane, row_displayed, 7'b0, (state != S_IDLE)};
 
     //==========================================================================
     // Pattern generator: 24-bit per RGB → plane slice → 6-bit out
@@ -326,11 +339,13 @@ module hub75e_panel_seq_v2 #(
                 pattern_24_bot_lut = user_color_bot;
             end
             3'd1: begin
-                pattern_24_top_lut = color_lut((row_idx / stripe_w[4:0]) & 3'h7);
+                // 固定 4-row 一条 stripe (row / 4 & 7), 去除除法器
+                pattern_24_top_lut = color_lut(row_idx[4:2]);
                 pattern_24_bot_lut = pattern_24_top_lut;
             end
             3'd2: begin
-                pattern_24_top_lut = color_lut((col_idx[10:0] / stripe_w) & 3'h7);
+                // 固定 16-col 一条 stripe (col / 16 & 7), 去除除法器以缩短 critical path
+                pattern_24_top_lut = color_lut(col_idx[6:4]);
                 pattern_24_bot_lut = pattern_24_top_lut;
             end
             3'd3: begin
@@ -389,6 +404,10 @@ module hub75e_panel_seq_v2 #(
             row_idx         <= 5'd0;
             row_displayed   <= 5'd0;
             plane           <= 3'd0;
+            disp_row        <= 5'd0;
+            disp_plane      <= 3'd0;
+            shift_active    <= 1'b0;
+            disp_active     <= 1'b0;
             sub_count       <= 0;
             ctrl_count      <= 4'd0;
             disp_count      <= 16'd0;
@@ -418,6 +437,10 @@ module hub75e_panel_seq_v2 #(
                     col_idx         <= 12'd0;
                     row_idx         <= 5'd0;
                     plane           <= 3'd0;
+                    disp_row        <= 5'd0;
+                    disp_plane      <= 3'd0;
+                    shift_active    <= 1'b0;
+                    disp_active     <= 1'b0;
                     sub_count       <= 0;
                     if (enable) state <= S_SHIFT;
                 end
@@ -461,12 +484,43 @@ module hub75e_panel_seq_v2 #(
                     hub75e_lat_out <= 1'b1;
                     if (ctrl_count == LATCH_CYC[3:0] - 1) begin
                         hub75e_lat_out <= 1'b0;
-                        ctrl_count <= 4'd0;
-                        state <= addr_mode_sr ? S_ADDR_SR : S_ADDR_ABCDE;
-                        sr_bit_idx <= 6'd0;
-                        sr_sub     <= 2'd0;
-                        sr_clk     <= 1'b0;
-                        sr_dat     <= 1'b0;
+                        ctrl_count  <= 4'd0;
+                        disp_count  <= 16'd0;
+                        disp_target <= {8'd0, t_unit} << plane;
+                        sr_bit_idx  <= 6'd0;
+                        sr_sub      <= 2'd0;
+                        sr_clk      <= 1'b0;
+                        sr_dat      <= 1'b0;
+                        // v28 OVERLAP path (ABCDE only): snapshot disp_* + advance plane/row
+                        if (overlap_en && !addr_mode_sr) begin
+                            disp_row    <= row_idx;
+                            disp_plane  <= plane;
+                            if (plane == BCM_PLANES[2:0] - 3'd1) begin
+                                plane <= 3'd0;
+                                if (row_idx == row_max) begin
+                                    row_idx <= 5'd0;
+                                    frame_count <= frame_count + 1;
+                                    if (walk_div_count == walk_speed - 1) begin
+                                        walk_div_count <= 8'd0;
+                                        if (test_mode == 3'd4) begin
+                                            walk_pos <= (walk_pos == row_max) ? 8'd0 : walk_pos + 1;
+                                        end else if (test_mode == 3'd5) begin
+                                            walk_pos <= (walk_pos == width_max[7:0]) ? 8'd0 : walk_pos + 1;
+                                        end
+                                    end else begin
+                                        walk_div_count <= walk_div_count + 1;
+                                    end
+                                end else begin
+                                    row_idx <= row_idx + 1;
+                                end
+                            end else begin
+                                plane <= plane + 1;
+                            end
+                            state <= S_ADDR_ABCDE;
+                        end else begin
+                            // serial path (both SR mode and overlap_en=0 ABCDE)
+                            state <= addr_mode_sr ? S_ADDR_SR : S_ADDR_ABCDE;
+                        end
                     end else begin
                         ctrl_count <= ctrl_count + 1;
                     end
@@ -474,16 +528,80 @@ module hub75e_panel_seq_v2 #(
 
                 S_ADDR_ABCDE: begin
                     hub75e_lat_out  <= 1'b0;
-                    addr_abcde_lat  <= row_idx;
-                    row_displayed   <= row_idx;
+                    // overlap path uses disp_row (= row just snapshotted, what's in output latch)
+                    // serial path uses row_idx (no advance yet, same value)
+                    addr_abcde_lat  <= (overlap_en) ? disp_row : row_idx;
+                    row_displayed   <= (overlap_en) ? disp_row : row_idx;
                     if (ctrl_count == ADDR_SET_CYC[3:0] - 1) begin
                         ctrl_count <= 4'd0;
-                        disp_count <= 16'd0;
-                        // BCM 时长 = t_unit << plane
-                        disp_target <= {8'd0, t_unit} << plane;
-                        state <= S_DISPLAY;
+                        state      <= overlap_en ? S_OE_PRE : S_DISPLAY;
                     end else begin
                         ctrl_count <= ctrl_count + 1;
+                    end
+                end
+
+                // v28 OVERLAP: drop OE LOW, wait OE_PRE_CYC cycles. This gives FM6124DJ
+                // time to cache SR data to its internal display latch at the OE falling edge
+                // (per datasheet). Only THEN start shifting next plane into SR.
+                S_OE_PRE: begin
+                    hub75e_lat_out  <= 1'b0;
+                    hub75e_oe_out   <= enable ? 1'b0 : 1'b1;   // OE drops here
+                    hub75e_dclk_out <= 1'b0;
+                    if (ctrl_count == OE_PRE_CYC[3:0] - 1) begin
+                        ctrl_count   <= 4'd0;
+                        disp_count   <= 16'd0;
+                        disp_active  <= 1'b1;
+                        shift_active <= 1'b1;
+                        state        <= S_PHASE;
+                    end else begin
+                        ctrl_count <= ctrl_count + 1;
+                    end
+                end
+
+                // v28 OVERLAP: shift NEXT plane (uses advanced `plane`) into SR while
+                // displaying CURRENT plane (in chip's display latch, from OE_PRE cache).
+                // Exits when both shift_active and disp_active are 0.
+                S_PHASE: begin
+                    hub75e_lat_out <= 1'b0;
+                    // Display half
+                    if (disp_active) begin
+                        hub75e_oe_out <= enable ? 1'b0 : 1'b1;
+                        if (disp_count >= disp_target) begin
+                            disp_active   <= 1'b0;
+                            hub75e_oe_out <= 1'b1;
+                        end else begin
+                            disp_count <= disp_count + 1;
+                        end
+                    end else begin
+                        hub75e_oe_out <= 1'b1;
+                    end
+                    // Shift half (uses pattern_rgb at current `plane` = advanced NEXT plane)
+                    if (shift_active) begin
+                        hub75e_rgb_out <= plane_rgb;
+                        if (sub_count == (DCLK_DIV/2 - 1)) begin
+                            hub75e_dclk_out <= 1'b1;
+                            sub_count       <= sub_count + 1;
+                        end else if (sub_count == (DCLK_DIV - 1)) begin
+                            hub75e_dclk_out <= 1'b0;
+                            sub_count       <= 0;
+                            if (col_idx == width_max) begin
+                                col_idx      <= 12'd0;
+                                shift_active <= 1'b0;
+                            end else begin
+                                col_idx <= col_idx + 1;
+                            end
+                        end else begin
+                            sub_count <= sub_count + 1;
+                        end
+                    end else begin
+                        hub75e_dclk_out <= 1'b0;
+                    end
+                    // Both done → BLANK (which will go to LATCH for next plane)
+                    if (!shift_active && !disp_active) begin
+                        hub75e_oe_out <= 1'b1;
+                        ctrl_count    <= 4'd0;
+                        // If !enable, return to IDLE; else continue
+                        state <= enable ? S_BLANK : S_IDLE;
                     end
                 end
 
@@ -513,13 +631,13 @@ module hub75e_panel_seq_v2 #(
                 end
 
                 S_DISPLAY: begin
+                    // SR legacy 串行 display
                     hub75e_oe_out <= enable ? 1'b0 : 1'b1;
                     sr_en         <= 1'b0;
                     if (disp_count >= disp_target) begin
                         hub75e_oe_out <= 1'b1;
                         sr_en         <= 1'b1;
                         disp_count    <= 16'd0;
-                        // plane++ 在 row 内, plane=7 后 row++
                         if (plane == BCM_PLANES[2:0] - 3'd1) begin
                             plane <= 3'd0;
                             if (row_idx == row_max) begin

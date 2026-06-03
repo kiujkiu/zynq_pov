@@ -1,66 +1,93 @@
 /*
- * led_panel.c — ICND1069 + ICND3019 panel driver (PL led_panel_seq IP backend)
+ * led_panel.c — ICND1069 V1.2 LE 协议 driver (ARM bit-bang)
  *
- * Panel: 160 × 180 RGB, 108 ICND1069 (9 chain × 12 cascade) + 24 ICND3019 row drivers.
- * Protocol (ICND1069 V1.2):
- *   init: PRE_ACT + WR_CFG password 0xAA + cfg regs + WR_CFG password 0x55 + EN_OP
- *   frame: VSYNC + 384 row_iter loops, each loop:
- *     - ICND3019 row advance (PL panel_seq_icnd_advance)
- *     - ICND1069 ROW pulse (panel_seq_row_pulse)
- *     - 12 LATCH × 9 chain (panel_seq_word_perchain, last LATCH has LE=1)
+ * 修正历史 (2026-05-18):
+ *   v3 — 加入 ROW 信号正确驱动 + PANEL_H=180 + SCAN_LINES=20
  *
- * PL IP (led_panel_seq) drives DCLK/LE/SDI/ROW/icnd_* directly.
- * ARM only writes AXI commands + GPIO bits for OE/ABC/SPI.
+ * 接线图协议重新解释 (按 ICND1069 编程指导 V1.2):
+ *   J1.10 (DCLK)  → ICND1069 DCLK
+ *   J1.12 (LAT)   → ICND1069 LE  (长度编码命令)
+ *   J1.14 (GCLK)  → **ICND1069 ROW** (高电平宽度 12/4 DCLK 编码行同步)
+ *                  注意接线图作者标"GCLK 可 NC"是错的!
+ *   J1.16/18/19/20/21/22/23/24/25 (9 RGB 数据线) → 9 个 SDI chain
+ *   J1.26/27/28 (CIN/BIN/AIN) → panel 上 ICND3019 行驱 SDI/DCLK/RCLK
+ *                  AIN = ICND3019 SDI (chain 输入 "1" 选第 1 行)
+ *                  BIN = ICND3019 DCLK (每 ↑ 移到下一行)
+ *                  CIN = ICND3019 RCLK (init 寄存器配置)
+ *   J1.11/13/15/9 (SPI 4 线) → panel 上 25VA16AT1G flash, idle 保持
  *
- * Public modes (selected via led_panel_multi_mode_diag):
- *   mode_full_white      — 全屏全 chain 全 bit 亮 (sanity check, brightness max)
- *   mode_single_pixel    — chip sweep: 单 bit, target_chain=0, 60 frames/chip
- *   mode_calib_sweep     — 两阶段标定: Phase 1 = 1728 tuple chip×bit sweep,
- *                          Phase 2 = 384 row_iter sweep (固定 C/K/B)
+ * Panel: 160 × 180 RGB, 108 ICND1069 (9 chain × 12 cascade) + 24 ICND3019.
+ * 1/20 scan: 9 chain × 20 row each = 180 row. 寄存器 0x02 = 19 (scan-1).
+ *
+ * 协议流程:
+ *   init: PRE_ACT + WR_CFG password + 配置寄存器 + WR_CFG 关 password + EN_OP
+ *   每帧: VSYNC + 16 DCLK 等 + 第 1 scan (ROW 高 12 DCLK 同时数据 shift) +
+ *         其余 scan (ROW 高 4 DCLK 同时数据 shift) + 帧结束
+ *   每 scan 需 DATA_LATCH (LE=1) × CHIPS_PER_CHAIN × 16 ch 次 (broadcast 9 chain)
+ *   每 scan 后 row_advance (ICND3019 chain 移到下一行)
  */
 
 #include "led_panel.h"
 #include "xil_io.h"
 #include "xil_printf.h"
-#include "sleep.h"
-#include "panel_seq.h"
 
-/* ===== axi_gpio_panel base (OE/ABC/SPI 还是走它, DCLK/LE/SDI 走 PL IP) ===== */
 #ifndef LED_PANEL_GPIO_BASE
 #  define LED_PANEL_GPIO_BASE 0x40000000UL
 #endif
 #define GPIO_DATA_OFF  0x00
 #define GPIO_TRI_OFF   0x04
 
-#define BIT(n)    (1u << (n))
+#define BIT(n)  (1u << (n))
+#define DCLK_M    BIT(LED_BIT_DCLK)
+#define LE_M      BIT(LED_BIT_LE)
+#define ROW_M     BIT(LED_BIT_ROW)
+#define R1_M      BIT(LED_BIT_R1)
+#define G1_M      BIT(LED_BIT_G1)
+#define B1_M      BIT(LED_BIT_B1)
+#define R2_M      BIT(LED_BIT_R2)
+#define G2_M      BIT(LED_BIT_G2)
+#define B2_M      BIT(LED_BIT_B2)
+#define R3_M      BIT(LED_BIT_R3)
+#define G3_M      BIT(LED_BIT_G3)
+#define B3_M      BIT(LED_BIT_B3)
+#define SDI_MASK  (R1_M|G1_M|B1_M|R2_M|G2_M|B2_M|R3_M|G3_M|B3_M)
 #define ABC_AIN   BIT(LED_BIT_AIN)
 #define ABC_BIN   BIT(LED_BIT_BIN)
 #define ABC_CIN   BIT(LED_BIT_CIN)
 #define SPI_CS_M  BIT(LED_BIT_SPI_CS)
 
-/* ===== ICND1069 LE 长度编码 (V1.2 page 5) ===== */
+/* LE 长度编码 (V1.2 page 5) */
 #define LE_DATA_LATCH  1
 #define LE_VSYNC       3
 #define LE_WR_CFG      5
 #define LE_EN_OP       11
+#define LE_DIS_OP      12
 #define LE_PRE_ACT     14
 
+/* 寄存器 */
 #define REG_PASSWORD_A   0x00
 #define REG_PASSWORD_B   0x01
+#define REG_SCAN         0x02   /* bit[5:0] = scan-1 */
+#define REG_GROUPS       0x03   /* sub-frames-1 */
 
+/* Cascade chips per chain. 9 chain × 12 = 108 (匹配接线图 9 RGB 数据线 + 108 chip).
+ * 注: cascade 链长错 → password broadcast 错位 → init 失败 → panel 全黑. */
 #ifndef CHIPS_PER_CHAIN
 #  define CHIPS_PER_CHAIN  12
 #endif
 
-/* ===== State + GPIO helpers ============================================ */
+/* ===== state ========================================================== */
+static u8  fb[PANEL_H][PANEL_W][3];
 static u32 gpio_mirror;
 static int pins_ok;
+static int warned;
 
 static inline void gpio_commit(void)
 {
-    Xil_Out32((UINTPTR)LED_PANEL_GPIO_BASE + GPIO_DATA_OFF, gpio_mirror);
+    if (LED_PANEL_GPIO_BASE)
+        Xil_Out32((UINTPTR)LED_PANEL_GPIO_BASE + GPIO_DATA_OFF, gpio_mirror);
 }
-static inline void gpio_set_bits(u32 m) { gpio_mirror |= m;  gpio_commit(); }
+static inline void gpio_set_bits(u32 m) { gpio_mirror |= m; gpio_commit(); }
 static inline void gpio_clr_bits(u32 m) { gpio_mirror &= ~m; gpio_commit(); }
 static inline void gpio_write_field(u32 mask, u32 val)
 {
@@ -70,83 +97,324 @@ static inline void gpio_write_field(u32 mask, u32 val)
 
 int led_panel_init_pins(void)
 {
-    if (!LED_PANEL_GPIO_BASE) { pins_ok = 0; return -1; }
+    if (!LED_PANEL_GPIO_BASE) {
+        if (!warned) {
+            xil_printf("[led_panel] WARN: LED_PANEL_GPIO_BASE=0\r\n");
+            warned = 1;
+        }
+        pins_ok = 0;
+        return -1;
+    }
     Xil_Out32((UINTPTR)LED_PANEL_GPIO_BASE + GPIO_TRI_OFF, 0u);
-    /* idle: SPI_CS=1, AIN/BIN/CIN = 1 (chain group enable default high) */
+    /* idle: SPI_CS=1, AIN/BIN/CIN 默认 1 (假设它们是 panel chain group enable) */
     gpio_mirror = SPI_CS_M | ABC_AIN | ABC_BIN | ABC_CIN;
     gpio_commit();
     pins_ok = 1;
     return 0;
 }
 
-/* ===== ICND1069 primitives (via PL panel_seq IP) ======================== */
-
-/* LE marker: 16×CHIPS_PER_CHAIN DCLK shift 0, last word holds LE high for
- * le_count cycles. 16-DCLK trailing gap = chip internal register commit time. */
-static void le_marker(u8 le_count)
+/* ===== DCLK / LE primitives ========================================== */
+static inline void pulse_dclk(void)
 {
-    if (!pins_ok || le_count == 0 || le_count > 31) return;
-    for (u8 chip = 0; chip < (u8)(CHIPS_PER_CHAIN - 1); chip++)
-        panel_seq_word(0, 0);
-    panel_seq_word(0, le_count);
-    panel_seq_word(0, 0);
+    gpio_set_bits(DCLK_M);
+    gpio_clr_bits(DCLK_M);
 }
 
-/* WR_CFG: broadcast same (addr, val) to all CHIPS_PER_CHAIN cascade chips.
- * Last word LE=LE_WR_CFG (5). Trailing 16-DCLK gap. */
+/* Broadcast 16-bit word on all 9 SDI chain, LE high last `le_count` DCLK
+ * → ICND1069 解析为 LE=`le_count` 命令 (在 LE 下降沿 latch).
+ * panel 上 SDI 经 2 次 74HC245 buffer 有延迟, 必须确保 DCLK ↑ 之前 SDI 已 settle:
+ *   预写下一 bit → DCLK ↑↓ (chip 在 ↑ 采当前 SDI). */
+static void le_pulse_broadcast(u8 le_count, u16 sdi_data)
+{
+    if (!pins_ok) return;
+    if (le_count == 0 || le_count > 16) return;
+    const u8 le_start = (u8)(16 - le_count);
+
+    /* 预写 bit 0 + LE state 0, 让 DCLK ↑ 前 SDI 已 settle */
+    u32 b0 = (sdi_data >> 15) & 1u;
+    gpio_write_field(SDI_MASK, b0 ? SDI_MASK : 0);
+    if (0 >= le_start) gpio_set_bits(LE_M); else gpio_clr_bits(LE_M);
+
+    for (u8 i = 0; i < 16; i++) {
+        pulse_dclk();  /* chip 在 ↑ 采 SDI[i] (已 settle) */
+        /* 在 DCLK ↓ 之后立即写 SDI[i+1], 给 buffer 延迟时间 settle */
+        if (i < 15) {
+            u32 bn = (sdi_data >> (15 - (i + 1))) & 1u;
+            gpio_write_field(SDI_MASK, bn ? SDI_MASK : 0);
+            if ((i + 1) >= le_start) gpio_set_bits(LE_M);
+            else                     gpio_clr_bits(LE_M);
+        }
+    }
+    gpio_clr_bits(LE_M);
+    gpio_clr_bits(SDI_MASK);
+}
+
+/* Marker-only (no data): LE 高 le_count DCLK. PRE_ACT / EN_OP / DIS_OP /
+ * VSYNC 都用这个. */
+static void le_marker(u8 le_count)
+{
+    if (!pins_ok) return;
+    if (le_count == 0) return;
+    gpio_set_bits(LE_M);
+    for (u8 i = 0; i < le_count; i++) pulse_dclk();
+    gpio_clr_bits(LE_M);
+}
+
+/* WR_CFG: 写 cascade chain 所有 chip 同一寄存器同一值 (broadcast).
+ * 实现: 把 16-bit word shift CHIPS_PER_CHAIN 次 (LE=0), 末次 LE 高 5 DCLK.
+ * 同样使用 "预写 → DCLK ↑↓" 顺序保证 SDI 在 DCLK ↑ 之前 settle. */
 static void wr_cfg(u8 addr, u8 val)
 {
     if (!pins_ok) return;
     const u16 word = ((u16)addr << 8) | val;
-    for (u8 chip = 0; chip < (u8)(CHIPS_PER_CHAIN - 1); chip++)
-        panel_seq_word(word, 0);
-    panel_seq_word(word, LE_WR_CFG);
-    panel_seq_word(0, 0);
+    /* prefill cascade with the same word (LE=0). 预写 bit 0. */
+    gpio_clr_bits(LE_M);
+    u32 b0 = (word >> 15) & 1u;
+    gpio_write_field(SDI_MASK, b0 ? SDI_MASK : 0);
+
+    for (u8 chip = 0; chip < CHIPS_PER_CHAIN - 1; chip++) {
+        for (u8 i = 0; i < 16; i++) {
+            pulse_dclk();
+            /* 写下个 bit (current chip 内 next bit 或 next chip 的 bit 0) */
+            u8 next_i = (i + 1) % 16;
+            u32 bn = (word >> (15 - next_i)) & 1u;
+            gpio_write_field(SDI_MASK, bn ? SDI_MASK : 0);
+        }
+    }
+    /* 最后一颗 chip: 使用 le_pulse_broadcast (内含预写顺序) */
+    le_pulse_broadcast(LE_WR_CFG, word);
 }
 
-static inline void pre_act(void)        { le_marker(LE_PRE_ACT); }
-static inline void en_op(void)          { le_marker(LE_EN_OP); }
-static inline void vsync_pulse(void)    { le_marker(LE_VSYNC); }
-
-/* ICND3019 row advance: SDI=1 at row_iter==0 starts new frame; SDI=0 shifts
- * existing '1' through the 384-stage chain. PL IP handles setup/hold + 500ns
- * DCLK-high blanking time per datasheet. */
-static inline void icnd3019_advance_row(int inject_one)
+static void pre_act(void)     { le_marker(LE_PRE_ACT); }
+static void en_op(void)       { le_marker(LE_EN_OP); }
+__attribute__((unused)) static void dis_op(void) { le_marker(LE_DIS_OP); }
+static void vsync_pulse(void) { le_marker(LE_VSYNC); }
+static void password(u8 v)
 {
-    panel_seq_icnd_advance(inject_one ? 1u : 0u);
+    wr_cfg(REG_PASSWORD_A, v);
+    wr_cfg(REG_PASSWORD_B, v);
 }
 
-/* ===== ICND1069 chip init (one-shot, called from led_panel_init) ======== */
-
-/* Full register init per V1.2 manual defaults + GAIN max (0xFF) for brightness.
- * Sequence: PRE_ACT → open password → cfg writes → close password → EN_OP. */
-static void panel_init_chip(void)
+/* ROW 信号: 高电平宽度编码 (12 DCLK = group-1 row-1, 4 DCLK = next row).
+ * SDI 数据 shift 跟 ROW 信号同步进行 (ICND1069 期望). */
+static void row_pulse(u8 dclks_high)
 {
-    vsync_pulse();
-    en_op();
+    if (!pins_ok) return;
+    gpio_set_bits(ROW_M);
+    for (u8 i = 0; i < dclks_high; i++) pulse_dclk();
+    gpio_clr_bits(ROW_M);
+}
+
+/* ===== ICND3019 行扫 ================================================
+ * ICND3019 datasheet:
+ *   AIN (chip SDI):  chain 数据输入
+ *   BIN (chip DCLK): 上升沿 shift register +1
+ *   CIN (chip RCLK): DCLK 低期间 N 个 RCLK 上升沿配置寄存器, Reg[3:0]=N-8
+ *   默认 Reg=1101 (= N=21, 普通模式 + 2.5V 消隐)
+ *
+ * 一颗 ICND3019 16 channel NMOS, 24 颗 cascade × 16 = 384 row select.
+ * panel 用其中 180 (剩 204 备用 / NC).
+ */
+static inline void icnd3019_clk(void)
+{
+    gpio_set_bits(ABC_BIN);   /* DCLK ↑ */
+    gpio_clr_bits(ABC_BIN);   /* DCLK ↓ */
+}
+static inline void icnd3019_load_first(void)
+{
+    /* 帧开始: SDI=1, 1 个 DCLK 上升沿 → chain shift in "1" → 选中第 1 行 (OUT0 拉低) */
+    gpio_set_bits(ABC_AIN);
+    icnd3019_clk();
+    gpio_clr_bits(ABC_AIN);
+}
+static inline void icnd3019_next_row(void)
+{
+    /* SDI=0, 1 个 DCLK 上升沿 → 移到下一行 */
+    gpio_clr_bits(ABC_AIN);
+    icnd3019_clk();
+}
+
+/* ICND3019 寄存器配置: DCLK 低期间发 N 个 RCLK ↑, 设 Reg[3:0] = N - 8.
+ * 普通模式 + 2.5V 消隐: N=21 (Reg=1101) — datasheet default. */
+static void icnd3019_init(void)
+{
+    if (!pins_ok) return;
+    /* 确保 DCLK (BIN) 低 */
+    gpio_clr_bits(ABC_BIN);
+    /* 发 21 个 RCLK (CIN) ↑ 设置普通模式 */
+    for (int i = 0; i < 21; i++) {
+        gpio_set_bits(ABC_CIN);
+        gpio_clr_bits(ABC_CIN);
+    }
+}
+
+/* ===== Init ========================================================== */
+static void icnd1069_init(void)
+{
+    /* DCLK warmup — 持续 DCLK 让 ICND1069 内部 PLL 锁相 */
+    for (int i = 0; i < 2000; i++) pulse_dclk();
+
+    /* V1.2 page 7-8 写寄存器流程 */
     pre_act();
-    wr_cfg(REG_PASSWORD_A, 0xAA);
-    wr_cfg(REG_PASSWORD_B, 0xAA);
-    wr_cfg(0x02, 19);     /* SCAN: 1/20 scan = 20-1 */
-    wr_cfg(0x03, 0x00);   /* GROUPS: 1 sub-frame */
-    wr_cfg(0x04, 0x02);   /* PLL_PRE_DIV default */
-    wr_cfg(0x05, 0x04);   /* PLL_LOOP_DIV default */
-    wr_cfg(0x06, 0x01);   /* PLL_POST_DIV default */
-    wr_cfg(0x07, 0x20);   /* GCLK/row default 128 */
-    wr_cfg(0x0D, 0x02);   /* 消隐时间 default */
-    wr_cfg(0x0E, 0x06);   /* 第一行暗补偿 default */
-    wr_cfg(0x1C, 0xFF);   /* GAIN max (200%) */
-    wr_cfg(0x1D, 0xA6);   /* 慢速开启 + 拐点电压 default */
-    wr_cfg(0x20, 0x09);   /* magic reg */
-    wr_cfg(0x26, 0xAA);   /* 写使能 password 部分 default */
-    wr_cfg(REG_PASSWORD_A, 0x55);
-    wr_cfg(REG_PASSWORD_B, 0x55);
+    password(0xAA);
+
+    wr_cfg(REG_SCAN,   (u8)(SCAN_LINES - 1));  /* scan-1 = 53 for 1/54 */
+    wr_cfg(REG_GROUPS, 0x07);                   /* 8 sub-frames - 1 */
+    wr_cfg(0x04,       0x02);                   /* PLL_PRE_DIV */
+    wr_cfg(0x05,       0x04);                   /* PLL_LOOP_DIV */
+    wr_cfg(0x06,       0x01);                   /* PLL_POST_DIV */
+    wr_cfg(0x07,       0x20);                   /* DCLK per row / 4 */
+    wr_cfg(0x1C,       0xFF);                   /* GAIN 200% (max bright for debug) */
+
+    password(0x55);
+    en_op();
+
+    /* 再 warmup 让 EN_OP 之后 PWM 启动 */
+    for (int i = 0; i < 2000; i++) pulse_dclk();
 }
 
-/* ===== SPI master bit-bang (read panel flash for debug) ================= */
+/* ===== 数据发送 (每 scan 一行) ===================================== */
+/* 9 chain × 12 chip × 16 ch × 16 bit-grey 数据.
+ * cascade order: chain tail (last chip OUT15) → head (first chip OUT0).
+ * 每 chip 16 ch grey scale = 16 × DATA_LATCH 命令 (LE=1).
+ * 但 broadcast 9 chain 同时 — 每 LE pulse 锁存 9 个 chain 同 ch 的 16-bit. */
+static void emit_row_data(u8 scan)
+{
+    /* 9 chain 同一 scan 各对应 panel 上不同 group (R1=group0, G1=group1, ...
+     * 物理 row index 内部由 panel 上 ICND3019 行选 + ICND1069 scan 联合决定.
+     * 此处简化: 假设 chain g 服务 panel row 范围 [g*20 ~ g*20+19], scan 0..19. */
+    for (int chip = CHIPS_PER_CHAIN - 1; chip >= 0; chip--) {
+        for (int ch = 15; ch >= 0; ch--) {
+            int col = chip * 16 + (15 - ch);
+            u8 c[9][3] = {{0}};   /* [chain][color], 实际只取 col % 3 那个 */
+            if (col >= 0 && col < PANEL_W) {
+                for (int g = 0; g < GROUPS; g++) {
+                    int prow = g * SCAN_LINES + scan;
+                    if (prow < PANEL_H) {
+                        c[g][0] = fb[prow][col][0];
+                        c[g][1] = fb[prow][col][1];
+                        c[g][2] = fb[prow][col][2];
+                    }
+                }
+            }
+            /* 每 chain 单独 16-bit grey scale (8-bit *257 expand).
+             * SDI 9 chain: R1/G1/B1 = group 0 r/g/b; R2/G2/B2 = group 1;
+             *              R3/G3/B3 = group 2. (但 9 chain 数据组只 3 group 不到 9)
+             * 简化: 每 chain 都用 group 0 r 灰度 测试 panel 是否反应. */
+            const u16 gs[9] = {
+                (u16)((u32)c[0][0] * 257u),  /* R1 chain */
+                (u16)((u32)c[0][1] * 257u),  /* G1 chain */
+                (u16)((u32)c[0][2] * 257u),  /* B1 chain */
+                (u16)((u32)c[1][0] * 257u),  /* R2 */
+                (u16)((u32)c[1][1] * 257u),  /* G2 */
+                (u16)((u32)c[1][2] * 257u),  /* B2 */
+                (u16)((u32)c[2][0] * 257u),  /* R3 */
+                (u16)((u32)c[2][1] * 257u),  /* G3 */
+                (u16)((u32)c[2][2] * 257u),  /* B3 */
+            };
+            /* shift 16 bit, last cycle LE high (= LE=1 = DATA_LATCH) */
+            for (u8 i = 0; i < 16; i++) {
+                u32 v = 0;
+                if ((gs[0] >> (15-i)) & 1) v |= R1_M;
+                if ((gs[1] >> (15-i)) & 1) v |= G1_M;
+                if ((gs[2] >> (15-i)) & 1) v |= B1_M;
+                if ((gs[3] >> (15-i)) & 1) v |= R2_M;
+                if ((gs[4] >> (15-i)) & 1) v |= G2_M;
+                if ((gs[5] >> (15-i)) & 1) v |= B2_M;
+                if ((gs[6] >> (15-i)) & 1) v |= R3_M;
+                if ((gs[7] >> (15-i)) & 1) v |= G3_M;
+                if ((gs[8] >> (15-i)) & 1) v |= B3_M;
+                gpio_write_field(SDI_MASK, v);
+                if (i == 15) gpio_set_bits(LE_M); else gpio_clr_bits(LE_M);
+                pulse_dclk();
+            }
+            gpio_clr_bits(LE_M);
+        }
+    }
+    gpio_clr_bits(SDI_MASK);
+}
+
+/* ===== Frame scan ===================================================== */
+/* Sanity 模式: 持续 send all-white DATA_LATCH, 验证 init + EN_OP 是否生效.
+ * panel 任何 LED 亮 = init OK, 协议方向对.
+ * 全黑 = init seq 没生效 或 chain map 完全错. */
+#ifndef LED_PANEL_SANITY
+#define LED_PANEL_SANITY 1
+#endif
+
+#if LED_PANEL_SANITY
+/* INIT_REPEAT 模式: 每帧前重发完整 ICND1069 init seq (PRE_ACT + password +
+ * 寄存器 + password 关 + EN_OP). 这样示波器持续抓 LE=14/5/11 各种长度脉冲,
+ * 能直接 verify init 信号正确到达 panel 上 ICND1069. */
+#ifndef LED_PANEL_INIT_REPEAT
+#define LED_PANEL_INIT_REPEAT 1
+#endif
+
+void led_panel_scan_frame(void)
+{
+    if (!pins_ok && led_panel_init_pins() < 0) return;
+
+#if LED_PANEL_INIT_REPEAT
+    /* 每帧重发 ICND1069 init: 示波器能持续抓到 LE 各种长度 */
+    icnd1069_init();
+#endif
+
+    vsync_pulse();
+    for (u8 i = 0; i < 16; i++) pulse_dclk();
+
+    for (u8 scan = 0; scan < SCAN_LINES; scan++) {
+        for (int i = 0; i < CHIPS_PER_CHAIN * 16; i++) {
+            for (u8 j = 0; j < 16; j++) {
+                gpio_write_field(SDI_MASK, SDI_MASK);
+                if (j == 15) gpio_set_bits(LE_M); else gpio_clr_bits(LE_M);
+                pulse_dclk();
+            }
+            gpio_clr_bits(LE_M);
+        }
+        gpio_clr_bits(SDI_MASK);
+        row_pulse(scan == 0 ? 12 : 4);
+    }
+}
+#else
+void led_panel_scan_frame(void)
+{
+    if (!pins_ok && led_panel_init_pins() < 0) return;
+
+    vsync_pulse();
+    for (u8 i = 0; i < 16; i++) pulse_dclk();
+
+    icnd3019_load_first();
+
+    for (u8 scan = 0; scan < SCAN_LINES; scan++) {
+        emit_row_data(scan);
+        row_pulse(scan == 0 ? 12 : 4);
+        if (scan < SCAN_LINES - 1) icnd3019_next_row();
+    }
+}
+#endif
+
+/* 慢速 ICND3019 chain advance — 不动 ICND1069, 让 user 测 OUT 引脚跟踪 */
+void led_panel_icnd3019_slow_scan(void)
+{
+    if (!pins_ok && led_panel_init_pins() < 0) return;
+    icnd3019_init();
+    while (1) {
+        /* load row 0 + slow scan all 384 row */
+        icnd3019_load_first();
+        for (volatile u32 d = 0; d < 20000000UL; d++) ;  /* ~200ms */
+        for (int row = 1; row < 24*16; row++) {
+            icnd3019_next_row();
+            for (volatile u32 d = 0; d < 20000000UL; d++) ;
+        }
+    }
+}
+
+/* ===== SPI master bit-bang (read panel flash for debug) =============== */
 static inline u32 gpio_read_miso(void)
 {
-    return Xil_In32((UINTPTR)LED_PANEL_GPIO_BASE + 0x08) & 1u;
+    if (!LED_PANEL_GPIO_BASE) return 0;
+    u32 v = Xil_In32((UINTPTR)LED_PANEL_GPIO_BASE + 0x08);
+    return v & 1u;
 }
 static inline u8 spi_xchg_byte(u8 out)
 {
@@ -180,257 +448,104 @@ void led_panel_spi_read_flash_jedec(void)
     gpio_set_bits(SPI_CS_M);
 }
 
-/* ===== Render helpers (shared by modes) ================================ */
-
-/* Render one full frame where target (chain, chip, bit, row_range) is lit.
- *   target_chain = -1 → all 9 chains enabled (set value across all)
- *   target_chip  = -1 → all 12 chips enabled
- *   target_mask  =  0 → nothing lit (frame-blank); otherwise per-chip bit mask
- *   row_lo, row_hi: only light at row_iter ∈ [row_lo, row_hi]; -1 = always
- *
- * panel_seq_set_sdi_mask + chain_data state must be set by caller for
- * advanced modes; this is the common scan/latch skeleton. */
-static void render_frame_targeted(int target_chain, int target_chip,
-                                  u16 target_mask, int row_lo, int row_hi)
-{
-    vsync_pulse();
-    panel_seq_set_sdi_mask(0x1FF);
-
-    for (int row_iter = 0; row_iter < 384; row_iter++) {
-        icnd3019_advance_row(row_iter == 0 ? 1 : 0);
-        panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
-
-        int in_row = (row_lo < 0) || (row_iter >= row_lo && row_iter <= row_hi);
-
-        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
-            int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
-            int chip_match = (target_chip < 0) || (chip == target_chip);
-            u16 v = (in_row && chip_match) ? target_mask : 0;
-            for (int c = 0; c < 9; c++) {
-                u16 cv = ((target_chain < 0) || (c == target_chain)) ? v : 0;
-                panel_seq_set_chain_data(c, cv);
-            }
-            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
-            panel_seq_word_perchain(le);
-        }
-        panel_seq_word(0, 0);
-    }
-}
-
-/* ===== Modes =========================================================== */
-
-/* Full white: all chain × all chip × all bit, all row_iter.
- * Brightest possible output. Use as sanity / physical-layout check. */
-static void mode_full_white(void)
-{
-    render_frame_targeted(-1, -1, 0xFFFF, -1, -1);
-}
-
-/* ===== Image render: 12 row × 48 col × RGB =============================
- * Logical resolution: 12 chip-rows × 48 cols (= 3 X-regions × 16 bits/chip) × RGB.
- * Mapping (chain → image col):
- *   region   = chain / 3                 // 0=右组(chain 0-2), 1=中组(3-5), 2=左组(6-8)
- *   color    = chain % 3                 // 0=R, 1=G, 2=B
- *   x_base   = (2 - region) * 16         // image col offset (left→right = 0→47)
- *   bit b in chain word ↔ image[chip][x_base + b][color]
- *
- * 1-bit per channel (threshold > 128). Grayscale needs BCM frames — TODO. */
-#define PANEL_IMG_W   48
-#define PANEL_IMG_H   12
-
-/* Weak symbol — gets overridden if panel_image_data.c provides a strong def.
- * Default test pattern: vertical color bands (3 R, 3 G, 3 B groups) to verify
- * bit→column mapping orientation. */
-__attribute__((weak)) const u8 panel_image[PANEL_IMG_H][PANEL_IMG_W][3] = {
-    [0 ... 11] = {
-        [0  ... 15] = {255, 0, 0},     /* left 16 cols: red */
-        [16 ... 31] = {0, 255, 0},     /* mid 16 cols: green */
-        [32 ... 47] = {0, 0, 255},     /* right 16 cols: blue */
-    }
-};
-
-static void mode_image_render(void)
-{
-    vsync_pulse();
-    panel_seq_set_sdi_mask(0x1FF);
-
-    for (int row_iter = 0; row_iter < 384; row_iter++) {
-        icnd3019_advance_row(row_iter == 0 ? 1 : 0);
-        panel_seq_row_pulse(row_iter == 0 ? 12 : 4);
-
-        for (u32 latch = 0; latch < CHIPS_PER_CHAIN; latch++) {
-            int chip = (int)((u32)(CHIPS_PER_CHAIN - 1) - latch);
-            for (int c = 0; c < 9; c++) {
-                int region = c / 3;
-                int color  = c % 3;
-                int x_base = (2 - region) * 16;
-                u16 mask = 0;
-                for (int b = 0; b < 16; b++) {
-                    if (panel_image[chip][x_base + b][color] > 128)
-                        mask |= (u16)(1u << b);
-                }
-                panel_seq_set_chain_data(c, mask);
-            }
-            u8 le = (latch == (u32)(CHIPS_PER_CHAIN - 1)) ? 1 : 0;
-            panel_seq_word_perchain(le);
-        }
-        panel_seq_word(0, 0);
-    }
-}
-
-/* Chain ID sweep: light ONE chain at a time (all chips, all bits, all rows),
- * cycle 0..8 every 300 frames (~3s @ 100fps). Use to determine chain→X mapping.
- * Each chain lights as a vertical region; eye observes its X position on panel.
- * UART prints current chain every switch for sync. */
-static void mode_chain_id(void)
-{
-    static u32 frame = 0;
-    static int last_chain = -1;
-    int target_chain = (int)((frame / 300) % 9);
-    if (target_chain != last_chain) {
-        xil_printf("[chain_id] now lighting chain %d (%c%d)\r\n",
-                   target_chain,
-                   "RGB"[target_chain % 3], (target_chain / 3) + 1);
-        last_chain = target_chain;
-    }
-    frame++;
-    render_frame_targeted(target_chain, -1, 0xFFFF, -1, -1);
-}
-
-/* Single pixel sweep: target_chain=0, target_bit=0, target_chip cycles
- * 0..11 every 60 frames. Use to verify chip→Y panel position mapping. */
-__attribute__((unused))
-static void mode_single_pixel(void)
-{
-    static u32 frame_x = 0;
-    frame_x++;
-    int target_chip = (int)((frame_x / 60) % CHIPS_PER_CHAIN);
-    render_frame_targeted(/*chain*/ 0, target_chip, /*mask*/ 0x0001, -1, -1);
-}
-
-/* Two-phase calibration sweep (UART-synced with host cap_sweep.py).
- *   Phase 1 (1728 tuple): iterate (chain, chip, bit) — print "[CAL] idx C K B"
- *   Phase 2 ( 384 tuple): fixed (P2_CHAIN, P2_CHIP, P2_BIT), sweep row_iter
- *                         — print "[CAL2] idx C K B R" */
-#define CALIB_FRAMES_PER_TUPLE     8
-#define CALIB_TOTAL                (9 * CHIPS_PER_CHAIN * 16)
-#define CALIB_P2_CHAIN             0
-#define CALIB_P2_CHIP              6
-#define CALIB_P2_BIT               0
-#define CALIB_P2_FRAMES_PER_TUPLE  20
-#define CALIB_P2_TOTAL             384
-
-__attribute__((unused))
-static void mode_calib_sweep(void)
-{
-    static int phase = 1;
-    static u32 idx = 0;
-    static u32 frame_in_tuple = 0;
-    static int announced = 0;
-
-    if (!announced) {
-        xil_printf("[CAL_BEGIN] p1=%d p2=%d p1_frames=%d p2_frames=%d\r\n",
-                   CALIB_TOTAL, CALIB_P2_TOTAL,
-                   CALIB_FRAMES_PER_TUPLE, CALIB_P2_FRAMES_PER_TUPLE);
-        announced = 1;
-    }
-
-    if (phase == 1) {
-        if (idx >= CALIB_TOTAL) {
-            xil_printf("[CAL_END_P1]\r\n");
-            phase = 2; idx = 0; frame_in_tuple = 0;
-            usleep(500000);
-            return;
-        }
-        int target_chain = (int)(idx / (CHIPS_PER_CHAIN * 16));
-        int target_chip  = (int)((idx / 16) % CHIPS_PER_CHAIN);
-        int target_bit   = (int)(idx % 16);
-        u16 target_mask  = (u16)(1u << target_bit);
-
-        render_frame_targeted(target_chain, target_chip, target_mask, -1, -1);
-
-        if (++frame_in_tuple >= CALIB_FRAMES_PER_TUPLE) {
-            usleep(50000);
-            xil_printf("[CAL] %u %d %d %d\r\n",
-                       (unsigned)idx, target_chain, target_chip, target_bit);
-            idx++; frame_in_tuple = 0;
-        }
-    } else {  /* phase 2 */
-        if (idx >= CALIB_P2_TOTAL) {
-            xil_printf("[CAL_END_P2]\r\n[CAL_DONE]\r\n");
-            phase = 1; idx = 0; frame_in_tuple = 0; announced = 0;
-            usleep(3000000);
-            return;
-        }
-        int target_row = (int)idx;
-        u16 mask = (u16)(1u << CALIB_P2_BIT);
-        render_frame_targeted(CALIB_P2_CHAIN, CALIB_P2_CHIP, mask,
-                              target_row, target_row);
-
-        if (++frame_in_tuple >= CALIB_P2_FRAMES_PER_TUPLE) {
-            usleep(50000);
-            xil_printf("[CAL2] %u %d %d %d %d\r\n",
-                       (unsigned)idx, CALIB_P2_CHAIN, CALIB_P2_CHIP,
-                       CALIB_P2_BIT, target_row);
-            idx++; frame_in_tuple = 0;
-        }
-    }
-}
-
-/* ===== Public API ====================================================== */
-
-/* Active mode selector — change here to pick which mode drives the panel. */
-#define LED_PANEL_MODE_FULL_WHITE     1
-#define LED_PANEL_MODE_SINGLE_PIXEL   2
-#define LED_PANEL_MODE_CALIB_SWEEP    3
-#define LED_PANEL_MODE_CHAIN_ID       4
-#define LED_PANEL_MODE_IMAGE          5
-
-#ifndef LED_PANEL_MODE
-#  define LED_PANEL_MODE  LED_PANEL_MODE_IMAGE
-#endif
-
+/* ===== Legacy API ==================================================== */
 void led_panel_init(void)
 {
-    xil_printf("[led_panel] init: W=%d H=%d scan=%d chips/chain=%d chain=%d\r\n",
+    xil_printf("[led_panel] ICND1069 V1.2 + ROW driver init: W=%d H=%d scan=%d chips/chain=%d chain=%d\r\n",
                PANEL_W, PANEL_H, SCAN_LINES, CHIPS_PER_CHAIN, GROUPS);
-    if (led_panel_init_pins() < 0) {
-        xil_printf("[led_panel] init_pins FAIL\r\n");
-        return;
-    }
-    panel_init_chip();
-    xil_printf("[led_panel] boot init done. mode=%d\r\n", LED_PANEL_MODE);
+    if (led_panel_init_pins() < 0) return;
+    icnd3019_init();   /* ICND3019 RCLK 配置 + 进入普通模式 */
+    icnd1069_init();
+    led_panel_clear();
+    xil_printf("[led_panel] ICND3019 + ICND1069 init done\r\n");
 }
 
-void led_panel_multi_mode_diag(void)
+void led_panel_set_pixel(int x, int y, u8 r, u8 g, u8 b)
 {
-    if (!pins_ok && led_panel_init_pins() < 0) return;
-    static int announced = 0;
-    if (!announced) {
-#if LED_PANEL_MODE == LED_PANEL_MODE_FULL_WHITE
-        xil_printf("\r\n=== MODE: FULL WHITE ===\r\n");
-#elif LED_PANEL_MODE == LED_PANEL_MODE_SINGLE_PIXEL
-        xil_printf("\r\n=== MODE: SINGLE PIXEL (chip sweep 0..11) ===\r\n");
-#elif LED_PANEL_MODE == LED_PANEL_MODE_CALIB_SWEEP
-        xil_printf("\r\n=== MODE: CALIB SWEEP (P1 1728 + P2 384) ===\r\n");
-#elif LED_PANEL_MODE == LED_PANEL_MODE_CHAIN_ID
-        xil_printf("\r\n=== MODE: CHAIN ID (one chain at a time, 3s each, 9 chain) ===\r\n");
-#elif LED_PANEL_MODE == LED_PANEL_MODE_IMAGE
-        xil_printf("\r\n=== MODE: IMAGE RENDER (12 chip × 3 region × RGB) ===\r\n");
-#endif
-        announced = 1;
+    if (x < 0 || x >= PANEL_W || y < 0 || y >= PANEL_H) return;
+    fb[y][x][0] = r;
+    fb[y][x][1] = g;
+    fb[y][x][2] = b;
+}
+
+void led_panel_clear(void)
+{
+    for (int y = 0; y < PANEL_H; y++)
+        for (int x = 0; x < PANEL_W; x++)
+            fb[y][x][0] = fb[y][x][1] = fb[y][x][2] = 0;
+}
+
+void led_panel_flush(void)
+{
+    led_panel_scan_frame();
+}
+
+/* ===== Test patterns ================================================== */
+static void pat_solid(u8 r, u8 g, u8 b)
+{
+    for (int y = 0; y < PANEL_H; y++)
+        for (int x = 0; x < PANEL_W; x++)
+            led_panel_set_pixel(x, y, r, g, b);
+}
+static void pat_checker(void)
+{
+    for (int y = 0; y < PANEL_H; y++)
+        for (int x = 0; x < PANEL_W; x++) {
+            int c = ((x >> 3) ^ (y >> 3)) & 1;
+            u8 v = c ? 0xFF : 0x00;
+            led_panel_set_pixel(x, y, v, v, v);
+        }
+}
+static void pat_color_bars(void)
+{
+    static const u8 bars[8][3] = {
+        {0,0,0}, {255,0,0}, {0,255,0}, {255,255,0},
+        {0,0,255}, {255,0,255}, {0,255,255}, {255,255,255}
+    };
+    int seg_w = PANEL_W / 8;
+    if (seg_w < 1) seg_w = 1;
+    for (int y = 0; y < PANEL_H; y++)
+        for (int x = 0; x < PANEL_W; x++) {
+            int s = x / seg_w;
+            if (s > 7) s = 7;
+            led_panel_set_pixel(x, y, bars[s][0], bars[s][1], bars[s][2]);
+        }
+}
+static void pat_groups(void)
+{
+    for (int y = 0; y < PANEL_H; y++) {
+        u8 r=0,g=0,b=0;
+        int grp = (y / SCAN_LINES) % 3;
+        if (grp == 0) r = 0xFF;
+        else if (grp == 1) g = 0xFF;
+        else b = 0xFF;
+        for (int x = 0; x < PANEL_W; x++)
+            led_panel_set_pixel(x, y, r, g, b);
     }
-#if LED_PANEL_MODE == LED_PANEL_MODE_FULL_WHITE
-    mode_full_white();
-#elif LED_PANEL_MODE == LED_PANEL_MODE_SINGLE_PIXEL
-    mode_single_pixel();
-#elif LED_PANEL_MODE == LED_PANEL_MODE_CALIB_SWEEP
-    mode_calib_sweep();
-#elif LED_PANEL_MODE == LED_PANEL_MODE_CHAIN_ID
-    mode_chain_id();
-#elif LED_PANEL_MODE == LED_PANEL_MODE_IMAGE
-    mode_image_render();
-#else
-#  error "Unknown LED_PANEL_MODE"
-#endif
+}
+static void pat_scan_lines(void)
+{
+    for (int y = 0; y < PANEL_H; y++) {
+        int vi = ((y % SCAN_LINES) + 1) * (256 / SCAN_LINES);
+        if (vi > 0xFF) vi = 0xFF;
+        u8 v = (u8)vi;
+        for (int x = 0; x < PANEL_W; x++)
+            led_panel_set_pixel(x, y, v, v, v);
+    }
+}
+void led_panel_test_pattern(int pattern_id)
+{
+    led_panel_clear();
+    switch (pattern_id) {
+        case 0: break;
+        case 1: pat_solid(0xFF, 0xFF, 0xFF); break;
+        case 2: pat_solid(0xFF, 0x00, 0x00); break;
+        case 3: pat_solid(0x00, 0xFF, 0x00); break;
+        case 4: pat_solid(0x00, 0x00, 0xFF); break;
+        case 5: pat_checker(); break;
+        case 6: pat_color_bars(); break;
+        case 7: pat_groups(); break;
+        case 8: pat_scan_lines(); break;
+        default: break;
+    }
 }

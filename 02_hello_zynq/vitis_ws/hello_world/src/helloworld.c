@@ -78,7 +78,7 @@
  *   4) panel FPC 接到鹿小班 GPIO1 + 外部 +3.8V/+2.8V/+5V 电源 OK
  * 未满足时设 0 (走 stub 不烧 panel; ENABLE_LED_PANEL_TEST=1 +
  * LED_PANEL_GPIO_BASE=0 时只 printf 不动 AXI). */
-#define ENABLE_LED_PANEL_TEST 1
+#define ENABLE_LED_PANEL_TEST 0
 
 /* Keep 720p60 for stable HDMI preview. 1080p upgrade needs rgb2dvi verification. */
 /* HDMI resolution: define USE_1080P30 to switch to 1920×1080 @ 30Hz.
@@ -2157,17 +2157,6 @@ int main(void)
         }
     }
 
-#ifndef ENABLE_HUB75E_TEST
-#define ENABLE_HUB75E_TEST 0  /* 0 = fall through to HDMI anime; 1 = jump to panel bringup */
-#endif
-#if ENABLE_HUB75E_TEST
-    /* HUB75E FM6124 panel Phase 1 bring-up via PL IP. 不返回. */
-    extern void hub75e_bringup_main(void);
-    xil_printf("[main] ENABLE_HUB75E_TEST=1, jumping to hub75e_bringup_main()\r\n");
-    hub75e_bringup_main();
-    while (1) ;
-#endif
-
 #if ENABLE_LED_PANEL_TEST
     /* HUB75 LED panel bring-up bit-bang. 不返回. */
     xil_printf("[main] ENABLE_LED_PANEL_TEST=1\r\n");
@@ -2193,13 +2182,22 @@ int main(void)
     }
 #else
     /* === Mode B: 正常 pattern loop ======================================== */
-    /* === RD_CFG bring-up test mode ====================================
-     * Phase 3 验证: 每 100ms 发一次 init + RD_CFG sequence, 用逻辑分析仪
-     * 看 chip 是否在 SDO 输出 reg 值. 如果 SDO 死 → chip 没被正确寻址 /
-     * chain 数错; 如果 SDO 有数据但值不对 → 寄存器 init 失败. */
-    xil_printf("[led_panel] Multi-mode diag: 5s/mode × 5 modes 轮换\r\n");
+    /* 固定在 pattern 1 (全白) 让 panel 持续看到亮信号.
+     * 每 5 帧切换 pattern (5 帧 ≈ 5-10 sec, ARM bit-bang 9-chain LE 协议慢). */
+    int pat = 1;   /* start with white */
+    led_panel_test_pattern(pat);
+    xil_printf("[led_panel] FAST_LOOP pattern %d (white)\r\n", pat);
+    const u32 FRAMES_PER_PATTERN = 5;
+    u32 fcnt = 0;
     while (1) {
-        led_panel_multi_mode_diag();
+        led_panel_flush();
+        fcnt++;
+        if (fcnt >= FRAMES_PER_PATTERN) {
+            fcnt = 0;
+            pat = (pat == 1) ? 2 : (pat == 2 ? 3 : (pat == 3 ? 4 : 1));  /* W->R->G->B->W */
+            led_panel_test_pattern(pat);
+            xil_printf("[led_panel] pattern %d\r\n", pat);
+        }
     }
 #endif
     /* unreachable */
@@ -2314,6 +2312,15 @@ int main(void)
     voxelize_model();
     xil_printf("Voxel grid: %d/%d cells occupied\r\n",
                voxel_n_occupied, VOXEL_RES*VOXEL_RES*VOXEL_RES);
+
+    /* HDMI→LED 桥接初始化: HUB75E IP @ 0x40020000 (v28 bit 有此 IP) */
+    #define HUB75E_BASE_BR     0x40020000UL
+    #define HUB75E_CTRL_BR     (HUB75E_BASE_BR + 0x00)
+    #define HUB75E_TUNIT_BR    (HUB75E_BASE_BR + 0x14)
+    Xil_Out32(HUB75E_CTRL_BR, 0);          /* disable */
+    Xil_Out32(HUB75E_TUNIT_BR, 8);         /* sweet spot */
+    Xil_Out32(HUB75E_CTRL_BR, 0x561);      /* en + mode0 + use_fb + overlap_en + addr_bits=5 */
+    xil_printf("[bridge] HUB75E init: CTRL=0x561 TUNIT=8 (HDMI fb_a → LED 128×64)\r\n");
 
 #if USE_PL
     xil_printf("PL IP path: pov_project @ 0x%x, FCLK_CLK1\r\n",
@@ -2516,6 +2523,33 @@ int main(void)
                  * we always have fresh frame on next VDMA swap. */
 #if HDMI_DEMO_N_SLOTS == 1
                 cpu_scale_blit_one_fb(fb_bufs[write_idx], src_slot, S3D_OFF_X, S3D_SCALE, 0);
+                /* HDMI→LED bridge: downsample 1280×720 fb → HUB75E 128×64 BRAM
+                 * 每帧执行, ARM ~5ms 开销. fb GBR byte order. Panel R>>G>>B 预补偿. */
+                {
+                    const u8 *fb_src = (const u8 *)fb_bufs[write_idx];
+                    for (int ly = 0; ly < 64; ly++) {
+                        int src_y = ly * HEIGHT / 64;
+                        /* Panel 两块拼接反: ly < 32 → fb_bot bank (0x4002C000) */
+                        UINTPTR led_bank = (ly < 32) ? (HUB75E_BASE_BR + 0xC000)
+                                                     : (HUB75E_BASE_BR + 0x8000);
+                        int led_y = (ly < 32) ? ly : (ly - 32);
+                        for (int lx = 0; lx < 128; lx++) {
+                            int src_x = lx * WIDTH / 128;
+                            const u8 *p = fb_src + src_y * STRIDE + src_x * 3;
+                            int g = p[0], b = p[1], r = p[2];
+                            /* 8-bit → 6-bit BCM 直接映射 + panel R>>G>>B 物理补偿:
+                             * R 255 → 10 (panel R 最亮, 衰减最多)
+                             * G 255 → 21 (中等)
+                             * B 255 → 63 (panel B 最弱, 保最高)
+                             * 这样 white (255,255,255) 实际 perceived = balanced. */
+                            r = (r * 10) >> 8;
+                            g = (g * 21) >> 8;
+                            b = (b * 63) >> 8;
+                            u32 rgb = (r & 0x3F) | ((g & 0x3F) << 8) | ((b & 0x3F) << 16);
+                            Xil_Out32(led_bank + (led_y * 128 + lx) * 4, rgb);
+                        }
+                    }
+                }
 #else
                 for (int t = 0; t < 2; t++) {
                     cpu_scale_blit_one_fb(fb_bufs[t], src_slot, S3D_OFF_X, S3D_SCALE, 0);

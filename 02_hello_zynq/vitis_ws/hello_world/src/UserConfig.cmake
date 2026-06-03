@@ -16,9 +16,6 @@ set(USER_COMPILE_DEFINITIONS
 # disable (proven single-core path remains intact via #ifdef).
 "ENABLE_DUAL_CORE=0"
 "ENABLE_SDIO_ESP_BRIDGE=1"
-# Phase 1 HUB75E FM6124 panel bring-up: 设 1 在 main 早期跳进 hub75e_bringup
-# (循环 8 个 PL 内置 test pattern, 永不返回). 0 = 走旧 POV-3D 渲染主路径.
-"ENABLE_HUB75E_TEST=0"
 )
 
 # Undefine any previously specified compiler definitions, either built in or provided with a -D option
@@ -43,9 +40,7 @@ set(USER_COMPILE_SOURCES
 "dual_core.c"
 "core1_boot.S"
 "led_panel.c"
-"panel_image_data.c"
 "sdio_esp.c"
-"hub75e_bringup.c"
 )
 
 # -----------------------------------------

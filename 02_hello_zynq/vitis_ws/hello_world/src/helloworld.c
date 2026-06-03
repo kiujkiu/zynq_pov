@@ -2317,10 +2317,14 @@ int main(void)
     #define HUB75E_BASE_BR     0x40020000UL
     #define HUB75E_CTRL_BR     (HUB75E_BASE_BR + 0x00)
     #define HUB75E_TUNIT_BR    (HUB75E_BASE_BR + 0x14)
+#ifndef DISABLE_HUB75E_BRIDGE
     Xil_Out32(HUB75E_CTRL_BR, 0);          /* disable */
     Xil_Out32(HUB75E_TUNIT_BR, 8);         /* sweet spot */
     Xil_Out32(HUB75E_CTRL_BR, 0x561);      /* en + mode0 + use_fb + overlap_en + addr_bits=5 */
     xil_printf("[bridge] HUB75E init: CTRL=0x561 TUNIT=8 (HDMI fb_a → LED 128×64)\r\n");
+#else
+    xil_printf("[bridge] HUB75E disabled (DISABLE_HUB75E_BRIDGE)\r\n");
+#endif
 
 #if USE_PL
     xil_printf("PL IP path: pov_project @ 0x%x, FCLK_CLK1\r\n",
@@ -2523,33 +2527,37 @@ int main(void)
                  * we always have fresh frame on next VDMA swap. */
 #if HDMI_DEMO_N_SLOTS == 1
                 cpu_scale_blit_one_fb(fb_bufs[write_idx], src_slot, S3D_OFF_X, S3D_SCALE, 0);
+#ifndef DISABLE_HUB75E_BRIDGE
                 /* HDMI→LED bridge: downsample 1280×720 fb → HUB75E 128×64 BRAM
-                 * 每帧执行, ARM ~5ms 开销. fb GBR byte order. Panel R>>G>>B 预补偿. */
+                 * 每帧执行, ARM ~5ms 开销. fb GBR byte order. Panel R>>G>>B 预补偿.
+                 * LED 2:1 vs HDMI 1.78:1: 裁 HDMI 左右空白让中央人物在 panel 放大. */
+                #define LED_CROP_X 240   /* 左右各裁 240 px, HDMI 中央 800 宽 → 128 LED */
+                #define LED_CROP_Y 160   /* 上下各裁 160 px, HDMI 中央 400 高 → 64 LED. 800:400=2:1 aspect-fit, 人物放大 */
+                #define LED_SRC_W  (WIDTH  - 2*LED_CROP_X)
+                #define LED_SRC_H  (HEIGHT - 2*LED_CROP_Y)
                 {
                     const u8 *fb_src = (const u8 *)fb_bufs[write_idx];
                     for (int ly = 0; ly < 64; ly++) {
-                        int src_y = ly * HEIGHT / 64;
+                        int src_y = LED_CROP_Y + ly * LED_SRC_H / 64;
                         /* Panel 两块拼接反: ly < 32 → fb_bot bank (0x4002C000) */
                         UINTPTR led_bank = (ly < 32) ? (HUB75E_BASE_BR + 0xC000)
                                                      : (HUB75E_BASE_BR + 0x8000);
                         int led_y = (ly < 32) ? ly : (ly - 32);
                         for (int lx = 0; lx < 128; lx++) {
-                            int src_x = lx * WIDTH / 128;
+                            int src_x = LED_CROP_X + lx * LED_SRC_W / 128;
                             const u8 *p = fb_src + src_y * STRIDE + src_x * 3;
                             int g = p[0], b = p[1], r = p[2];
-                            /* 8-bit → 6-bit BCM 直接映射 + panel R>>G>>B 物理补偿:
-                             * R 255 → 10 (panel R 最亮, 衰减最多)
-                             * G 255 → 21 (中等)
-                             * B 255 → 63 (panel B 最弱, 保最高)
-                             * 这样 white (255,255,255) 实际 perceived = balanced. */
-                            r = (r * 10) >> 8;
-                            g = (g * 21) >> 8;
-                            b = (b * 63) >> 8;
+                            /* 8-bit → 6-bit BCM: 直接取高 6 bit 截断, 不预补偿.
+                             * 先看 panel 自然色平衡再决定调哪个通道. */
+                            r >>= 2;
+                            g >>= 2;
+                            b >>= 2;
                             u32 rgb = (r & 0x3F) | ((g & 0x3F) << 8) | ((b & 0x3F) << 16);
                             Xil_Out32(led_bank + (led_y * 128 + lx) * 4, rgb);
                         }
                     }
                 }
+#endif /* DISABLE_HUB75E_BRIDGE */
 #else
                 for (int t = 0; t < 2; t++) {
                     cpu_scale_blit_one_fb(fb_bufs[t], src_slot, S3D_OFF_X, S3D_SCALE, 0);

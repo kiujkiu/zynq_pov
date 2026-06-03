@@ -1,5 +1,5 @@
 - [User role and domain](user_role.md) — FPGA/Zynq engineer building POV-3D display, terse Chinese, drives Windows Vivado/Vitis from WSL
-- [Claude Code statusline 配额进度条](reference_statusline_bars.md) — 自制 wrapper 在 ccusage 后追加 5h/7d 用量+时间条, 配置/备份/恢复路径
+- [Claude Code 配置中心](reference_claude_config.md) — **本机 Claude 配置唯一权威 memory**, 后续任何 Claude 设置改动都必须更新这里 + 同步 claude_config_backup/ + push
 - [POV3D 项目状态 HTML (团队解释 + 任务认领 + 跨部门)](reference_project_status_html.md) — `D:\claude_workspace\pov3d\project_status.html`, 任务 ID T-Cx/T-Rx/T-Lx + 里程碑 M1-M4 + 7 部门诉求
 - [zynq_pov project (Phase 9 snapshot)](project_zynq_pov.md) — POV-3D pipeline, Phase 8 mesh slice + Phase 9 ABDE 并行 (HLS 4× IP / WiFi / QSPI fix / warm bake)
 - [POV3D anime xsdb 直推路径](project_pov3d_anime_xsdb_path.md) — JTAG 直写 DDR + ANIME_MAGIC 检测 + 32K HLS IP, 绕开 WiFi/UART 通信问题

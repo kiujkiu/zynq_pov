@@ -3,6 +3,9 @@
 ###############################################################################
 open_project 02_hello_zynq.xpr
 puts "\[INFO\] project opened"
+# Module reference 需要 automatic compile order mode 才能 resolve hub75e_panel_seq_v2
+set_property source_mgmt_mode All [current_project]
+puts "\[INFO\] source_mgmt_mode = All (auto)"
 
 # 确认 BD 现在 PS7 FCLK1 = 75 MHz, hub75e DCLK_DIV 默认 4
 open_bd_design [get_files hello_zynq.bd]

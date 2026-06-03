@@ -41,10 +41,10 @@ module hub75e_panel_seq_v2 #(
     parameter integer BCM_PLANES   = 6,    // 6-bit per channel (64 灰度, 帧率 ×4 vs 8-bit)
     parameter integer T_UNIT_DEF   = 8,    // 默认 TUNIT=8 cycle (用户测试)
     parameter integer DISP_CYCLES  = 1000, // (legacy compat)
-    parameter integer LATCH_CYC    = 4,
-    parameter integer BLANK_CYC    = 5,
-    parameter integer ADDR_SET_CYC = 3,
-    parameter integer OE_PRE_CYC   = 8,    // v28: OE-fall setup before shift, gives FM6124DJ time to cache SR
+    parameter integer LATCH_CYC    = 2,    // tWLE=20ns spec, 2 cyc @ 60MHz = 33ns (1.65x margin)
+    parameter integer BLANK_CYC    = 1,    // tSETUP2=5ns spec (CLK→LE), 1 cyc = 17ns (3.3x margin)
+    parameter integer ADDR_SET_CYC = 2,    // LE-fall → OE-fall, spec 无指定, 留 33ns
+    parameter integer OE_PRE_CYC   = 8,    // v28: OE-fall setup before shift, gives FM6124DJ time to cache SR (memory ≥100ns, 不动)
     parameter integer FB_DEPTH     = 8192  // 128×64 pixel
 )(
     input  wire        s_axi_aclk,

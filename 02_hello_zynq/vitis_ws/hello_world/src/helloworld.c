@@ -2547,14 +2547,11 @@ int main(void)
                             int src_x = LED_CROP_X + lx * LED_SRC_W / 128;
                             const u8 *p = fb_src + src_y * STRIDE + src_x * 3;
                             int g = p[0], b = p[1], r = p[2];
-                            /* 8-bit → 6-bit BCM with stretch: anime 中段 100-180
-                             * 经过 [32,224]→[0,63] 把色相差异放到 6-bit 全幅,
-                             * 让头发(R+G)/披风(B)/盔甲(R+G+B) 色相在 panel 更可分. */
+                            /* stretch [32,224]→[0,63] 放大 anime 中段值色差,
+                             * R 100% / G 50% / B 75%, 整体 >>2 = 1/4 亮度 */
                             int sr = r - 32; if (sr < 0) sr = 0; if (sr > 192) sr = 192;
                             int sg = g - 32; if (sg < 0) sg = 0; if (sg > 192) sg = 192;
                             int sb = b - 32; if (sb < 0) sb = 0; if (sb > 192) sb = 192;
-                            /* 实测 panel 反而 G dominant (实拍对比期望发现 R 严重不足):
-                             * R 100%, G 50%, B 75%, 整体再 >>2 = 1/4 亮度 */
                             r = ((sr * 21) >> 6) >> 2;
                             g = ((sg * 21) >> 6) >> 3;
                             b = (((sb * 21) >> 6) * 3) >> 4;

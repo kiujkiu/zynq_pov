@@ -36,7 +36,7 @@ GND
 
 **注意**：模组 IO 是 1.8V，Zynq BANK33/35 是 3.3V，必须加电平转换或选 3.3V IO 版本。
 
-## 软件 (PetaLinux 2022.2)
+## 软件 (PetaLinux 2024.2 — 匹配本机 Vivado 2024.2, 2026-06-04 修正)
 
 Kernel config：
 ```

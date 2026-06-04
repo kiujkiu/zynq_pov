@@ -1,8 +1,9 @@
 ---
-name: HUB75E FM6124 panel + v28 overlap+OE_PRE (2026-06-02)
-description: 128×64 1/32 scan HUB75E, v28 runtime overlap_en 切换 serial (462 fps) vs overlap+OE_PRE (645 fps, +39%), BCM 6-bit 都保留, CTRL[6] runtime 切换
+name: HUB75E FM6124 panel + v29 timing-tight (2026-06-04)
+description: 128×64 1/32 scan HUB75E, v29 FSM 跳 S_BLANK + ADDR_SET_CYC=1 + 16 col + TUNIT=1 + FCLK1=72M = **8545 fps**, 准备转换驱动 chip (memory 决策 MBI5264)
 type: project
 originSessionId: 37686ade-ae15-4bcf-a387-f01c094bd546
+updated_at: 2026-06-04
 ---
 **分支**: `feature/hub75e-fm6124-12864` (zynq_pov 项目), HEAD = 9e697f0 "HUB75E v28: runtime overlap_en + OE_PRE delay"
 
@@ -96,6 +97,28 @@ mwr 0x40020000 $new_ctrl   # 写新 CTRL (含新 overlap_en)
 - `mwr -bin -file` 一次性写 fb BRAM
 - TUNIT=32, CTRL=0x521 / 0x561
 - 实拍 8×4 grid 32 cells, 数字 0-31 全清晰, R→G→B 渐变色按 cell_idx 排序 ✓
+
+## v29 timing 优化 (2026-06-04)
+
+Baseline v28 8170 fps (16 col + TUNIT=1 + FCLK1=72M + DCLK 36M, OE_PRE_CYC=8) → **v29 8545 fps (+4.6%)**.
+
+**改动** (hub75e_panel_seq.v):
+1. FSM `S_PHASE` 退出时直接 `state <= S_LATCH` (跳过 `S_BLANK`, BLANK_CYC=1 已 FSM 最小但仍可跳一个 transition cyc, -14ns/plane)
+2. `ADDR_SET_CYC` 2→1 (LE→OE 缩 1 aclk, -14ns/plane)
+
+预测省 2 cyc/plane × 6 plane × 32 row × 13.9ns = 5.3 µs/帧 → 122.4→117.1 µs/帧 → 8541 fps; 实测 8545.5 ✓
+
+**未动**: `OE_PRE_CYC=8` (~111ns), memory 红线 ≥100ns (FM6124DJ OE-fall 缓存 SR setup time), v27 直接 0 cyc 翻车经验.
+
+**改 5 处必走** (memory: feedback_vivado_bd_addr_width_cache.md):
+- `.srcs/sources_1/imports/hdl/hub75e_panel_seq.v` (parameter + FSM)
+- `.srcs/sources_1/bd/.../hub75e_panel_seq_0_3.xci` (2 处 value)
+- `.gen/sources_1/bd/.../synth/hub75e_panel_seq_0_3.v` (.ADDR_SET_CYC + CORE_GENERATION_INFO)
+- `.gen/sources_1/bd/.../sim/hub75e_panel_seq_0_3.v`
+
+**工具**: `tools/v29_test.tcl` — 一条龙 stop ARM + FCLK1=72M + width=16 + TUNIT=1 + 测 fps + fill 白. dl_minimal.tcl 后跑.
+
+**下一步**: user 2026-06-04 决定**先不压 OE_PRE**, **转换驱动 chip** (见 `project_pov3d_led_chip_decision.md`: MBI5264 cathode sink, 需 PMOS 行管).
 
 ## v27 → v28 关键 diff
 

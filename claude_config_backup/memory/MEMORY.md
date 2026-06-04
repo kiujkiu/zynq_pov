@@ -43,6 +43,7 @@
 - [鹿小班 MIO 物理引脚分配](reference_luxiaoban_mio_pinout.md) — MIO1-6=QSPI flash, MIO40-45/47=板载 microSD, 扩展连接器只走 PL 引脚
 - [鹿小班无 USB host 能力](reference_lxb_no_usb_host.md) — MIO 28-39 全悬空 + 无 ULPI PHY + USB-C 只是 CH340E UART, USB WiFi 必须换板 (ALINX/米尔/正点原子)
 - [LXB SDIO WiFi 升级方案 RTL8822CS](project_lxb_sdio_wifi_plan.md) — PetaLinux + SD1 EMIO + rtw88 driver, 接受 200 Mbps SDIO 上限, 取代 ESP32 桥
+- [LXB Linux 开发环境准备 (2026-06-04)](project_lxb_linux_setup_progress.md) — `~/lxb-linux-setup/` 脚本 + PetaLinux 2024.2 + 6 步骤 task list, 卡在用户下载 installer
 - [鹿小班 GPIO1 connector pinout](reference_lxb_gpio1_pinout.md) — GPIO1 2×40 排针 17 对 BANK 33 site → CLG484 PACKAGE_PIN 完整表
 - [鹿小班 GPIO2 connector pinout](reference_lxb_gpio2_pinout.md) — GPIO2 BANK 35 site→pin 全表, 跟 ETH RGMII **不冲突** (ETH 占用的 pin 不在 GPIO2 上)
 - [HUB75E 48-SDI IO 分配 (POV 7K+ fps)](project_pov3d_48sdi_io_plan.md) — 拆 daisy 48-chain, GPIO1(24SDI+8ctrl)+GPIO2(24SDI), 保 ETH, 7510 fps @6-bit / 4300 fps @8-bit
@@ -97,3 +98,7 @@
 - [POV3D PCB v1 进度快照 2026-06-02](project_pov3d_pcb_v1_snapshot_2026-06-02.md) — schematic 100% / PCB 95→75mm 6L + GND/PWR zone done / 真布线未做, 16 subagent 推进历程
 - [交互和 memory 全部加时间戳](feedback_timestamp_everywhere.md) — 每回复带 `[YYYY-MM-DD HH:MM CST]`, memory frontmatter 加 created_at/updated_at, 状态汇报必带
 - [KiCad lib_symbols 子符号名 NOT 加 namespace](feedback_kicad_subsym_namespace.md) — leaf "Lib:Name" 但 sub-symbol (_0_1/_1_1) 只能 bare "Name_0_1", 加 ":" KiCad load 失败
+- [PCB layout 半熟项硬规则](reference_pcb_layout_guidelines.md) — power plane split 缩 10×dielectric / BGA decap via≤10mil / TPS563210 PowerPAD 0.33mm thermal via / 频率→λ/20 stitching 间距表
+- [POV3D PCB v1 v23 后待办清单 2026-06-03](project_pov3d_pcb_v1_pending_2026-06-03.md) — FT232HQ 单通道砍包 / 330µF并联拆 / DDR3 北 BGA 并排 12mm / BOT 激活 / 排针中底加GND / 真布线; 含 zynqPCB+Zynq-SoM 开源参考路径
+- [PCB 改完必跑 audit_pcb.py (3 检查固化)](reference_pcb_audit_workflow.md) — lib sync / overlap / off-board, 不要靠"改完就完成"直接走
+- [Voxon 专利 FTO (2026-06-03)](project_voxon_patent_fto.md) — P1/P2 往复无关 / **P3 旋转命门"按径向距离变特征"** / multivox colscatter.h 字面命中 claim 2-5 / 方案 A 统一刷新率渲染层吸收

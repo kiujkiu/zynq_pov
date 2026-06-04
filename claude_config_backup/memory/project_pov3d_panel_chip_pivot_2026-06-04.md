@@ -130,7 +130,32 @@ User 决定切 ICND2047 路径前需要确认:
 
 # 当前进度状态
 
-- ✅ v29 timing 优化完成 (8170 → 8545 fps, +4.6%), git commit 7fc37aa pushed
+- ✅ v29 FM6124 timing 优化完成 (8170 → 8545 fps, +4.6%), git commit 7fc37aa
 - ✅ chip pivot 调研完成 (FM6124 → 跳过 FM6047 → 锁 ICND2047)
-- ⏳ ICND2047 硬件到位 (panel/chip 状态待 user 确认)
-- ⏳ v30 verilog 改造 (草稿 `icnd2047_panel_seq.v`, 等硬件再开干)
+- ✅ ICND2047 硬件确认: 已成品 128×64 1/32 panel, 行管 (ICND3019 NMOS) 跟 FM6124 一样
+- ✅ **v30 ICND2047 MVP 跑通 (2026-06-04)**: 8545 → **10919 fps @ FCLK1=72M (+28%)**
+  - git commit 79d4932 pushed
+  - sequential FSM, 未用 chip 内置 shift-while-display 双缓存
+  - 协议 model 误差 0.5% (估算 vs 实测), 时序计算可信
+  - 视觉验证待 user 物理 check (frame_count 在跑只证 FSM 工作, 不证 LE 命令字 row counter 同步对)
+- ⏳ overlap 改造预测 ~14100 fps @ 72M / ~9750 fps @ 50M (+29%)
+
+# v30 实测数据 (2026-06-04, 16 col / TUNIT=1 / mode 0 SOLID white)
+
+| FCLK1 | DCLK | aclk | fps 实测 | 估算 | 误差 |
+|---|---|---|---:|---:|---|
+| 50M (spec 内) | 25M | 50M | 7540 | 7575 | -0.5% ✓ |
+| **72M** (超 spec 44%) | 36M | 72M | **10919** | 10870 | +0.5% ✓ |
+
+vs v29 FM6124 @ 72M baseline 8545 fps: **+28%**.
+
+# v30 文件清单
+
+- `02_hello_zynq.srcs/sources_1/imports/hdl/icnd2047_panel_seq.v` (583 行)
+  module 名 `hub75e_panel_seq_v2` (占位, 让 BD module_ref drop-in 不改)
+- `02_hello_zynq.srcs/sources_1/imports/hdl/hub75e_panel_seq.v`
+  FM6124 module 改名 `hub75e_panel_seq_v2_fm6124` (avoid name duplicate, 保 git history)
+- `tools/build_v30_icnd.tcl` — add icnd2047 file + re-wrap + build
+- `tools/v30_test.tcl` — FCLK1=50M + 72M sweep + 测 fps
+- BD 完全不动 (FCLK1 BD 75M build-time, runtime mwr SLCR 改 50/72M)
+- xci/wrapper 不改 (ports 一致, parameter 多余的 ICND module 接受但忽略)

@@ -85,7 +85,7 @@
 - [Multivox POV→Zynq 移植 + 48-IO 方案 (2026-05-29)](project_multivox_zynq_port.md) — multivox 项目 (D:\claude_workspace\pov3d\multivox), 拆 daisy 改 48 SDI, 7350 fps × 8-bit BCM, **下次直接开干 Verilog**
 - [LED IC 选型对比 (POV + 静态屏 + DDR)](reference_pov_chip_selection.md) — FM6124/MBI/ICN, BCM vs PWM vs S-PWM 时间预算, ICN2065 SDR 100M 最实用
 - [HUB75E FM6124 panel + v29 timing-tight (2026-06-04)](project_hub75e_fm6124_lit.md) — 128×64, v29 FSM 跳 S_BLANK + ADDR=1: 16 col @ FCLK1=72M = **8545 fps**, 准备转 ICND2047
-- [POV3D panel chip pivot FM6124→ICND2047 (2026-06-04)](project_pov3d_panel_chip_pivot_2026-06-04.md) — 跳 FM6047 (编程手册 NDA), 锁 ICND2047 (永远 DDR + register 公开), 估 ~13700 fps
+- [POV3D panel chip pivot FM6124→ICND2047 v30 MVP 跑通 (2026-06-04)](project_pov3d_panel_chip_pivot_2026-06-04.md) — ICND2047 sequential FSM 跑通 **10919 fps @ 72M (+28% vs v29 8545)**, overlap 改造预测 ~14100 fps
 - [HUB75E overlap 翻案: 需 OE-fall setup delay](feedback_hub75e_no_overlap_shift_display.md) — v27 直接 overlap 翻车; v28 加 8 cyc OE_PRE 让 FM6124DJ 缓存 SR → 正常 +39% fps
 - [Vivado BD module_ref ADDR_WIDTH 顽固缓存](feedback_vivado_bd_addr_width_cache.md) — 改 PL IP port width 后 BD 永远按旧 5-bit elaborate. 唯一 fix: rename module + 删 ip cache 目录 + recreate cell
 - [FM6124 引脚 + 关键参数](reference_fm6124_pinout.md) — SSOP24 完整 pin 表, OE pin 21, CLK pin 3, max 30MHz, 真值表, PDF 在 docs/fm/FM6124.pdf

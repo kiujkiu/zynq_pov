@@ -2,7 +2,7 @@
 //Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
-//Date        : Wed May 27 15:56:36 2026
+//Date        : Tue Jun  2 22:15:10 2026
 //Host        : DESKTOP-O1VQ95V running 64-bit major release  (build 9200)
 //Command     : generate_target hello_zynq_wrapper.bd
 //Design      : hello_zynq_wrapper
@@ -47,15 +47,13 @@ module hello_zynq_wrapper
     hdmi_tmds_clk_p,
     hdmi_tmds_data_n,
     hdmi_tmds_data_p,
+    hub75e_addr,
+    hub75e_dclk,
+    hub75e_lat,
+    hub75e_oe,
+    hub75e_rgb,
     led_tri_o,
     panel_gpio_tri_o,
-    panel_seq_dclk,
-    panel_seq_icnd_dclk,
-    panel_seq_icnd_rclk,
-    panel_seq_icnd_sdi,
-    panel_seq_le,
-    panel_seq_row,
-    panel_seq_sdi,
     panel_spi_miso_tri_i);
   inout [14:0]DDR_addr;
   inout [2:0]DDR_ba;
@@ -93,15 +91,13 @@ module hello_zynq_wrapper
   output hdmi_tmds_clk_p;
   output [2:0]hdmi_tmds_data_n;
   output [2:0]hdmi_tmds_data_p;
+  output [4:0]hub75e_addr;
+  output hub75e_dclk;
+  output hub75e_lat;
+  output hub75e_oe;
+  output [5:0]hub75e_rgb;
   output [1:0]led_tri_o;
   output [17:0]panel_gpio_tri_o;
-  output panel_seq_dclk;
-  output panel_seq_icnd_dclk;
-  output panel_seq_icnd_rclk;
-  output panel_seq_icnd_sdi;
-  output panel_seq_le;
-  output panel_seq_row;
-  output [8:0]panel_seq_sdi;
   input [0:0]panel_spi_miso_tri_i;
 
   wire [14:0]DDR_addr;
@@ -143,15 +139,13 @@ module hello_zynq_wrapper
   wire hdmi_tmds_clk_p;
   wire [2:0]hdmi_tmds_data_n;
   wire [2:0]hdmi_tmds_data_p;
+  wire [4:0]hub75e_addr;
+  wire hub75e_dclk;
+  wire hub75e_lat;
+  wire hub75e_oe;
+  wire [5:0]hub75e_rgb;
   wire [1:0]led_tri_o;
   wire [17:0]panel_gpio_tri_o;
-  wire panel_seq_dclk;
-  wire panel_seq_icnd_dclk;
-  wire panel_seq_icnd_rclk;
-  wire panel_seq_icnd_sdi;
-  wire panel_seq_le;
-  wire panel_seq_row;
-  wire [8:0]panel_seq_sdi;
   wire [0:0]panel_spi_miso_tri_i;
 
   IOBUF MDIO_PHY_0_mdio_iobuf
@@ -198,14 +192,12 @@ module hello_zynq_wrapper
         .hdmi_tmds_clk_p(hdmi_tmds_clk_p),
         .hdmi_tmds_data_n(hdmi_tmds_data_n),
         .hdmi_tmds_data_p(hdmi_tmds_data_p),
+        .hub75e_addr(hub75e_addr),
+        .hub75e_dclk(hub75e_dclk),
+        .hub75e_lat(hub75e_lat),
+        .hub75e_oe(hub75e_oe),
+        .hub75e_rgb(hub75e_rgb),
         .led_tri_o(led_tri_o),
         .panel_gpio_tri_o(panel_gpio_tri_o),
-        .panel_seq_dclk(panel_seq_dclk),
-        .panel_seq_icnd_dclk(panel_seq_icnd_dclk),
-        .panel_seq_icnd_rclk(panel_seq_icnd_rclk),
-        .panel_seq_icnd_sdi(panel_seq_icnd_sdi),
-        .panel_seq_le(panel_seq_le),
-        .panel_seq_row(panel_seq_row),
-        .panel_seq_sdi(panel_seq_sdi),
         .panel_spi_miso_tri_i(panel_spi_miso_tri_i));
 endmodule

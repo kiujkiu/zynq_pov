@@ -52,7 +52,7 @@
 
 (* X_CORE_INFO = "hub75e_panel_seq_v2,Vivado 2024.2" *)
 (* CHECK_LICENSE_TYPE = "hello_zynq_hub75e_panel_seq_0_3,hub75e_panel_seq_v2,{}" *)
-(* CORE_GENERATION_INFO = "hello_zynq_hub75e_panel_seq_0_3,hub75e_panel_seq_v2,{x_ipProduct=Vivado 2024.2,x_ipVendor=xilinx.com,x_ipLibrary=module_ref,x_ipName=hub75e_panel_seq_v2,x_ipVersion=1.0,x_ipCoreRevision=1,x_ipLanguage=VERILOG,x_ipSimLanguage=MIXED,DCLK_DIV=2,PANEL_WIDTH=128,ADDR_BITS=5,BCM_PLANES=6,T_UNIT_DEF=8,DISP_CYCLES=1000,LATCH_CYC=2,BLANK_CYC=1,ADDR_SET_CYC=2,OE_PRE_CYC=8,FB_DEPTH=8192}" *)
+(* CORE_GENERATION_INFO = "hello_zynq_hub75e_panel_seq_0_3,hub75e_panel_seq_v2,{x_ipProduct=Vivado 2024.2,x_ipVendor=xilinx.com,x_ipLibrary=module_ref,x_ipName=hub75e_panel_seq_v2,x_ipVersion=1.0,x_ipCoreRevision=1,x_ipLanguage=VERILOG,x_ipSimLanguage=MIXED,DCLK_DIV=2,PANEL_WIDTH=128,ADDR_BITS=5,BCM_PLANES=6,T_UNIT_DEF=8,DISP_CYCLES=1000,LATCH_CYC=2,BLANK_CYC=1,ADDR_SET_CYC=1,OE_PRE_CYC=8,FB_DEPTH=8192}" *)
 (* IP_DEFINITION_SOURCE = "module_ref" *)
 (* DowngradeIPIdentifiedWarnings = "yes" *)
 module hello_zynq_hub75e_panel_seq_0_3 (
@@ -148,7 +148,7 @@ output wire [4 : 0] hub75e_addr_out;
     .DISP_CYCLES(1000),
     .LATCH_CYC(2),
     .BLANK_CYC(1),
-    .ADDR_SET_CYC(2),
+    .ADDR_SET_CYC(1),
     .OE_PRE_CYC(8),
     .FB_DEPTH(8192)
   ) inst (

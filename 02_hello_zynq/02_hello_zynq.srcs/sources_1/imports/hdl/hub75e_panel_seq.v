@@ -43,7 +43,7 @@ module hub75e_panel_seq_v2 #(
     parameter integer DISP_CYCLES  = 1000, // (legacy compat)
     parameter integer LATCH_CYC    = 2,    // tWLE=20ns spec, 2 cyc @ 60MHz = 33ns (1.65x margin)
     parameter integer BLANK_CYC    = 1,    // tSETUP2=5ns spec (CLK→LE), 1 cyc = 17ns (3.3x margin)
-    parameter integer ADDR_SET_CYC = 2,    // LE-fall → OE-fall, spec 无指定, 留 33ns
+    parameter integer ADDR_SET_CYC = 1,    // v29: LE-fall → OE-fall 缩到 1 cyc (~14ns), spec 无指定下限
     parameter integer OE_PRE_CYC   = 8,    // v28: OE-fall setup before shift, gives FM6124DJ time to cache SR (memory ≥100ns, 不动)
     parameter integer FB_DEPTH     = 8192  // 128×64 pixel
 )(
@@ -601,7 +601,7 @@ module hub75e_panel_seq_v2 #(
                         hub75e_oe_out <= 1'b1;
                         ctrl_count    <= 4'd0;
                         // If !enable, return to IDLE; else continue
-                        state <= enable ? S_BLANK : S_IDLE;
+                        state <= enable ? S_LATCH : S_IDLE;  // v29: 跳过 S_BLANK 省 1 cyc (CLK→LE -14ns)
                     end
                 end
 

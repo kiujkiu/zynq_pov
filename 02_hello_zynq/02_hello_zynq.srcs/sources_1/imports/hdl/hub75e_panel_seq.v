@@ -34,7 +34,7 @@
 //   0x8000-0xFFFF : framebuffer 区 (bit[15]=1, 用 bit[14:2] = pixel index 0..8191)
 //   每 pixel 32-bit aligned, 低 24-bit = RGB (R[7:0] G[15:8] B[23:16])
 //   total 8192 pixel × 24-bit = 196608 bit = 6 个 36Kb BRAM
-module hub75e_panel_seq_v2 #(
+module hub75e_panel_seq_v2 #(  // FM6124 driver, active. ICND2047 in icnd2047_panel_seq.v has v1 name (dormant)
     parameter integer DCLK_DIV     = 2,    // 75 MHz / 2 = 37.5 MHz DCLK 50% duty (超 FM6124 spec 30M 25%, 实测)
     parameter integer PANEL_WIDTH  = 128,
     parameter integer ADDR_BITS    = 5,    // 1/32 scan
@@ -99,6 +99,9 @@ module hub75e_panel_seq_v2 #(
     wire [7:0]  stripe_w      = (reg_param[23:16] == 8'd0) ? 8'd8 : reg_param[23:16];
     wire [7:0]  walk_speed    = (reg_param[31:24] == 8'd0) ? 8'd10 : reg_param[31:24];
     wire [7:0]  t_unit        = (reg_tunit[7:0] == 8'd0) ? T_UNIT_DEF[7:0] : reg_tunit[7:0];
+    // v31: runtime BCM planes (1..6 bit). reg_tunit[11:8]=0 → BCM_PLANES default
+    wire [3:0]  bcm_planes_cfg = (reg_tunit[11:8] == 4'd0) ? BCM_PLANES[3:0] : reg_tunit[11:8];
+    wire [2:0]  plane_max_run  = bcm_planes_cfg[2:0] - 3'd1;
 
     // Framebuffer 用 sdp_bram helper module 实例化 (Xilinx UG901 标准 SDP 模板)
     // 之前 inferred BRAM in main module 不稳, 实例化 sub-module 强制 SDP 行为
@@ -495,7 +498,7 @@ module hub75e_panel_seq_v2 #(
                         if (overlap_en && !addr_mode_sr) begin
                             disp_row    <= row_idx;
                             disp_plane  <= plane;
-                            if (plane == BCM_PLANES[2:0] - 3'd1) begin
+                            if (plane == plane_max_run) begin
                                 plane <= 3'd0;
                                 if (row_idx == row_max) begin
                                     row_idx <= 5'd0;
@@ -638,7 +641,7 @@ module hub75e_panel_seq_v2 #(
                         hub75e_oe_out <= 1'b1;
                         sr_en         <= 1'b1;
                         disp_count    <= 16'd0;
-                        if (plane == BCM_PLANES[2:0] - 3'd1) begin
+                        if (plane == plane_max_run) begin
                             plane <= 3'd0;
                             if (row_idx == row_max) begin
                                 row_idx <= 5'd0;

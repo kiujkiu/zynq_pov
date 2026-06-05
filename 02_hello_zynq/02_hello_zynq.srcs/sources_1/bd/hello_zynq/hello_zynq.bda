@@ -262,8 +262,8 @@
             },
             "V7": {
                 "VT": "AC",
-                "BA": "0x40020000",
-                "HA": "0x4002FFFF",
+                "BA": "0x40010000",
+                "HA": "0x4001FFFF",
                 "BP": "C_BASEADDR",
                 "HP": "C_HIGHADDR",
                 "MA": "Data",
@@ -274,7 +274,7 @@
                 "SX": "/hub75e_panel_seq_0",
                 "SI": "s_axi",
                 "SS": "reg0",
-                "SV": "xilinx.com:module_ref:hub75e_panel_seq_v2:1.0",
+                "SV": "xilinx.com:module_ref:hub75e_panel_seq_v3:1.0",
                 "TM": "both",
                 "TU": "register"
             },

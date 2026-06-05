@@ -2,7 +2,7 @@
 //Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2024.2 (win64) Build 5239630 Fri Nov 08 22:35:27 MST 2024
-//Date        : Tue Jun  2 22:15:10 2026
+//Date        : Fri Jun  5 13:01:25 2026
 //Host        : DESKTOP-O1VQ95V running 64-bit major release  (build 9200)
 //Command     : generate_target hello_zynq_wrapper.bd
 //Design      : hello_zynq_wrapper
@@ -52,6 +52,7 @@ module hello_zynq_wrapper
     hub75e_lat,
     hub75e_oe,
     hub75e_rgb,
+    hub75e_rgb2,
     led_tri_o,
     panel_gpio_tri_o,
     panel_spi_miso_tri_i);
@@ -96,6 +97,7 @@ module hello_zynq_wrapper
   output hub75e_lat;
   output hub75e_oe;
   output [5:0]hub75e_rgb;
+  output [5:0]hub75e_rgb2;
   output [1:0]led_tri_o;
   output [17:0]panel_gpio_tri_o;
   input [0:0]panel_spi_miso_tri_i;
@@ -144,6 +146,7 @@ module hello_zynq_wrapper
   wire hub75e_lat;
   wire hub75e_oe;
   wire [5:0]hub75e_rgb;
+  wire [5:0]hub75e_rgb2;
   wire [1:0]led_tri_o;
   wire [17:0]panel_gpio_tri_o;
   wire [0:0]panel_spi_miso_tri_i;
@@ -197,6 +200,7 @@ module hello_zynq_wrapper
         .hub75e_lat(hub75e_lat),
         .hub75e_oe(hub75e_oe),
         .hub75e_rgb(hub75e_rgb),
+        .hub75e_rgb2(hub75e_rgb2),
         .led_tri_o(led_tri_o),
         .panel_gpio_tri_o(panel_gpio_tri_o),
         .panel_spi_miso_tri_i(panel_spi_miso_tri_i));

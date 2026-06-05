@@ -19,6 +19,16 @@ set_property -dict { PACKAGE_PIN Y20  IOSTANDARD LVCMOS33 } [get_ports { hub75e_
 set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[4] }]; # G2 → panel.5 (GRB swap, AB21)
 set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[5] }]; # B2 → panel.7 (Y21)
 
+## --- v33: panel 2 RGB SDI (128×128 dual panel, 共享 panel 1 的 CLK/LAT/OE/ABCDE) ---
+## panel 2 IDC: pin 1 R1', pin 2 G1', pin 3 B1', pin 5 R2', pin 6 G2', pin 7 B2'
+## v34d: 改 4 个 pin 避开 axi_gpio_panel/panel_spi 占用
+set_property -dict { PACKAGE_PIN AA19 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[0] }]; # R1'  → panel2.1 (GPIO1 pin 13, AA19, 不动)
+set_property -dict { PACKAGE_PIN AA13 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[1] }]; # G1'  → panel2.2 (GPIO1 pin 31, AA13, 改)
+set_property -dict { PACKAGE_PIN Y13  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[2] }]; # B1'  → panel2.3 (GPIO1 pin 32, Y13, 改)
+set_property -dict { PACKAGE_PIN AB15 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[3] }]; # R2'  → panel2.5 (GPIO1 pin 33, AB15, 改)
+set_property -dict { PACKAGE_PIN AB14 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[4] }]; # G2'  → panel2.6 (GPIO1 pin 34, AB14, 改)
+set_property -dict { PACKAGE_PIN Y16  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[5] }]; # B2'  → panel2.7 (GPIO1 pin 30, Y16, 不动)
+
 ## --- 时钟控制 broadcast (Phase 1 + Phase 2 不变) ---
 set_property -dict { PACKAGE_PIN Y18  IOSTANDARD LVCMOS33 } [get_ports { hub75e_dclk }];   # CLK  (J1.17 / GPIO1.17, MRCC)
 set_property -dict { PACKAGE_PIN Y19  IOSTANDARD LVCMOS33 } [get_ports { hub75e_lat  }];   # LAT  (J1.14 / GPIO1.14, SRCC)

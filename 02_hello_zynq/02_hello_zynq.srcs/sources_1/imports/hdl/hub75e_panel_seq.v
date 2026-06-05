@@ -34,7 +34,9 @@
 //   0x8000-0xFFFF : framebuffer 区 (bit[15]=1, 用 bit[14:2] = pixel index 0..8191)
 //   每 pixel 32-bit aligned, 低 24-bit = RGB (R[7:0] G[15:8] B[23:16])
 //   total 8192 pixel × 24-bit = 196608 bit = 6 个 36Kb BRAM
-module hub75e_panel_seq_v2 #(  // FM6124 driver, active. ICND2047 in icnd2047_panel_seq.v has v1 name (dormant)
+// v33 Phase 2: rename to v3 for BD recreate path (memory feedback_vivado_bd_addr_width_cache.md)
+// v3 = FM6124 driver + hub75e_rgb_out2 output port for panel 2 mirror (128×128 dual panel)
+module hub75e_panel_seq_v3 #(
     parameter integer DCLK_DIV     = 2,    // 75 MHz / 2 = 37.5 MHz DCLK 50% duty (超 FM6124 spec 30M 25%, 实测)
     parameter integer PANEL_WIDTH  = 128,
     parameter integer ADDR_BITS    = 5,    // 1/32 scan
@@ -70,6 +72,7 @@ module hub75e_panel_seq_v2 #(  // FM6124 driver, active. ICND2047 in icnd2047_pa
     input  wire        s_axi_rready,
 
     output reg [5:0]   hub75e_rgb_out,
+    output reg [5:0]   hub75e_rgb_out2,  // v33: panel 2 SDI (128×128 dual panel, MVP mirror panel 1)
     output reg         hub75e_dclk_out,
     output reg         hub75e_lat_out,
     output reg         hub75e_oe_out,
@@ -419,6 +422,7 @@ module hub75e_panel_seq_v2 #(  // FM6124 driver, active. ICND2047 in icnd2047_pa
             walk_pos        <= 8'd0;
             walk_div_count  <= 8'd0;
             hub75e_rgb_out  <= 6'b0;
+            hub75e_rgb_out2 <= 6'b0;
             hub75e_dclk_out <= 1'b0;
             hub75e_lat_out  <= 1'b0;
             hub75e_oe_out   <= 1'b1;
@@ -435,6 +439,7 @@ module hub75e_panel_seq_v2 #(  // FM6124 driver, active. ICND2047 in icnd2047_pa
                     hub75e_lat_out  <= 1'b0;
                     hub75e_dclk_out <= 1'b0;
                     hub75e_rgb_out  <= 6'b0;
+                    hub75e_rgb_out2 <= 6'b0;
                     sr_en           <= 1'b1;
                     sr_clk          <= 1'b0;
                     col_idx         <= 12'd0;
@@ -452,6 +457,7 @@ module hub75e_panel_seq_v2 #(  // FM6124 driver, active. ICND2047 in icnd2047_pa
                     hub75e_oe_out  <= 1'b1;
                     hub75e_lat_out <= 1'b0;
                     hub75e_rgb_out <= plane_rgb;
+                    hub75e_rgb_out2 <= plane_rgb;
 
                     if (sub_count == (DCLK_DIV/2 - 1)) begin
                         hub75e_dclk_out <= 1'b1;
@@ -581,6 +587,7 @@ module hub75e_panel_seq_v2 #(  // FM6124 driver, active. ICND2047 in icnd2047_pa
                     // Shift half (uses pattern_rgb at current `plane` = advanced NEXT plane)
                     if (shift_active) begin
                         hub75e_rgb_out <= plane_rgb;
+                        hub75e_rgb_out2 <= plane_rgb;
                         if (sub_count == (DCLK_DIV/2 - 1)) begin
                             hub75e_dclk_out <= 1'b1;
                             sub_count       <= sub_count + 1;

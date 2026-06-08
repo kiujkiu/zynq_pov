@@ -72,7 +72,7 @@ module hub75e_panel_seq_v3 #(
     input  wire        s_axi_rready,
 
     output reg [5:0]   hub75e_rgb_out,
-    output reg [5:0]   hub75e_rgb_out2,  // v33: panel 2 SDI (128×128 dual panel, MVP mirror panel 1)
+    (* dont_touch = "true" *) output reg [5:0]   hub75e_rgb_out2,  // v33: panel 2 SDI mirror (dont_touch 防 synth merge)
     output reg         hub75e_dclk_out,
     output reg         hub75e_lat_out,
     output reg         hub75e_oe_out,

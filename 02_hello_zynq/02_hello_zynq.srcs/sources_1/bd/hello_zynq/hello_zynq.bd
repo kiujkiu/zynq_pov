@@ -1,7 +1,7 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0x4923315C10E6F3E2",
+      "boundary_crc": "0xA6490FDF18DFBC99",
       "device": "xc7z020clg484-2",
       "gen_directory": "../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq",
       "name": "hello_zynq",
@@ -366,6 +366,20 @@
             "value_src": "default"
           }
         }
+      },
+      "hub75e_dclk2": {
+        "direction": "O"
+      },
+      "hub75e_lat2": {
+        "direction": "O"
+      },
+      "hub75e_oe2": {
+        "direction": "O"
+      },
+      "hub75e_addr2": {
+        "direction": "O",
+        "left": "4",
+        "right": "0"
       }
     },
     "components": {
@@ -785,7 +799,7 @@
             "value": "50"
           },
           "PCW_FPGA1_PERIPHERAL_FREQMHZ": {
-            "value": "60"
+            "value": "75"
           },
           "PCW_FPGA2_PERIPHERAL_FREQMHZ": {
             "value": "200"
@@ -2565,14 +2579,14 @@
         }
       },
       "hub75e_panel_seq_0": {
-        "vlnv": "xilinx.com:module_ref:hub75e_panel_seq_v4:1.0",
+        "vlnv": "xilinx.com:module_ref:hub75e_panel_seq_v5:1.0",
         "ip_revision": "1",
         "xci_name": "hello_zynq_hub75e_panel_seq_0_1",
         "xci_path": "ip\\hello_zynq_hub75e_panel_seq_0_1\\hello_zynq_hub75e_panel_seq_0_1.xci",
         "inst_hier_path": "hub75e_panel_seq_0",
         "reference_info": {
           "ref_type": "hdl",
-          "ref_name": "hub75e_panel_seq_v4",
+          "ref_name": "hub75e_panel_seq_v5",
           "boundary_crc": "0x0"
         },
         "interface_ports": {
@@ -2853,6 +2867,20 @@
             "direction": "O",
             "left": "4",
             "right": "0"
+          },
+          "hub75e_dclk_out2": {
+            "direction": "O"
+          },
+          "hub75e_lat_out2": {
+            "direction": "O"
+          },
+          "hub75e_oe_out2": {
+            "direction": "O"
+          },
+          "hub75e_addr_out2": {
+            "direction": "O",
+            "left": "4",
+            "right": "0"
           }
         }
       }
@@ -3028,10 +3056,22 @@
           "hub75e_addr"
         ]
       },
+      "hub75e_panel_seq_0_hub75e_addr_out2": {
+        "ports": [
+          "hub75e_panel_seq_0/hub75e_addr_out2",
+          "hub75e_addr2"
+        ]
+      },
       "hub75e_panel_seq_0_hub75e_dclk_out1": {
         "ports": [
           "hub75e_panel_seq_0/hub75e_dclk_out",
           "hub75e_dclk"
+        ]
+      },
+      "hub75e_panel_seq_0_hub75e_dclk_out2": {
+        "ports": [
+          "hub75e_panel_seq_0/hub75e_dclk_out2",
+          "hub75e_dclk2"
         ]
       },
       "hub75e_panel_seq_0_hub75e_lat_out1": {
@@ -3040,10 +3080,22 @@
           "hub75e_lat"
         ]
       },
+      "hub75e_panel_seq_0_hub75e_lat_out2": {
+        "ports": [
+          "hub75e_panel_seq_0/hub75e_lat_out2",
+          "hub75e_lat2"
+        ]
+      },
       "hub75e_panel_seq_0_hub75e_oe_out1": {
         "ports": [
           "hub75e_panel_seq_0/hub75e_oe_out",
           "hub75e_oe"
+        ]
+      },
+      "hub75e_panel_seq_0_hub75e_oe_out2": {
+        "ports": [
+          "hub75e_panel_seq_0/hub75e_oe_out2",
+          "hub75e_oe2"
         ]
       },
       "hub75e_panel_seq_0_hub75e_rgb_out1": {

@@ -33,6 +33,16 @@ set_property -dict { PACKAGE_PIN AB15 IOSTANDARD LVCMOS33 } [get_ports { hub75e_
 set_property -dict { PACKAGE_PIN AB14 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[4] }]; # G2'  → J1.19 AB14
 set_property -dict { PACKAGE_PIN Y16  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[5] }]; # B2'  → J1.30 Y16
 
+## --- v34L: panel 2 独立 DCLK2/LAT2/OE2/ABCDE2 (减 dual panel 共享信号 SI) ---
+set_property -dict { PACKAGE_PIN Y14  IOSTANDARD LVCMOS33 } [get_ports { hub75e_dclk2 }];   # DCLK2 → J1.31 (Y14, L22P)
+set_property -dict { PACKAGE_PIN V14  IOSTANDARD LVCMOS33 } [get_ports { hub75e_lat2  }];   # LAT2  → J1.34 (V14, L19P)
+set_property -dict { PACKAGE_PIN V15  IOSTANDARD LVCMOS33 } [get_ports { hub75e_oe2   }];   # OE2   → J1.33 (V15, L19N VREF 输出 OK)
+set_property -dict { PACKAGE_PIN V13  IOSTANDARD LVCMOS33 } [get_ports { hub75e_addr2[0] }]; # A2 → J1.23 V13
+set_property -dict { PACKAGE_PIN W13  IOSTANDARD LVCMOS33 } [get_ports { hub75e_addr2[1] }]; # B2 → J1.24 W13
+set_property -dict { PACKAGE_PIN T22  IOSTANDARD LVCMOS33 } [get_ports { hub75e_addr2[2] }]; # C2 → J1.37 T22
+set_property -dict { PACKAGE_PIN U22  IOSTANDARD LVCMOS33 } [get_ports { hub75e_addr2[3] }]; # D2 → J1.38 U22
+set_property -dict { PACKAGE_PIN AA14 IOSTANDARD LVCMOS33 } [get_ports { hub75e_addr2[4] }]; # E2 → J1.32 AA14 (L22N)
+
 ## --- 时钟控制 broadcast (Phase 1 + Phase 2 不变) ---
 set_property -dict { PACKAGE_PIN Y18  IOSTANDARD LVCMOS33 } [get_ports { hub75e_dclk }];   # CLK  (J1.17 / GPIO1.17, MRCC)
 set_property -dict { PACKAGE_PIN Y19  IOSTANDARD LVCMOS33 } [get_ports { hub75e_lat  }];   # LAT  (J1.14 / GPIO1.14, SRCC)

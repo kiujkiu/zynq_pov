@@ -3,7 +3,7 @@
   "ip_inst": {
     "xci_name": "hello_zynq_hub75e_panel_seq_0_1",
     "cell_name": "hub75e_panel_seq_0",
-    "component_reference": "xilinx.com:module_ref:hub75e_panel_seq_v4:1.0",
+    "component_reference": "xilinx.com:module_ref:hub75e_panel_seq_v5:1.0",
     "ip_revision": "1",
     "gen_directory": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_hub75e_panel_seq_0_1",
     "parameters": {
@@ -17,7 +17,7 @@
         "LATCH_CYC": [ { "value": "2", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "BLANK_CYC": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "ADDR_SET_CYC": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
-        "OE_PRE_CYC": [ { "value": "8", "resolve_type": "user", "format": "long", "usage": "all" } ],
+        "OE_PRE_CYC": [ { "value": "15", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "FB_DEPTH": [ { "value": "8192", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "Component_Name": [ { "value": "hello_zynq_hub75e_panel_seq_0_1", "resolve_type": "user", "usage": "all" } ]
       },
@@ -31,7 +31,7 @@
         "LATCH_CYC": [ { "value": "2", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "BLANK_CYC": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "ADDR_SET_CYC": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
-        "OE_PRE_CYC": [ { "value": "8", "resolve_type": "generated", "format": "long", "usage": "all" } ],
+        "OE_PRE_CYC": [ { "value": "15", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "FB_DEPTH": [ { "value": "8192", "resolve_type": "generated", "format": "long", "usage": "all" } ]
       },
       "project_parameters": {
@@ -86,7 +86,11 @@
         "hub75e_dclk_out": [ { "direction": "out" } ],
         "hub75e_lat_out": [ { "direction": "out" } ],
         "hub75e_oe_out": [ { "direction": "out" } ],
-        "hub75e_addr_out": [ { "direction": "out", "size_left": "4", "size_right": "0" } ]
+        "hub75e_addr_out": [ { "direction": "out", "size_left": "4", "size_right": "0" } ],
+        "hub75e_dclk_out2": [ { "direction": "out" } ],
+        "hub75e_lat_out2": [ { "direction": "out" } ],
+        "hub75e_oe_out2": [ { "direction": "out" } ],
+        "hub75e_addr_out2": [ { "direction": "out", "size_left": "4", "size_right": "0" } ]
       },
       "interfaces": {
         "s_axi": {

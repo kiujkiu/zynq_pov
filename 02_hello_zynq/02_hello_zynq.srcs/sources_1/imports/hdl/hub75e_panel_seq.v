@@ -36,7 +36,7 @@
 //   total 8192 pixel × 24-bit = 196608 bit = 6 个 36Kb BRAM
 // v33 Phase 2: rename to v3 for BD recreate path (memory feedback_vivado_bd_addr_width_cache.md)
 // v3 = FM6124 driver + hub75e_rgb_out2 output port for panel 2 mirror (128×128 dual panel)
-module hub75e_panel_seq_v4 #(  // v34g: Phase 2 dual BRAM (panel 2 独立, 128x128 拼接)
+module hub75e_panel_seq_v5 #(  // v34L: panel 2 独立 DCLK2/LAT2/OE2/ABCDE2 8 pin (减 dual panel SI)
     parameter integer DCLK_DIV     = 2,    // 75 MHz / 2 = 37.5 MHz DCLK 50% duty (超 FM6124 spec 30M 25%, 实测)
     parameter integer PANEL_WIDTH  = 128,
     parameter integer ADDR_BITS    = 5,    // 1/32 scan
@@ -46,7 +46,7 @@ module hub75e_panel_seq_v4 #(  // v34g: Phase 2 dual BRAM (panel 2 独立, 128x1
     parameter integer LATCH_CYC    = 2,    // tWLE=20ns spec, 2 cyc @ 60MHz = 33ns (1.65x margin)
     parameter integer BLANK_CYC    = 1,    // tSETUP2=5ns spec (CLK→LE), 1 cyc = 17ns (3.3x margin)
     parameter integer ADDR_SET_CYC = 1,    // v29: LE-fall → OE-fall 缩到 1 cyc (~14ns), spec 无指定下限
-    parameter integer OE_PRE_CYC   = 8,    // v28: OE-fall setup before shift, gives FM6124DJ time to cache SR (memory ≥100ns, 不动)
+    parameter integer OE_PRE_CYC   = 15,   // v34k: SM16208 (实际 chip) setup time 比 FM6124 更紧, 8→15 给 chain 末端 B chip 更多 cache 时间 (ctrl_count 4-bit max 15)
     parameter integer FB_DEPTH     = 8192  // 128×64 pixel
 )(
     input  wire        s_axi_aclk,
@@ -76,8 +76,19 @@ module hub75e_panel_seq_v4 #(  // v34g: Phase 2 dual BRAM (panel 2 独立, 128x1
     output reg         hub75e_dclk_out,
     output reg         hub75e_lat_out,
     output reg         hub75e_oe_out,
-    output reg [4:0]   hub75e_addr_out
+    output reg [4:0]   hub75e_addr_out,
+    // v34L: panel 2 独立 8 pin (减 dual panel SI), wire 直复 panel 1 同源信号, 独立 IO pin 分摊 fanout 负载
+    (* dont_touch = "true" *) output wire         hub75e_dclk_out2,
+    (* dont_touch = "true" *) output wire         hub75e_lat_out2,
+    (* dont_touch = "true" *) output wire         hub75e_oe_out2,
+    (* dont_touch = "true" *) output wire [4:0]   hub75e_addr_out2
 );
+
+    // v34L: panel 2 控制信号直复 panel 1 (同步), 但走独立 IO pin/IOB → SI 隔离
+    assign hub75e_dclk_out2 = hub75e_dclk_out;
+    assign hub75e_lat_out2  = hub75e_lat_out;
+    assign hub75e_oe_out2   = hub75e_oe_out;
+    assign hub75e_addr_out2 = hub75e_addr_out;
 
     //==========================================================================
     // AXI-Lite 寄存器

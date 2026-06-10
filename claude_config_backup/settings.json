@@ -1,4 +1,5 @@
 {
+  "model": "opus",
   "permissions": {
     "defaultMode": "auto"
   },
@@ -16,10 +17,11 @@
       }
     ]
   },
-  "skipDangerousModePermissionPrompt": true,
-  "skipAutoPermissionPrompt": true,
   "statusLine": {
     "type": "command",
     "command": "python3 /home/kiujkiu/.claude/statusline_with_bars.py"
-  }
+  },
+  "autoUpdatesChannel": "latest",
+  "skipDangerousModePermissionPrompt": true,
+  "skipAutoPermissionPrompt": true
 }

@@ -3,7 +3,7 @@ name: Claude Code 配置中心
 description: 本地 Claude Code 所有自定义配置 (statusline/permissions/hooks/scripts) 的中心索引 + 备份 + 恢复方法。后续所有 Claude 相关设置改动都必须更新这里
 type: reference
 created_at: 2026-06-03 12:08 CST
-updated_at: 2026-06-10 21:59 CST
+updated_at: 2026-06-10 22:10 CST
 originSessionId: d8fa45a6-872d-42f7-81a0-cb5be6c962bd
 ---
 # Claude Code 配置中心
@@ -69,9 +69,23 @@ originSessionId: d8fa45a6-872d-42f7-81a0-cb5be6c962bd
 - PATH 里 `~/.local/bin` 在 `/usr/bin` 前 (`.profile` 自动加), `which claude` 自动指向新版
 - 旧 `/usr/bin/claude` 没删, 留作 fallback
 - 以后**升级直接 `claude update`** (内部走 `claude install`, 无 sudo 问题), 不要再用 `sudo npm install -g`
+- ⚠️ **`claude update` 默认查 stable channel**, settings.json 里的 `autoUpdatesChannel=latest` 不影响这条命令的查版本动作. 想要最新版必须 `claude install latest` (2026-06-10 实测: `claude update` 报 stable 停 2.1.153, `claude install latest` 拿到 2.1.170)
 - `claude update` 失败时手动 `claude install stable` (或 `latest` / 具体版本号)
 
 **契机**: codexflow 显示 Opus 4.8 (1M), 而旧 2.1.118 `/model` 菜单里看不到 4.8, 推测新模型 access 需要 CLI 较新版本
+
+### 5. 默认模型 = `opus` 别名 = Opus 4.8 (新增 2026-06-10)
+
+`settings.json` 加 `"model": "opus"`. alias 不锁版本, Anthropic 推 4.9/5.0 时自动跟最新 opus.
+
+| 写法 | 效果 |
+|---|---|
+| `"model": "opus"` | 自动跟最新 opus (当前 Opus 4.8) ✅ 当前用这个 |
+| `"model": "sonnet"` | 自动跟最新 sonnet |
+| `"model": "fable"` | Claude Fable 5 (2026-06-22 才对 Pro/Max 免费开放) |
+| `"model": "claude-opus-4-8"` | 锁版本, 不自动升 |
+
+**命令行临时切**: `claude --model sonnet` 单 session 覆盖, settings.json 不变.
 
 ## 备份位置
 

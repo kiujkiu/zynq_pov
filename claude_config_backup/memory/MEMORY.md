@@ -1,9 +1,14 @@
 - [User role and domain](user_role.md) — FPGA/Zynq engineer building POV-3D display, terse Chinese, drives Windows Vivado/Vitis from WSL
 - [Claude Code 配置中心](reference_claude_config.md) — **本机 Claude 配置唯一权威 memory**, 后续任何 Claude 设置改动都必须更新这里 + 同步 claude_config_backup/ + push
+- [改 settings.json auto mode 必拦](feedback_settings_self_modify_auto_blocks.md) — self-modification 上轮口头 "要" 不算, 必须当轮 AskUserQuestion; Edit old_string 用最短 unique anchor 避免 classifier 误判 diff
 - [POV3D 项目状态 HTML (团队解释 + 任务认领 + 跨部门)](reference_project_status_html.md) — `D:\claude_workspace\pov3d\project_status.html`, 任务 ID T-Cx/T-Rx/T-Lx + 里程碑 M1-M4 + 7 部门诉求
 - [zynq_pov project (Phase 9 snapshot)](project_zynq_pov.md) — POV-3D pipeline, Phase 8 mesh slice + Phase 9 ABDE 并行 (HLS 4× IP / WiFi / QSPI fix / warm bake)
 - [POV3D anime xsdb 直推路径](project_pov3d_anime_xsdb_path.md) — JTAG 直写 DDR + ANIME_MAGIC 检测 + 32K HLS IP, 绕开 WiFi/UART 通信问题
 - [LED panel 协议踩坑总结](feedback_led_panel_protocol_pitfalls.md) — 5 条: DCLK 不能停 / ICND3019 DCLK ≥500ns / cascade LATCH 是 N×16 一次 / EN_OP 首帧后 / ROW 宽度必精
+- [panel 黑先查 panel 5V](feedback_panel_dark_check_panel_power_first.md) — 寄存器 / state machine / PL LED 都正常但 panel 黑, 99% 是 panel 自己没上电, 不要先怀疑 verilog/XDC
+- [dual panel 共享信号干扰](feedback_dual_panel_shared_signal_interference.md) — panel 2 接入让 panel 1 W 变橙 (DCLK/LAT/OE/ABCDE SI 降级 B chip latch fail), 74HC245 buffer 不够, 必须 panel 2 独立 8 pin
+- [panel 切色不黑屏模式](feedback_panel_color_switch_no_blackout.md) — 单 xsdb + 内 while + BRAM 直填 + CTRL=0x561 一次设好不动, 反例每次新 xsdb 重写 CTRL 必黑屏
+- [JTAG dl 反复挂](feedback_jtag_dl_reflash_loop_dead.md) — 一 session 内 fpga -file 5+ 次或 kill hw_server 多次 → DAP sticky error 锁死, rst -dap 救不了, 必须用户冷循环板子
 - [led_panel_seq PL IP 接口](reference_led_panel_seq_ip.md) — 0x40010000, 3 modes + burst, AXI-Lite, panel_seq.h C API
 - [Vivado BD module_ref 加 port 改 xci JSON](feedback_vivado_bd_module_ref_update.md) — update_module_reference 失败时直接改 xci/bd JSON, 不用 Vivado API
 - [多色 LED panel bring-up 没厂家文档不要盲试](feedback_led_panel_blind_bringup.md) — 协议规范 + panel-specific 参数缺一不可, 没 demo code 不开工
@@ -11,6 +16,7 @@
 - [Hardware + Windows toolchain](reference_hardware.md) — COM/JTAG/HDMI-capture details, Vivado/Vitis paths called from WSL（本机走 `D:\` 符号链接 → `C:\Xilinx\...`）
 - [Win Python 安装](reference_python_install.md) — Python 3.12.10 在 `%LOCALAPPDATA%\Programs\Python\Python312`，已装 pyserial/trimesh/numpy/pillow/pygltflib/PyQt6/obs-websocket-py/imageio
 - [POV3D 最终目标参数](project_pov3d_final_target.md) — 720 slice × 30 Hz × 160×180，推出 46 μs/slice 硬预算
+- [anime 默认指代角色](reference_anime_canonical.md) — 用户说 "anime" 一律指这个 = 金发白甲蓝披风武士, 数据文件 fb_anime_top/bot.bin + anime_points.bin + anime_crop.png
 - [Phase 4b HLS pov IP 已完成](project_pov3d_hls_ip_done.md) — 基址、性能、限制、优化方向
 - [产品路径决策 (ADR-001)](project_pov3d_path_decision.md) — 锁 A voxel 4× IP, mesh 路径备货等 LED + 精简 BD 时再考虑
 - [slicemap LUT 实验分支](project_slicemap_lut.md) — experiment/slicemap-lut + worktree zynq_pov_slicemap, 设计文档 commit 0d3b4a2, 代码未实现
@@ -44,7 +50,9 @@
 - [鹿小班无 USB host 能力](reference_lxb_no_usb_host.md) — MIO 28-39 全悬空 + 无 ULPI PHY + USB-C 只是 CH340E UART, USB WiFi 必须换板 (ALINX/米尔/正点原子)
 - [LXB SDIO WiFi 升级方案 RTL8822CS](project_lxb_sdio_wifi_plan.md) — PetaLinux + SD1 EMIO + rtw88 driver, 接受 200 Mbps SDIO 上限, 取代 ESP32 桥
 - [LXB Linux 开发环境准备 (2026-06-04)](project_lxb_linux_setup_progress.md) — `~/lxb-linux-setup/` 脚本 + PetaLinux 2024.2 + 6 步骤 task list, 卡在用户下载 installer
-- [鹿小班 GPIO1 connector pinout](reference_lxb_gpio1_pinout.md) — GPIO1 2×40 排针 17 对 BANK 33 site → CLG484 PACKAGE_PIN 完整表
+- [鹿小班 GPIO1 connector pinout (2026-06-08 已纠正)](reference_lxb_gpio1_pinout.md) — GPIO1 2×40 排针 17 对 BANK 33 site → CLG484 PACKAGE_PIN, 2026-06-08 panel 2 调试时发现 pin 19/20/21/22 跟 31/32/33/34 之前抽反, 已 verified
+- [PDF schematic pin map 抽错坑](feedback_memory_pdf_pinout_swap.md) — raw `pdftotext` dump SCH 双排 connector 会错位, 必须 PyMuPDF 坐标抽 + Y 行对齐. v34e panel 2 wiring 在这上面踩 2h
+- [panel 内部 BRG vs GRB 同款 panel 不一定同色序](feedback_panel_brg_vs_grb.md) — 2026-06-08 v34f panel 2 G/B 反, 跟 panel 1 GRB 不同; 新装 panel 必须单色 R/G/B 验证 IDC pin 内部 chip 色序后再定 xdc
 - [鹿小班 GPIO2 connector pinout](reference_lxb_gpio2_pinout.md) — GPIO2 BANK 35 site→pin 全表, 跟 ETH RGMII **不冲突** (ETH 占用的 pin 不在 GPIO2 上)
 - [HUB75E 48-SDI IO 分配 (POV 7K+ fps)](project_pov3d_48sdi_io_plan.md) — 拆 daisy 48-chain, GPIO1(24SDI+8ctrl)+GPIO2(24SDI), 保 ETH, 7510 fps @6-bit / 4300 fps @8-bit
 - [LED panel anime 显示 (xsdb mwr 路径)](project_pov3d_led_anime_display.md) — PC downsample 128×64 + 预补偿 R×0.35 / G×0.9 / B×1.3, 角色可见但黄色出不来
@@ -62,6 +70,7 @@
 - [Vivado 批处理 Tcl 用法](reference_vivado_batch_tcl.md)
 - [WSL git push 走 cmd.exe](reference_git_push_via_cmd.md) — `cmd.exe /c "cd /d D:\... && git push"` 用 Windows GCM, 不要绕 SSH/PAT
 - [换机首次重建踩坑](feedback_new_machine_setup_gotchas.md) — 7 条: HLS PATH / vivado-library / rgb2dvi 重打包 / BD hdmi_tmds 自杀 / Vitis platform delete-recreate / dl_helloworld 路径切 hello_plat/hw/sdt / OBS Virtual Camera 假帧
+- [xsdb jtag targets 空 → 先 taskkill hw_server](feedback_xilinx_cable_needs_adept_runtime.md) — 不是 driver 版本问题. Adept 2.8.5 (2018) 一直能用. 卡死时 `taskkill /F /IM hw_server.exe` + 板子冷循环就好. Cable = Digilent JTAG-SMT2 module (FT2232H 内核, EEPROM D2XX-only)
 - [ESP32-C5 DevKitC bring-up](project_esp32c5_setup.md) — chip rev v1.0, COM6 (CH340), IDF v6.0 在 `D:\esp-idf` / `C:\Users\kiujkiu\.espressif`
 - [ESP32-C5 SDIO slave 已验证](project_esp32c5_sdio_slave.md) — IDF v6 example 通, 引脚 IOMUX 固定 (CLK9/CMD10/D0-3=8/7/14/13), 4-bit 模式占用 USB-JTAG
 - [ESP32-C5 WiFi 桥已通 (5G HT40 ch161)](project_esp32c5_wifi_bridge_live.md) — 密码改对后 IP 10.168.168.137:8888, Windows TcpTestSucceeded=True, reason 0
@@ -87,7 +96,10 @@
 - [HUB75E FM6124 panel + v29 timing-tight (2026-06-04)](project_hub75e_fm6124_lit.md) — 128×64, v29 FSM 跳 S_BLANK + ADDR=1: 16 col @ FCLK1=72M = **8545 fps**, 准备转 ICND2047
 - [POV3D panel chip pivot FM6124→ICND2047 v30 MVP 跑通 (2026-06-04)](project_pov3d_panel_chip_pivot_2026-06-04.md) — ICND2047 sequential FSM 跑通 **10919 fps @ 72M (+28% vs v29 8545)**, overlap 改造预测 ~14100 fps
 - [POV3D Phase 1 plan + 3-bit BCM 甜区 (2026-06-04)](project_pov3d_phase1_plan_2026-06-04.md) — **FM6124 3-bit @ 2931 fps × 24 Hz × 122 slice = rotor 1440 RPM**. branch debug/fm6124-v29 已 push, Phase 1 软件链下次开干
-- [POV3D dual panel v34e 状态 (2026-06-08)](project_pov3d_dual_panel_v34e_state.md) — **MVP mirror PL build OK (commit 0aada63)**, panel base @ 0x40010000, CTRL=0x501 (use_fb=0), JTAG driver USB 拔插即可恢复
+- [POV3D dual panel v34e Mirror MVP ✅ (2026-06-08)](project_pov3d_dual_panel_v34e_state.md) — v34e dual panel 完工, anime 显示 mirror, 横着拼接 = 角色 × 2; 接线 J1.13/22/21/20/19/30 (上下半各物理换 G/B 适配 panel 2 BRG); Phase 2 改独立 256×64 待
+- [POV3D v34g Phase 2 dual BRAM 🚧 (2026-06-08)](project_pov3d_v34g_phase2.md) — v34g 改 panel_seq_v4 (ADDR 17-bit + 2 BRAM 独立 panel 2 数据 + plane_rgb2), 4 BRAM map 在 0x40018000/0x4001C000/0x40028000/0x4002C000, 竖拼 128×128 anime, Vivado build 跑中
+- [POV3D v34g 8×8 chess + W=橙 bug + v34h IO fix 等 build (2026-06-09 晚)](project_pov3d_dual_panel_v34g_chess.md) — chess 显示通, 关键发现 "R 开 B 整掉" (M/W bug, C/B 单独 OK). XDC 改 panel 1 R2/G2 swap (Y20↔AB21) + DRIVE 4 SLEW SLOW. Vivado batch spawn 卡死, 需 GUI build
+- [Vivado batch 必须先 call settings64.bat](feedback_vivado_batch_needs_settings64.md) — vivado.bat batch 模式不 source 环境会 "Spawn failed: No error", 但 settings64 也不一定救得了, 间歇性. GUI build 最稳
 - [HUB75E overlap 翻案: 需 OE-fall setup delay](feedback_hub75e_no_overlap_shift_display.md) — v27 直接 overlap 翻车; v28 加 8 cyc OE_PRE 让 FM6124DJ 缓存 SR → 正常 +39% fps
 - [Vivado BD module_ref ADDR_WIDTH 顽固缓存](feedback_vivado_bd_addr_width_cache.md) — 改 PL IP port width 后 BD 永远按旧 5-bit elaborate. 唯一 fix: rename module + 删 ip cache 目录 + recreate cell
 - [FM6124 引脚 + 关键参数](reference_fm6124_pinout.md) — SSOP24 完整 pin 表, OE pin 21, CLK pin 3, max 30MHz, 真值表, PDF 在 docs/fm/FM6124.pdf

@@ -785,7 +785,7 @@
             "value": "50"
           },
           "PCW_FPGA1_PERIPHERAL_FREQMHZ": {
-            "value": "75"
+            "value": "60"
           },
           "PCW_FPGA2_PERIPHERAL_FREQMHZ": {
             "value": "200"

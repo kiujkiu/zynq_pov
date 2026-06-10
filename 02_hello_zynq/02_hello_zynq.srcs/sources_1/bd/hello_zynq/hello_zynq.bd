@@ -2565,14 +2565,14 @@
         }
       },
       "hub75e_panel_seq_0": {
-        "vlnv": "xilinx.com:module_ref:hub75e_panel_seq_v3:1.0",
+        "vlnv": "xilinx.com:module_ref:hub75e_panel_seq_v4:1.0",
         "ip_revision": "1",
         "xci_name": "hello_zynq_hub75e_panel_seq_0_1",
         "xci_path": "ip\\hello_zynq_hub75e_panel_seq_0_1\\hello_zynq_hub75e_panel_seq_0_1.xci",
         "inst_hier_path": "hub75e_panel_seq_0",
         "reference_info": {
           "ref_type": "hdl",
-          "ref_name": "hub75e_panel_seq_v3",
+          "ref_name": "hub75e_panel_seq_v4",
           "boundary_crc": "0x0"
         },
         "interface_ports": {
@@ -2598,7 +2598,7 @@
                 "value_src": "constant"
               },
               "ADDR_WIDTH": {
-                "value": "16",
+                "value": "17",
                 "value_src": "constant"
               },
               "AWUSER_WIDTH": {
@@ -2703,7 +2703,7 @@
               "AWADDR": {
                 "physical_name": "s_axi_awaddr",
                 "direction": "I",
-                "left": "15",
+                "left": "16",
                 "right": "0"
               },
               "AWPROT": {
@@ -2757,7 +2757,7 @@
               "ARADDR": {
                 "physical_name": "s_axi_araddr",
                 "direction": "I",
-                "left": "15",
+                "left": "16",
                 "right": "0"
               },
               "ARPROT": {
@@ -3174,8 +3174,8 @@
               },
               "SEG_hub75e_panel_seq_0_reg0": {
                 "address_block": "/hub75e_panel_seq_0/s_axi/reg0",
-                "offset": "0x40010000",
-                "range": "64K"
+                "offset": "0x40020000",
+                "range": "128K"
               },
               "SEG_pov_project_batch_0_Reg": {
                 "address_block": "/pov_project_batch_0/s_axi_control/Reg",

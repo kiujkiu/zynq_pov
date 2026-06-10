@@ -12,22 +12,26 @@
 ## 信号意义: hub75e_rgb[0]=R1, [1]=G1, [2]=B1, [3]=R2, [4]=G2, [5]=B2 (PL 内)
 ## panel 物理: panel.1=G chip, panel.2=R chip (panel.5/6 同理), panel.3/7=B 不变
 ## → R 信号走 panel.2 (AB22 / AB21), G 信号走 panel.1 (AA22 / Y20)
-set_property -dict { PACKAGE_PIN AB22 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[0] }]; # R1 → panel.2 (GRB swap, AB22)
-set_property -dict { PACKAGE_PIN AA22 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[1] }]; # G1 → panel.1 (GRB swap, AA22)
-set_property -dict { PACKAGE_PIN AA21 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[2] }]; # B1 → panel.3 (AA21)
-set_property -dict { PACKAGE_PIN Y20  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[3] }]; # R2 → panel.6 (GRB swap, Y20)
-set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[4] }]; # G2 → panel.5 (GRB swap, AB21)
-set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[5] }]; # B2 → panel.7 (Y21)
+## v34h: swap R2/G2 — 把 R2 从 Y20 (L9 DQS 跟 B2 共差分对) 挪到 AB21 (L8), 减少 R2-B2 crosstalk
+##: 降 IO 翻转速率 + 驱动电流, 减少 SSO 噪声 + bank Vccio droop
+set_property -dict { PACKAGE_PIN AB22 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[0] }]; # R1 → panel.2 (GRB swap)
+set_property -dict { PACKAGE_PIN AA22 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[1] }]; # G1 → panel.1 (GRB swap)
+set_property -dict { PACKAGE_PIN AA21 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[2] }]; # B1 → panel.3
+set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[3] }]; # R2 → panel.6 (v34h: was Y20, swap to L8 break DQS crosstalk)
+set_property -dict { PACKAGE_PIN Y20  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[4] }]; # G2 → panel.5 (v34h: was AB21)
+set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb[5] }]; # B2 → panel.7
 
-## --- v33: panel 2 RGB SDI (128×128 dual panel, 共享 panel 1 的 CLK/LAT/OE/ABCDE) ---
+## --- v34e: panel 2 RGB SDI (128×128 dual panel, 共享 panel 1 的 CLK/LAT/OE/ABCDE) ---
 ## panel 2 IDC: pin 1 R1', pin 2 G1', pin 3 B1', pin 5 R2', pin 6 G2', pin 7 B2'
-## v34d: 改 4 个 pin 避开 axi_gpio_panel/panel_spi 占用
-set_property -dict { PACKAGE_PIN AA19 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[0] }]; # R1'  → panel2.1 (GPIO1 pin 13, AA19, 不动)
-set_property -dict { PACKAGE_PIN AA13 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[1] }]; # G1'  → panel2.2 (GPIO1 pin 31, AA13, 改)
-set_property -dict { PACKAGE_PIN Y13  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[2] }]; # B1'  → panel2.3 (GPIO1 pin 32, Y13, 改)
-set_property -dict { PACKAGE_PIN AB15 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[3] }]; # R2'  → panel2.5 (GPIO1 pin 33, AB15, 改)
-set_property -dict { PACKAGE_PIN AB14 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[4] }]; # G2'  → panel2.6 (GPIO1 pin 34, AB14, 改)
-set_property -dict { PACKAGE_PIN Y16  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[5] }]; # B2'  → panel2.7 (GPIO1 pin 30, Y16, 不动)
+## 用户选物理换线兼容 (panel 2 内部 BRG vs panel 1 GRB), xdc 跟 panel 1 一致
+## GPIO1 pin 号已纠正 (memory 之前 J1.19/20/21/22 跟 J1.31/32/33/34 抽反)
+## v34h: 加 减 SSO
+set_property -dict { PACKAGE_PIN AA19 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[0] }]; # R1'  → J1.13 AA19
+set_property -dict { PACKAGE_PIN AA13 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[1] }]; # G1'  → J1.22 AA13
+set_property -dict { PACKAGE_PIN Y13  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[2] }]; # B1'  → J1.21 Y13
+set_property -dict { PACKAGE_PIN AB15 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[3] }]; # R2'  → J1.20 AB15
+set_property -dict { PACKAGE_PIN AB14 IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[4] }]; # G2'  → J1.19 AB14
+set_property -dict { PACKAGE_PIN Y16  IOSTANDARD LVCMOS33 } [get_ports { hub75e_rgb2[5] }]; # B2'  → J1.30 Y16
 
 ## --- 时钟控制 broadcast (Phase 1 + Phase 2 不变) ---
 set_property -dict { PACKAGE_PIN Y18  IOSTANDARD LVCMOS33 } [get_ports { hub75e_dclk }];   # CLK  (J1.17 / GPIO1.17, MRCC)

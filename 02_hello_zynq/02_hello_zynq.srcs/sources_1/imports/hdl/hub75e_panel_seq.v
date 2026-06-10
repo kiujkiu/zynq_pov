@@ -36,7 +36,7 @@
 //   total 8192 pixel × 24-bit = 196608 bit = 6 个 36Kb BRAM
 // v33 Phase 2: rename to v3 for BD recreate path (memory feedback_vivado_bd_addr_width_cache.md)
 // v3 = FM6124 driver + hub75e_rgb_out2 output port for panel 2 mirror (128×128 dual panel)
-module hub75e_panel_seq_v3 #(
+module hub75e_panel_seq_v4 #(  // v34g: Phase 2 dual BRAM (panel 2 独立, 128x128 拼接)
     parameter integer DCLK_DIV     = 2,    // 75 MHz / 2 = 37.5 MHz DCLK 50% duty (超 FM6124 spec 30M 25%, 实测)
     parameter integer PANEL_WIDTH  = 128,
     parameter integer ADDR_BITS    = 5,    // 1/32 scan
@@ -51,7 +51,7 @@ module hub75e_panel_seq_v3 #(
 )(
     input  wire        s_axi_aclk,
     input  wire        s_axi_aresetn,
-    input  wire [15:0] s_axi_awaddr,
+    input  wire [16:0] s_axi_awaddr,  // v34g: 17-bit for 128K segment (panel 1 + panel 2 BRAMs)
     input  wire [2:0]  s_axi_awprot,
     input  wire        s_axi_awvalid,
     output reg         s_axi_awready,
@@ -62,7 +62,7 @@ module hub75e_panel_seq_v3 #(
     output reg [1:0]   s_axi_bresp,
     output reg         s_axi_bvalid,
     input  wire        s_axi_bready,
-    input  wire [15:0] s_axi_araddr,
+    input  wire [16:0] s_axi_araddr,  // v34g: 17-bit
     input  wire [2:0]  s_axi_arprot,
     input  wire        s_axi_arvalid,
     output reg         s_axi_arready,
@@ -107,24 +107,34 @@ module hub75e_panel_seq_v3 #(
     wire [2:0]  plane_max_run  = bcm_planes_cfg[2:0] - 3'd1;
 
     // Framebuffer 用 sdp_bram helper module 实例化 (Xilinx UG901 标准 SDP 模板)
-    // 之前 inferred BRAM in main module 不稳, 实例化 sub-module 强制 SDP 行为
+    // v34g (Phase 2): 4 BRAMs (panel 1 + panel 2 independent), addr[16] selects panel
+    //   panel 1 fb_top  @ 0x0_8000 (addr[16]=0, addr[15]=1, addr[14]=0)
+    //   panel 1 fb_bot  @ 0x0_C000 (addr[16]=0, addr[15]=1, addr[14]=1)
+    //   panel 2 fb_top  @ 0x1_8000 (addr[16]=1, addr[15]=1, addr[14]=0)
+    //   panel 2 fb_bot  @ 0x1_C000 (addr[16]=1, addr[15]=1, addr[14]=1)
     wire fb_top_we_main;
     wire fb_bot_we_main;
+    wire fb_top2_we_main;
+    wire fb_bot2_we_main;
     wire [11:0] fb_waddr_main = cur_aw_addr[13:2];
     wire [23:0] fb_wdata_main = s_axi_wdata[23:0];
-    assign fb_top_we_main = (s_axi_wvalid && !w_done && (aw_done || s_axi_awvalid) &&
-                              cur_aw_addr[15] && !cur_aw_addr[14]);
-    assign fb_bot_we_main = (s_axi_wvalid && !w_done && (aw_done || s_axi_awvalid) &&
-                              cur_aw_addr[15] && cur_aw_addr[14]);
+    assign fb_top_we_main  = (s_axi_wvalid && !w_done && (aw_done || s_axi_awvalid) &&
+                              !cur_aw_addr[16] && cur_aw_addr[15] && !cur_aw_addr[14]);
+    assign fb_bot_we_main  = (s_axi_wvalid && !w_done && (aw_done || s_axi_awvalid) &&
+                              !cur_aw_addr[16] && cur_aw_addr[15] &&  cur_aw_addr[14]);
+    assign fb_top2_we_main = (s_axi_wvalid && !w_done && (aw_done || s_axi_awvalid) &&
+                               cur_aw_addr[16] && cur_aw_addr[15] && !cur_aw_addr[14]);
+    assign fb_bot2_we_main = (s_axi_wvalid && !w_done && (aw_done || s_axi_awvalid) &&
+                               cur_aw_addr[16] && cur_aw_addr[15] &&  cur_aw_addr[14]);
 
     // DEBUG: 任何 AXI W handshake 都触发 fb_top_we (用来验证 ARM 写 AXI 是否真到 IP)
     // 实际 BRAM write 在 main always block 嵌套 if 里, 这只是 debug counter
     wire fb_top_we = s_axi_wvalid && !w_done && (aw_done || s_axi_awvalid);
 
-    reg [15:0] aw_addr_q;
+    reg [16:0] aw_addr_q;  // v34g: 17-bit
     reg        aw_done, w_done;
     // Verilog 不支持 (ternary)[bit slice], 用 wire 包一层
-    wire [15:0] cur_aw_addr = aw_done ? aw_addr_q : s_axi_awaddr;
+    wire [16:0] cur_aw_addr = aw_done ? aw_addr_q : s_axi_awaddr;  // v34g: 17-bit
     always @(posedge s_axi_aclk) begin
         if (!s_axi_aresetn) begin
             s_axi_awready <= 1'b0;
@@ -274,9 +284,10 @@ module hub75e_panel_seq_v3 #(
     reg [23:0] pattern_24_top_lut;
     reg [23:0] pattern_24_bot_lut;
 
-    // PL 端 BRAM read addr
+    // PL 端 BRAM read addr (shared by panel 1 + panel 2 BRAMs in Phase 2)
     wire [11:0] fb_raddr = {row_idx[4:0], col_idx[6:0]};
     wire [23:0] fb_top_dout, fb_bot_dout;
+    wire [23:0] fb_top2_dout, fb_bot2_dout;  // v34g: panel 2 independent BRAM
 
     // Xilinx XPM macro: 100% defined behavior, Vivado 不会 swap/优化掉
     xpm_memory_sdpram #(
@@ -316,10 +327,51 @@ module hub75e_panel_seq_v3 #(
         .sbiterrb(), .dbiterrb()
     );
 
+    // v34g: panel 2 independent BRAMs (Phase 2 dual panel 128x128)
+    xpm_memory_sdpram #(
+        .ADDR_WIDTH_A(12), .ADDR_WIDTH_B(12),
+        .BYTE_WRITE_WIDTH_A(24),
+        .CLOCKING_MODE("common_clock"),
+        .MEMORY_PRIMITIVE("block"),
+        .MEMORY_SIZE(98304),
+        .READ_DATA_WIDTH_B(24),
+        .READ_LATENCY_B(1),
+        .WRITE_DATA_WIDTH_A(24),
+        .USE_MEM_INIT(0)
+    ) u_fb_top2 (
+        .clka(s_axi_aclk), .ena(1'b1), .wea(fb_top2_we_main),
+        .addra(fb_waddr_main), .dina(fb_wdata_main),
+        .clkb(s_axi_aclk), .enb(1'b1), .regceb(1'b1), .rstb(1'b0),
+        .addrb(fb_raddr), .doutb(fb_top2_dout),
+        .injectsbiterra(1'b0), .injectdbiterra(1'b0), .sleep(1'b0),
+        .sbiterrb(), .dbiterrb()
+    );
+    xpm_memory_sdpram #(
+        .ADDR_WIDTH_A(12), .ADDR_WIDTH_B(12),
+        .BYTE_WRITE_WIDTH_A(24),
+        .CLOCKING_MODE("common_clock"),
+        .MEMORY_PRIMITIVE("block"),
+        .MEMORY_SIZE(98304),
+        .READ_DATA_WIDTH_B(24),
+        .READ_LATENCY_B(1),
+        .WRITE_DATA_WIDTH_A(24),
+        .USE_MEM_INIT(0)
+    ) u_fb_bot2 (
+        .clka(s_axi_aclk), .ena(1'b1), .wea(fb_bot2_we_main),
+        .addra(fb_waddr_main), .dina(fb_wdata_main),
+        .clkb(s_axi_aclk), .enb(1'b1), .regceb(1'b1), .rstb(1'b0),
+        .addrb(fb_raddr), .doutb(fb_bot2_dout),
+        .injectsbiterra(1'b0), .injectdbiterra(1'b0), .sleep(1'b0),
+        .sbiterrb(), .dbiterrb()
+    );
+
     // pattern_24 = LUT (use_fb=0) vs framebuffer 读 (use_fb=1)
     // BRAM write 改成独立 always block 后 (UG901 SDP 标准), fb_dout 应该有 ARM 写的 data
     wire [23:0] pattern_24_top = use_fb ? fb_top_dout : pattern_24_top_lut;
     wire [23:0] pattern_24_bot = use_fb ? fb_bot_dout : pattern_24_bot_lut;
+    // v34g: panel 2 独立 pattern, use_fb=0 时 fallback 到 panel 1 (跟 mirror MVP 行为兼容)
+    wire [23:0] pattern_24_top2 = use_fb ? fb_top2_dout : pattern_24_top_lut;
+    wire [23:0] pattern_24_bot2 = use_fb ? fb_bot2_dout : pattern_24_bot_lut;
 
     // 8 色 LUT (R, G, B, W, Y, M, C, K) — R in low byte
     function [23:0] color_lut;
@@ -378,8 +430,8 @@ module hub75e_panel_seq_v3 #(
         endcase
     end
 
-    // BCM slice: 取 plane 位的 R/G/B bit
-    // BCM plane bit slice (修复: 之前 3'd0 + 3'd8 expression 不正确算 bit index)
+    // 临时 revert v34i byte-slice → 恢复 v34h plane_ext + 5'd16 写法
+    // (isolate panel-black, 验证是否 byte-slice 改让 Vivado 优化掉 plane_rgb)
     wire [4:0] plane_ext = {2'b0, plane};
     wire r1_bit = pattern_24_top[plane_ext];
     wire g1_bit = pattern_24_top[plane_ext + 5'd8];
@@ -388,6 +440,13 @@ module hub75e_panel_seq_v3 #(
     wire g2_bit = pattern_24_bot[plane_ext + 5'd8];
     wire b2_bit = pattern_24_bot[plane_ext + 5'd16];
     wire [5:0] plane_rgb = {b2_bit, g2_bit, r2_bit, b1_bit, g1_bit, r1_bit};
+    wire r1_bit2 = pattern_24_top2[plane_ext];
+    wire g1_bit2 = pattern_24_top2[plane_ext + 5'd8];
+    wire b1_bit2 = pattern_24_top2[plane_ext + 5'd16];
+    wire r2_bit2 = pattern_24_bot2[plane_ext];
+    wire g2_bit2 = pattern_24_bot2[plane_ext + 5'd8];
+    wire b2_bit2 = pattern_24_bot2[plane_ext + 5'd16];
+    wire [5:0] plane_rgb2 = {b2_bit2, g2_bit2, r2_bit2, b1_bit2, g1_bit2, r1_bit2};
 
     //==========================================================================
     // ADDR 输出 mux
@@ -457,7 +516,7 @@ module hub75e_panel_seq_v3 #(
                     hub75e_oe_out  <= 1'b1;
                     hub75e_lat_out <= 1'b0;
                     hub75e_rgb_out <= plane_rgb;
-                    hub75e_rgb_out2 <= plane_rgb;
+                    hub75e_rgb_out2 <= plane_rgb2;  // v34g: panel 2 独立数据源
 
                     if (sub_count == (DCLK_DIV/2 - 1)) begin
                         hub75e_dclk_out <= 1'b1;
@@ -587,7 +646,7 @@ module hub75e_panel_seq_v3 #(
                     // Shift half (uses pattern_rgb at current `plane` = advanced NEXT plane)
                     if (shift_active) begin
                         hub75e_rgb_out <= plane_rgb;
-                        hub75e_rgb_out2 <= plane_rgb;
+                        hub75e_rgb_out2 <= plane_rgb2;  // v34g: panel 2 独立数据源
                         if (sub_count == (DCLK_DIV/2 - 1)) begin
                             hub75e_dclk_out <= 1'b1;
                             sub_count       <= sub_count + 1;

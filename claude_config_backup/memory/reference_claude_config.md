@@ -3,7 +3,7 @@ name: Claude Code 配置中心
 description: 本地 Claude Code 所有自定义配置 (statusline/permissions/hooks/scripts) 的中心索引 + 备份 + 恢复方法。后续所有 Claude 相关设置改动都必须更新这里
 type: reference
 created_at: 2026-06-03 12:08 CST
-updated_at: 2026-06-03 12:16 CST
+updated_at: 2026-06-10 21:59 CST
 originSessionId: d8fa45a6-872d-42f7-81a0-cb5be6c962bd
 ---
 # Claude Code 配置中心
@@ -55,6 +55,23 @@ originSessionId: d8fa45a6-872d-42f7-81a0-cb5be6c962bd
 ### 3. Stop hook = codexflow 通知
 
 每次 Claude Code 回复结束触发 `node ~/.claude/hooks/codexflow_stop_notify.js`。**此 hook 依赖 codexflow 工具链**, 新机器没装时要在恢复后从 settings.json 删掉 hooks 块, 不然 statusline 也可能波及。
+
+### 4. Binary 安装方式 = native (~/.local/bin) (2026-06-10 切换)
+
+| | 旧 | 新 |
+|---|---|---|
+| 路径 | `/usr/bin/claude` → `/usr/lib/node_modules/@anthropic-ai/claude-code/` | `~/.local/bin/claude` |
+| 装法 | `sudo npm install -g @anthropic-ai/claude-code` | `claude install stable` (native build) |
+| 权限 | root, 升级要 sudo | 用户拥有, 不需要 sudo |
+| 版本 (切换时) | 2.1.118 | 2.1.153 |
+
+**关键**:
+- PATH 里 `~/.local/bin` 在 `/usr/bin` 前 (`.profile` 自动加), `which claude` 自动指向新版
+- 旧 `/usr/bin/claude` 没删, 留作 fallback
+- 以后**升级直接 `claude update`** (内部走 `claude install`, 无 sudo 问题), 不要再用 `sudo npm install -g`
+- `claude update` 失败时手动 `claude install stable` (或 `latest` / 具体版本号)
+
+**契机**: codexflow 显示 Opus 4.8 (1M), 而旧 2.1.118 `/model` 菜单里看不到 4.8, 推测新模型 access 需要 CLI 较新版本
 
 ## 备份位置
 

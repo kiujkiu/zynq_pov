@@ -1,8 +1,9 @@
 import cv2, sys
 out = r'D:\claude_workspace\pov3d\zynq_pov\tools\panel_low_exp.jpg'
 frame = None
-for be in (cv2.CAP_MSMF, cv2.CAP_DSHOW):
-    for idx in (1, 0, 2, 3):
+# 2026-06-11: DSHOW idx=2 实测稳定可用, 放最前跳过 MSMF ~5s 失败探测 (减少设备占用防驱动挂)
+for be, idxs in ((cv2.CAP_DSHOW, (2, 1, 0, 3)), (cv2.CAP_MSMF, (1, 0, 2, 3))):
+    for idx in idxs:
         try:
             cap = cv2.VideoCapture(idx, be)
             if not cap.isOpened(): cap.release(); continue

@@ -1029,6 +1029,11 @@ static inline u64 gt_read(void) {
 #define BATCH_SLOT_STRIDE  0x38
 #define BATCH_PHASE        0x40
 #define BATCH_N_SLOTS      0x48
+#define BATCH_SLICE_MODE   0x50   /* 1 = z-slice 截面 (POV 模拟) */
+#define BATCH_SLICE_THICK  0x58
+/* POV 切片模拟 demo: 假角度 (phase 推进) + HLS slice_mode 截面渲染.
+ * 0 = 原全投影旋转; 1 = POV 切片模式 */
+#define POV_SLICE_DEMO     1
 
 /* Alternate model copy address — to test if HP/smc has read-cache stale issue */
 #define MODEL_ADDR_B  0x11400000UL   /* 4 MB after primary, well aligned */
@@ -1088,6 +1093,8 @@ static void pov_render_frame_to_ring(u32 phase)
 #define HDMI_DEMO_N_SLOTS 1
 #endif
     pov_w(BATCH_N_SLOTS,     HDMI_DEMO_N_SLOTS);
+    pov_w(BATCH_SLICE_MODE,  POV_SLICE_DEMO);
+    pov_w(BATCH_SLICE_THICK, 8);
 
     /* v1.7 HLS 内部 BRAM slot_local 自己 clear, ARM 不再 memset/flush ring. */
     u64 tm0 = gt_read();

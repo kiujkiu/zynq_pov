@@ -1094,7 +1094,7 @@ static void pov_render_frame_to_ring(u32 phase)
 #endif
     pov_w(BATCH_N_SLOTS,     HDMI_DEMO_N_SLOTS);
     pov_w(BATCH_SLICE_MODE,  POV_SLICE_DEMO);
-    pov_w(BATCH_SLICE_THICK, 8);
+    pov_w(BATCH_SLICE_THICK, 16);  /* 屏幕预览 33% 深度, 真转子时调薄 (agent 诊断: 8=15% 太稀像噪点) */
 
     /* v1.7 HLS 内部 BRAM slot_local 自己 clear, ARM 不再 memset/flush ring. */
     u64 tm0 = gt_read();

@@ -15,9 +15,12 @@
  * Set USE_PL=0 to fall back to ARM software rendering (old Phase 4a path)
  * for A/B comparison.
  */
-/* v34g (2026-06-09): disable HDMI->LED bridge to let xsdb write BRAM directly
- * for chess/anime test patterns via display_128x128 driver */
-#define DISABLE_HUB75E_BRIDGE 1
+/* v34o (2026-06-11): re-enable bridge, upgraded to dual-panel 128x128.
+ * Color chain per camera-verified findings: sRGB->linear gamma 2.2 LUT (LED
+ * BCM is linear duty), byte map byte0=BLUE byte1=RED byte2=GREEN, gains
+ * R0.95/G1.0/B0.85. Orientation rot180+swap-halves folded into the mapping
+ * (derived from display_128x128.py transforms). */
+/* #define DISABLE_HUB75E_BRIDGE 1 */
 
 #include <stdio.h>
 #include <string.h>
@@ -2532,34 +2535,92 @@ int main(void)
 #if HDMI_DEMO_N_SLOTS == 1
                 cpu_scale_blit_one_fb(fb_bufs[write_idx], src_slot, S3D_OFF_X, S3D_SCALE, 0);
 #ifndef DISABLE_HUB75E_BRIDGE
-                /* HDMI→LED bridge: downsample 1280×720 fb → HUB75E 128×64 BRAM
-                 * 每帧执行, ARM ~5ms 开销. fb GBR byte order. Panel R>>G>>B 预补偿.
-                 * LED 2:1 vs HDMI 1.78:1: 裁 HDMI 左右空白让中央人物在 panel 放大. */
-                #define LED_CROP_X 240   /* 左右各裁 240 px, HDMI 中央 800 宽 → 128 LED */
-                #define LED_CROP_Y 160   /* 上下各裁 160 px, HDMI 中央 400 高 → 64 LED. 800:400=2:1 aspect-fit, 人物放大 */
-                #define LED_SRC_W  (WIDTH  - 2*LED_CROP_X)
-                #define LED_SRC_H  (HEIGHT - 2*LED_CROP_Y)
+                /* v34o HDMI→LED bridge: 1280×720 fb 中央 400×400 → 双屏 128×128.
+                 * 颜色链 (2026-06-11 相机标定): gamma 2.2 LUT (sRGB→线性 BCM 占空)
+                 * × 增益 R0.95/G1.0/B0.85, byte0=蓝 byte1=红 byte2=绿.
+                 * 坐标映射 = display_128x128.py transforms + rot180 + swap-halves
+                 * 的复合闭式解: panel2(row,col)=src(63-row, col),
+                 *               panel1(row,col)=src(127-((row+32)&63), col). */
+                #define LED_CROP_X 355   /* HDMI 中央 570×570 方形 → 128×128 (人物 ~70%) */
+                #define LED_CROP_Y 75
+                #define LED_SRC    570
                 {
+                    static const u8 led_lut_r[256] = {
+                         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+                         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,
+                         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+                         1,  1,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  3,
+                         3,  3,  3,  3,  3,  3,  3,  3,  3,  4,  4,  4,  4,  4,  4,  4,
+                         4,  4,  5,  5,  5,  5,  5,  5,  5,  5,  6,  6,  6,  6,  6,  6,
+                         7,  7,  7,  7,  7,  7,  7,  8,  8,  8,  8,  8,  8,  9,  9,  9,
+                         9,  9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 12, 12, 12,
+                        12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15, 15, 16,
+                        16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 20, 20,
+                        20, 20, 20, 21, 21, 21, 22, 22, 22, 23, 23, 23, 24, 24, 24, 25,
+                        25, 25, 25, 26, 26, 26, 26, 27, 27, 28, 28, 28, 29, 29, 29, 30,
+                        30, 30, 31, 31, 31, 32, 32, 33, 33, 33, 33, 34, 34, 35, 35, 35,
+                        36, 36, 37, 37, 37, 38, 38, 39, 39, 39, 40, 40, 41, 41, 41, 42,
+                        42, 42, 43, 43, 44, 44, 45, 45, 46, 46, 46, 47, 47, 48, 48, 49,
+                        49, 49, 50, 50, 51, 51, 52, 52, 53, 53, 54, 54, 55, 55, 56, 56,
+                    };
+                    static const u8 led_lut_g[256] = {
+                         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+                         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,
+                         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,
+                         2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  3,  3,  3,  3,  3,
+                         3,  3,  3,  3,  3,  4,  4,  4,  4,  4,  4,  4,  4,  5,  5,  5,
+                         5,  5,  5,  5,  5,  6,  6,  6,  6,  6,  6,  7,  7,  7,  7,  7,
+                         7,  8,  8,  8,  8,  8,  8,  9,  9,  9,  9,  9, 10, 10, 10, 10,
+                        10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 14,
+                        14, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 17, 17, 17, 17, 18,
+                        18, 18, 18, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 22, 22, 22,
+                        23, 23, 23, 24, 24, 24, 25, 25, 25, 25, 26, 26, 26, 27, 27, 28,
+                        28, 28, 29, 29, 29, 30, 30, 30, 31, 31, 31, 32, 32, 33, 33, 33,
+                        34, 34, 35, 35, 35, 36, 36, 37, 37, 37, 38, 38, 39, 39, 39, 40,
+                        40, 41, 41, 42, 42, 42, 43, 43, 44, 44, 45, 45, 46, 46, 46, 47,
+                        47, 48, 48, 49, 49, 50, 50, 51, 51, 52, 52, 53, 53, 54, 54, 55,
+                        55, 56, 56, 57, 57, 58, 58, 59, 59, 60, 60, 61, 61, 62, 62, 63,
+                    };
+                    static const u8 led_lut_b[256] = {
+                         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+                         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+                         0,  0,  0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
+                         1,  1,  1,  1,  1,  1,  1,  1,  2,  2,  2,  2,  2,  2,  2,  2,
+                         2,  2,  2,  2,  2,  2,  3,  3,  3,  3,  3,  3,  3,  3,  3,  3,
+                         3,  3,  4,  4,  4,  4,  4,  4,  4,  4,  4,  5,  5,  5,  5,  5,
+                         5,  5,  5,  5,  6,  6,  6,  6,  6,  6,  6,  6,  7,  7,  7,  7,
+                         7,  7,  7,  8,  8,  8,  8,  8,  8,  8,  9,  9,  9,  9,  9,  9,
+                        10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12,
+                        12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 15, 15, 15, 15, 16,
+                        16, 16, 16, 16, 17, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19,
+                        19, 20, 20, 20, 20, 20, 21, 21, 21, 22, 22, 22, 22, 23, 23, 23,
+                        24, 24, 24, 24, 25, 25, 25, 25, 26, 26, 26, 26, 27, 27, 28, 28,
+                        28, 28, 29, 29, 29, 30, 30, 30, 30, 31, 31, 31, 32, 32, 32, 33,
+                        33, 33, 34, 34, 34, 35, 35, 35, 36, 36, 36, 37, 37, 37, 38, 38,
+                        39, 39, 39, 39, 40, 40, 41, 41, 41, 42, 42, 42, 43, 43, 43, 44,
+                    };
                     const u8 *fb_src = (const u8 *)fb_bufs[write_idx];
-                    for (int ly = 0; ly < 64; ly++) {
-                        int src_y = LED_CROP_Y + ly * LED_SRC_H / 64;
-                        /* Panel 两块拼接反: ly < 32 → fb_bot bank (0x4002C000) */
-                        UINTPTR led_bank = (ly < 32) ? (HUB75E_BASE_BR + 0xC000)
-                                                     : (HUB75E_BASE_BR + 0x8000);
-                        int led_y = (ly < 32) ? ly : (ly - 32);
-                        for (int lx = 0; lx < 128; lx++) {
-                            int src_x = LED_CROP_X + lx * LED_SRC_W / 128;
-                            const u8 *p = fb_src + src_y * STRIDE + src_x * 3;
-                            int g = p[0], b = p[1], r = p[2];
-                            /* stretch [32,224]→[0,63] R100/G50/B75 + 1/4 亮度 (用户认可) */
-                            int sr = r - 32; if (sr < 0) sr = 0; if (sr > 192) sr = 192;
-                            int sg = g - 32; if (sg < 0) sg = 0; if (sg > 192) sg = 192;
-                            int sb = b - 32; if (sb < 0) sb = 0; if (sb > 192) sb = 192;
-                            r = ((sr * 21) >> 6) >> 2;
-                            g = ((sg * 21) >> 6) >> 3;
-                            b = (((sb * 21) >> 6) * 3) >> 4;
-                            u32 rgb = (r & 0x3F) | ((g & 0x3F) << 8) | ((b & 0x3F) << 16);
-                            Xil_Out32(led_bank + (led_y * 128 + lx) * 4, rgb);
+                    for (int yf = 0; yf < 64; yf++) {
+                        UINTPTR bank1 = (yf < 32) ? (HUB75E_BASE_BR + 0x8000)
+                                                  : (HUB75E_BASE_BR + 0xC000);
+                        UINTPTR bank2 = (yf < 32) ? (HUB75E_BASE_BR + 0x18000)
+                                                  : (HUB75E_BASE_BR + 0x1C000);
+                        int row = yf & 31;
+                        int sx2 = 63 - yf;                 /* panel2 逻辑列 */
+                        int sx1 = 127 - ((yf + 32) & 63);  /* panel1 逻辑列 */
+                        int fx2 = LED_CROP_X + sx2 * LED_SRC / 128;
+                        int fx1 = LED_CROP_X + sx1 * LED_SRC / 128;
+                        for (int xf = 0; xf < 128; xf++) {
+                            int fy = LED_CROP_Y + xf * LED_SRC / 128;  /* 逻辑行 = xf */
+                            const u8 *p2 = fb_src + fy * STRIDE + fx2 * 3;
+                            const u8 *p1 = fb_src + fy * STRIDE + fx1 * 3;
+                            /* fb GBR 字节序 */
+                            u32 w2 = (u32)led_lut_b[p2[1]] | ((u32)led_lut_r[p2[2]] << 8)
+                                                           | ((u32)led_lut_g[p2[0]] << 16);
+                            u32 w1 = (u32)led_lut_b[p1[1]] | ((u32)led_lut_r[p1[2]] << 8)
+                                                           | ((u32)led_lut_g[p1[0]] << 16);
+                            Xil_Out32(bank2 + (row * 128 + xf) * 4, w2);
+                            Xil_Out32(bank1 + (row * 128 + xf) * 4, w1);
                         }
                     }
                 }

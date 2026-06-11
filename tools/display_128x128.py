@@ -47,6 +47,17 @@ def transform_for_panel2(img_half):
 PANEL1_BRIGHT = 0.90
 PANEL2_BRIGHT = 1.00
 
+# 通道增益 (2026-06-11 当前 bit 实测): 右屏单色满值 camera 读 R228/G183/B218
+# → G 最弱, 把 R/B 压到 G 水平. (06-03 记录 "G 过亮砍半" 是旧 bit/旧接线, 已不符;
+#  R×0.35 是 160x180 ICND 面板的, 同样不适用)
+R_GAIN, G_GAIN, B_GAIN = 0.95, 1.00, 0.85
+
+# sRGB→线性 gamma 2.2 LUT (2026-06-11 黄卡实测): LED BCM 是线性占空, 图片是 sRGB
+# 编码. 不做 gamma 解码所有中间调冲白 (发色金 187,165,88 显示成粉白).
+# HDMI 显示器自带 2.2 解码所以 HDMI 路径不需要, LED 必须.
+GAMMA = 2.2
+_G_LUT = [min(63, round(((v / 255.0) ** GAMMA) * 63)) for v in range(256)]
+
 def pack_panel_bin(panel_hw, bright=1.0):
     """Pack panel hw 128x64 image to (top_half_bytes, bot_half_bytes), 16KB each."""
     pix = panel_hw.load()
@@ -54,11 +65,12 @@ def pack_panel_bin(panel_hw, bright=1.0):
     for hw_row in range(64):
         for hw_col in range(128):
             r, g, b = pix[hw_col, hw_row]
-            r8 = min(255, int(r * 0.35 * bright))
-            g8 = min(255, int(g * 0.9 * bright))
-            b8 = min(255, int(b * 1.3 * bright))
-            r6, g6, b6 = r8 >> 2, g8 >> 2, b8 >> 2
-            word = struct.pack('<I', r6 | (g6 << 8) | (b6 << 16))
+            r8 = min(255, int(r * R_GAIN * bright))
+            g8 = min(255, int(g * G_GAIN * bright))
+            b8 = min(255, int(b * B_GAIN * bright))
+            r6, g6, b6 = _G_LUT[r8], _G_LUT[g8], _G_LUT[b8]
+            # byte→LED 实测映射 (2026-06-11): byte0→蓝 byte1→红 byte2→绿
+            word = struct.pack('<I', b6 | (r6 << 8) | (g6 << 16))
             (top_data if hw_row < 32 else bot_data).append(word[0])
             (top_data if hw_row < 32 else bot_data).append(word[1])
             (top_data if hw_row < 32 else bot_data).append(word[2])

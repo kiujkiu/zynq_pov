@@ -1,0 +1,1 @@
+Get-PnpDevice -PresentOnly | Where-Object { $_.Class -eq 'USB' -or $_.Class -eq 'Ports' -or $_.InstanceId -like 'USB\*' } | Sort-Object InstanceId | Format-Table -AutoSize Status, InstanceId, FriendlyName | Out-String -Width 200

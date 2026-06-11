@@ -15,6 +15,10 @@
  * Set USE_PL=0 to fall back to ARM software rendering (old Phase 4a path)
  * for A/B comparison.
  */
+/* v34g (2026-06-09): disable HDMI->LED bridge to let xsdb write BRAM directly
+ * for chess/anime test patterns via display_128x128 driver */
+#define DISABLE_HUB75E_BRIDGE 1
+
 #include <stdio.h>
 #include <string.h>
 #include "platform.h"

@@ -12,7 +12,10 @@ mwr -force 0x40020000 0x561
 after 100
 puts "panel ON, OVERLAP mode, starting loop..."
 
-set colors [list 0x00003F 0x003F00 0x3F0000 0x3F3F3F 0x003F3F 0x3F003F 0x3F3F00]
+# 通道映射修正 (2026-06-10): 实测 byte0->蓝 byte1->红 byte2->绿, 反推把每个名色放进正确字节
+#   R=byte1(0x003F00) G=byte2(0x3F0000) B=byte0(0x00003F)
+#   W=0x3F3F3F  Y=R+G=0x3F3F00  M=R+B=0x003F3F  C=G+B=0x3F003F
+set colors [list 0x003F00 0x3F0000 0x00003F 0x3F3F3F 0x3F3F00 0x003F3F 0x3F003F]
 set names  [list R G B W Y M C]
 set idx 0
 while {1} {

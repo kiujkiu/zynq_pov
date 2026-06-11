@@ -1,0 +1,1245 @@
+
+****** Vivado v2024.2 (64-bit)
+  **** SW Build 5239630 on Fri Nov 08 22:35:27 MST 2024
+  **** IP Build 5239520 on Sun Nov 10 16:12:51 MST 2024
+  **** SharedData Build 5239561 on Fri Nov 08 14:39:27 MST 2024
+  **** Start of session at: Fri May 22 19:13:22 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+
+source {D:\workspace\zynq_pov\tools\synth_panel_seq.tcl}
+# open_project D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.xpr
+WARNING: [filemgmt 56-3] IPUserFilesDir: Could not find the directory 'D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.ip_user_files'.
+Scanning sources...
+Finished scanning sources
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1700] Loaded user IP repository 'd:/workspace/zynq_pov/hls_proj/proj_pov/solution1/impl/ip'.
+INFO: [IP_Flow 19-1700] Loaded user IP repository 'd:/workspace/zynq_pov/vivado-library'.
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository 'C:/Xilinx/Vivado/2024.2/data/ip'.
+INFO: [Project 1-5579] Found utility IPs instantiated in one or more block designs which have equivalent inline hdl with improved performance and reduced diskspace. It is recommended to migrate these utility IPs to inline hdl using the command upgrade_project -migrate_to_inline_hdl. The utility IPs may be deprecated in future releases. More information on inline hdl is available in UG994.
+open_project: Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 444.754 ; gain = 154.199
+# set_property source_mgmt_mode All [current_project]
+# set_property STEPS.WRITE_BITSTREAM.TCL.PRE \
+#     [pwd]/../bitgen_severity_override.tcl [get_runs impl_1]
+WARNING: [Runs 36-537] File D:/claude_workspace/pov3d/zynq_pov/host/../bitgen_severity_override.tcl is not part of fileset utils_1, but has specified as a Tcl hook script for run(s) impl_1. This file will not be handled as part of the project for archive and other project based functionality.
+# set fp [open "[pwd]/../bitgen_severity_override.tcl" w]
+# puts $fp {set_property SEVERITY {Warning} [get_drc_checks NSTD-1]}
+# puts $fp {set_property SEVERITY {Warning} [get_drc_checks UCIO-1]}
+# close $fp
+# puts "=== reset + impl + bit ==="
+=== reset + impl + bit ===
+# reset_run synth_1
+INFO: [Project 1-1160] Copying file D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.runs/synth_1/hello_zynq_wrapper.dcp to D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/utils_1/imports/synth_1 and adding it to utils fileset
+WARNING: [filemgmt 56-12] File 'D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/utils_1/imports/synth_1/hello_zynq_wrapper.dcp' cannot be added to the project because it already exists in the project, skipping this file
+WARNING: [Project 1-1859] Fail to add auto incremental checkpoint D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.runs/synth_1/hello_zynq_wrapper.dcp to utils_1 fileset.
+# reset_run impl_1
+# launch_runs impl_1 -to_step write_bitstream -jobs 8
+
+[Fri May 22 19:13:38 2026] Launched synth_1...
+Run output will be captured here: D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.runs/synth_1/runme.log
+[Fri May 22 19:13:38 2026] Launched impl_1...
+Run output will be captured here: D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.runs/impl_1/runme.log
+launch_runs: Time (s): cpu = 00:00:00 ; elapsed = 00:00:08 . Memory (MB): peak = 472.449 ; gain = 4.742
+# wait_on_run impl_1
+[Fri May 22 19:13:38 2026] Waiting for impl_1 to finish...
+
+*** Running vivado
+    with args -log hello_zynq_wrapper.vdi -applog -m64 -product Vivado -messageDb vivado.pb -mode batch -source hello_zynq_wrapper.tcl -notrace
+
+
+
+****** Vivado v2024.2 (64-bit)
+  **** SW Build 5239630 on Fri Nov 08 22:35:27 MST 2024
+  **** IP Build 5239520 on Sun Nov 10 16:12:51 MST 2024
+  **** SharedData Build 5239561 on Fri Nov 08 14:39:27 MST 2024
+  **** Start of session at: Fri May 22 19:17:03 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+
+source hello_zynq_wrapper.tcl -notrace
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1700] Loaded user IP repository 'd:/workspace/zynq_pov/hls_proj/proj_pov/solution1/impl/ip'.
+INFO: [IP_Flow 19-1700] Loaded user IP repository 'd:/workspace/zynq_pov/vivado-library'.
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository 'C:/Xilinx/Vivado/2024.2/data/ip'.
+Command: link_design -top hello_zynq_wrapper -part xc7z020clg484-2
+Design is defaulting to srcset: sources_1
+Design is defaulting to constrset: constrs_1
+INFO: [Device 21-403] Loading part xc7z020clg484-2
+Netlist sorting complete. Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.474 . Memory (MB): peak = 833.305 ; gain = 0.000
+INFO: [Netlist 29-17] Analyzing 1853 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-479] Netlist was created with Vivado 2024.2
+INFO: [Project 1-570] Preparing netlist for logic optimization
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_processing_system7_0_0/hello_zynq_processing_system7_0_0.xdc] for cell 'hello_zynq_i/processing_system7_0/inst'
+WARNING: [Vivado 12-2489] -input_jitter contains time 0.399990 which will be rounded to 0.400 to ensure it is an integer multiple of 1 picosecond [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_processing_system7_0_0/hello_zynq_processing_system7_0_0.xdc:24]
+WARNING: [Vivado 12-2489] -input_jitter contains time 0.199980 which will be rounded to 0.200 to ensure it is an integer multiple of 1 picosecond [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_processing_system7_0_0/hello_zynq_processing_system7_0_0.xdc:27]
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_processing_system7_0_0/hello_zynq_processing_system7_0_0.xdc] for cell 'hello_zynq_i/processing_system7_0/inst'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_gpio_0_0/hello_zynq_axi_gpio_0_0_board.xdc] for cell 'hello_zynq_i/axi_gpio_0/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_gpio_0_0/hello_zynq_axi_gpio_0_0_board.xdc] for cell 'hello_zynq_i/axi_gpio_0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_gpio_0_0/hello_zynq_axi_gpio_0_0.xdc] for cell 'hello_zynq_i/axi_gpio_0/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_gpio_0_0/hello_zynq_axi_gpio_0_0.xdc] for cell 'hello_zynq_i/axi_gpio_0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_1/bd_edd3_psr0_0_board.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr0/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_1/bd_edd3_psr0_0_board.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_1/bd_edd3_psr0_0.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr0/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_1/bd_edd3_psr0_0.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_2/bd_edd3_psr_aclk_0_board.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr_aclk/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_2/bd_edd3_psr_aclk_0_board.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr_aclk/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_2/bd_edd3_psr_aclk_0.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr_aclk/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_2/bd_edd3_psr_aclk_0.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr_aclk/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_3/bd_edd3_psr_aclk1_0_board.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr_aclk1/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_3/bd_edd3_psr_aclk1_0_board.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr_aclk1/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_3/bd_edd3_psr_aclk1_0.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr_aclk1/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/ip/ip_3/bd_edd3_psr_aclk1_0.xdc] for cell 'hello_zynq_i/axi_smc/inst/clk_map/psr_aclk1/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc] for cell 'hello_zynq_i/axi_smc/inst'
+WARNING: [Vivado_Tcl 4-919] Waiver ID 'CDC-1' -from list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:11]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:12]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:14]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:15]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:17]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:18]
+WARNING: [Vivado_Tcl 4-935] Waiver ID 'CDC-1' is a duplicate and will not be added again. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:19]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:20]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:21]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:22]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:25]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:27]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:28]
+WARNING: [Vivado_Tcl 4-935] Waiver ID 'CDC-1' is a duplicate and will not be added again. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:29]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:30]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:31]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:32]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:33]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:34]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:35]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:37]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-2' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:38]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-2' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:39]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-2' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:40]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-10' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:41]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-10' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:42]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-10' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:43]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:44]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:45]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:46]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-13' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:47]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-13' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc:48]
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/smartconnect.xdc] for cell 'hello_zynq_i/axi_smc/inst'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_rgb2dvi_0_0/src/rgb2dvi.xdc] for cell 'hello_zynq_i/rgb2dvi_0/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_rgb2dvi_0_0/src/rgb2dvi.xdc] for cell 'hello_zynq_i/rgb2dvi_0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_proc_sys_reset_0_0/hello_zynq_proc_sys_reset_0_0_board.xdc] for cell 'hello_zynq_i/proc_sys_reset_0/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_proc_sys_reset_0_0/hello_zynq_proc_sys_reset_0_0_board.xdc] for cell 'hello_zynq_i/proc_sys_reset_0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_proc_sys_reset_0_0/hello_zynq_proc_sys_reset_0_0.xdc] for cell 'hello_zynq_i/proc_sys_reset_0/U0'
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-11' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_proc_sys_reset_0_0/hello_zynq_proc_sys_reset_0_0.xdc:50]
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_proc_sys_reset_0_0/hello_zynq_proc_sys_reset_0_0.xdc] for cell 'hello_zynq_i/proc_sys_reset_0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0.xdc] for cell 'hello_zynq_i/gmii_to_rgmii_0/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0.xdc] for cell 'hello_zynq_i/gmii_to_rgmii_0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc] for cell 'hello_zynq_i/axi_vdma_0/U0'
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:60]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:64]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:88]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:92]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:96]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:100]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:104]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:108]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:116]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:120]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:124]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:136]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:140]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:144]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:148]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:152]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:156]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:160]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:164]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:168]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:172]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:176]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-4' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:180]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-1' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:184]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-6' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:192]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-6' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:196]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-6' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:200]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-6' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:204]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-6' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:208]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-6' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:212]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-6' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:216]
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-6' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc:220]
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0.xdc] for cell 'hello_zynq_i/axi_vdma_0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_hp_0/bd_0/ip/ip_1/bd_f697_psr_aclk_0_board.xdc] for cell 'hello_zynq_i/axi_smc_hp/inst/clk_map/psr_aclk/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_hp_0/bd_0/ip/ip_1/bd_f697_psr_aclk_0_board.xdc] for cell 'hello_zynq_i/axi_smc_hp/inst/clk_map/psr_aclk/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_hp_0/bd_0/ip/ip_1/bd_f697_psr_aclk_0.xdc] for cell 'hello_zynq_i/axi_smc_hp/inst/clk_map/psr_aclk/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_hp_0/bd_0/ip/ip_1/bd_f697_psr_aclk_0.xdc] for cell 'hello_zynq_i/axi_smc_hp/inst/clk_map/psr_aclk/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_hp_0/smartconnect.xdc] for cell 'hello_zynq_i/axi_smc_hp/inst'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_hp_0/smartconnect.xdc] for cell 'hello_zynq_i/axi_smc_hp/inst'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_pov_hp_0/bd_0/ip/ip_1/bd_82d5_psr_aclk_0_board.xdc] for cell 'hello_zynq_i/axi_smc_pov_hp/inst/clk_map/psr_aclk/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_pov_hp_0/bd_0/ip/ip_1/bd_82d5_psr_aclk_0_board.xdc] for cell 'hello_zynq_i/axi_smc_pov_hp/inst/clk_map/psr_aclk/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_pov_hp_0/bd_0/ip/ip_1/bd_82d5_psr_aclk_0.xdc] for cell 'hello_zynq_i/axi_smc_pov_hp/inst/clk_map/psr_aclk/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_pov_hp_0/bd_0/ip/ip_1/bd_82d5_psr_aclk_0.xdc] for cell 'hello_zynq_i/axi_smc_pov_hp/inst/clk_map/psr_aclk/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_pov_hp_0/smartconnect.xdc] for cell 'hello_zynq_i/axi_smc_pov_hp/inst'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_pov_hp_0/smartconnect.xdc] for cell 'hello_zynq_i/axi_smc_pov_hp/inst'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_proc_sys_reset_pov_0/hello_zynq_proc_sys_reset_pov_0_board.xdc] for cell 'hello_zynq_i/proc_sys_reset_pov/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_proc_sys_reset_pov_0/hello_zynq_proc_sys_reset_pov_0_board.xdc] for cell 'hello_zynq_i/proc_sys_reset_pov/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_proc_sys_reset_pov_0/hello_zynq_proc_sys_reset_pov_0.xdc] for cell 'hello_zynq_i/proc_sys_reset_pov/U0'
+WARNING: [Vivado_Tcl 4-921] Waiver ID 'CDC-11' -to list should not be empty. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_proc_sys_reset_pov_0/hello_zynq_proc_sys_reset_pov_0.xdc:50]
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_proc_sys_reset_pov_0/hello_zynq_proc_sys_reset_pov_0.xdc] for cell 'hello_zynq_i/proc_sys_reset_pov/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_sc_pov_axilite_0/bd_0/ip/ip_1/bd_1b9c_psr_aclk_0_board.xdc] for cell 'hello_zynq_i/sc_pov_axilite/inst/clk_map/psr_aclk/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_sc_pov_axilite_0/bd_0/ip/ip_1/bd_1b9c_psr_aclk_0_board.xdc] for cell 'hello_zynq_i/sc_pov_axilite/inst/clk_map/psr_aclk/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_sc_pov_axilite_0/bd_0/ip/ip_1/bd_1b9c_psr_aclk_0.xdc] for cell 'hello_zynq_i/sc_pov_axilite/inst/clk_map/psr_aclk/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_sc_pov_axilite_0/bd_0/ip/ip_1/bd_1b9c_psr_aclk_0.xdc] for cell 'hello_zynq_i/sc_pov_axilite/inst/clk_map/psr_aclk/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_sc_pov_axilite_0/smartconnect.xdc] for cell 'hello_zynq_i/sc_pov_axilite/inst'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_sc_pov_axilite_0/smartconnect.xdc] for cell 'hello_zynq_i/sc_pov_axilite/inst'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_gpio_panel_0/hello_zynq_axi_gpio_panel_0_board.xdc] for cell 'hello_zynq_i/axi_gpio_panel/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_gpio_panel_0/hello_zynq_axi_gpio_panel_0_board.xdc] for cell 'hello_zynq_i/axi_gpio_panel/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_gpio_panel_0/hello_zynq_axi_gpio_panel_0.xdc] for cell 'hello_zynq_i/axi_gpio_panel/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_gpio_panel_0/hello_zynq_axi_gpio_panel_0.xdc] for cell 'hello_zynq_i/axi_gpio_panel/U0'
+Parsing XDC File [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/hellozynq.xdc]
+Finished Parsing XDC File [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/hellozynq.xdc]
+Parsing XDC File [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/led_pins.xdc]
+WARNING: [Vivado 12-584] No ports matched 'panel_seq_row'. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/led_pins.xdc:53]
+CRITICAL WARNING: [Common 17-55] 'set_property' expects at least one object. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/led_pins.xdc:53]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+Finished Parsing XDC File [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/led_pins.xdc]
+Parsing XDC File [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc]
+INFO: [Timing 38-35] Done setting XDC timing constraints. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+INFO: [Timing 38-2] Deriving generated clocks [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+WARNING: [Vivado 12-627] No clocks matched 'gmii_clk_25m_out'. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+WARNING: [Vivado 12-627] No clocks matched 'gmii_clk_2_5m_out'. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+WARNING: [Vivado 12-627] No clocks matched 'gmii_clk_125m_out'. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+CRITICAL WARNING: [Vivado 12-4739] set_clock_groups:No valid object(s) found for '-group [get_clocks -include_generated_clocks {gmii_clk_25m_out gmii_clk_2_5m_out}]'. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+CRITICAL WARNING: [Vivado 12-4739] set_clock_groups:No valid object(s) found for '-group '. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+CRITICAL WARNING: [Vivado 12-4739] set_clock_groups:No valid object(s) found for '-group [get_clocks -include_generated_clocks gmii_clk_125m_out]'. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+CRITICAL WARNING: [Vivado 12-4739] set_clock_groups:No valid object(s) found for '-group '. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+Resolution: Check if the specified object(s) exists in the current design. If it does, ensure that the correct design hierarchy was specified for the object. If you are working with clocks, make sure create_clock was used to create the clock object before it is referenced.
+CRITICAL WARNING: [Constraints 18-4644] set_clock_groups: All clock groups specified are empty. Please specify atleast one clock group which is not empty. [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc:25]
+Finished Parsing XDC File [D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/constrs_1/new/eth_pins.xdc]
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_v_tc_0_0/hello_zynq_v_tc_0_0_clocks.xdc] for cell 'hello_zynq_i/v_tc_0/U0'
+WARNING: [Vivado 12-1008] No clocks found for command 'get_clocks -of [get_ports -scoped_to_current_instance clk]'. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_v_tc_0_0/hello_zynq_v_tc_0_0_clocks.xdc:2]
+Resolution: Verify the create_clock command was called to create the clock object before it is referenced.
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_v_tc_0_0/hello_zynq_v_tc_0_0_clocks.xdc:2]
+CRITICAL WARNING: [Common 17-55] 'get_property' expects at least one object. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_v_tc_0_0/hello_zynq_v_tc_0_0_clocks.xdc:5]
+Resolution: If [get_<value>] was used to populate the object, check to make sure this command returns at least one valid object.
+CRITICAL WARNING: [Vivado 12-259] No clocks specified, please specify clocks using -clock, -fall_clock, -rise_clock options [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_v_tc_0_0/hello_zynq_v_tc_0_0_clocks.xdc:6]
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_v_tc_0_0/hello_zynq_v_tc_0_0_clocks.xdc] for cell 'hello_zynq_i/v_tc_0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_v_axi4s_vid_out_0_0/hello_zynq_v_axi4s_vid_out_0_0_clocks.xdc] for cell 'hello_zynq_i/v_axi4s_vid_out_0/inst'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_v_axi4s_vid_out_0_0/hello_zynq_v_axi4s_vid_out_0_0_clocks.xdc] for cell 'hello_zynq_i/v_axi4s_vid_out_0/inst'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_rgb2dvi_0_0/src/rgb2dvi_clocks.xdc] for cell 'hello_zynq_i/rgb2dvi_0/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_rgb2dvi_0_0/src/rgb2dvi_clocks.xdc] for cell 'hello_zynq_i/rgb2dvi_0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc] for cell 'hello_zynq_i/gmii_to_rgmii_0/U0'
+INFO: [Constraints 18-483] create_clock: no pin(s)/port(s)/net(s) specified as objects, only virtual clock 'hello_zynq_gmii_to_rgmii_0_0_rgmii_rx_clk' will be created. If you don't want this, please specify pin(s)/ports(s)/net(s) as objects to the command. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:7]
+WARNING: [Vivado 12-1008] No clocks found for command 'get_clocks -of [get_ports -scoped_to_current_instance gmii_clk_125m*]'. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:27]
+Resolution: Verify the create_clock command was called to create the clock object before it is referenced.
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:27]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:30]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:31]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:32]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:33]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:35]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:36]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:37]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:38]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:40]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:41]
+INFO: [Vivado 12-626] No clocks found. Please use 'create_clock' or 'create_generated_clock' command to create clocks. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:46]
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc] for cell 'hello_zynq_i/gmii_to_rgmii_0/U0'
+Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0_clocks.xdc] for cell 'hello_zynq_i/axi_vdma_0/U0'
+Finished Parsing XDC File [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_vdma_0_0/hello_zynq_axi_vdma_0_0_clocks.xdc] for cell 'hello_zynq_i/axi_vdma_0/U0'
+WARNING: [XPM_CDC_GRAY: TCL-1000] The source and destination clocks are the same. 
+     Instance: hello_zynq_i/v_axi4s_vid_out_0/inst/COUPLER_INST/generate_async_fifo.FIFO_INST/XPM_FIFO_ASYNC_INST/gnuram_async_fifo.xpm_fifo_base_inst/gen_cdc_pntr.rd_pntr_cdc_inst 
+  This will add unnecessary latency to the design. Please check the design for the following: 
+ 1) Manually instantiated XPM_CDC modules: AMD recommends that you remove these modules. 
+ 2) AMD IP that contains XPM_CDC modules: Verify the connections to the IP to determine whether you can safely ignore this message.
+ [C:/Xilinx/Vivado/2024.2/data/ip/xpm/xpm_cdc/tcl/xpm_cdc_gray.tcl:16]
+WARNING: [XPM_CDC_GRAY: TCL-1000] The source and destination clocks are the same. 
+     Instance: hello_zynq_i/v_axi4s_vid_out_0/inst/COUPLER_INST/generate_async_fifo.FIFO_INST/XPM_FIFO_ASYNC_INST/gnuram_async_fifo.xpm_fifo_base_inst/gen_cdc_pntr.wr_pntr_cdc_inst 
+  This will add unnecessary latency to the design. Please check the design for the following: 
+ 1) Manually instantiated XPM_CDC modules: AMD recommends that you remove these modules. 
+ 2) AMD IP that contains XPM_CDC modules: Verify the connections to the IP to determine whether you can safely ignore this message.
+ [C:/Xilinx/Vivado/2024.2/data/ip/xpm/xpm_cdc/tcl/xpm_cdc_gray.tcl:16]
+WARNING: [XPM_CDC_GRAY: TCL-1000] The source and destination clocks are the same. 
+     Instance: hello_zynq_i/v_axi4s_vid_out_0/inst/COUPLER_INST/generate_async_fifo.FIFO_INST/XPM_FIFO_ASYNC_INST/gnuram_async_fifo.xpm_fifo_base_inst/gen_cdc_pntr.wr_pntr_cdc_dc_inst 
+  This will add unnecessary latency to the design. Please check the design for the following: 
+ 1) Manually instantiated XPM_CDC modules: AMD recommends that you remove these modules. 
+ 2) AMD IP that contains XPM_CDC modules: Verify the connections to the IP to determine whether you can safely ignore this message.
+ [C:/Xilinx/Vivado/2024.2/data/ip/xpm/xpm_cdc/tcl/xpm_cdc_gray.tcl:16]
+WARNING: [XPM_CDC_GRAY: TCL-1000] The source and destination clocks are the same. 
+     Instance: hello_zynq_i/v_axi4s_vid_out_0/inst/COUPLER_INST/generate_async_fifo.FIFO_INST/XPM_FIFO_ASYNC_INST/gnuram_async_fifo.xpm_fifo_base_inst/gen_cdc_pntr.rd_pntr_cdc_dc_inst 
+  This will add unnecessary latency to the design. Please check the design for the following: 
+ 1) Manually instantiated XPM_CDC modules: AMD recommends that you remove these modules. 
+ 2) AMD IP that contains XPM_CDC modules: Verify the connections to the IP to determine whether you can safely ignore this message.
+ [C:/Xilinx/Vivado/2024.2/data/ip/xpm/xpm_cdc/tcl/xpm_cdc_gray.tcl:16]
+INFO: [Project 1-1714] 205 XPM XDC files have been applied to the design.
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+INFO: [Project 1-1687] 58 scoped IP constraints or related sub-commands were skipped due to synthesis logic optimizations usually triggered by constant connectivity or unconnected output pins. To review the skipped constraints and messages, run the command 'set_param netlist.IPMsgFiltering false' before opening the design.
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.007 . Memory (MB): peak = 1716.547 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 189 instances were transformed.
+  IOBUF => IOBUF (IBUF, OBUFT): 1 instance 
+  RAM16X1D => RAM32X1D (RAMD32(x2)): 1 instance 
+  RAM32M => RAM32M (RAMD32(x6), RAMS32(x2)): 182 instances
+  RAM32X1D => RAM32X1D (RAMD32(x2)): 5 instances
+
+31 Infos, 78 Warnings, 8 Critical Warnings and 0 Errors encountered.
+link_design completed successfully
+link_design: Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 1716.547 ; gain = 1250.625
+Command: opt_design
+Attempting to get a license for feature 'Implementation' and/or device 'xc7z020'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xc7z020'
+Running DRC as a precondition to command opt_design
+
+Starting DRC Task
+INFO: [DRC 23-27] Running DRC with 2 threads
+INFO: [Project 1-461] DRC finished with 0 Errors
+INFO: [Project 1-462] Please refer to the DRC report (report_drc) for more information.
+
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:01 . Memory (MB): peak = 1716.547 ; gain = 0.000
+
+Starting Cache Timing Information Task
+INFO: [Constraints 18-483] create_clock: no pin(s)/port(s)/net(s) specified as objects, only virtual clock 'hello_zynq_gmii_to_rgmii_0_0_rgmii_rx_clk' will be created. If you don't want this, please specify pin(s)/ports(s)/net(s) as objects to the command. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:7]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+Ending Cache Timing Information Task | Checksum: 109a893a1
+
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:01 . Memory (MB): peak = 1716.547 ; gain = 0.000
+
+Starting Logic Optimization Task
+
+Phase 1 Initialization
+
+Phase 1.1 Core Generation And Design Setup
+Phase 1.1 Core Generation And Design Setup | Checksum: 109a893a1
+
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.026 . Memory (MB): peak = 2085.852 ; gain = 0.000
+
+Phase 1.2 Setup Constraints And Sort Netlist
+Phase 1.2 Setup Constraints And Sort Netlist | Checksum: 109a893a1
+
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.040 . Memory (MB): peak = 2085.852 ; gain = 0.000
+Phase 1 Initialization | Checksum: 109a893a1
+
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.043 . Memory (MB): peak = 2085.852 ; gain = 0.000
+
+Phase 2 Timer Update And Timing Data Collection
+
+Phase 2.1 Timer Update
+Phase 2.1 Timer Update | Checksum: 109a893a1
+
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.429 . Memory (MB): peak = 2085.852 ; gain = 0.000
+
+Phase 2.2 Timing Data Collection
+Phase 2.2 Timing Data Collection | Checksum: 109a893a1
+
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.496 . Memory (MB): peak = 2085.852 ; gain = 0.000
+Phase 2 Timer Update And Timing Data Collection | Checksum: 109a893a1
+
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.498 . Memory (MB): peak = 2085.852 ; gain = 0.000
+
+Phase 3 Retarget
+INFO: [Opt 31-1851] Number of loadless carry chains removed were: 0
+INFO: [Opt 31-1834] Total Chains To Be Transformed Were: 0 AND Number of Transformed insts Created are: 0
+INFO: [Opt 31-1566] Pulled 4 inverters resulting in an inversion of 19 pins
+INFO: [Opt 31-138] Pushed 35 inverter(s) to 185 load pin(s).
+INFO: [Opt 31-49] Retargeted 0 cell(s).
+Phase 3 Retarget | Checksum: 26fee8108
+
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.869 . Memory (MB): peak = 2085.852 ; gain = 0.000
+Retarget | Checksum: 26fee8108
+INFO: [Opt 31-389] Phase Retarget created 167 cells and removed 509 cells
+INFO: [Opt 31-1021] In phase Retarget, 270 netlist objects are constrained preventing optimization. Please run opt_design with -debug_log to get more detail. 
+
+Phase 4 Constant propagation
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Phase 4 Constant propagation | Checksum: 1d7808175
+
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:01 . Memory (MB): peak = 2085.852 ; gain = 0.000
+Constant propagation | Checksum: 1d7808175
+INFO: [Opt 31-389] Phase Constant propagation created 52 cells and removed 953 cells
+INFO: [Opt 31-1021] In phase Constant propagation, 556 netlist objects are constrained preventing optimization. Please run opt_design with -debug_log to get more detail. 
+
+Phase 5 Sweep
+INFO: [Constraints 18-11670] Building netlist checker database with flags, 0x8
+Done building netlist checker database: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.016 . Memory (MB): peak = 2085.852 ; gain = 0.000
+INFO: [Constraints 18-11670] Building netlist checker database with flags, 0x8
+Done building netlist checker database: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.016 . Memory (MB): peak = 2085.852 ; gain = 0.000
+Phase 5 Sweep | Checksum: 23b4b3cf1
+
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:02 . Memory (MB): peak = 2085.852 ; gain = 0.000
+Sweep | Checksum: 23b4b3cf1
+INFO: [Opt 31-389] Phase Sweep created 26 cells and removed 2128 cells
+INFO: [Opt 31-1021] In phase Sweep, 383 netlist objects are constrained preventing optimization. Please run opt_design with -debug_log to get more detail. 
+
+Phase 6 BUFG optimization
+INFO: [Opt 31-194] Inserted BUFG hello_zynq_i/rgb2dvi_0/U0/ClockGenInternal.ClockGenX/PixelClk_BUFG_inst to drive 8 load(s) on clock net hello_zynq_i/rgb2dvi_0/U0/ClockGenInternal.ClockGenX/PixelClk_BUFG
+INFO: [Opt 31-194] Inserted BUFG hello_zynq_i/rgb2dvi_0/U0/ClockGenInternal.ClockGenX/SerialClk_BUFG_inst to drive 8 load(s) on clock net hello_zynq_i/rgb2dvi_0/U0/ClockGenInternal.ClockGenX/SerialClk_BUFG
+INFO: [Opt 31-193] Inserted 2 BUFG(s) on clock nets
+Phase 6 BUFG optimization | Checksum: 2b09c97d6
+
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2085.852 ; gain = 0.000
+BUFG optimization | Checksum: 2b09c97d6
+INFO: [Opt 31-662] Phase BUFG optimization created 2 cells of which 2 are BUFGs and removed 1 cells.
+
+Phase 7 Shift Register Optimization
+INFO: [Opt 31-1064] SRL Remap converted 0 SRLs to 0 registers and converted 0 registers of register chains to 0 SRLs
+Phase 7 Shift Register Optimization | Checksum: 2b09c97d6
+
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2085.852 ; gain = 0.000
+Shift Register Optimization | Checksum: 2b09c97d6
+INFO: [Opt 31-389] Phase Shift Register Optimization created 0 cells and removed 0 cells
+
+Phase 8 Post Processing Netlist
+Phase 8 Post Processing Netlist | Checksum: 2580f0c1d
+
+Time (s): cpu = 00:00:03 ; elapsed = 00:00:03 . Memory (MB): peak = 2085.852 ; gain = 0.000
+Post Processing Netlist | Checksum: 2580f0c1d
+INFO: [Opt 31-389] Phase Post Processing Netlist created 0 cells and removed 0 cells
+INFO: [Opt 31-1021] In phase Post Processing Netlist, 308 netlist objects are constrained preventing optimization. Please run opt_design with -debug_log to get more detail. 
+
+Phase 9 Finalization
+
+Phase 9.1 Finalizing Design Cores and Updating Shapes
+Phase 9.1 Finalizing Design Cores and Updating Shapes | Checksum: 1d2d1f11f
+
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:03 . Memory (MB): peak = 2085.852 ; gain = 0.000
+
+Phase 9.2 Verifying Netlist Connectivity
+
+Starting Connectivity Check Task
+
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.030 . Memory (MB): peak = 2085.852 ; gain = 0.000
+Phase 9.2 Verifying Netlist Connectivity | Checksum: 1d2d1f11f
+
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:03 . Memory (MB): peak = 2085.852 ; gain = 0.000
+Phase 9 Finalization | Checksum: 1d2d1f11f
+
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:03 . Memory (MB): peak = 2085.852 ; gain = 0.000
+Opt_design Change Summary
+=========================
+
+
+-------------------------------------------------------------------------------------------------------------------------
+|  Phase                        |  #Cells created  |  #Cells Removed  |  #Constrained objects preventing optimizations  |
+-------------------------------------------------------------------------------------------------------------------------
+|  Retarget                     |             167  |             509  |                                            270  |
+|  Constant propagation         |              52  |             953  |                                            556  |
+|  Sweep                        |              26  |            2128  |                                            383  |
+|  BUFG optimization            |               2  |               1  |                                              0  |
+|  Shift Register Optimization  |               0  |               0  |                                              0  |
+|  Post Processing Netlist      |               0  |               0  |                                            308  |
+-------------------------------------------------------------------------------------------------------------------------
+
+
+Ending Logic Optimization Task | Checksum: 1d2d1f11f
+
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:03 . Memory (MB): peak = 2085.852 ; gain = 0.000
+
+Starting Power Optimization Task
+INFO: [Pwropt 34-132] Skipping clock gating for clocks with a period < 2.00 ns.
+INFO: [Constraints 18-483] create_clock: no pin(s)/port(s)/net(s) specified as objects, only virtual clock 'hello_zynq_gmii_to_rgmii_0_0_rgmii_rx_clk' will be created. If you don't want this, please specify pin(s)/ports(s)/net(s) as objects to the command. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:7]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Pwropt 34-9] Applying IDT optimizations ...
+INFO: [Pwropt 34-10] Applying ODC optimizations ...
+Running Vector-less Activity Propagation...
+
+Finished Running Vector-less Activity Propagation
+
+
+Starting PowerOpt Patch Enables Task
+INFO: [Pwropt 34-162] WRITE_MODE attribute of 0 BRAM(s) out of a total of 99 has been updated to save power. Run report_power_opt to get a complete listing of the BRAMs updated.
+INFO: [Pwropt 34-201] Structural ODC has moved 1 WE to EN ports
+Number of BRAM Ports augmented: 8 newly gated: 3 Total Ports: 198
+Number of Flops added for Enable Generation: 2
+
+Ending PowerOpt Patch Enables Task | Checksum: 281630b2d
+
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.213 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Ending Power Optimization Task | Checksum: 281630b2d
+
+Time (s): cpu = 00:00:08 ; elapsed = 00:00:05 . Memory (MB): peak = 2446.867 ; gain = 361.016
+
+Starting Final Cleanup Task
+
+Starting Logic Optimization Task
+INFO: [Constraints 18-483] create_clock: no pin(s)/port(s)/net(s) specified as objects, only virtual clock 'hello_zynq_gmii_to_rgmii_0_0_rgmii_rx_clk' will be created. If you don't want this, please specify pin(s)/ports(s)/net(s) as objects to the command. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:7]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+Ending Logic Optimization Task | Checksum: 194de463c
+
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Ending Final Cleanup Task | Checksum: 194de463c
+
+Time (s): cpu = 00:00:05 ; elapsed = 00:00:04 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Starting Netlist Obfuscation Task
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.007 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Ending Netlist Obfuscation Task | Checksum: 194de463c
+
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.010 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Common 17-83] Releasing license: Implementation
+69 Infos, 78 Warnings, 8 Critical Warnings and 0 Errors encountered.
+opt_design completed successfully
+opt_design: Time (s): cpu = 00:00:22 ; elapsed = 00:00:16 . Memory (MB): peak = 2446.867 ; gain = 730.320
+INFO: [Vivado 12-24828] Executing command : report_drc -file hello_zynq_wrapper_drc_opted.rpt -pb hello_zynq_wrapper_drc_opted.pb -rpx hello_zynq_wrapper_drc_opted.rpx
+Command: report_drc -file hello_zynq_wrapper_drc_opted.rpt -pb hello_zynq_wrapper_drc_opted.pb -rpx hello_zynq_wrapper_drc_opted.rpx
+INFO: [IP_Flow 19-1839] IP Catalog is up to date.
+INFO: [DRC 23-27] Running DRC with 2 threads
+INFO: [Vivado_Tcl 2-168] The results of DRC are in file D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.runs/impl_1/hello_zynq_wrapper_drc_opted.rpt.
+report_drc completed successfully
+INFO: [Constraints 18-483] create_clock: no pin(s)/port(s)/net(s) specified as objects, only virtual clock 'hello_zynq_gmii_to_rgmii_0_0_rgmii_rx_clk' will be created. If you don't want this, please specify pin(s)/ports(s)/net(s) as objects to the command. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:7]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Wrote PlaceDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.012 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Wrote PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Write ShapeDB Complete: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.040 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Writing XDEF routing special nets.
+Wrote RouteStorage: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.047 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Wrote Netlist Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.001 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Wrote Device Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.008 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Write Physdb Complete: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.073 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Common 17-1381] The checkpoint 'D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.runs/impl_1/hello_zynq_wrapper_opt.dcp' has been generated.
+Command: place_design
+Attempting to get a license for feature 'Implementation' and/or device 'xc7z020'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xc7z020'
+INFO: [Common 17-83] Releasing license: Implementation
+INFO: [DRC 23-27] Running DRC with 2 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+Running DRC as a precondition to command place_design
+INFO: [DRC 23-27] Running DRC with 2 threads
+INFO: [Vivado_Tcl 4-198] DRC finished with 0 Errors
+INFO: [Vivado_Tcl 4-199] Please refer to the DRC report (report_drc) for more information.
+INFO: [Place 30-611] Multithreading enabled for place_design using a maximum of 2 CPUs
+
+Starting Placer Task
+
+Phase 1 Placer Initialization
+
+Phase 1.1 Placer Initialization Netlist Sorting
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.007 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Phase 1.1 Placer Initialization Netlist Sorting | Checksum: 11a87ecc9
+
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.012 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.005 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 1.2 IO Placement/ Clock Placement/ Build Placer Device
+WARNING: [Place 30-87] Partially locked IO Bus is found. Following components of the IO Bus panel_gpio_tri_o are not locked:  'panel_gpio_tri_o[11]'  'panel_gpio_tri_o[10]'  'panel_gpio_tri_o[9]'  'panel_gpio_tri_o[8]'  'panel_gpio_tri_o[7]'  'panel_gpio_tri_o[6]'  'panel_gpio_tri_o[5]'  'panel_gpio_tri_o[4]'  'panel_gpio_tri_o[3]'  'panel_gpio_tri_o[2]'  'panel_gpio_tri_o[1]'  'panel_gpio_tri_o[0]' 
+Phase 1.2 IO Placement/ Clock Placement/ Build Placer Device | Checksum: 6f92dba8
+
+Time (s): cpu = 00:00:02 ; elapsed = 00:00:01 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 1.3 Build Placer Netlist Model
+Phase 1.3 Build Placer Netlist Model | Checksum: be5240e7
+
+Time (s): cpu = 00:00:07 ; elapsed = 00:00:05 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 1.4 Constrain Clocks/Macros
+Phase 1.4 Constrain Clocks/Macros | Checksum: be5240e7
+
+Time (s): cpu = 00:00:07 ; elapsed = 00:00:05 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Phase 1 Placer Initialization | Checksum: be5240e7
+
+Time (s): cpu = 00:00:07 ; elapsed = 00:00:05 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 2 Global Placement
+
+Phase 2.1 Floorplanning
+Phase 2.1 Floorplanning | Checksum: 14bf4c370
+
+Time (s): cpu = 00:00:08 ; elapsed = 00:00:06 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 2.2 Update Timing before SLR Path Opt
+Phase 2.2 Update Timing before SLR Path Opt | Checksum: 8e61d788
+
+Time (s): cpu = 00:00:09 ; elapsed = 00:00:06 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 2.3 Post-Processing in Floorplanning
+Phase 2.3 Post-Processing in Floorplanning | Checksum: 8e61d788
+
+Time (s): cpu = 00:00:09 ; elapsed = 00:00:06 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 2.4 Global Place Phase1
+Phase 2.4 Global Place Phase1 | Checksum: 214b94e86
+
+Time (s): cpu = 00:00:21 ; elapsed = 00:00:14 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 2.5 Global Place Phase2
+
+Phase 2.5.1 UpdateTiming Before Physical Synthesis
+Phase 2.5.1 UpdateTiming Before Physical Synthesis | Checksum: 1c35e270a
+
+Time (s): cpu = 00:00:23 ; elapsed = 00:00:15 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 2.5.2 Physical Synthesis In Placer
+INFO: [Physopt 32-1035] Found 2 LUTNM shape to break, 865 LUT instances to create LUTNM shape
+INFO: [Physopt 32-1044] Break lutnm for timing: one critical 2, two critical 0, total 2, new lutff created 0
+INFO: [Physopt 32-1138] End 1 Pass. Optimized 343 nets or LUTs. Breaked 2 LUTs, combined 341 existing LUTs and moved 0 existing LUT
+INFO: [Physopt 32-65] No nets found for high-fanout optimization.
+INFO: [Physopt 32-232] Optimized 0 net. Created 0 new instance.
+INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+INFO: [Physopt 32-76] Pass 1. Identified 1 candidate net for fanout optimization.
+INFO: [Physopt 32-81] Processed net hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/Q[0]. Replicated 10 times.
+INFO: [Physopt 32-232] Optimized 1 net. Created 10 new instances.
+INFO: [Physopt 32-775] End 1 Pass. Optimized 1 net or cell. Created 10 new cells, deleted 0 existing cell and moved 0 existing cell
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.022 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Physopt 32-457] Pass 1. Identified 12 candidate cells for DSP register optimization.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U23/buff0_reg__0. 31 registers were pushed out.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U26/buff0_reg__0. 31 registers were pushed out.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U24/buff0_reg__0. 31 registers were pushed out.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U21/buff0_reg__0. 31 registers were pushed out.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U25/buff0_reg__0. 31 registers were pushed out.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U22/buff0_reg__0. 31 registers were pushed out.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U22/buff0_reg. 14 registers were pushed out.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U24/buff0_reg. 14 registers were pushed out.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U23/buff0_reg. 14 registers were pushed out.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U21/buff0_reg. 14 registers were pushed out.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U26/buff0_reg. 14 registers were pushed out.
+INFO: [Physopt 32-665] Processed cell hello_zynq_i/pov_project_batch_0/inst/grp_pov_project_batch_Pipeline_POINTS_IN_SLICE_fu_334/mul_32ns_34ns_65_3_1_U25/buff0_reg. 14 registers were pushed out.
+INFO: [Physopt 32-775] End 2 Pass. Optimized 12 nets or cells. Created 270 new cells, deleted 0 existing cell and moved 0 existing cell
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.024 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Physopt 32-1123] No candidate cells found for Shift Register to Pipeline optimization
+INFO: [Physopt 32-775] End 2 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+INFO: [Physopt 32-1402] Pass 1: Identified 2 candidate cells for Shift Register optimization.
+INFO: [Physopt 32-775] End 1 Pass. Optimized 2 nets or cells. Created 2 new cells, deleted 0 existing cell and moved 0 existing cell
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.018 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Physopt 32-526] No candidate cells for BRAM register optimization found in the design
+INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+INFO: [Physopt 32-846] No candidate cells for URAM register optimization found in the design
+INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+INFO: [Physopt 32-846] No candidate cells for URAM register optimization found in the design
+INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+INFO: [Physopt 32-949] No candidate nets found for dynamic/static region interface net replication
+INFO: [Physopt 32-775] End 1 Pass. Optimized 0 net or cell. Created 0 new cell, deleted 0 existing cell and moved 0 existing cell
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.007 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Summary of Physical Synthesis Optimizations
+============================================
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+|  Optimization                                     |  Added Cells  |  Removed Cells  |  Optimized Cells/Nets  |  Dont Touch  |  Iterations  |  Elapsed   |
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+|  LUT Combining                                    |            2  |            341  |                   343  |           0  |           1  |  00:00:00  |
+|  Retime                                           |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  Very High Fanout                                 |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  Fanout                                           |           10  |              0  |                     1  |           0  |           1  |  00:00:00  |
+|  DSP Register                                     |          270  |              0  |                    12  |           0  |           1  |  00:00:00  |
+|  Shift Register to Pipeline                       |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  Shift Register                                   |            2  |              0  |                     2  |           0  |           1  |  00:00:00  |
+|  BRAM Register                                    |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  URAM Register                                    |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  Dynamic/Static Region Interface Net Replication  |            0  |              0  |                     0  |           0  |           1  |  00:00:00  |
+|  Total                                            |          284  |            341  |                   358  |           0  |          10  |  00:00:01  |
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Phase 2.5.2 Physical Synthesis In Placer | Checksum: 1e4b38a13
+
+Time (s): cpu = 00:00:25 ; elapsed = 00:00:18 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Phase 2.5 Global Place Phase2 | Checksum: 11642a981
+
+Time (s): cpu = 00:00:26 ; elapsed = 00:00:18 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Phase 2 Global Placement | Checksum: 11642a981
+
+Time (s): cpu = 00:00:26 ; elapsed = 00:00:18 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 3 Detail Placement
+
+Phase 3.1 Commit Multi Column Macros
+Phase 3.1 Commit Multi Column Macros | Checksum: 1a5236416
+
+Time (s): cpu = 00:00:28 ; elapsed = 00:00:19 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 3.2 Commit Most Macros & LUTRAMs
+Phase 3.2 Commit Most Macros & LUTRAMs | Checksum: 12a34eeda
+
+Time (s): cpu = 00:00:31 ; elapsed = 00:00:21 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 3.3 Area Swap Optimization
+Phase 3.3 Area Swap Optimization | Checksum: 1b3a59584
+
+Time (s): cpu = 00:00:31 ; elapsed = 00:00:21 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 3.4 Pipeline Register Optimization
+Phase 3.4 Pipeline Register Optimization | Checksum: 13ede3071
+
+Time (s): cpu = 00:00:31 ; elapsed = 00:00:21 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 3.5 Fast Optimization
+Phase 3.5 Fast Optimization | Checksum: 170b079c3
+
+Time (s): cpu = 00:00:35 ; elapsed = 00:00:24 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 3.6 Small Shape Detail Placement
+Phase 3.6 Small Shape Detail Placement | Checksum: 1c5ed2264
+
+Time (s): cpu = 00:00:40 ; elapsed = 00:00:31 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 3.7 Re-assign LUT pins
+Phase 3.7 Re-assign LUT pins | Checksum: 17962914f
+
+Time (s): cpu = 00:00:40 ; elapsed = 00:00:32 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 3.8 Pipeline Register Optimization
+Phase 3.8 Pipeline Register Optimization | Checksum: 13da7b194
+
+Time (s): cpu = 00:00:40 ; elapsed = 00:00:32 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 3.9 Fast Optimization
+Phase 3.9 Fast Optimization | Checksum: 12d6b0c32
+
+Time (s): cpu = 00:00:46 ; elapsed = 00:00:35 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Phase 3 Detail Placement | Checksum: 12d6b0c32
+
+Time (s): cpu = 00:00:46 ; elapsed = 00:00:36 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 4 Post Placement Optimization and Clean-Up
+
+Phase 4.1 Post Commit Optimization
+INFO: [Constraints 18-483] create_clock: no pin(s)/port(s)/net(s) specified as objects, only virtual clock 'hello_zynq_gmii_to_rgmii_0_0_rgmii_rx_clk' will be created. If you don't want this, please specify pin(s)/ports(s)/net(s) as objects to the command. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:7]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+
+Phase 4.1.1 Post Placement Optimization
+Post Placement Optimization Initialization | Checksum: 10cd3d31a
+
+Phase 4.1.1.1 BUFG Insertion
+
+Starting Physical Synthesis Task
+
+Phase 1 Physical Synthesis Initialization
+INFO: [Physopt 32-721] Multithreading enabled for phys_opt_design using a maximum of 2 CPUs
+INFO: [Physopt 32-619] Estimated Timing Summary | WNS=-0.189 | TNS=-0.965 |
+Phase 1 Physical Synthesis Initialization | Checksum: 163384ac2
+
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.652 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Place 46-33] Processed net hello_zynq_i/pov_project_batch_0/inst/gmem1_m_axi_U/bus_write/wreq_burst_conv/rs_req/SR[0], BUFG insertion was skipped due to placement/routing conflicts.
+INFO: [Place 46-33] Processed net hello_zynq_i/v_tc_0/U0/U_VIDEO_CTRL/GEN_HAS_IRQ.irq_i_1_n_3, BUFG insertion was skipped due to placement/routing conflicts.
+INFO: [Place 46-56] BUFG insertion identified 2 candidate nets. Inserted BUFG: 0, Replicated BUFG Driver: 0, Skipped due to Placement/Routing Conflicts: 2, Skipped due to Timing Degradation: 0, Skipped due to netlist editing failed: 0.
+Ending Physical Synthesis Task | Checksum: 1d3fa5c79
+
+Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.870 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Phase 4.1.1.1 BUFG Insertion | Checksum: 10cd3d31a
+
+Time (s): cpu = 00:00:53 ; elapsed = 00:00:40 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 4.1.1.2 Post Placement Timing Optimization
+INFO: [Place 30-746] Post Placement Timing Summary WNS=0.067. For the most accurate timing information please run report_timing.
+Phase 4.1.1.2 Post Placement Timing Optimization | Checksum: 1d3206e8b
+
+Time (s): cpu = 00:01:03 ; elapsed = 00:00:48 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Time (s): cpu = 00:01:03 ; elapsed = 00:00:48 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Phase 4.1 Post Commit Optimization | Checksum: 1d3206e8b
+
+Time (s): cpu = 00:01:03 ; elapsed = 00:00:48 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 4.2 Post Placement Cleanup
+Phase 4.2 Post Placement Cleanup | Checksum: 1d3206e8b
+
+Time (s): cpu = 00:01:03 ; elapsed = 00:00:48 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 4.3 Placer Reporting
+
+Phase 4.3.1 Print Estimated Congestion
+INFO: [Place 30-612] Post-Placement Estimated Congestion 
+ ____________________________________________________
+|           | Global Congestion | Short Congestion  |
+| Direction | Region Size       | Region Size       |
+|___________|___________________|___________________|
+|      North|                1x1|                2x2|
+|___________|___________________|___________________|
+|      South|                1x1|                2x2|
+|___________|___________________|___________________|
+|       East|                1x1|                1x1|
+|___________|___________________|___________________|
+|       West|                1x1|                1x1|
+|___________|___________________|___________________|
+
+Phase 4.3.1 Print Estimated Congestion | Checksum: 1d3206e8b
+
+Time (s): cpu = 00:01:03 ; elapsed = 00:00:48 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Phase 4.3 Placer Reporting | Checksum: 1d3206e8b
+
+Time (s): cpu = 00:01:03 ; elapsed = 00:00:48 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Phase 4.4 Final Placement Cleanup
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.010 . Memory (MB): peak = 2446.867 ; gain = 0.000
+
+Time (s): cpu = 00:01:03 ; elapsed = 00:00:48 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Phase 4 Post Placement Optimization and Clean-Up | Checksum: 20f283124
+
+Time (s): cpu = 00:01:03 ; elapsed = 00:00:48 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Ending Placer Task | Checksum: 1b050194d
+
+Time (s): cpu = 00:01:04 ; elapsed = 00:00:48 . Memory (MB): peak = 2446.867 ; gain = 0.000
+131 Infos, 79 Warnings, 8 Critical Warnings and 0 Errors encountered.
+place_design completed successfully
+place_design: Time (s): cpu = 00:01:07 ; elapsed = 00:00:50 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Vivado 12-24838] Running report commands "report_control_sets, report_io, report_utilization" in parallel.
+Running report generation with 2 threads.
+INFO: [Vivado 12-24828] Executing command : report_io -file hello_zynq_wrapper_io_placed.rpt
+report_io: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.048 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Vivado 12-24828] Executing command : report_control_sets -verbose -file hello_zynq_wrapper_control_sets_placed.rpt
+report_control_sets: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.051 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Vivado 12-24828] Executing command : report_utilization -file hello_zynq_wrapper_utilization_placed.rpt -pb hello_zynq_wrapper_utilization_placed.pb
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Write ShapeDB Complete: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.068 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Wrote PlaceDB: Time (s): cpu = 00:00:04 ; elapsed = 00:00:01 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Wrote PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Wrote RouteStorage: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.040 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Wrote Netlist Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.037 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Wrote Device Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.007 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Write Physdb Complete: Time (s): cpu = 00:00:04 ; elapsed = 00:00:01 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Common 17-1381] The checkpoint 'D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.runs/impl_1/hello_zynq_wrapper_placed.dcp' has been generated.
+Command: phys_opt_design
+Attempting to get a license for feature 'Implementation' and/or device 'xc7z020'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xc7z020'
+
+Starting Initial Update Timing Task
+
+Time (s): cpu = 00:00:04 ; elapsed = 00:00:02 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Vivado_Tcl 4-2279] Estimated Timing Summary | WNS= 0.067 | TNS= 0.000 | 
+INFO: [Vivado_Tcl 4-383] Design worst setup slack (WNS) is greater than or equal to 0.000 ns. All physical synthesis setup optimizations will be skipped.
+INFO: [Vivado_Tcl 4-232] No setup violation found. The netlist was not modified.
+INFO: [Common 17-83] Releasing license: Implementation
+142 Infos, 79 Warnings, 8 Critical Warnings and 0 Errors encountered.
+phys_opt_design completed successfully
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Write ShapeDB Complete: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.070 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Wrote PlaceDB: Time (s): cpu = 00:00:03 ; elapsed = 00:00:01 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Wrote PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Wrote RouteStorage: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.041 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Wrote Netlist Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.033 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Wrote Device Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.007 . Memory (MB): peak = 2446.867 ; gain = 0.000
+Write Physdb Complete: Time (s): cpu = 00:00:03 ; elapsed = 00:00:01 . Memory (MB): peak = 2446.867 ; gain = 0.000
+INFO: [Common 17-1381] The checkpoint 'D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.runs/impl_1/hello_zynq_wrapper_physopt.dcp' has been generated.
+Command: route_design
+Attempting to get a license for feature 'Implementation' and/or device 'xc7z020'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xc7z020'
+
+
+Starting Routing Task
+INFO: [Route 35-254] Multithreading enabled for route_design using a maximum of 2 CPUs
+
+Phase 1 Build RT Design
+Checksum: PlaceDB: fec875cb ConstDB: 0 ShapeSum: 9b8e3092 RouteDB: 15f972f0
+Post Restoration Checksum: NetGraph: 2770d921 | NumContArr: 1aaab008 | Constraints: c2a8fa9d | Timing: c2a8fa9d
+Phase 1 Build RT Design | Checksum: 1c76d7e63
+
+Time (s): cpu = 00:00:17 ; elapsed = 00:00:13 . Memory (MB): peak = 2468.441 ; gain = 21.574
+
+Phase 2 Router Initialization
+
+Phase 2.1 Fix Topology Constraints
+Phase 2.1 Fix Topology Constraints | Checksum: 1c76d7e63
+
+Time (s): cpu = 00:00:17 ; elapsed = 00:00:13 . Memory (MB): peak = 2468.441 ; gain = 21.574
+
+Phase 2.2 Pre Route Cleanup
+Phase 2.2 Pre Route Cleanup | Checksum: 1c76d7e63
+
+Time (s): cpu = 00:00:17 ; elapsed = 00:00:13 . Memory (MB): peak = 2468.441 ; gain = 21.574
+ Number of Nodes with overlaps = 0
+
+Phase 2.3 Update Timing
+Phase 2.3 Update Timing | Checksum: 2510240d4
+
+Time (s): cpu = 00:00:24 ; elapsed = 00:00:18 . Memory (MB): peak = 2523.938 ; gain = 77.070
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=0.128  | TNS=0.000  | WHS=-2.340 | THS=-1074.800|
+
+
+Phase 2.4 Update Timing for Bus Skew
+
+Phase 2.4.1 Update Timing
+Phase 2.4.1 Update Timing | Checksum: 1d1d13d83
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:21 . Memory (MB): peak = 2712.160 ; gain = 265.293
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=0.128  | TNS=0.000  | WHS=-3.258 | THS=-120.347|
+
+Phase 2.4 Update Timing for Bus Skew | Checksum: 23cc3167c
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:22 . Memory (MB): peak = 2712.160 ; gain = 265.293
+
+Router Utilization Summary
+  Global Vertical Routing Utilization    = 0 %
+  Global Horizontal Routing Utilization  = 0 %
+  Routable Net Status*
+  *Does not include unroutable nets such as driverless and loadless.
+  Run report_route_status for detailed report.
+  Number of Failed Nets               = 27973
+    (Failed Nets is the sum of unrouted and partially routed nets)
+  Number of Unrouted Nets             = 27973
+  Number of Partially Routed Nets     = 0
+  Number of Node Overlaps             = 0
+
+Phase 2 Router Initialization | Checksum: 1c77dee8f
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:22 . Memory (MB): peak = 2712.160 ; gain = 265.293
+
+Phase 3 Global Routing
+Phase 3 Global Routing | Checksum: 1c77dee8f
+
+Time (s): cpu = 00:00:30 ; elapsed = 00:00:22 . Memory (MB): peak = 2712.160 ; gain = 265.293
+
+Phase 4 Initial Routing
+
+Phase 4.1 Initial Net Routing Pass
+Phase 4.1 Initial Net Routing Pass | Checksum: 23ce5ce68
+
+Time (s): cpu = 00:00:40 ; elapsed = 00:00:27 . Memory (MB): peak = 2729.020 ; gain = 282.152
+Phase 4 Initial Routing | Checksum: 23ce5ce68
+
+Time (s): cpu = 00:00:40 ; elapsed = 00:00:27 . Memory (MB): peak = 2729.020 ; gain = 282.152
+
+Phase 5 Rip-up And Reroute
+
+Phase 5.1 Global Iteration 0
+ Number of Nodes with overlaps = 2291
+ Number of Nodes with overlaps = 558
+ Number of Nodes with overlaps = 264
+ Number of Nodes with overlaps = 124
+ Number of Nodes with overlaps = 52
+ Number of Nodes with overlaps = 19
+ Number of Nodes with overlaps = 4
+ Number of Nodes with overlaps = 7
+ Number of Nodes with overlaps = 3
+ Number of Nodes with overlaps = 1
+ Number of Nodes with overlaps = 1
+ Number of Nodes with overlaps = 0
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=-0.085 | TNS=-0.189 | WHS=N/A    | THS=N/A    |
+
+Phase 5.1 Global Iteration 0 | Checksum: 1e9eb523e
+
+Time (s): cpu = 00:01:07 ; elapsed = 00:00:51 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Phase 5.2 Global Iteration 1
+ Number of Nodes with overlaps = 484
+ Number of Nodes with overlaps = 139
+ Number of Nodes with overlaps = 45
+ Number of Nodes with overlaps = 33
+ Number of Nodes with overlaps = 15
+ Number of Nodes with overlaps = 4
+ Number of Nodes with overlaps = 5
+ Number of Nodes with overlaps = 3
+ Number of Nodes with overlaps = 2
+ Number of Nodes with overlaps = 1
+ Number of Nodes with overlaps = 1
+ Number of Nodes with overlaps = 0
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=-0.042 | TNS=-0.125 | WHS=N/A    | THS=N/A    |
+
+Phase 5.2 Global Iteration 1 | Checksum: 1803bde68
+
+Time (s): cpu = 00:01:23 ; elapsed = 00:01:04 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Phase 5.3 Global Iteration 2
+ Number of Nodes with overlaps = 424
+ Number of Nodes with overlaps = 152
+ Number of Nodes with overlaps = 60
+ Number of Nodes with overlaps = 16
+ Number of Nodes with overlaps = 12
+ Number of Nodes with overlaps = 8
+ Number of Nodes with overlaps = 2
+ Number of Nodes with overlaps = 0
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=-0.110 | TNS=-0.235 | WHS=N/A    | THS=N/A    |
+
+Phase 5.3 Global Iteration 2 | Checksum: 2456e7513
+
+Time (s): cpu = 00:01:34 ; elapsed = 00:01:12 . Memory (MB): peak = 2732.484 ; gain = 285.617
+Phase 5 Rip-up And Reroute | Checksum: 2456e7513
+
+Time (s): cpu = 00:01:34 ; elapsed = 00:01:12 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Phase 6 Delay and Skew Optimization
+
+Phase 6.1 Delay CleanUp
+
+Phase 6.1.1 Update Timing
+Phase 6.1.1 Update Timing | Checksum: 1e1bdb960
+
+Time (s): cpu = 00:01:35 ; elapsed = 00:01:13 . Memory (MB): peak = 2732.484 ; gain = 285.617
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=-0.030 | TNS=-0.042 | WHS=N/A    | THS=N/A    |
+
+ Number of Nodes with overlaps = 0
+Phase 6.1 Delay CleanUp | Checksum: 1d953e679
+
+Time (s): cpu = 00:01:35 ; elapsed = 00:01:13 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Phase 6.2 Clock Skew Optimization
+Phase 6.2 Clock Skew Optimization | Checksum: 1d953e679
+
+Time (s): cpu = 00:01:36 ; elapsed = 00:01:13 . Memory (MB): peak = 2732.484 ; gain = 285.617
+Phase 6 Delay and Skew Optimization | Checksum: 1d953e679
+
+Time (s): cpu = 00:01:36 ; elapsed = 00:01:13 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Phase 7 Post Hold Fix
+
+Phase 7.1 Hold Fix Iter
+INFO: [Route 35-416] Intermediate Timing Summary | WNS=-0.030 | TNS=-0.042 | WHS=-0.213 | THS=-0.416 |
+
+Phase 7.1 Hold Fix Iter | Checksum: 28af665aa
+
+Time (s): cpu = 00:01:37 ; elapsed = 00:01:14 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Phase 7.2 Non Free Resource Hold Fix Iter
+Phase 7.2 Non Free Resource Hold Fix Iter | Checksum: 273cea9f9
+
+Time (s): cpu = 00:01:37 ; elapsed = 00:01:14 . Memory (MB): peak = 2732.484 ; gain = 285.617
+Phase 7 Post Hold Fix | Checksum: 273cea9f9
+
+Time (s): cpu = 00:01:37 ; elapsed = 00:01:14 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Phase 8 Route finalize
+
+Router Utilization Summary
+  Global Vertical Routing Utilization    = 6.6617 %
+  Global Horizontal Routing Utilization  = 7.92639 %
+  Routable Net Status*
+  *Does not include unroutable nets such as driverless and loadless.
+  Run report_route_status for detailed report.
+  Number of Failed Nets               = 0
+    (Failed Nets is the sum of unrouted and partially routed nets)
+  Number of Unrouted Nets             = 0
+  Number of Partially Routed Nets     = 0
+  Number of Node Overlaps             = 0
+
+
+--GLOBAL Congestion:
+Utilization threshold used for congestion level computation: 0.85
+Congestion Report
+North Dir 1x1 Area, Max Cong = 82.8829%, No Congested Regions.
+South Dir 1x1 Area, Max Cong = 88.2883%, Congestion bounded by tiles (Lower Left Tile -> Upper Right Tile):
+   INT_L_X54Y58 -> INT_L_X54Y58
+East Dir 1x1 Area, Max Cong = 94.1176%, Congestion bounded by tiles (Lower Left Tile -> Upper Right Tile):
+   INT_R_X59Y62 -> INT_R_X59Y62
+West Dir 1x1 Area, Max Cong = 88.2353%, Congestion bounded by tiles (Lower Left Tile -> Upper Right Tile):
+   INT_R_X19Y49 -> INT_R_X19Y49
+
+------------------------------
+Reporting congestion hotspots
+------------------------------
+Direction: North
+----------------
+Congested clusters found at Level 0
+Effective congestion level: 0 Aspect Ratio: 1 Sparse Ratio: 0
+Direction: South
+----------------
+Congested clusters found at Level 0
+Effective congestion level: 0 Aspect Ratio: 1 Sparse Ratio: 1
+Direction: East
+----------------
+Congested clusters found at Level 0
+Effective congestion level: 0 Aspect Ratio: 1 Sparse Ratio: 1
+Direction: West
+----------------
+Congested clusters found at Level 0
+Effective congestion level: 0 Aspect Ratio: 1 Sparse Ratio: 1
+
+Phase 8 Route finalize | Checksum: 273cea9f9
+
+Time (s): cpu = 00:01:37 ; elapsed = 00:01:14 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Phase 9 Verifying routed nets
+
+ Verification completed successfully
+Phase 9 Verifying routed nets | Checksum: 273cea9f9
+
+Time (s): cpu = 00:01:37 ; elapsed = 00:01:14 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Phase 10 Depositing Routes
+Phase 10 Depositing Routes | Checksum: 319ca5c09
+
+Time (s): cpu = 00:01:39 ; elapsed = 00:01:15 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Phase 11 Post Process Routing
+Phase 11 Post Process Routing | Checksum: 319ca5c09
+
+Time (s): cpu = 00:01:39 ; elapsed = 00:01:15 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Phase 12 Post Router Timing
+
+Phase 12.1 Update Timing
+Phase 12.1 Update Timing | Checksum: 319ca5c09
+
+Time (s): cpu = 00:01:40 ; elapsed = 00:01:16 . Memory (MB): peak = 2732.484 ; gain = 285.617
+INFO: [Route 35-57] Estimated Timing Summary | WNS=-0.030 | TNS=-0.042 | WHS=0.053  | THS=0.000  |
+
+WARNING: [Route 35-328] Router estimated timing not met.
+Resolution: For a complete and accurate timing signoff, report_timing_summary must be run after route_design. Alternatively, route_design can be run with the -timing_summary option to enable a complete timing signoff at the end of route_design.
+Phase 12 Post Router Timing | Checksum: 319ca5c09
+
+Time (s): cpu = 00:01:40 ; elapsed = 00:01:16 . Memory (MB): peak = 2732.484 ; gain = 285.617
+Total Elapsed time in route_design: 75.931 secs
+
+Phase 13 Post-Route Event Processing
+Phase 13 Post-Route Event Processing | Checksum: 110c94f5d
+
+Time (s): cpu = 00:01:40 ; elapsed = 00:01:16 . Memory (MB): peak = 2732.484 ; gain = 285.617
+INFO: [Route 35-16] Router Completed Successfully
+Ending Routing Task | Checksum: 110c94f5d
+
+Time (s): cpu = 00:01:41 ; elapsed = 00:01:16 . Memory (MB): peak = 2732.484 ; gain = 285.617
+
+Routing Is Done.
+INFO: [Common 17-83] Releasing license: Implementation
+156 Infos, 80 Warnings, 8 Critical Warnings and 0 Errors encountered.
+route_design completed successfully
+route_design: Time (s): cpu = 00:01:41 ; elapsed = 00:01:16 . Memory (MB): peak = 2732.484 ; gain = 285.617
+INFO: [Vivado 12-24828] Executing command : report_drc -file hello_zynq_wrapper_drc_routed.rpt -pb hello_zynq_wrapper_drc_routed.pb -rpx hello_zynq_wrapper_drc_routed.rpx
+Command: report_drc -file hello_zynq_wrapper_drc_routed.rpt -pb hello_zynq_wrapper_drc_routed.pb -rpx hello_zynq_wrapper_drc_routed.rpx
+INFO: [IP_Flow 19-1839] IP Catalog is up to date.
+INFO: [DRC 23-27] Running DRC with 2 threads
+INFO: [Vivado_Tcl 2-168] The results of DRC are in file D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.runs/impl_1/hello_zynq_wrapper_drc_routed.rpt.
+report_drc completed successfully
+INFO: [Vivado 12-24828] Executing command : report_methodology -file hello_zynq_wrapper_methodology_drc_routed.rpt -pb hello_zynq_wrapper_methodology_drc_routed.pb -rpx hello_zynq_wrapper_methodology_drc_routed.rpx
+Command: report_methodology -file hello_zynq_wrapper_methodology_drc_routed.rpt -pb hello_zynq_wrapper_methodology_drc_routed.pb -rpx hello_zynq_wrapper_methodology_drc_routed.rpx
+INFO: [Constraints 18-483] create_clock: no pin(s)/port(s)/net(s) specified as objects, only virtual clock 'hello_zynq_gmii_to_rgmii_0_0_rgmii_rx_clk' will be created. If you don't want this, please specify pin(s)/ports(s)/net(s) as objects to the command. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:7]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [DRC 23-133] Running Methodology with 2 threads
+INFO: [Vivado_Tcl 2-1520] The results of Report Methodology are in file D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.runs/impl_1/hello_zynq_wrapper_methodology_drc_routed.rpt.
+report_methodology completed successfully
+report_drc: Time (s): cpu = 00:00:11 ; elapsed = 00:00:06 . Memory (MB): peak = 2747.684 ; gain = 15.199
+INFO: [Vivado 12-24828] Executing command : report_timing_summary -max_paths 10 -report_unconstrained -file hello_zynq_wrapper_timing_summary_routed.rpt -pb hello_zynq_wrapper_timing_summary_routed.pb -rpx hello_zynq_wrapper_timing_summary_routed.rpx -warn_on_violation 
+INFO: [Constraints 18-483] create_clock: no pin(s)/port(s)/net(s) specified as objects, only virtual clock 'hello_zynq_gmii_to_rgmii_0_0_rgmii_rx_clk' will be created. If you don't want this, please specify pin(s)/ports(s)/net(s) as objects to the command. [d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_gmii_to_rgmii_0_0/synth/hello_zynq_gmii_to_rgmii_0_0_clocks.xdc:7]
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 2 CPUs
+CRITICAL WARNING: [Timing 38-282] The design failed to meet the timing requirements. Please see the timing summary report for details on the timing violations.
+WARNING: [Timing 38-436] There are set_bus_skew constraint(s) in this design. Please run report_bus_skew to ensure that bus skew requirements are met.
+INFO: [Vivado 12-24838] Running report commands "report_incremental_reuse, report_route_status" in parallel.
+Running report generation with 2 threads.
+INFO: [Vivado 12-24828] Executing command : report_incremental_reuse -file hello_zynq_wrapper_incremental_reuse_routed.rpt
+INFO: [Vivado_Tcl 4-1062] Incremental flow is disabled. No incremental reuse Info to report.
+INFO: [Vivado 12-24828] Executing command : report_route_status -file hello_zynq_wrapper_route_status.rpt -pb hello_zynq_wrapper_route_status.pb
+INFO: [Vivado 12-24828] Executing command : report_power -file hello_zynq_wrapper_power_routed.rpt -pb hello_zynq_wrapper_power_summary_routed.pb -rpx hello_zynq_wrapper_power_routed.rpx
+Command: report_power -file hello_zynq_wrapper_power_routed.rpt -pb hello_zynq_wrapper_power_summary_routed.pb -rpx hello_zynq_wrapper_power_routed.rpx
+Running Vector-less Activity Propagation...
+
+Finished Running Vector-less Activity Propagation
+WARNING: [Power 33-332] Found switching activity that implies high-fanout reset nets being asserted for excessive periods of time which may result in inaccurate power analysis.
+Resolution: To review and fix problems, please run Power Constraints Advisor in the GUI from Tools > Power Constraints Advisor or run report_power with the -advisory option to generate a text report.
+175 Infos, 82 Warnings, 9 Critical Warnings and 0 Errors encountered.
+report_power completed successfully
+INFO: [Vivado 12-24828] Executing command : report_clock_utilization -file hello_zynq_wrapper_clock_utilization_routed.rpt
+INFO: [Vivado 12-24828] Executing command : report_bus_skew -warn_on_violation -file hello_zynq_wrapper_bus_skew_routed.rpt -pb hello_zynq_wrapper_bus_skew_routed.pb -rpx hello_zynq_wrapper_bus_skew_routed.rpx
+INFO: [Timing 38-91] UpdateTimingParams: Speed grade: -2, Delay Type: min_max.
+INFO: [Timing 38-191] Multithreading enabled for timing update using a maximum of 2 CPUs
+generate_parallel_reports: Time (s): cpu = 00:00:28 ; elapsed = 00:00:17 . Memory (MB): peak = 2768.602 ; gain = 36.117
+INFO: [Timing 38-480] Writing timing data to binary archive.
+Write ShapeDB Complete: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.063 . Memory (MB): peak = 2798.586 ; gain = 15.543
+Wrote PlaceDB: Time (s): cpu = 00:00:03 ; elapsed = 00:00:01 . Memory (MB): peak = 2805.398 ; gain = 22.320
+Wrote PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 2805.398 ; gain = 0.000
+Writing XDEF routing.
+Writing XDEF routing logical nets.
+Writing XDEF routing special nets.
+Wrote RouteStorage: Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.175 . Memory (MB): peak = 2805.398 ; gain = 0.000
+Wrote Netlist Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.031 . Memory (MB): peak = 2805.398 ; gain = 0.000
+Wrote Device Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.007 . Memory (MB): peak = 2805.398 ; gain = 0.000
+Write Physdb Complete: Time (s): cpu = 00:00:04 ; elapsed = 00:00:02 . Memory (MB): peak = 2805.398 ; gain = 22.320
+INFO: [Common 17-1381] The checkpoint 'D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.runs/impl_1/hello_zynq_wrapper_routed.dcp' has been generated.
+source D:/claude_workspace/pov3d/zynq_pov/bitgen_severity_override.tcl
+INFO: [Memdata 28-208] The XPM instance: <hello_zynq_i/v_axi4s_vid_out_0/inst/COUPLER_INST/generate_async_fifo.FIFO_INST/XPM_FIFO_ASYNC_INST/gnuram_async_fifo.xpm_fifo_base_inst/gen_sdpram.xpm_memory_base_inst> is part of IP: <hello_zynq_i/v_axi4s_vid_out_0>. This XPM instance will be excluded from the .mmi because updatemem is prohibited from making changes to an XPM that is part of an IP.
+INFO: [Memdata 28-208] The XPM instance: <hello_zynq_i/axi_vdma_0/U0/I_PRMRY_DATAMOVER/GEN_MM2S_FULL.I_MM2S_FULL_WRAPPER/GEN_INCLUDE_MM2S_SF.I_RD_SF/I_DATA_FIFO/BLK_MEM.I_SYNC_FIFOGEN_FIFO/xpm_fifo_instance.xpm_fifo_sync_inst/xpm_fifo_base_inst/gen_sdpram.xpm_memory_base_inst> is part of IP: <hello_zynq_i/axi_vdma_0>. This XPM instance will be excluded from the .mmi because updatemem is prohibited from making changes to an XPM that is part of an IP.
+INFO: [Memdata 28-208] The XPM instance: <hello_zynq_i/axi_vdma_0/U0/GEN_SPRT_FOR_MM2S.MM2S_LINEBUFFER_I/GEN_LINEBUF_NO_SOF.GEN_LINEBUFFER.GEN_SYNC_FIFO.I_LINEBUFFER_FIFO/xpm_fifo_sync_inst/xpm_fifo_base_inst/gen_sdpram.xpm_memory_base_inst> is part of IP: <hello_zynq_i/axi_vdma_0>. This XPM instance will be excluded from the .mmi because updatemem is prohibited from making changes to an XPM that is part of an IP.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.gen_fifo_req.inst_fifo_req/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/s01_nodes/s01_w_node/inst/inst_mi_handler/gen_normal_area.gen_fifo_req.inst_fifo_req/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/s01_nodes/s01_aw_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/s01_nodes/s01_aw_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/s00_nodes/s00_ar_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/s00_nodes/s00_ar_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_w_node/inst/inst_si_handler/gen_si_handler.gen_request_fifos.gen_req_fifo[1].inst_req_fifo/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_w_node/inst/inst_si_handler/gen_si_handler.gen_request_fifos.gen_req_fifo[1].inst_req_fifo/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_w_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_r_node/inst/inst_mi_handler/gen_normal_area.gen_fifo_req.inst_fifo_req/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_r_node/inst/inst_mi_handler/gen_normal_area.gen_fifo_req.inst_fifo_req/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_b_node/inst/inst_mi_handler/gen_normal_area.gen_fifo_req.inst_fifo_req/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_b_node/inst/inst_mi_handler/gen_normal_area.gen_fifo_req.inst_fifo_req/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_aw_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_aw_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_ar_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_pov_hp/inst/m00_nodes/m00_ar_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_hp/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_hp/inst/s00_nodes/s00_r_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+INFO: [Memdata 28-167] Found XPM memory block hello_zynq_i/axi_smc_hp/inst/s00_nodes/s00_ar_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst with a P_MEMORY_PRIMITIVE property set to distributed. A value of block is required. You will not be able to use the updatemem program to update the bitstream with new data for the hello_zynq_i/axi_smc_hp/inst/s00_nodes/s00_ar_node/inst/inst_mi_handler/gen_normal_area.inst_fifo_node_payld/gen_xpm_memory_fifo.inst_fifo/gen_mem_rep[0].inst_xpm_memory/xpm_memory_base_inst block.
+Command: write_bitstream -force hello_zynq_wrapper.bit
+Attempting to get a license for feature 'Implementation' and/or device 'xc7z020'
+INFO: [Common 17-349] Got license for feature 'Implementation' and/or device 'xc7z020'
+Running DRC as a precondition to command write_bitstream
+INFO: [IP_Flow 19-1839] IP Catalog is up to date.
+INFO: [DRC 23-27] Running DRC with 2 threads
+INFO: [Vivado 12-3199] DRC finished with 0 Errors
+INFO: [Vivado 12-3200] Please refer to the DRC report (report_drc) for more information.
+INFO: [Designutils 20-2272] Running write_bitstream with 2 threads.
+Loading data files...
+Loading site data...
+Loading route data...
+Processing options...
+Creating bitmap...
+Creating bitstream...
+Writing bitstream ./hello_zynq_wrapper.bit...
+INFO: [Vivado 12-1842] Bitgen Completed Successfully.
+INFO: [Project 1-1876] WebTalk data collection is mandatory when using a ULT device. To see the specific WebTalk data collected for your design, open the usage_statistics_webtalk.html or usage_statistics_webtalk.xml file in the implementation directory.
+INFO: [Common 17-83] Releasing license: Implementation
+207 Infos, 82 Warnings, 9 Critical Warnings and 0 Errors encountered.
+write_bitstream completed successfully
+write_bitstream: Time (s): cpu = 00:00:23 ; elapsed = 00:00:15 . Memory (MB): peak = 3250.176 ; gain = 444.777
+INFO: [Common 17-206] Exiting Vivado at Fri May 22 19:20:38 2026...
+[Fri May 22 19:20:39 2026] impl_1 finished
+wait_on_runs: Time (s): cpu = 00:00:01 ; elapsed = 00:07:01 . Memory (MB): peak = 472.449 ; gain = 0.000
+# set st [get_property STATUS [get_runs impl_1]]
+# puts "impl_1: $st"
+impl_1: write_bitstream Complete!
+# if {$st ne "write_bitstream Complete!"} {
+#     puts "FAIL: $st"
+#     exit 1
+# }
+# puts "=== export XSA ==="
+=== export XSA ===
+# open_run impl_1
+INFO: [Device 21-403] Loading part xc7z020clg484-2
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.443 . Memory (MB): peak = 818.535 ; gain = 0.000
+INFO: [Netlist 29-17] Analyzing 1823 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 1 CPU seconds
+INFO: [Project 1-479] Netlist was created with Vivado 2024.2
+INFO: [Project 1-570] Preparing netlist for logic optimization
+Read ShapeDB Complete: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.071 . Memory (MB): peak = 1049.047 ; gain = 11.371
+INFO: [Timing 38-478] Restoring timing data from binary archive.
+INFO: [Timing 38-479] Binary timing data restore complete.
+INFO: [Project 1-856] Restoring constraints from binary archive.
+INFO: [Project 1-853] Binary constraint restore complete.
+INFO: [Designutils 20-5722] Start Reading Physical Databases.
+Reading placement.
+Read Netlist Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.021 . Memory (MB): peak = 1734.969 ; gain = 0.000
+Reading placer database...
+Read Device Cache: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.009 . Memory (MB): peak = 1734.969 ; gain = 0.000
+Read PlaceDB: Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.687 . Memory (MB): peak = 1734.969 ; gain = 0.000
+Read PulsedLatchDB: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 1734.969 ; gain = 0.000
+Reading routing.
+Read RouteStorage: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.205 . Memory (MB): peak = 1734.969 ; gain = 0.000
+Read Physdb Files: Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.935 . Memory (MB): peak = 1734.969 ; gain = 0.000
+Restored from archive | CPU: 1.000000 secs | Memory: 0.000000 MB |
+Finished XDEF File Restore: Time (s): cpu = 00:00:01 ; elapsed = 00:00:00.967 . Memory (MB): peak = 1734.969 ; gain = 0.000
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.008 . Memory (MB): peak = 1734.969 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 189 instances were transformed.
+  IOBUF => IOBUF (IBUF, OBUFT): 1 instance 
+  RAM16X1D => RAM32X1D (RAMD32(x2)): 1 instance 
+  RAM32M => RAM32M (RAMD32(x6), RAMS32(x2)): 182 instances
+  RAM32X1D => RAM32X1D (RAMD32(x2)): 5 instances
+
+open_run: Time (s): cpu = 00:00:10 ; elapsed = 00:00:11 . Memory (MB): peak = 1734.969 ; gain = 1262.520
+# write_hw_platform -fixed -include_bit -force \
+#     D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.xsa
+INFO: [Project 1-1918] Creating Hardware Platform: D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.xsa ...
+INFO: [Project 1-1943] The Hardware Platform can be used for Hardware
+INFO: [Project 1-1941] Successfully created Hardware Platform: D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.xsa
+INFO: [Hsi 55-2053] elapsed time for repository (C:/Xilinx/Vivado/2024.2/data/embeddedsw) loading 0 seconds
+# puts "DONE"
+DONE
+# close_project
+# exit 0
+INFO: [Common 17-206] Exiting Vivado at Fri May 22 19:20:55 2026...

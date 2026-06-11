@@ -1,0 +1,82 @@
+
+****** Vivado v2024.2 (64-bit)
+  **** SW Build 5239630 on Fri Nov 08 22:35:27 MST 2024
+  **** IP Build 5239520 on Sun Nov 10 16:12:51 MST 2024
+  **** SharedData Build 5239561 on Fri Nov 08 14:39:27 MST 2024
+  **** Start of session at: Fri May 22 19:54:40 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2024 Advanced Micro Devices, Inc. All Rights Reserved.
+
+source {D:\workspace\zynq_pov\tools\bd_regen_wrapper.tcl}
+# open_project D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.xpr
+WARNING: [filemgmt 56-3] IPUserFilesDir: Could not find the directory 'D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.ip_user_files'.
+Scanning sources...
+Finished scanning sources
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1700] Loaded user IP repository 'd:/workspace/zynq_pov/hls_proj/proj_pov/solution1/impl/ip'.
+INFO: [IP_Flow 19-1700] Loaded user IP repository 'd:/workspace/zynq_pov/vivado-library'.
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository 'C:/Xilinx/Vivado/2024.2/data/ip'.
+INFO: [Project 1-5579] Found utility IPs instantiated in one or more block designs which have equivalent inline hdl with improved performance and reduced diskspace. It is recommended to migrate these utility IPs to inline hdl using the command upgrade_project -migrate_to_inline_hdl. The utility IPs may be deprecated in future releases. More information on inline hdl is available in UG994.
+open_project: Time (s): cpu = 00:00:05 ; elapsed = 00:00:05 . Memory (MB): peak = 443.957 ; gain = 153.852
+# set bd_file [get_files hello_zynq.bd]
+# open_bd_design D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/sources_1/bd/hello_zynq/hello_zynq.bd
+Reading block design file <D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/sources_1/bd/hello_zynq/hello_zynq.bd>...
+Adding component instance block -- xilinx.com:ip:processing_system7:5.5 - processing_system7_0
+Adding component instance block -- xilinx.com:ip:axi_gpio:2.0 - axi_gpio_0
+Adding component instance block -- xilinx.com:ip:smartconnect:1.0 - axi_smc
+Adding component instance block -- xilinx.com:ip:v_tc:6.2 - v_tc_0
+Adding component instance block -- xilinx.com:ip:v_axi4s_vid_out:4.0 - v_axi4s_vid_out_0
+Adding component instance block -- digilentinc.com:ip:rgb2dvi:1.4 - rgb2dvi_0
+Adding component instance block -- xilinx.com:ip:proc_sys_reset:5.0 - proc_sys_reset_0
+Adding component instance block -- xilinx.com:ip:xlconstant:1.1 - xlconstant_0
+Adding component instance block -- xilinx.com:ip:gmii_to_rgmii:4.1 - gmii_to_rgmii_0
+Adding component instance block -- xilinx.com:ip:util_vector_logic:2.0 - util_vector_logic_eth
+Adding component instance block -- xilinx.com:ip:axi_vdma:6.3 - axi_vdma_0
+Adding component instance block -- xilinx.com:ip:smartconnect:1.0 - axi_smc_hp
+Adding component instance block -- xilinx.com:ip:xlconstant:1.1 - eth_rstn_const
+Adding component instance block -- xilinx.com:ip:smartconnect:1.0 - axi_smc_pov_hp
+Adding component instance block -- xilinx.com:ip:proc_sys_reset:5.0 - proc_sys_reset_pov
+Adding component instance block -- povlab:user:pov_project_batch:1.10 - pov_project_batch_0
+Adding component instance block -- xilinx.com:ip:smartconnect:1.0 - sc_pov_axilite
+Adding component instance block -- xilinx.com:ip:axi_gpio:2.0 - axi_gpio_panel
+Adding component instance block -- xilinx.com:module_ref:led_panel_seq:1.0 - led_panel_seq_0
+Successfully read diagram <hello_zynq> from block design file <D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/sources_1/bd/hello_zynq/hello_zynq.bd>
+# puts "BD opened, checking row port..."
+BD opened, checking row port...
+# puts "  ports with 'row': [get_bd_ports -quiet {*row*}]"
+  ports with 'row': /panel_seq_row
+# puts "  led_panel_seq_0 pins: [get_bd_pins led_panel_seq_0/*]"
+  led_panel_seq_0 pins: /led_panel_seq_0/dclk_out /led_panel_seq_0/le_out /led_panel_seq_0/row_out /led_panel_seq_0/s_axi_aclk /led_panel_seq_0/s_axi_araddr /led_panel_seq_0/s_axi_aresetn /led_panel_seq_0/s_axi_arprot /led_panel_seq_0/s_axi_arready /led_panel_seq_0/s_axi_arvalid /led_panel_seq_0/s_axi_awaddr /led_panel_seq_0/s_axi_awprot /led_panel_seq_0/s_axi_awready /led_panel_seq_0/s_axi_awvalid /led_panel_seq_0/s_axi_bready /led_panel_seq_0/s_axi_bresp /led_panel_seq_0/s_axi_bvalid /led_panel_seq_0/s_axi_rdata /led_panel_seq_0/s_axi_rready /led_panel_seq_0/s_axi_rresp /led_panel_seq_0/s_axi_rvalid /led_panel_seq_0/s_axi_wdata /led_panel_seq_0/s_axi_wready /led_panel_seq_0/s_axi_wstrb /led_panel_seq_0/s_axi_wvalid /led_panel_seq_0/sdi_out
+# validate_bd_design
+INFO: [BD 5-320] Validate design is not run, since the design is already validated.
+# save_bd_design
+# puts "regenerating BD targets..."
+regenerating BD targets...
+# generate_target all $bd_file
+WARNING: [BD 41-2384] Width mismatch when connecting pin: '/s00_entry_pipeline/s00_si_converter/s_axi_awid'(3) to pin: '/s00_entry_pipeline/s00_transaction_regulator/m_axi_awid'(1) - Only lower order bits will be connected.
+WARNING: [BD 41-2384] Width mismatch when connecting pin: '/s00_entry_pipeline/s00_transaction_regulator/m_axi_bid'(1) to pin: '/s00_entry_pipeline/s00_si_converter/s_axi_bid'(3) - Only lower order bits will be connected.
+WARNING: [BD 41-2384] Width mismatch when connecting pin: '/s00_entry_pipeline/s00_transaction_regulator/m_axi_rid'(1) to pin: '/s00_entry_pipeline/s00_si_converter/s_axi_rid'(3) - Only lower order bits will be connected.
+WARNING: [BD 41-2384] Width mismatch when connecting pin: '/s00_entry_pipeline/s00_si_converter/s_axi_arid'(3) to pin: '/s00_entry_pipeline/s00_transaction_regulator/m_axi_arid'(1) - Only lower order bits will be connected.
+WARNING: [BD 41-2384] Width mismatch when connecting pin: '/s00_entry_pipeline/s00_si_converter/s_axi_awid'(3) to pin: '/s00_entry_pipeline/s00_transaction_regulator/m_axi_awid'(1) - Only lower order bits will be connected.
+WARNING: [BD 41-2384] Width mismatch when connecting pin: '/s00_entry_pipeline/s00_transaction_regulator/m_axi_bid'(1) to pin: '/s00_entry_pipeline/s00_si_converter/s_axi_bid'(3) - Only lower order bits will be connected.
+WARNING: [BD 41-2384] Width mismatch when connecting pin: '/s00_entry_pipeline/s00_transaction_regulator/m_axi_rid'(1) to pin: '/s00_entry_pipeline/s00_si_converter/s_axi_rid'(3) - Only lower order bits will be connected.
+WARNING: [BD 41-2384] Width mismatch when connecting pin: '/s00_entry_pipeline/s00_si_converter/s_axi_arid'(3) to pin: '/s00_entry_pipeline/s00_transaction_regulator/m_axi_arid'(1) - Only lower order bits will be connected.
+Exporting to file d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/hw_handoff/hello_zynq_axi_smc_0.hwh
+Generated Hardware Definition File d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_0/bd_0/synth/hello_zynq_axi_smc_0.hwdef
+Exporting to file d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_hp_0/bd_0/hw_handoff/hello_zynq_axi_smc_hp_0.hwh
+Generated Hardware Definition File d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_hp_0/bd_0/synth/hello_zynq_axi_smc_hp_0.hwdef
+Exporting to file d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_pov_hp_0/bd_0/hw_handoff/hello_zynq_axi_smc_pov_hp_0.hwh
+Generated Hardware Definition File d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_axi_smc_pov_hp_0/bd_0/synth/hello_zynq_axi_smc_pov_hp_0.hwdef
+Exporting to file d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_sc_pov_axilite_0/bd_0/hw_handoff/hello_zynq_sc_pov_axilite_0.hwh
+Generated Hardware Definition File d:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_sc_pov_axilite_0/bd_0/synth/hello_zynq_sc_pov_axilite_0.hwdef
+INFO: [BD 41-1029] Generation completed for the IP Integrator block led_panel_seq_0 .
+generate_target: Time (s): cpu = 00:00:05 ; elapsed = 00:00:06 . Memory (MB): peak = 619.082 ; gain = 64.617
+# puts "regenerating wrapper..."
+regenerating wrapper...
+# make_wrapper -files [get_files hello_zynq.bd] -top -import -force
+WARNING: [Vivado 12-3482] The generated wrapper file has already been imported into the project, the imported file is:
+'D:/workspace/zynq_pov/02_hello_zynq/02_hello_zynq.srcs/sources_1/imports/hdl/hello_zynq_wrapper.v'
+# puts "DONE"
+DONE
+# exit 0
+INFO: [Common 17-206] Exiting Vivado at Fri May 22 19:54:56 2026...

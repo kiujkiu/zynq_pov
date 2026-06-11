@@ -2584,6 +2584,11 @@
         "xci_name": "hello_zynq_hub75e_panel_seq_0_1",
         "xci_path": "ip\\hello_zynq_hub75e_panel_seq_0_1\\hello_zynq_hub75e_panel_seq_0_1.xci",
         "inst_hier_path": "hub75e_panel_seq_0",
+        "parameters": {
+          "DCLK_DIV": {
+            "value": "3"
+          }
+        },
         "reference_info": {
           "ref_type": "hdl",
           "ref_name": "hub75e_panel_seq_v5",

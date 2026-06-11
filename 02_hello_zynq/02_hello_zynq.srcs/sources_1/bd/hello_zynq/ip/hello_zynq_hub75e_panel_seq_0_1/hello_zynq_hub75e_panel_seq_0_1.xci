@@ -8,7 +8,7 @@
     "gen_directory": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_hub75e_panel_seq_0_1",
     "parameters": {
       "component_parameters": {
-        "DCLK_DIV": [ { "value": "3", "value_src": "user", "resolve_type": "user", "format": "long", "usage": "all" } ],
+        "DCLK_DIV": [ { "value": "2", "value_src": "user", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "PANEL_WIDTH": [ { "value": "128", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "ADDR_BITS": [ { "value": "5", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "BCM_PLANES": [ { "value": "6", "resolve_type": "user", "format": "long", "usage": "all" } ],
@@ -22,7 +22,7 @@
         "Component_Name": [ { "value": "hello_zynq_hub75e_panel_seq_0_1", "resolve_type": "user", "usage": "all" } ]
       },
       "model_parameters": {
-        "DCLK_DIV": [ { "value": "3", "resolve_type": "generated", "format": "long", "usage": "all" } ],
+        "DCLK_DIV": [ { "value": "2", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "PANEL_WIDTH": [ { "value": "128", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "ADDR_BITS": [ { "value": "5", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "BCM_PLANES": [ { "value": "6", "resolve_type": "generated", "format": "long", "usage": "all" } ],

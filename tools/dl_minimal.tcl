@@ -13,6 +13,12 @@ set MAGIC_VALUE 0xA11ECEC0
 connect
 after 1000
 # NO rst -system here — leave PL state from cold boot
+# v34o fix: 先停 ARM 再烧 PL — ARM 跑着写 PL 时 fpga reconfig 会卡死 AXI 事务
+# (DAP sticky 0x30000021 根源), 之后只能拔电救
+targets -set -nocase -filter {name =~ "ARM*#0"}
+catch { stop }
+catch { targets -set -nocase -filter {name =~ "ARM*#1"}; stop }
+after 200
 targets -set -nocase -filter {name =~ "APU*"}
 fpga -file $bit
 after 500

@@ -1,0 +1,912 @@
+=== PAGE 1 ===
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+        
+ICND1069 
+(1~64 扫 PWM 恒流输出 LED 显示屏共阴驱动芯片)   
+=== PAGE 2 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 2 - 
+www.chiponeic.com   
+                                                  
+概述 
+ICND1069 是一款专为全彩 LED 显示屏设计的共
+阴驱动 IC，16 路 PWM 恒流输出，1~64 扫任意扫。
+ICND1069 可选用不同的外挂电阻对输出级电流大小进
+行调节，精确控制 LED 的发光亮度。 
+ICND1069 会缓存输入的 16 位数据并转化为灰阶
+输出，并通过优化 PWM 输出提高低灰显示一致性。内
+部集成了 LED 开路检测，从而解决了开路十字架问题。
+内部自建消隐电路可以良好的消除下鬼隐。 ICND1069
+无需外部 GCLK 信号，优化系统 EMI。 
+ICND1069 内部采用了电流精确控制技术，可使片
+间误差低于± 2.0%，通道间误差低于± 2.0%。显示方面
+可以有效解决低灰色块、偏色、麻点、第一行偏暗等问
+题。 
+特性 
+ 16 路 PWM 恒流源输出 
+ 1~64 扫任意扫 
+ 输出电流设定范围： 
+1～18mA× 16@VDD=3.8V 路恒定电流输出 
+1～15mA× 16@VDD=2.8V 路恒定电流输出 
+ 电流精度 
+通道间：± 1.5%(典型值)，± 2.0%(最大值) 
+芯片间：± 1.5%(典型值)，± 2.0%(最大值) 
+ 8 位电流增益调整：50%~200% 
+ 数据传输频率：fMAX=25MHz 
+ 供电电压：VDD=2.6～5V 
+ 工作温度范围：Topr=-40～85°C 
+ 动态节能，消除无用功耗 
+ 低灰高刷，更高对比度 
+ 集成下鬼影消除功能集成灯珠保护电路，减少灯珠
+损坏 
+ LED 故障排除 
+消除 LED 坏点造成的十字架现象 
+LED 开路侦测 
+ 有效解决低灰色块、偏色、麻点、第一行偏暗 
+ 有效解决高对比耦合、跨板色差 
+ 
+ 
+ 
+ 
+ 
+封装 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+Shrink SOP
+SSOP24-P-150-0.635
+Quad Flat No-Lead
+QFN24-4*4-0.5
+
+=== PAGE 3 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 3 - 
+www.chiponeic.com   
+                                                  
+引脚说明 
+1. SSOP24-P-150-0.635 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ICND1069AP (SSOP24) 
+管脚编号 管脚名称 功能说明 
+1 GND 接地端 
+2 SDI 串行数据输入端 
+3 DCLK 数据时钟，用于写入数据与指令 
+4 LE 据与指令的锁存端，不同的 LE 长度代表不同指令 
+5～20 OUT0~OUT15 恒流电流输出端 
+21 ROW 换行信号，ROW 信号由 0 变为 1 表示一次换行 
+22 SDO 串行数据输出端 
+23 REXT 外挂电阻输入端，可调节输出端恒流值 
+24 VDD 电源输入端 
+ 
+ 
+1
+2
+3
+4
+5
+6
+7
+8
+24
+23
+22
+21
+20
+19
+18
+17
+9
+10
+11
+12
+16
+15
+14
+13
+GND
+SDI
+DCLK
+LE
+OUT0
+OUT1
+OUT2
+OUT3
+OUT4
+OUT5
+OUT6
+OUT7
+VDD
+REXT
+SDO
+ROW
+OUT15
+OUT14
+OUT13
+OUT12
+OUT11
+OUT10
+OUT9
+OUT8
+CHIPONE
+ICND1069AP
+LOT NO.
+=== PAGE 4 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 4 - 
+www.chiponeic.com   
+                                                  
+2. QFN24-4*4-0.5 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ICND1069AN (QFN24) 
+管脚编号 管脚名称 功能说明 
+1 LE 据与指令的锁存端，不同的 LE 长度代表不同指令 
+2～9,11～18 OUT0~OUT15 恒流灌电流输出端 
+10 VDD  电源输入端 
+19 SDO 串行数据输出端 
+20 ROW 换行信号，ROW 信号由 0 变为 1 表示一次换行 
+21 REXT 外挂电阻输入端，可调节输出端恒流值 
+22 GND 接地端 
+23 SDI 串行数据输入端 
+24 DCLK 数据时钟，用于写入数据与指令 
+ 
+LE
+OUT0
+OUT1
+OUT2
+OUT3
+OUT4
+OUT15
+OUT14
+OUT13
+OUT12
+OUT11
+OUT10
+OUT5
+OUT6
+OUT7
+VDD
+OUT8
+OUT9
+DCLK
+SDI
+GND
+REXT
+ROW
+SDO
+1
+2
+3
+24
+4
+5
+6
+7 8 9
+23 22 21 20 19
+18
+17
+16
+15
+14
+13
+121110
+CHIPONE
+ICND1069AN
+LOT NO.
+=== PAGE 5 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 5 - 
+www.chiponeic.com   
+                                                  
+ICND1069 框图 
+SDI 16bit移位寄存器
+SDO
+LE LE脉冲
+解析器
+可配置寄存器
+SRAM
+地址产生器
+MBIST
+开路检测模块ROW
+状态机 数据预处理
+模块
+GCLK计数
+器
+比较器 比较器 比较器  
+预
+充
+电
+电
+路
+电流
+调节
+模块
+REXT  
+输出锁存器
+OUT0 OUT1 OUT15
+DCLK
+锁
+相
+环
+16
+GCLK
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+=== PAGE 6 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 6 - 
+www.chiponeic.com   
+                                                  
+I/O 等效电路 
+1. GCLK, SDI, LE                            
+                 
+                          
+                
+ 
+ 
+ 
+ 
+ 
+2. DCLK                                  3.SDO  
+ 
+ 
+ 
+ 
+         
+ 
+ 
+ 
+绝对最大额定值 (Ta = 25°C) 
+特性 符号 额定值 单位 
+电源电压 VDD 0 ~ 6.0 V 
+输出电流 IO 20 mA 
+输入电压 VIN -0.4 ~ VDD+0.4 V 
+输出耐受电压 VOUT 10 V 
+时钟频率 FCLK 25 MHz 
+消耗功耗 
+(4 层印刷电路板上，25° C) 
+SSOP24 
+PD 
+1.98 
+W 
+QFN24 2.79 
+热阻抗 
+SSOP24 
+Rth(j-a) 
+64 
+° C/W 
+QFN24 44.7 
+工作温度 Topr -40 ~ 85 °C 
+存储温度 Tstg -55 ~ 150 °C 
+GND
+VDD
+GCLK / 
+SDI / LE
+GND
+VDD
+DCLK
+GND
+VDD
+SDO
+=== PAGE 7 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 7 - 
+www.chiponeic.com   
+                                                  
+电气特性 (如果不另外说明，VDD = 5V，Ta = 25°C) 
+特性 符号 测试
+电路 测试条件 最小值 典型值 最大值 单位 
+高电平逻辑输出电压 VOH 1 IOH=-1mA, SDO VDD-0.4 - VDD V 
+低电平逻辑输出电压 VOL 1 IOH=+1mA, SDO - - 0.4 V 
+高电平逻辑输入电压 VIH 3 - 0.7× VDD - - V 
+低电平逻辑输入电压 VIL 3 - - - 0.3× VDD V 
+高电平逻辑输入电流 IIH 2 VIN=VDD, 
+SDI,CLK,LE,ROW - - 1 μA 
+低电平逻辑输入电流 IIL 1 VIN=GND, 
+ SDI,CLK,LE,ROW -1 - - μA 
+电源电流 IVDD 4 IOUT=1mA - 3.6 - mA 
+恒流源误差 
+ΔIOchl 5 
+恒流范围 1mA~20mA 
+- 1.0 2.0 % 
+ΔIOchip 5 - 1.0 2.0 % 
+恒流源电源电压调节 %VDD 5 
+VDD=4.5~5.5V, 
+REXT=3 kΩ,  
+OUT0~OUT15 
+- ±1.0 - %/V 
+恒流源输出电压调节 %VOUT 5 
+VO=0.6~3.0V, 
+REXT=3 kΩ,  
+OUT0~OUT15 
+- ±1.0 - %/V 
+电气特性 (如果不另外说明，VDD = 3.3V，Ta = 25°C) 
+特性 符号 测试
+电路 测试条件 最小值 典型值 最大值 单位 
+高电平逻辑输出电压 VOH 1 IOH=-1mA, SDO VDD-0.4 - VDD V 
+低电平逻辑输出电压 VOL 1 IOH=+1mA, SDO - - 0.4 V 
+高电平逻辑输入电压 VIH 3 - 0.7×VDD - - V 
+低电平逻辑输入电压 VIL 3 - - - 0.3×VDD V 
+高电平逻辑输入电流 IIH 2 VIN=VDD, 
+SDI,CLK,LE,ROW - - 1 μA 
+低电平逻辑输入电流 IIL 1 VIN=GND 
+ SDI,CLK,LE,ROW -1 - - μA 
+电源电流 IVDD 4 IOUT=1mA - 3.3 - mA 
+恒流源误差 
+ΔIOchl 5 
+恒流范围 1mA~15mA 
+- 1.0 2.0 % 
+ΔIOchip 5 - 1.0 2.0 % 
+恒流源电源电压调节 %VDD 5 
+VDD=3.0~3.6V, 
+REXT=3kΩ,  
+OUT0~OUT15 
+- ±1.0 - %/V 
+恒流源输出电压调节 %VOUT 5 
+VO=0.6~1.0V, 
+REXT=3kΩ,  
+OUT0~OUT15 
+- ±1.0 - %/V 
+=== PAGE 8 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 8 - 
+www.chiponeic.com   
+                                                  
+开关特性 (如果不另外说明, VDD = 5 V, Ta = 25°C) 
+特  性 符号 测试电路 测试条件 最小值 典型值 最大值 单位 
+输出端关闭时间 tor 6 REXT=3kΩ 
+RL=540Ω, CL=10pF 
+- 35 - ns 
+输出端开启时间 tof 6 - 35 - ns 
+传输延迟时间 DCLK-SDO tpLH 6 CL=10pF - 28 - ns 
+建立时间 
+SDI—DCLK↑ tSU_SDI 
+6 
+- 7 - - 
+ns 
+LE↑—DCLK↑ tSU_LE - 7 - - 
+保持时间 
+DCLK↑—SDI tHD_SDI 
+6 
+- 7 - - 
+ns 
+DCLK↑—LE↓ tHD_LE - 7 - - 
+脉冲宽度 
+DCLK twCLK 6 - 40 - - ns 
+LE twLE 6 - 10 - - ns 
+ROW twROW 6 - 160 - - ns 
+时钟频率 FCLK 
+6 
+- - - 25 
+MHz 
+灰阶频率 FGCLK - - - 96 
+开关特性 (如果不另外说明, VDD = 3.3 V, Ta = 25°C) 
+特  性 符号 测试电路 测试条件 最小值 典型值 最大值 单位 
+输出端关闭时间 tor 6 REXT=3kΩ 
+RL=540Ω, CL=10pF 
+- 38 - ns 
+输出端开启时间 tof 6 - 38 - ns 
+传输延迟时间 DCLK-SDO tpLH 6 CL=10pF - 31 - ns 
+建立时间 
+SDI—DCLK↑ tSU_SDI 
+6 
+- 7 - - 
+ns 
+LE↑—DCLK↑ tSU_LE - 7 - - 
+保持时间 
+DCLK↑—SDI tHD_SDI 
+6 
+- 7 - - 
+ns 
+DCLK↑—LE↓ tHD_LE - 7 - - 
+脉冲宽度 
+DCLK twCLK 6 - 40 - - ns 
+LE twLE 6 - 10 - - ns 
+ROW twROW 6 - 160 - - ns 
+时钟频率 FCLK 
+6 
+- - - 25 
+MHz 
+灰阶频率 FGCLK - - - 90 
+ 
+ 
+ 
+ 
+ 
+ 
+=== PAGE 9 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 9 - 
+www.chiponeic.com   
+                                                  
+测试波形 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+OUT
+10%
+toftor
+90% 90%
+10%
+DCLK
+SDI
+LE
+Tsu_LE Thd_LE Tsw_LE
+Tsu_SDI Thd_SDI
+50%
+50% 50%
+50% 50%
+50%
+DCLK
+SDO
+TpLH
+50%
+50%
+=== PAGE 10 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 10 - 
+www.chiponeic.com   
+                                                  
+测试电路 
+测试电路 1：高电平逻辑输出电压/低电平逻辑输出电压 
+DCLK
+GND SDO
+OUT15
+OUT7
+OUT0
+REXT
+F.G
+V  =VIH DD
+V  =0VIL
+ t = t =10nsr f
+(10%~90%)
+REXT
+V
+C  = 10pFL
+I  = -1mA~ 1mAO
+VDD
+VDD
+LE
+SDI
+ROW
+ 
+测试电路 2：高电平逻辑输入电流 
+DCLK
+SDI
+LE
+GND SDO
+OUT15
+OUT7
+OUT0
+REXT
+REXT
+C  = 10pFL
+VDD
+VDD
+A
+A
+A
+A
+V  =VIN DD
+ROW
+ 
+测试电路 3：低电平逻辑输入电流  
+DCLK
+SDI
+LE
+GND SDO
+OUT15
+OUT7
+OUT0
+REXT
+REXT
+C  = 10pFL
+VDD
+VDD
+A
+A
+A
+A
+V  =GNDIN
+ROW
+=== PAGE 11 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 11 - 
+www.chiponeic.com   
+                                                  
+测试电路 4：电源电流 
+DCLK
+SDI
+LE
+GND SDO
+OUT15
+OUT7
+OUT0
+REXT
+F.G
+V  =VIH DD
+V  =0VIL
+ t = t =10nsr f
+(10%~90%)
+REXT
+VDD
+VDD
+C  = 10pFL
+A
+ROW
+ 
+测试电路 5：恒流输出/恒流误差 
+            恒流电源电压调节/恒流输出电压调节 
+DCLK
+SDI
+LE
+GND SDO
+OUT15
+OUT7
+OUT0
+REXT
+F.G
+V  =VIH DD
+V  =0VIL
+ t = t =10nsr f
+(10%~90%)
+REXT
+VDD
+VDD
+C  = 10pFL
+A
+A
+A
+V  =1V,3V,10VO
+ROW
+ 
+测试电路 6：开关特性 
+ 
+DCLK
+SDI
+LE
+GND SDO
+OUT15
+OUT7
+OUT0
+REXT
+F.G
+V  =VIH DD
+V  =0VIL
+ t = t =10nsr f
+(10%~90%)
+VDD
+VDD
+C  = 10pFL
+R  =540ΩL
+LC
+C  =10pFL
+R  L
+LC
+LC
+R  L
+Rext  = 3KΩ
+V    =5VLED
+ROW
+ 
+=== PAGE 12 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 12 - 
+www.chiponeic.com   
+                                                  
+应用信息  
+OUT0 OUT15
+ICND1069
+OUT0 OUT15
+ICND1069
+Line0
+Line7
+Line56
+Line63
+OUT0
+OUT7
+ICND2019
+OUT0
+OUT7
+ICND2019
+IC1
+IC8
+OUT0 OUT15
+ICND1069
+DCLK
+SDI
+RCLK
+Controller
+DCLK LE ROW SDI_R DCLK LE ROW SDI_G DCLK LE ROW SDI_B
+DCLK
+RCLK
+SDI
+ 
+上图为 ICND1069 64 扫应用示例图。芯片由 LE 和 DCLK 接收指令，由 SDI 接收灰阶数据。 
+恒流信息  
+ICND1069采用了精确电流驱动控制技术，同一芯片的不同通道间，不同芯片之间的电流差异极小。  
+1) 通道间电流差异<±2.0%，芯片间的电流差异<± 2.0%。  
+2) 具有不受负载端电压影响的电流输出特性，如下图所示。输出电流将不随LED 顺向电压VF  
+的变化而变化。 
+ 
+0
+5
+10
+15
+20
+0 0.2 0.4 0.6 0.8 1.0 1.2
+Iout (mA)
+VDS (V)
+2mA
+8mA
+20mA
+VDD=5V
+ 
+=== PAGE 13 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 13 - 
+www.chiponeic.com   
+                                                  
+0
+2
+4
+6
+8
+0 0.3 0.6 0.9 1.2 1.5 1.8
+Iout (mA)
+VDS (V)
+2mA
+8mA
+10mA
+VDD=3.3V
+10
+ 
+调节输出电流  
+ICND1069通过外接电阻 Rext 来调节输出电流（Iout） ，计算公式为：  
+                     
+                        Iout = (12/Rext) * Gain     （Gain: 50%~200%）  
+ 
+当电流输出在67%-200%之间，最小调节阶梯1.56%, 86级可调 
+Gain =（Igain-127）* 1.56%    255≥Igain≥170 
+当电流输出在22%-67%之间，最小调节阶梯0.525%, 86级可调 
+ Gain = Igain * 0.525%        127≥Igain≥42 
+ 
+备注：Igain为寄存器可调的8bit参数。 
+ 
+ 
+=== PAGE 14 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 14 - 
+www.chiponeic.com   
+                                                  
+封装体散热功率 
+封装体的最大散热功率 PD-MAX,由公式:PD-MAX=(TJ-Ta)/ Rth(j-a)计算所得。当ICND1069的16个通道全部打开时，
+ICND1069的工作功耗PD-OP=（IDD×VDD）+（Iout× Duty× VDS× 16）。为确保PD-OP≤PD-MAX,可输出的最大电流Iout-max
+和Duty Cycle要满足以下关系： 
+ 
+ 
+ 
+封装 Rth-ja(°C/W) PD-MAX(W) Ta=25°C 
+ SSOP24 64 1.98 
+QFN24 44.7 2.79 
+ 
+ 
+Iout-max= VDS×Duty×16
+TJ-TA
+Rth-ja
+(IDD×VDD)
+=== PAGE 15 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 15 - 
+www.chiponeic.com   
+                                                  
+封装尺寸 
+SSOP24-P-150-0.635 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+=== PAGE 16 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 16 - 
+www.chiponeic.com   
+                                                  
+QFN24-4*4*0.5 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+=== PAGE 17 ===
+        ICND1069    1～64 扫 PWM 恒流输出 LED 显示屏驱动芯片 
+                                                                                                  V1.1  Apr  2023 
+- 17 - 
+www.chiponeic.com   
+                                                  
+产品订购信息 
+ 
+ 
+ 
+ 
+版本说明 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+声明：  
+北京集创北方科技股份有限公司保留说明书的更改权，恕不另行通知!  
+任何半导体产品在特定条件下都有一定的失效或发生故障的可能，用户有责任在使用Chipone产品进行系统设计和整机制造时遵守安
+全标准并采取安全措施，以避免潜在失败风险及可能造成人身伤害或财产损失情况的发生！  
+ 
+集智创芯，我公司将竭诚为客户提供更优秀的产品！ 
+产品编号 封装 （无铅环保） 
+ICND1069AP SSOP24-0.635 
+ICND1069AN QFN24-4*4-0.5 
+版本  日期  备注  
+1.0 2023/02 初次发布 
+1.1 2023/04 添加QFN24封装 

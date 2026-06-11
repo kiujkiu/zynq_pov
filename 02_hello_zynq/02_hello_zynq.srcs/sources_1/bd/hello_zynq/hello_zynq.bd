@@ -2586,7 +2586,7 @@
         "inst_hier_path": "hub75e_panel_seq_0",
         "parameters": {
           "DCLK_DIV": {
-            "value": "3"
+            "value": "2"
           }
         },
         "reference_info": {

@@ -1,0 +1,2400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>POV3D LED 屏幕驱动完整方案</title>
+<style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei",
+                 "PingFang SC", "Hiragino Sans GB", sans-serif;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px;
+    background: #f4f5f7;
+    color: #1a1a2e;
+    line-height: 1.6;
+}
+h1 {
+    font-size: 30px;
+    color: #1a1a2e;
+    border-bottom: 4px solid #16a085;
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+}
+h1 small {
+    display: block;
+    font-size: 14px;
+    font-weight: normal;
+    color: #555;
+    margin-top: 8px;
+}
+h2 {
+    font-size: 22px;
+    color: #2c3e50;
+    margin-top: 44px;
+    border-left: 5px solid #16a085;
+    padding-left: 14px;
+}
+.section {
+    background: white;
+    border: 1px solid #e1e4e8;
+    border-radius: 10px;
+    padding: 24px;
+    margin: 20px 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.note {
+    background: #fff7e0;
+    border-left: 5px solid #f39c12;
+    padding: 14px 18px;
+    margin: 18px 0;
+    border-radius: 4px;
+    font-size: 14px;
+}
+.warning {
+    background: #ffeaea;
+    border-left: 5px solid #c0392b;
+    padding: 14px 18px;
+    margin: 18px 0;
+    border-radius: 4px;
+    font-size: 14px;
+}
+.warning strong { color: #c0392b; }
+.note strong { color: #b8860b; }
+.info {
+    background: #e8f6f3;
+    border-left: 5px solid #16a085;
+    padding: 14px 18px;
+    margin: 18px 0;
+    border-radius: 4px;
+    font-size: 14px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 14px 0;
+    font-size: 14px;
+}
+th, td {
+    border: 1px solid #d0d8e0;
+    padding: 8px 12px;
+    text-align: left;
+}
+th {
+    background: #34495e;
+    color: white;
+    font-weight: 600;
+}
+tr:nth-child(even) td {
+    background: #f8f9fa;
+}
+code {
+    background: #eef2f5;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-family: "Consolas", "Monaco", monospace;
+    font-size: 13px;
+    color: #c0392b;
+}
+.kbd {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-family: "Consolas", monospace;
+    font-size: 12px;
+}
+.toc {
+    background: #ecf0f1;
+    padding: 14px 20px;
+    border-radius: 6px;
+    margin: 16px 0;
+}
+.toc ol { margin: 4px 0; padding-left: 22px; }
+.toc a { color: #16a085; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.legend-box {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+</style>
+</head>
+<body>
+
+<h1>POV3D LED 屏幕驱动完整方案
+<small>从几何推导到落地: 15×16.8 cm 屏 · 160×180 RGB · 360 slice × 20 Hz · Zynq 7020 + 90× MBI5264 + 12× MBI5989</small>
+</h1>
+
+<div class="toc">
+<strong>目录 (设计来源 → 落地)</strong>
+<ol>
+  <li><a href="#sec_geom">📐 POV3D 几何推导: 屏幕尺寸 → 切片数 N</a></li>
+  <li><a href="#sec_rate">⚡ 刷新率与数据带宽计算</a></li>
+  <li><a href="#sec_chip">🔧 芯片选型推导过程</a></li>
+  <li><a href="#sec_final">🎯 方案锁定参数总表</a></li>
+  <li><a href="#sec1">拓扑选择与芯片配对说明</a></li>
+  <li><a href="#sec2">单组接线: 1 列驱 + 1 行驱 + 16×16 LED</a></li>
+  <li><a href="#sec3">芯片管脚级详图</a></li>
+  <li><a href="#sec4">单 Stripe 扩展: 30 列驱 + 4 行驱 + 60-scan</a></li>
+  <li><a href="#sec5">整面板架构: 3 Stripe 完整接线</a></li>
+  <li><a href="#sec6">扩展方向: 4 种升级路径</a></li>
+</ol>
+</div>
+
+<div class="section" id="sec_geom">
+<h2>📐 1. POV3D 几何推导: 屏幕尺寸 → 切片数 N</h2>
+<p><strong>原始需求</strong>: 在直径 15 cm 的旋转体内, 让外圈视觉分辨率不低于屏幕像素分辨率, 即"旋转切片密度 = 屏幕像素密度"。</p>
+<svg viewBox="0 0 900 540" xmlns="http://www.w3.org/2000/svg" style="background:#fcfcfc;border:1px solid #ddd;width:100%;max-width:920px;display:block;margin:0 auto;">
+<text x="450.0" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a1a2e">几何推导：旋转半径 → 切片数 N</text>
+<text x="450.0" y="40" text-anchor="middle" font-size="11" fill="#666">外圈相邻 slice 间距 = 单 LED 像素间距 0.9375 mm 时, 体素分辨率与屏幕分辨率匹配</text>
+<circle cx="280" cy="290" r="200" fill="#fffaeb" stroke="#f39c12" stroke-width="2" stroke-dasharray="6,3"/>
+<text x="280" y="82" text-anchor="middle" font-size="11" fill="#f39c12" font-weight="bold">旋转外圈 ⌀ 15 cm = 周长 471.24 mm</text>
+<circle cx="280" cy="290" r="100" fill="none" stroke="#bdc3c7" stroke-width="1" stroke-dasharray="3,3"/>
+<circle cx="280" cy="290" r="6" fill="#c0392b"/>
+<text x="292" y="295" font-size="10" fill="#c0392b">旋转轴</text>
+<rect x="100.0" y="285.0" width="360" height="10" fill="#2c3e50" stroke="#1a1a2e"/>
+<circle cx="108.0" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="126.10526315789474" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="144.21052631578948" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="162.31578947368422" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="180.42105263157896" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="198.5263157894737" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="216.63157894736844" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="234.73684210526318" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="252.8421052631579" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="270.9473684210526" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="289.0526315789474" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="307.1578947368421" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="325.2631578947369" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="343.36842105263156" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="361.47368421052636" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="379.57894736842104" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="397.6842105263158" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="415.7894736842105" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="433.89473684210526" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="452.0" cy="290" r="2.5" fill="#e74c3c"/>
+<circle cx="452.0" cy="290" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<text x="460.0" y="294" font-size="9" fill="#c0392b" font-weight="bold">外圈 LED</text>
+<line x1="280" y1="290" x2="452.0" y2="290" stroke="#3498db" stroke-width="1.5"/>
+<text x="366.0" y="282" text-anchor="middle" font-size="10" fill="#3498db" font-weight="bold">r = 75 mm</text>
+<line x1="435.88457268119896" y1="200.0" x2="124.11542731880104" y2="380.0" stroke="#34495e" stroke-width="1" opacity="0.2"/>
+<line x1="370.0" y1="134.11542731880104" x2="190.0" y2="445.88457268119896" stroke="#34495e" stroke-width="1" opacity="0.2"/>
+<line x1="280.0" y1="110.0" x2="280.0" y2="470.0" stroke="#34495e" stroke-width="1" opacity="0.2"/>
+<line x1="190.00000000000006" y1="134.11542731880104" x2="369.99999999999994" y2="445.88457268119896" stroke="#34495e" stroke-width="1" opacity="0.2"/>
+<line x1="124.11542731880104" y1="200.0" x2="435.88457268119896" y2="380.0" stroke="#34495e" stroke-width="1" opacity="0.2"/>
+<path d="M 452.0 290 A 200 200 0 0 0 479.0022027676401 270.0469728204701" fill="none" stroke="#27ae60" stroke-width="3"/>
+<text x="467.0" y="270" font-size="10" fill="#27ae60" font-weight="bold">8 个 slice 弧</text>
+<line x1="477.0" y1="290.0" x2="483.0" y2="290.0" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="476.9846306907239" y1="287.53925384504794" x2="482.9841625899338" y2="287.4643072616484" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="476.93852516102424" y1="285.07889164916907" x2="482.93665283090314" y2="284.9290101765549" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="476.8616906049126" y1="282.61929731152594" x2="482.85747813602677" y2="282.39450433624245" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="476.7541390111612" y1="280.1608546114696" x2="482.7466508592169" y2="279.86118520877324" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="476.61588716143206" y1="277.70394714865677" x2="482.60418829325226" y2="277.32944807704223" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="476.44695662765844" y1="275.2489582831957" x2="482.43011266707947" y2="274.7996879771001" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="476.2473737686791" y1="272.79627107582894" x2="482.2244511423445" y2="272.27229963651405" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="476.01716972612553" y1="270.34626822816307" x2="481.9872358091547" y2="269.74767741277714" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="475.75638041956233" y1="267.89933202295435" x2="481.7185036810718" y2="267.2262152317753" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="475.465046540883" y1="265.4558442644598" x2="481.4182966893363" y2="264.70830652632156" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="475.1432135479605" y1="263.01618621886297" x2="481.08666167632475" y2="262.1943441747674" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="474.7909316575543" y1="260.58073855478335" x2="480.72365038824125" y2="259.68472043970064" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="474.40825583747477" y1="258.14988128387967" x2="480.3293194670425" y2="257.179826906739" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="473.9952457980065" y1="255.72399370155495" x2="479.9037304416006" y2="254.68005442342974" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="473.5519659825914" y1="253.30345432777386" x2="479.4469497181018" y2="252.18579303826445" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="473.07848555777343" y1="250.88864084800093" x2="478.95904856968536" y2="249.69743193981822" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="472.5748784024063" y1="248.47993005426875" x2="478.44010312532225" y2="247.21535939602313" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="472.0412230961258" y1="246.0776977863859" x2="477.8901943579367" y2="244.73996269358548" stroke="#c0392b" stroke-width="1.2"/>
+<line x1="471.4776029070886" y1="243.68231887329333" x2="477.30940807177154" y2="242.27162807755604" stroke="#c0392b" stroke-width="1.2"/>
+<rect x="540" y="80" width="320" height="380" rx="8" fill="#f7f8fa" stroke="#bdc3c7"/>
+<text x="700" y="104" text-anchor="middle" font-size="13" font-weight="bold" fill="#34495e">推导公式</text>
+<text x="560" y="130" font-size="11" fill="#34495e" font-weight="600">屏幕尺寸:</text>
+<text x="650" y="130" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">15 cm × 16.8 cm</text>
+<text x="560" y="150" font-size="11" fill="#34495e" font-weight="600">屏幕分辨率:</text>
+<text x="650" y="150" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">160 × 180 RGB</text>
+<text x="560" y="170" font-size="11" fill="#34495e" font-weight="600">单 LED 边长:</text>
+<text x="650" y="170" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">p = 150 / 160 = 0.9375 mm</text>
+<text x="650" y="190" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace"></text>
+<text x="560" y="210" font-size="11" fill="#34495e" font-weight="600">旋转轴位置:</text>
+<text x="650" y="210" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">屏幕短边中点 (centered)</text>
+<text x="560" y="230" font-size="11" fill="#34495e" font-weight="600">外圈半径:</text>
+<text x="650" y="230" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">r_max = 15 cm / 2 = 75 mm</text>
+<text x="560" y="250" font-size="11" fill="#34495e" font-weight="600">外圈周长:</text>
+<text x="650" y="250" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">C = 2π × 75 = 471.24 mm</text>
+<text x="650" y="270" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace"></text>
+<text x="560" y="290" font-size="11" fill="#34495e" font-weight="600">要求:</text>
+<text x="650" y="290" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">外圈每 p 距离 = 1 slice</text>
+<text x="560" y="310" font-size="11" fill="#34495e" font-weight="600">  ↓</text>
+<text x="650" y="310" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace"></text>
+<text x="560" y="330" font-size="11" fill="#34495e" font-weight="600">切片数 N:</text>
+<text x="650" y="330" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">N = C / p</text>
+<text x="650" y="350" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">   = 471.24 / 0.9375</text>
+<text x="650" y="370" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">   = 502.65</text>
+<text x="650" y="390" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace"></text>
+<rect x="552" y="398" width="296" height="22" fill="#16a085" opacity="0.15" rx="3"/>
+<text x="560" y="413" font-size="11" font-weight="bold" fill="#16a085">结果:</text>
+<text x="620" y="413" font-size="12" font-weight="bold" fill="#c0392b">N = 503 slice/rotation</text>
+</svg>
+<table>
+<tr><th>参数</th><th>数值</th><th>来源</th></tr>
+<tr><td>屏幕物理尺寸</td><td>15 cm × 16.8 cm</td><td>外购 LED 面板规格</td></tr>
+<tr><td>屏幕像素分辨率</td><td>160 × 180 RGB</td><td>同上</td></tr>
+<tr><td>单 LED 像素间距 p</td><td>0.9375 mm × 0.9333 mm</td><td>150 mm / 160 = 168 mm / 180</td></tr>
+<tr><td>旋转轴位置</td><td>屏幕短边中心 (穿过 160 列方向)</td><td>设计选择 (使外圈半径最小化)</td></tr>
+<tr><td>外圈半径 r_max</td><td>75 mm</td><td>15 cm / 2</td></tr>
+<tr><td>外圈周长</td><td>2π × 75 = 471.24 mm</td><td>几何</td></tr>
+<tr><td><strong>切片数 N</strong></td><td><strong>471.24 / 0.9375 = 502.65 → 503</strong></td><td>角分辨率 = 像素分辨率约束</td></tr>
+</table>
+<div class="note">
+<strong>关键洞察</strong>: 切片数由"外圈最稀疏体素"决定, 内圈体素自动满足。N = 503 是"外圈像素密度匹配"的理论值;
+实际工程可降到 360 (角分辨率 1°, 外圈每像素粗 25%) 仍肉眼难辨。
+</div>
+</div>
+
+<div class="section" id="sec_rate">
+<h2>⚡ 2. 刷新率与数据带宽计算</h2>
+<p>有了切片数 N 和体刷新率目标后, <strong>屏幕刷新率 = N × 体刷新率</strong>。这个数字决定了所有硬件选型。</p>
+<svg viewBox="0 0 900 540" xmlns="http://www.w3.org/2000/svg" style="background:#fcfcfc;border:1px solid #ddd;width:100%;max-width:920px;display:block;margin:0 auto;">
+<text x="450.0" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a1a2e">屏幕刷新率与数据带宽推导</text>
+<rect x="60" y="80" width="800" height="60" fill="#ecf0f1" stroke="#34495e" stroke-width="2"/>
+<text x="60" y="72" font-size="11" font-weight="bold" fill="#34495e">⏱ 1 体帧 = 1 / 30 Hz = 33.3 ms (终极目标) / 1 / 20 Hz = 50 ms (锁定 Phase 1)</text>
+<line x1="65.0" y1="80" x2="65.0" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="91.33333333333333" y1="80" x2="91.33333333333333" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="117.66666666666666" y1="80" x2="117.66666666666666" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="144.0" y1="80" x2="144.0" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="170.33333333333331" y1="80" x2="170.33333333333331" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="196.66666666666666" y1="80" x2="196.66666666666666" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="223.0" y1="80" x2="223.0" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="249.33333333333334" y1="80" x2="249.33333333333334" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="275.66666666666663" y1="80" x2="275.66666666666663" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="302.0" y1="80" x2="302.0" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="328.3333333333333" y1="80" x2="328.3333333333333" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="354.6666666666667" y1="80" x2="354.6666666666667" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="381.0" y1="80" x2="381.0" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="407.3333333333333" y1="80" x2="407.3333333333333" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="433.6666666666667" y1="80" x2="433.6666666666667" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="460.0" y1="80" x2="460.0" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="486.3333333333333" y1="80" x2="486.3333333333333" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="512.6666666666667" y1="80" x2="512.6666666666667" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="539.0" y1="80" x2="539.0" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="565.3333333333333" y1="80" x2="565.3333333333333" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="591.6666666666666" y1="80" x2="591.6666666666666" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="618.0" y1="80" x2="618.0" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="644.3333333333334" y1="80" x2="644.3333333333334" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="670.6666666666666" y1="80" x2="670.6666666666666" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="697.0" y1="80" x2="697.0" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="723.3333333333334" y1="80" x2="723.3333333333334" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="749.6666666666666" y1="80" x2="749.6666666666666" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="776.0" y1="80" x2="776.0" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="802.3333333333334" y1="80" x2="802.3333333333334" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<line x1="828.6666666666666" y1="80" x2="828.6666666666666" y2="140" stroke="#bdc3c7" stroke-width="0.8"/>
+<rect x="328.3333333333333" y="80" width="26.333333333333332" height="60" fill="#f1c40f" opacity="0.5"/>
+<line x1="341.5" y1="148" x2="341.5" y2="170" stroke="#c0392b" stroke-width="1.5"/>
+<text x="341.5" y="184" text-anchor="middle" font-size="10" fill="#c0392b" font-weight="bold">1 slice = 138.9 µs (终极)</text>
+<text x="341.5" y="198" text-anchor="middle" font-size="10" fill="#c0392b">/ 138.9 µs (360×20)</text>
+<text x="68" y="115" font-size="9" fill="#34495e">N slice ÷ 一帧时间</text>
+<text x="68" y="128" font-size="9" fill="#34495e">每 slice 显示一张新图</text>
+<rect x="60" y="200" width="380" height="300" rx="6" fill="white" stroke="#c0392b" stroke-width="2"/>
+<rect x="60" y="200" width="380" height="32" fill="#c0392b"/>
+<text x="250.0" y="222" text-anchor="middle" font-size="13" font-weight="bold" fill="white">场景 A: 终极目标 503 × 30 Hz</text>
+<text x="78" y="256" font-size="11" fill="#34495e" font-weight="600">屏幕刷新率</text>
+<text x="170" y="256" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">F_screen = N × F_vol</text>
+<text x="170" y="278" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">         = 503 × 30 = 15,090 Hz</text>
+<text x="78" y="300" font-size="11" fill="#34495e" font-weight="600">每 slice 时间</text>
+<text x="170" y="300" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">T_slice = 1 / 15,090 = 66.3 µs</text>
+<text x="78" y="322" font-size="11" fill="#34495e" font-weight="600">每帧像素</text>
+<text x="170" y="322" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">160 × 180 × 3 = 86,400 LED</text>
+<text x="78" y="344" font-size="11" fill="#34495e" font-weight="600">每帧位深</text>
+<text x="170" y="344" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">8-bit 灰度 (S-PWM)</text>
+<text x="78" y="366" font-size="11" fill="#34495e" font-weight="600">每帧比特</text>
+<text x="170" y="366" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">86,400 × 8 = 691,200 bit</text>
+<text x="78" y="388" font-size="11" fill="#34495e" font-weight="600">总带宽</text>
+<text x="170" y="388" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">B = 691,200 × 15,090</text>
+<text x="170" y="410" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">   = 10.4 Gb/s</text>
+<text x="78" y="432" font-size="11" fill="#34495e" font-weight="600">单芯片需求</text>
+<text x="170" y="432" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">~ 116 Mbps (>60 Mbps spec)</text>
+<rect x="72" y="440" width="356" height="22" fill="#fdebd0" rx="3"/>
+<text x="78" y="454" font-size="11" font-weight="bold" fill="#c0392b">结论:</text>
+<text x="130" y="454" font-size="11" font-weight="bold" fill="#c0392b">❌ 90 颗 MBI5264 做不到</text>
+<rect x="470" y="200" width="380" height="300" rx="6" fill="white" stroke="#16a085" stroke-width="2"/>
+<rect x="470" y="200" width="380" height="32" fill="#16a085"/>
+<text x="660.0" y="222" text-anchor="middle" font-size="13" font-weight="bold" fill="white">场景 B: 锁定 360 × 20 Hz</text>
+<text x="488" y="256" font-size="11" fill="#34495e" font-weight="600">屏幕刷新率</text>
+<text x="580" y="256" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">F_screen = 360 × 20 = 7,200 Hz</text>
+<text x="580" y="278" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace"></text>
+<text x="488" y="300" font-size="11" fill="#34495e" font-weight="600">每 slice 时间</text>
+<text x="580" y="300" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">T_slice = 1 / 7,200 = 138.9 µs</text>
+<text x="488" y="322" font-size="11" fill="#34495e" font-weight="600">每帧像素</text>
+<text x="580" y="322" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">86,400 LED</text>
+<text x="488" y="344" font-size="11" fill="#34495e" font-weight="600">每帧位深</text>
+<text x="580" y="344" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">8-bit 灰度</text>
+<text x="488" y="366" font-size="11" fill="#34495e" font-weight="600">每帧比特</text>
+<text x="580" y="366" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">691,200 bit</text>
+<text x="488" y="388" font-size="11" fill="#34495e" font-weight="600">总带宽</text>
+<text x="580" y="388" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">B = 691,200 × 7,200</text>
+<text x="580" y="410" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">   = 4.98 Gb/s</text>
+<text x="488" y="432" font-size="11" fill="#34495e" font-weight="600">单芯片需求</text>
+<text x="580" y="432" font-size="11" fill="#1a1a2e" font-family="Consolas, monospace">~ 55 Mbps (< 60 Mbps spec)</text>
+<rect x="482" y="440" width="356" height="22" fill="#d1f2eb" rx="3"/>
+<text x="488" y="454" font-size="11" font-weight="bold" fill="#16a085">结论:</text>
+<text x="540" y="454" font-size="11" font-weight="bold" fill="#16a085">✅ 90 颗 MBI5264 + 30 MHz DDR</text>
+</svg>
+
+<table>
+<tr><th>需求参数</th><th>计算式</th><th>结果</th></tr>
+<tr><td>体刷新率 (终极目标)</td><td>原始需求</td><td>30 Hz</td></tr>
+<tr><td>屏幕刷新率 (终极)</td><td>503 × 30 Hz</td><td><strong>15.1 kHz</strong></td></tr>
+<tr><td>每 slice 时间预算</td><td>1 / 15,090</td><td>66.3 µs</td></tr>
+<tr><td>每帧像素</td><td>160 × 180 × 3 RGB</td><td>86,400 LED</td></tr>
+<tr><td>每帧数据 (8-bit)</td><td>86,400 × 8 bit</td><td>691,200 bit ≈ 86.4 KB</td></tr>
+<tr><td>总数据带宽 (终极, 8-bit)</td><td>691,200 × 15,090</td><td><strong>10.4 Gb/s</strong></td></tr>
+<tr><td>总数据带宽 (终极, 16-bit)</td><td>10.4 × 2</td><td>20.9 Gb/s</td></tr>
+</table>
+
+<div class="warning">
+<strong>⚠ 单面屏特殊性</strong>: 普通显示屏没有"旋转浪费"问题, 但 POV3D 屏幕只朝一个方向发光,
+背面 180° 旋转过程对体素积分无贡献。所以屏幕刷新率公式 = <code>N × F_vol</code>, 不是 <code>N × F_vol / 2</code>。
+</div>
+
+<p><strong>实际锁定 Phase 1 目标</strong>: 由于终极 15.1 kHz 需要 ~10 Gb/s 总带宽 (后面推导显示 MBI5264 达不到),
+当前 Phase 锁定 <strong>360 slice × 20 Hz = 7.2 kHz 屏幕刷新</strong>:</p>
+
+<table>
+<tr><th>Phase 1 参数</th><th>值</th></tr>
+<tr><td>切片数 N (降级)</td><td>360 (外圈角分辨率 1°)</td></tr>
+<tr><td>体刷新率</td><td>20 Hz (电影 24fps 83%)</td></tr>
+<tr><td>屏幕刷新率</td><td><strong>7.2 kHz</strong></td></tr>
+<tr><td>每 slice 时间</td><td>138.9 µs</td></tr>
+<tr><td>总带宽</td><td><strong>4.98 Gb/s</strong></td></tr>
+</table>
+</div>
+
+<div class="section" id="sec_chip">
+<h2>🔧 3. 芯片选型推导过程</h2>
+<p>有了 4.98 Gb/s 总带宽需求, 现在选择能够供给这么多数据的 LED 驱动芯片。下面按时间顺序列出考虑过的候选:</p>
+<svg viewBox="0 0 900 580" xmlns="http://www.w3.org/2000/svg" style="background:#fcfcfc;border:1px solid #ddd;width:100%;max-width:920px;display:block;margin:0 auto;">
+<text x="450.0" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a1a2e">芯片选型推导过程 (按时间顺序)</text>
+<rect x="30" y="60" width="400" height="200" rx="8" fill="white" stroke="#7f8c8d" stroke-width="2"/>
+<rect x="30" y="60" width="400" height="30" fill="#7f8c8d"/>
+<text x="44" y="81" font-size="13" font-weight="bold" fill="white">ICND1069 (鹿小班现有)</text>
+<text x="44" y="112" font-size="10" fill="#34495e" font-weight="600">DCLK</text>
+<text x="130" y="112" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">25 MHz SDR = 25 Mbps</text>
+<text x="44" y="130" font-size="10" fill="#34495e" font-weight="600">扫数</text>
+<text x="130" y="130" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">1-64</text>
+<text x="44" y="148" font-size="10" fill="#34495e" font-weight="600">通道</text>
+<text x="130" y="148" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">16</text>
+<text x="44" y="166" font-size="10" fill="#34495e" font-weight="600">单芯片刷新</text>
+<text x="130" y="166" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">~1.5 kHz</text>
+<text x="44" y="184" font-size="10" fill="#34495e" font-weight="600">整板能力</text>
+<text x="130" y="184" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">503 × 3 Hz / 360 × 4 Hz</text>
+<line x1="40" y1="222" x2="420" y2="222" stroke="#7f8c8d" stroke-width="0.5"/>
+<text x="44" y="242" font-size="11" font-weight="bold" fill="#7f8c8d">❌ 太慢, 体刷新只能 3-4 Hz</text>
+<rect x="470" y="60" width="400" height="200" rx="8" fill="white" stroke="#16a085" stroke-width="3"/>
+<rect x="470" y="60" width="400" height="30" fill="#16a085"/>
+<text x="484" y="81" font-size="13" font-weight="bold" fill="white">MBI5264 (Hawkeye 150)</text>
+<text x="484" y="112" font-size="10" fill="#34495e" font-weight="600">DCLK</text>
+<text x="570" y="112" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">15 MHz DDR (spec) / 30 MHz max</text>
+<text x="484" y="130" font-size="10" fill="#34495e" font-weight="600">扫数</text>
+<text x="570" y="130" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">1-64</text>
+<text x="484" y="148" font-size="10" fill="#34495e" font-weight="600">通道</text>
+<text x="570" y="148" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">16</text>
+<text x="484" y="166" font-size="10" fill="#34495e" font-weight="600">单芯片刷新</text>
+<text x="570" y="166" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">3.66 kHz (spec) / 7.8 kHz (max)</text>
+<text x="484" y="184" font-size="10" fill="#34495e" font-weight="600">整板能力</text>
+<text x="570" y="184" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">360 × 20 Hz / 503 × 14 Hz</text>
+<line x1="480" y1="222" x2="860" y2="222" stroke="#16a085" stroke-width="0.5"/>
+<text x="484" y="242" font-size="11" font-weight="bold" fill="#16a085">✅ 选定 — 超频 30 MHz 可达 7.8 kHz</text>
+<rect x="30" y="280" width="400" height="200" rx="8" fill="white" stroke="#3498db" stroke-width="2"/>
+<rect x="30" y="280" width="400" height="30" fill="#3498db"/>
+<text x="44" y="301" font-size="13" font-weight="bold" fill="white">MBI5353 (48 通道)</text>
+<text x="44" y="332" font-size="10" fill="#34495e" font-weight="600">DCLK</text>
+<text x="130" y="332" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">15 MHz DDR</text>
+<text x="44" y="350" font-size="10" fill="#34495e" font-weight="600">扫数</text>
+<text x="130" y="350" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">1-32 (限)</text>
+<text x="44" y="368" font-size="10" fill="#34495e" font-weight="600">通道</text>
+<text x="130" y="368" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">48 ⬆</text>
+<text x="44" y="386" font-size="10" fill="#34495e" font-weight="600">单芯片刷新</text>
+<text x="130" y="386" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">1.22 kHz (慢 3×)</text>
+<text x="44" y="404" font-size="10" fill="#34495e" font-weight="600">整板能力</text>
+<text x="130" y="404" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">同 MBI5264</text>
+<line x1="40" y1="442" x2="420" y2="442" stroke="#3498db" stroke-width="0.5"/>
+<text x="44" y="462" font-size="11" font-weight="bold" fill="#3498db">⚠ 颗数 ⬇ 但 IO/刷新无优势</text>
+<rect x="470" y="280" width="400" height="200" rx="8" fill="white" stroke="#9b59b6" stroke-width="2"/>
+<rect x="470" y="280" width="400" height="30" fill="#9b59b6"/>
+<text x="484" y="301" font-size="13" font-weight="bold" fill="white">MBS7264 / DaVinci (未来)</text>
+<text x="484" y="332" font-size="10" fill="#34495e" font-weight="600">DCLK</text>
+<text x="570" y="332" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">V-by-One ~3.75 Gbps/pair</text>
+<text x="484" y="350" font-size="10" fill="#34495e" font-weight="600">扫数</text>
+<text x="570" y="350" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">1-64+</text>
+<text x="484" y="368" font-size="10" fill="#34495e" font-weight="600">通道</text>
+<text x="570" y="368" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">48+</text>
+<text x="484" y="386" font-size="10" fill="#34495e" font-weight="600">单芯片刷新</text>
+<text x="570" y="386" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">20+ kHz (估)</text>
+<text x="484" y="404" font-size="10" fill="#34495e" font-weight="600">整板能力</text>
+<text x="570" y="404" font-size="10" fill="#1a1a2e" font-family="Consolas, monospace">720 × 30 Hz × 16-bit ✓</text>
+<line x1="480" y1="442" x2="860" y2="442" stroke="#9b59b6" stroke-width="0.5"/>
+<text x="484" y="462" font-size="11" font-weight="bold" fill="#9b59b6">🚀 Phase 3 升级目标</text>
+<rect x="30" y="500" width="840" height="70" rx="6" fill="#fff7e0" stroke="#f39c12" stroke-width="1.5"/>
+<text x="450.0" y="520" text-anchor="middle" font-size="12" font-weight="bold" fill="#b8860b">关键发现</text>
+<text x="50" y="540" font-size="10" fill="#34495e">• 单 SDI 带宽 (DCLK 限) 是真瓶颈, 不是 FPGA 算力 / IO 数 / 芯片通道数</text>
+<text x="50" y="556" font-size="10" fill="#34495e">• 48 通道 (MBI5353) / 桥接 FPGA / 9 CPLD 都只省 IO 不增刷新; 要真提速必须换更高 DCLK 的 driver</text>
+</svg>
+
+<h3 style="margin-top:24px;font-size:16px;color:#34495e;">每路 SDI 物理铁律</h3>
+<div class="info">
+<strong>单 SDI 带宽 = DCLK × bit_per_clock</strong><br>
+- ICND1069: 25 MHz × 1 (SDR) = <code>25 Mbps/SDI</code><br>
+- MBI5264: 15 MHz × 2 (DDR) = <code>30 Mbps/SDI</code> (spec), 30 MHz × 2 = <code>60 Mbps/SDI</code> (超频 max)<br>
+- 90 颗芯片 × 60 Mbps = <code>5.4 Gb/s 整板聚合</code> (vs 4.98 Gb/s 需求, 余 8.5%)
+</div>
+
+<h3 style="margin-top:24px;font-size:16px;color:#34495e;">芯片数量推导</h3>
+<table>
+<tr><th>项目</th><th>计算</th><th>结果</th></tr>
+<tr><td>每颗 MBI5264 LED 容量</td><td>16 通道 × 60-scan</td><td>960 LED</td></tr>
+<tr><td>所需芯片数 (单色)</td><td>28,800 / 960</td><td>30 颗</td></tr>
+<tr><td>RGB 总芯片数</td><td>30 × 3 色</td><td><strong>90 颗 MBI5264</strong></td></tr>
+<tr><td>行管 MBI5989 数</td><td>180 row / 16 ch</td><td><strong>12 颗</strong></td></tr>
+<tr><td>单颗每帧数据</td><td>16 × 60 × 8 bit</td><td>7,680 bit</td></tr>
+<tr><td>单颗刷新上限 @ 60 Mbps</td><td>60M / 7,680</td><td><strong>7.81 kHz</strong> (vs 7.2k 目标, 余 8.5%)</td></tr>
+</table>
+</div>
+
+<div class="section" id="sec_final">
+<h2>🎯 4. 方案锁定参数总表</h2>
+<table>
+<tr><th colspan="2" style="background:#16a085;text-align:center;font-size:14px;">Phase 1 落地参数 (2026-05-12 锁定)</th></tr>
+<tr><td><strong>POV 配置</strong></td><td>360 slice × 20 Hz × 8-bit RGB</td></tr>
+<tr><td><strong>体刷新率</strong></td><td>20 Hz</td></tr>
+<tr><td><strong>屏幕刷新率</strong></td><td>7.2 kHz (单颗 MBI5264 上限 7.81 kHz, 余 8.5%)</td></tr>
+<tr><td><strong>角分辨率 (外圈)</strong></td><td>1° 每 slice (比像素粗 25%)</td></tr>
+<tr><td><strong>灰度位深</strong></td><td>8-bit (256 级, S-PWM scrambling 提升视觉)</td></tr>
+<tr><td><strong>数据带宽</strong></td><td>4.98 Gb/s 整板聚合</td></tr>
+<tr><td><strong>主 FPGA</strong></td><td>Zynq 7020 CLG484 (PL IO 200, 占用 ~101)</td></tr>
+<tr><td><strong>列驱动</strong></td><td>90× MBI5264 (16ch × 60-scan PWM Sink, 共阳屏)</td></tr>
+<tr><td><strong>行驱动</strong></td><td>12× MBI5989 (16ch PMOS 高边开关)</td></tr>
+<tr><td><strong>时钟扇出</strong></td><td>2~3× NB3N551 (1:48 fanout, DCLK/LE/GCLK)</td></tr>
+<tr><td><strong>LED 灯珠</strong></td><td>28,800× 共阳 RGB SMD, 0.94 mm pitch</td></tr>
+<tr><td><strong>DCLK 工作频率</strong></td><td>30 MHz DDR (max spec, 需 Phase 1 实测验证)</td></tr>
+<tr><td><strong>BOM (单板)</strong></td><td>≈ $1,108</td></tr>
+</table>
+
+<div class="note">
+<strong>DCLK 超频应急表</strong>: 30 MHz DDR 是 datasheet absolute max, 实测可能掉到 25/20/15 MHz, 对应 POV 配置:
+<ul>
+<li>30 MHz DDR (理想): 360×20Hz ✓</li>
+<li>25 MHz DDR: 360×18 / 320×20 ✓</li>
+<li>20 MHz DDR: 360×14 / 260×20 ✓</li>
+<li>15 MHz DDR (spec 安全): 360×10 / 180×20 ✓</li>
+</ul>
+</div>
+</div>
+
+<div class="section" id="sec1">
+<h2>1. 拓扑选择与芯片配对说明</h2>
+
+<div class="warning">
+<strong>⚠ 重要：MBI5264 + ICND3019 不是合法配对</strong><br>
+之前讨论中我们一直说 MBI5264 + ICND3019, 但实际上：
+<ul>
+<li><strong>MBI5264</strong>: 共阳屏 (common anode panel) 列驱动, OUT 端 <strong>电流 SINK</strong> 到 GND (LED 阴极侧)</li>
+<li><strong>ICND3019</strong>: 共阴屏 (common cathode panel) 行驱动, NMOS <strong>拉 GND</strong> (LED 阴极侧)</li>
+<li>两颗都驱动 LED 阴极侧, 物理上无法配对</li>
+</ul>
+</div>
+
+<table>
+<tr><th>面板拓扑</th><th>列驱动 (PWM 恒流)</th><th>行驱动 (扫描开关)</th><th>LED 类型</th></tr>
+<tr><td>共阳 (common anode)</td><td><strong>MBI5264 SINK</strong></td><td><strong>MBI5989 PMOS</strong> ⭐</td><td>共阳极 RGB LED (3 阴极)</td></tr>
+<tr><td>共阴 (common cathode)</td><td>MBI5754 或 ICND1069 (SOURCE)</td><td>ICND3019 或 MBI5981 (NMOS)</td><td>共阴极 RGB LED (3 阳极)</td></tr>
+</table>
+
+<div class="info">
+<strong>本设计采用</strong>: 共阳屏拓扑 = <strong>MBI5264 (列) + MBI5989 (行)</strong>, 按 Macroblock Hawkeye 150 官方参考方案。
+鹿小班现有屏 (108× ICND1069 + 24× ICND3019) 是共阴屏拓扑, 不能复用; 新设计需要重新选购共阳 RGB LED 灯珠。
+</div>
+
+<table>
+<tr><th>参数</th><th>MBI5264 (列驱)</th><th>MBI5989 (行驱)</th></tr>
+<tr><td>通道数</td><td>16 PWM 电流 SINK</td><td>16 PMOS 高边开关</td></tr>
+<tr><td>电流范围</td><td>0.5–20 mA / ch</td><td>1.5 A / ch (持续)</td></tr>
+<tr><td>耐压 VDS</td><td>3.8–5.5 V</td><td>17 V</td></tr>
+<tr><td>DCLK</td><td>15 MHz typ / 30 MHz max DDR</td><td>15 MHz (同步)</td></tr>
+<tr><td>SRAM</td><td>16K bit × 2 ping-pong (64-scan)</td><td>无 (简单移位)</td></tr>
+<tr><td>灰度</td><td>13/14/15/16-bit S-PWM</td><td>– (开关)</td></tr>
+<tr><td>封装</td><td>QFN24 / SSOP24</td><td>QFN24</td></tr>
+<tr><td>单价</td><td>~$2.0</td><td>~$1.5</td></tr>
+</table>
+</div>
+
+<div class="section" id="sec2">
+<h2>2. 单组接线：1 列驱 + 1 行驱 + 16×16 LED</h2>
+<p>最小可用单元 = 1× MBI5264 + 1× MBI5989 + 16×16 = 256 颗 LED 单色矩阵 (16-scan)</p>
+<svg viewBox="0 0 668 698" xmlns="http://www.w3.org/2000/svg" style="background:#fcfcfc;border:1px solid #ddd;width:100%;max-width:920px;display:block;margin:0 auto;">
+<text x="334.0" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a1a2e">单组接线：1× MBI5264 + 1× MBI5989 驱动 16×16 LED 单色矩阵 (16-scan)</text>
+<line x1="20" y1="50" x2="85.0" y2="50" stroke="#e74c3c" stroke-width="2.5"/>
+<text x="30" y="44" font-size="11" fill="#e74c3c">VLED +5V</text>
+<line x1="85.0" y1="50" x2="85.0" y2="90" stroke="#e74c3c" stroke-width="2.5"/>
+<rect x="30" y="90" width="110" height="448" rx="6" fill="#34495e" stroke="#1a1a2e" stroke-width="1"/>
+<text x="85.0" y="110" text-anchor="middle" fill="white" font-size="12" font-weight="bold">MBI5989</text>
+<text x="85.0" y="125" text-anchor="middle" fill="white" font-size="9">PMOS 高边开关</text>
+<text x="85.0" y="138" text-anchor="middle" fill="white" font-size="9">16 通道行驱动</text>
+<line x1="140" y1="104.0" x2="160" y2="104.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="104.0" x2="608" y2="104.0" stroke="#3498db" stroke-width="1.5"/>
+<text x="144" y="100.0" font-size="8" fill="#3498db">Row0 阳极</text>
+<line x1="140" y1="132.0" x2="160" y2="132.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="132.0" x2="608" y2="132.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="140" y1="160.0" x2="160" y2="160.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="160.0" x2="608" y2="160.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="140" y1="188.0" x2="160" y2="188.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="188.0" x2="608" y2="188.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="140" y1="216.0" x2="160" y2="216.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="216.0" x2="608" y2="216.0" stroke="#3498db" stroke-width="1.5"/>
+<text x="144" y="212.0" font-size="8" fill="#3498db">Row4</text>
+<line x1="140" y1="244.0" x2="160" y2="244.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="244.0" x2="608" y2="244.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="140" y1="272.0" x2="160" y2="272.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="272.0" x2="608" y2="272.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="140" y1="300.0" x2="160" y2="300.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="300.0" x2="608" y2="300.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="140" y1="328.0" x2="160" y2="328.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="328.0" x2="608" y2="328.0" stroke="#3498db" stroke-width="1.5"/>
+<text x="144" y="324.0" font-size="8" fill="#3498db">Row8</text>
+<line x1="140" y1="356.0" x2="160" y2="356.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="356.0" x2="608" y2="356.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="140" y1="384.0" x2="160" y2="384.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="384.0" x2="608" y2="384.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="140" y1="412.0" x2="160" y2="412.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="412.0" x2="608" y2="412.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="140" y1="440.0" x2="160" y2="440.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="440.0" x2="608" y2="440.0" stroke="#3498db" stroke-width="1.5"/>
+<text x="144" y="436.0" font-size="8" fill="#3498db">Row12</text>
+<line x1="140" y1="468.0" x2="160" y2="468.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="468.0" x2="608" y2="468.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="140" y1="496.0" x2="160" y2="496.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="496.0" x2="608" y2="496.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="140" y1="524.0" x2="160" y2="524.0" stroke="#3498db" stroke-width="1.5"/>
+<line x1="160" y1="524.0" x2="608" y2="524.0" stroke="#3498db" stroke-width="1.5"/>
+<text x="144" y="520.0" font-size="8" fill="#3498db">Row15</text>
+<rect x="160" y="568" width="448" height="60" rx="6" fill="#2c3e50" stroke="#1a1a2e" stroke-width="1"/>
+<text x="384.0" y="590" text-anchor="middle" fill="white" font-size="13" font-weight="bold">MBI5264 — 16 通道 PWM 恒流 SINK · 列驱动</text>
+<text x="384.0" y="606" text-anchor="middle" fill="white" font-size="9">每通道 OUT0..OUT15 把所在列阴极拉到 GND, 由内部 PWM 控制电流 (0.5~20mA)</text>
+<text x="384.0" y="620" text-anchor="middle" fill="white" font-size="9">SDI / DCLK / LE / GCLK 从 Zynq FPGA 来</text>
+<line x1="174.0" y1="568" x2="174.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="174.0" y1="90" x2="174.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<text x="170.0" y="84" font-size="8" fill="#e67e22">Col0 阴极</text>
+<line x1="202.0" y1="568" x2="202.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="202.0" y1="90" x2="202.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="230.0" y1="568" x2="230.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="230.0" y1="90" x2="230.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="258.0" y1="568" x2="258.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="258.0" y1="90" x2="258.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="286.0" y1="568" x2="286.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="286.0" y1="90" x2="286.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<text x="278.0" y="84" font-size="8" fill="#e67e22">Col4</text>
+<line x1="314.0" y1="568" x2="314.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="314.0" y1="90" x2="314.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="342.0" y1="568" x2="342.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="342.0" y1="90" x2="342.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="370.0" y1="568" x2="370.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="370.0" y1="90" x2="370.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="398.0" y1="568" x2="398.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="398.0" y1="90" x2="398.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<text x="390.0" y="84" font-size="8" fill="#e67e22">Col8</text>
+<line x1="426.0" y1="568" x2="426.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="426.0" y1="90" x2="426.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="454.0" y1="568" x2="454.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="454.0" y1="90" x2="454.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="482.0" y1="568" x2="482.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="482.0" y1="90" x2="482.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="510.0" y1="568" x2="510.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="510.0" y1="90" x2="510.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<text x="502.0" y="84" font-size="8" fill="#e67e22">Col12</text>
+<line x1="538.0" y1="568" x2="538.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="538.0" y1="90" x2="538.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="566.0" y1="568" x2="566.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="566.0" y1="90" x2="566.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="594.0" y1="568" x2="594.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<line x1="594.0" y1="90" x2="594.0" y2="538" stroke="#e67e22" stroke-width="1.5"/>
+<text x="586.0" y="84" font-size="8" fill="#e67e22">Col15</text>
+<circle cx="174.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="104.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="132.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="160.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="174.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="202.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="202.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="230.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="230.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="258.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="258.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="286.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="286.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="314.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="314.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="342.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="342.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="370.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="370.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="398.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="398.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="426.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="426.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="454.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="454.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="482.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="482.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="510.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="510.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="538.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="538.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="566.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="566.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="594.0" cy="188.0" r="6" fill="#f1c40f" stroke="#c0392b" stroke-width="1.5"/>
+<circle cx="594.0" cy="188.0" r="3" fill="#fff"/>
+<circle cx="174.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="216.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="244.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="272.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="300.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="328.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="356.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="384.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="412.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="440.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="468.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="496.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="174.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="202.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="230.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="258.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="286.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="314.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="342.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="370.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="398.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="426.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="454.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="482.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="510.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="538.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="566.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<circle cx="594.0" cy="524.0" r="4" fill="#bdc3c7" stroke="#7f8c8d" stroke-width="0.8"/>
+<text x="135" y="192.0" text-anchor="end" font-size="9" fill="#e74c3c" font-weight="bold">► ON</text>
+<text x="85.0" y="552" text-anchor="middle" fill="white" font-size="9">PMOS 选 1 行,</text>
+<text x="85.0" y="562" text-anchor="middle" fill="white" font-size="9">其他 15 行 OFF</text>
+<line x1="160" y1="640" x2="608" y2="640" stroke="#555" stroke-width="3"/>
+<line x1="165" y1="642" x2="172" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="195" y1="642" x2="202" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="225" y1="642" x2="232" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="255" y1="642" x2="262" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="285" y1="642" x2="292" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="315" y1="642" x2="322" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="345" y1="642" x2="352" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="375" y1="642" x2="382" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="405" y1="642" x2="412" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="435" y1="642" x2="442" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="465" y1="642" x2="472" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="495" y1="642" x2="502" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="525" y1="642" x2="532" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="555" y1="642" x2="562" y2="648" stroke="#555" stroke-width="1.5"/>
+<line x1="585" y1="642" x2="592" y2="648" stroke="#555" stroke-width="1.5"/>
+<text x="616" y="644" font-size="11" fill="#555">GND</text>
+<text x="334.0" y="663" text-anchor="middle" font-size="11" fill="#16a085" font-weight="bold">电流路径: VLED → MBI5989 PMOS → Row3 阳极 → LED → Col 阴极 → MBI5264 PWM Sink → GND</text>
+<text x="334.0" y="680" text-anchor="middle" font-size="10" fill="#666">16-scan: 每个时刻只有 1 行 16 颗 LED 通电, 16 个 scan cycle 后所有 256 颗 LED 都被刷一遍</text>
+</svg>
+<div class="info">
+<strong>工作原理</strong>:
+<ol>
+<li><strong>MBI5989</strong> (左侧 PMOS) 每个时刻只把 1 个 OUT 输出 VLED, 其余 15 个 OUT 高阻 → 只有 1 行被供电</li>
+<li><strong>MBI5264</strong> (下方 SINK) 每个 OUT 按 PWM 占空比把对应列的阴极拉到 GND → 该列 LED 通电亮起</li>
+<li>2 个 chip 配合 16 次扫描 (16-scan), 256 颗 LED 每个都被刷一次, 一帧完成</li>
+<li>S-PWM 把每个 sub-frame 打散到多个时间段, 视觉刷新率 ×2~4</li>
+</ol>
+</div>
+</div>
+
+<div class="section" id="sec3">
+<h2>3. 芯片管脚级详图</h2>
+<svg viewBox="0 0 1000 540" xmlns="http://www.w3.org/2000/svg" style="background:#fcfcfc;border:1px solid #ddd;width:100%;max-width:980px;display:block;margin:0 auto;">
+<text x="500.0" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a1a2e">单颗芯片管脚详图 · 信号来源与负载连接</text>
+<rect x="130" y="70" width="200" height="380" rx="8" fill="#2c3e50" stroke="#1a1a2e" stroke-width="1.5"/>
+<text x="230.0" y="92" text-anchor="middle" fill="white" font-size="14" font-weight="bold">MBI5264</text>
+<text x="230.0" y="108" text-anchor="middle" fill="#bdc3c7" font-size="10">QFN24 · 列驱动 · PWM Sink</text>
+<line x1="130" y1="130" x2="105" y2="130" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="135" y="134" font-size="10" fill="white">VDD</text>
+<text x="100" y="134" text-anchor="end" font-size="9" fill="#444">+5V</text>
+<line x1="130" y1="158" x2="105" y2="158" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="135" y="162" font-size="10" fill="white">GND</text>
+<text x="100" y="162" text-anchor="end" font-size="9" fill="#444">GND</text>
+<line x1="130" y1="186" x2="105" y2="186" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="135" y="190" font-size="10" fill="white">SDI</text>
+<text x="100" y="190" text-anchor="end" font-size="9" fill="#444">← Zynq SDI[N]</text>
+<line x1="130" y1="214" x2="105" y2="214" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="135" y="218" font-size="10" fill="white">SDO</text>
+<text x="100" y="218" text-anchor="end" font-size="9" fill="#444">悬空</text>
+<line x1="130" y1="242" x2="105" y2="242" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="135" y="246" font-size="10" fill="white">DCLK</text>
+<text x="100" y="246" text-anchor="end" font-size="9" fill="#444">← DCLK 共享</text>
+<line x1="130" y1="270" x2="105" y2="270" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="135" y="274" font-size="10" fill="white">LE</text>
+<text x="100" y="274" text-anchor="end" font-size="9" fill="#444">← LE 共享</text>
+<line x1="130" y1="298" x2="105" y2="298" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="135" y="302" font-size="10" fill="white">GCLK</text>
+<text x="100" y="302" text-anchor="end" font-size="9" fill="#444">← GCLK 共享</text>
+<line x1="130" y1="326" x2="105" y2="326" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="135" y="330" font-size="10" fill="white">REXT</text>
+<text x="100" y="330" text-anchor="end" font-size="9" fill="#444">→ 14.4kΩ → GND</text>
+<line x1="330" y1="130" x2="360" y2="130" stroke="#e67e22" stroke-width="1.8"/>
+<text x="325" y="134" text-anchor="end" font-size="10" fill="white">OUT0</text>
+<text x="364" y="134" font-size="9" fill="#e67e22">→ Col0</text>
+<line x1="330" y1="158" x2="360" y2="158" stroke="#e67e22" stroke-width="1.8"/>
+<text x="325" y="162" text-anchor="end" font-size="10" fill="white">OUT1</text>
+<text x="364" y="162" font-size="9" fill="#e67e22">→ Col1</text>
+<text x="320" y="190" text-anchor="end" font-size="11" fill="white">…</text>
+<line x1="330" y1="214" x2="360" y2="214" stroke="#e67e22" stroke-width="1.8"/>
+<text x="325" y="218" text-anchor="end" font-size="10" fill="white">OUT14</text>
+<text x="364" y="218" font-size="9" fill="#e67e22">→ Col14</text>
+<line x1="330" y1="242" x2="360" y2="242" stroke="#e67e22" stroke-width="1.8"/>
+<text x="325" y="246" text-anchor="end" font-size="10" fill="white">OUT15</text>
+<text x="364" y="246" font-size="9" fill="#e67e22">→ Col15</text>
+<rect x="680" y="70" width="200" height="380" rx="8" fill="#34495e" stroke="#1a1a2e" stroke-width="1.5"/>
+<text x="780.0" y="92" text-anchor="middle" fill="white" font-size="14" font-weight="bold">MBI5989</text>
+<text x="780.0" y="108" text-anchor="middle" fill="#bdc3c7" font-size="10">QFN24 · 行驱动 · PMOS 高边</text>
+<line x1="650" y1="130" x2="680" y2="130" stroke="#3498db" stroke-width="1.8"/>
+<text x="685" y="134" text-anchor="start" font-size="10" fill="white">OUT0</text>
+<text x="646" y="134" text-anchor="end" font-size="9" fill="#3498db">Row0 ←</text>
+<line x1="650" y1="158" x2="680" y2="158" stroke="#3498db" stroke-width="1.8"/>
+<text x="685" y="162" text-anchor="start" font-size="10" fill="white">OUT1</text>
+<text x="646" y="162" text-anchor="end" font-size="9" fill="#3498db">Row1 ←</text>
+<text x="690" y="190" text-anchor="start" font-size="11" fill="white">…</text>
+<line x1="650" y1="214" x2="680" y2="214" stroke="#3498db" stroke-width="1.8"/>
+<text x="685" y="218" text-anchor="start" font-size="10" fill="white">OUT14</text>
+<text x="646" y="218" text-anchor="end" font-size="9" fill="#3498db">Row14 ←</text>
+<line x1="650" y1="242" x2="680" y2="242" stroke="#3498db" stroke-width="1.8"/>
+<text x="685" y="246" text-anchor="start" font-size="10" fill="white">OUT15</text>
+<text x="646" y="246" text-anchor="end" font-size="9" fill="#3498db">Row15 ←</text>
+<line x1="880" y1="130" x2="905" y2="130" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="875" y="134" text-anchor="end" font-size="10" fill="white">VLED</text>
+<text x="910" y="134" font-size="9" fill="#444">+5V LED</text>
+<line x1="880" y1="158" x2="905" y2="158" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="875" y="162" text-anchor="end" font-size="10" fill="white">GND</text>
+<text x="910" y="162" font-size="9" fill="#444">GND</text>
+<line x1="880" y1="186" x2="905" y2="186" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="875" y="190" text-anchor="end" font-size="10" fill="white">SDI</text>
+<text x="910" y="190" font-size="9" fill="#444">← Row_SDI</text>
+<line x1="880" y1="214" x2="905" y2="214" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="875" y="218" text-anchor="end" font-size="10" fill="white">SDO</text>
+<text x="910" y="218" font-size="9" fill="#444">→ 下颗 SDI</text>
+<line x1="880" y1="242" x2="905" y2="242" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="875" y="246" text-anchor="end" font-size="10" fill="white">DCLK</text>
+<text x="910" y="246" font-size="9" fill="#444">← Row_DCLK</text>
+<line x1="880" y1="270" x2="905" y2="270" stroke="#95a5a6" stroke-width="1.5"/>
+<text x="875" y="274" text-anchor="end" font-size="10" fill="white">LE</text>
+<text x="910" y="274" font-size="9" fill="#444">← Row_LE</text>
+<polygon points="485.0,230 525.0,230 505.0,260" fill="#27ae60" stroke="#16a085" stroke-width="1.5"/>
+<line x1="488.0" y1="262" x2="522.0" y2="262" stroke="#16a085" stroke-width="3"/>
+<text x="505.0" y="226" text-anchor="middle" font-size="9" fill="#16a085">阳极 (A)</text>
+<text x="505.0" y="276" text-anchor="middle" font-size="9" fill="#16a085">阴极 (K)</text>
+<text x="505.0" y="292" text-anchor="middle" font-size="11" fill="#16a085" font-weight="bold">LED (R0,C0)</text>
+<line x1="650" y1="130" x2="505.0" y2="130" stroke="#3498db" stroke-width="2"/>
+<line x1="505.0" y1="130" x2="505.0" y2="230" stroke="#3498db" stroke-width="2"/>
+<text x="511.0" y="124" font-size="9" fill="#3498db">Row0 阳极线</text>
+<line x1="505.0" y1="265" x2="505.0" y2="330" stroke="#e67e22" stroke-width="2"/>
+<line x1="505.0" y1="330" x2="360" y2="330" stroke="#e67e22" stroke-width="2"/>
+<line x1="360" y1="330" x2="360" y2="130" stroke="#e67e22" stroke-width="2"/>
+<text x="499.0" y="324" text-anchor="end" font-size="9" fill="#e67e22">Col0 阴极线</text>
+<text x="531.0" y="248" font-size="11" fill="#16a085" font-weight="bold">↓</text>
+<text x="543.0" y="250" font-size="9" fill="#16a085">电流</text>
+<line x1="980" y1="130" x2="905" y2="130" stroke="#e74c3c" stroke-width="3"/>
+<text x="985" y="124" font-size="11" fill="#e74c3c" font-weight="bold">+5V</text>
+<line x1="30" y1="158" x2="105" y2="158" stroke="#555" stroke-width="3"/>
+<text x="25" y="152" font-size="11" fill="#555" font-weight="bold" text-anchor="end">GND</text>
+<rect x="60" y="470" width="880" height="60" rx="6" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="1"/>
+<text x="500.0" y="490" text-anchor="middle" font-size="12" font-weight="bold" fill="#34495e">来自 Zynq FPGA 的控制信号汇总</text>
+<text x="80" y="510" font-size="10" fill="#666">列驱信号: <tspan fill="#e67e22" font-weight="bold">SDI_Col[N]</tspan> (每颗 1 根, 共 90 根) + 共享 DCLK / LE / GCLK (经 NB3N551 fanout)</text>
+<text x="80" y="524" font-size="10" fill="#666">行驱信号: <tspan fill="#3498db" font-weight="bold">Row_SDI</tspan> (12 颗 MBI5989 串行级联, 1 根) + 共享 Row_DCLK / Row_LE</text>
+</svg>
+<table>
+<tr><th>信号</th><th>方向</th><th>说明</th></tr>
+<tr><td><code>VDD</code> / <code>VLED</code></td><td>电源输入</td><td>5V 主电源, 经本地 10µF + 0.1µF 旁路电容</td></tr>
+<tr><td><code>SDI</code></td><td>FPGA → chip</td><td>串行数据输入, 16-bit MSB first; 列驱每颗一根, 行驱级联</td></tr>
+<tr><td><code>SDO</code></td><td>chip → 下一颗 / FPGA</td><td>串行输出, 不级联时悬空, 级联时接下一颗 SDI</td></tr>
+<tr><td><code>DCLK</code></td><td>FPGA → chip</td><td>数据时钟, 30 MHz DDR 超频, 经 NB3N551 扇出到全部 chip</td></tr>
+<tr><td><code>LE</code></td><td>FPGA → chip</td><td>锁存使能, 配合 DCLK 区分指令 (DATA_LATCH / VSYNC / WR_CFG 等)</td></tr>
+<tr><td><code>GCLK</code></td><td>FPGA → chip</td><td>灰度时钟 33 MHz, 驱动内部 PWM 计数器</td></tr>
+<tr><td><code>REXT</code></td><td>外接电阻</td><td>14.4 kΩ → GND, 决定恒流值 Iout = 12/Rext × Gain</td></tr>
+<tr><td><code>OUT0..OUT15</code></td><td>→ LED</td><td>MBI5264 接 LED 阴极 (列); MBI5989 接 LED 阳极 (行)</td></tr>
+</table>
+</div>
+
+<div class="section" id="sec4">
+<h2>4. 单 Stripe 扩展：60-scan, 30 列驱 + 4 行驱</h2>
+<p>面板按 60-scan 时分多路, 180 行 ÷ 60-scan = 3 stripe, 每 stripe 60 行 × 160 列 × 3 色 = 28,800 LED</p>
+<svg viewBox="0 0 900 460" xmlns="http://www.w3.org/2000/svg" style="background:#fcfcfc;border:1px solid #ddd;width:100%;max-width:920px;display:block;margin:0 auto;">
+<text x="450.0" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a1a2e">单 Stripe 扩展：160 col × 60 row × 3 color RGB = 28,800 LED</text>
+<text x="450.0" y="40" text-anchor="middle" font-size="11" fill="#666">30× MBI5264 + 4× MBI5989, 60-scan 时分多路</text>
+<rect x="30" y="70.0" width="60" height="66.0" rx="4" fill="#34495e" stroke="#1a1a2e"/>
+<text x="60.0" y="86.0" text-anchor="middle" fill="white" font-size="10" font-weight="bold">MBI5989</text>
+<text x="60.0" y="100.0" text-anchor="middle" fill="white" font-size="8">#0</text>
+<text x="60.0" y="115.0" text-anchor="middle" fill="#bdc3c7" font-size="8">行 0..15</text>
+<line x1="90" y1="82.0" x2="108" y2="82.0" stroke="#3498db" stroke-width="1"/>
+<line x1="90" y1="94.0" x2="108" y2="94.0" stroke="#3498db" stroke-width="1"/>
+<line x1="90" y1="106.0" x2="108" y2="106.0" stroke="#3498db" stroke-width="1"/>
+<rect x="30" y="140.0" width="60" height="66.0" rx="4" fill="#34495e" stroke="#1a1a2e"/>
+<text x="60.0" y="156.0" text-anchor="middle" fill="white" font-size="10" font-weight="bold">MBI5989</text>
+<text x="60.0" y="170.0" text-anchor="middle" fill="white" font-size="8">#1</text>
+<text x="60.0" y="185.0" text-anchor="middle" fill="#bdc3c7" font-size="8">行 16..31</text>
+<line x1="90" y1="152.0" x2="108" y2="152.0" stroke="#3498db" stroke-width="1"/>
+<line x1="90" y1="164.0" x2="108" y2="164.0" stroke="#3498db" stroke-width="1"/>
+<line x1="90" y1="176.0" x2="108" y2="176.0" stroke="#3498db" stroke-width="1"/>
+<rect x="30" y="210.0" width="60" height="66.0" rx="4" fill="#34495e" stroke="#1a1a2e"/>
+<text x="60.0" y="226.0" text-anchor="middle" fill="white" font-size="10" font-weight="bold">MBI5989</text>
+<text x="60.0" y="240.0" text-anchor="middle" fill="white" font-size="8">#2</text>
+<text x="60.0" y="255.0" text-anchor="middle" fill="#bdc3c7" font-size="8">行 32..47</text>
+<line x1="90" y1="222.0" x2="108" y2="222.0" stroke="#3498db" stroke-width="1"/>
+<line x1="90" y1="234.0" x2="108" y2="234.0" stroke="#3498db" stroke-width="1"/>
+<line x1="90" y1="246.0" x2="108" y2="246.0" stroke="#3498db" stroke-width="1"/>
+<rect x="30" y="280.0" width="60" height="66.0" rx="4" fill="#34495e" stroke="#1a1a2e"/>
+<text x="60.0" y="296.0" text-anchor="middle" fill="white" font-size="10" font-weight="bold">MBI5989</text>
+<text x="60.0" y="310.0" text-anchor="middle" fill="white" font-size="8">#3</text>
+<text x="60.0" y="325.0" text-anchor="middle" fill="#bdc3c7" font-size="8">行 48..59</text>
+<line x1="90" y1="292.0" x2="108" y2="292.0" stroke="#3498db" stroke-width="1"/>
+<line x1="90" y1="304.0" x2="108" y2="304.0" stroke="#3498db" stroke-width="1"/>
+<line x1="90" y1="316.0" x2="108" y2="316.0" stroke="#3498db" stroke-width="1"/>
+<line x1="20" y1="60" x2="60.0" y2="60" stroke="#3498db" stroke-width="1.5"/>
+<line x1="60.0" y1="60" x2="60.0" y2="70" stroke="#3498db" stroke-width="1.5"/>
+<text x="20" y="56" font-size="9" fill="#3498db">Row_SDI 串入</text>
+<rect x="115" y="70" width="600" height="280" fill="#fff3cd" stroke="#856404" stroke-width="1.5" stroke-dasharray="6,3"/>
+<text x="415.0" y="98" text-anchor="middle" font-size="12" font-weight="bold" fill="#856404">LED 阵列  ·  160 col × 60 row × 3 color</text>
+<text x="415.0" y="114" text-anchor="middle" font-size="10" fill="#856404">每个像素 = 共阳 RGB SMD LED (3 个 die, 共阳极)</text>
+<circle cx="126.53846153846153" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="130.0" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="130.0" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="130.0" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="141.05263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="141.05263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="141.05263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="152.10526315789474" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="152.10526315789474" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="152.10526315789474" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="163.1578947368421" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="163.1578947368421" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="163.1578947368421" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="174.21052631578948" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="174.21052631578948" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="174.21052631578948" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="185.26315789473685" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="185.26315789473685" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="185.26315789473685" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="196.31578947368422" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="196.31578947368422" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="196.31578947368422" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="207.36842105263156" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="207.36842105263156" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="207.36842105263156" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="218.42105263157896" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="218.42105263157896" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="218.42105263157896" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="229.4736842105263" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="229.4736842105263" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="229.4736842105263" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="240.5263157894737" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="240.5263157894737" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="240.5263157894737" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="251.57894736842104" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="251.57894736842104" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="251.57894736842104" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="262.63157894736844" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="262.63157894736844" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="262.63157894736844" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="273.6842105263158" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="273.6842105263158" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="273.6842105263158" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="284.7368421052631" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="284.7368421052631" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="284.7368421052631" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="295.7894736842105" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="295.7894736842105" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="295.7894736842105" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="306.8421052631579" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="306.8421052631579" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="306.8421052631579" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="126.53846153846153" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="138.07692307692307" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="149.6153846153846" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="161.15384615384613" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="172.69230769230768" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="184.23076923076923" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="195.76923076923077" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="207.30769230769232" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="218.84615384615384" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="230.38461538461536" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="241.9230769230769" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="253.46153846153845" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="265.0" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="276.53846153846155" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="288.0769230769231" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="299.6153846153846" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="311.15384615384613" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="322.6923076923077" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="334.2307692307692" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="345.7692307692308" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="357.3076923076923" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="368.8461538461538" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="380.38461538461536" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="391.9230769230769" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="403.46153846153845" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="415.0" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="426.53846153846155" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="438.0769230769231" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="449.61538461538464" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="461.15384615384613" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="472.6923076923077" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="484.2307692307692" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="495.7692307692308" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="507.3076923076923" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="518.8461538461538" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="530.3846153846154" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="541.9230769230769" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="553.4615384615385" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="565.0" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="576.5384615384615" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="588.0769230769231" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="599.6153846153846" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="611.1538461538461" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="622.6923076923076" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="634.2307692307692" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="645.7692307692307" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="657.3076923076923" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<circle cx="668.8461538461538" cy="317.89473684210526" r="3" fill="#3498db" opacity="0.7"/>
+<circle cx="680.3846153846154" cy="317.89473684210526" r="3" fill="#e74c3c" opacity="0.7"/>
+<circle cx="691.9230769230769" cy="317.89473684210526" r="3" fill="#27ae60" opacity="0.7"/>
+<text x="415.0" y="340" text-anchor="middle" font-size="9" fill="#856404" font-style="italic">(示意：R/G/B 三色 LED 在每列像素位置交替)</text>
+<rect x="115" y="358" width="600" height="60" rx="4" fill="#2c3e50" stroke="#1a1a2e"/>
+<rect x="117.0" y="360" width="196.0" height="56" fill="#1a1a2e" opacity="0.4"/>
+<text x="215.0" y="378" text-anchor="middle" fill="#e74c3c" font-size="11" font-weight="bold">10× MBI5264 (R 红色)</text>
+<text x="215.0" y="394" text-anchor="middle" fill="white" font-size="9">驱动 160 列阴极, 每颗 16 通道</text>
+<text x="215.0" y="408" text-anchor="middle" fill="#95a5a6" font-size="8">SDI_R[0..9] 来自 FPGA</text>
+<rect x="317.0" y="360" width="196.0" height="56" fill="#1a1a2e" opacity="0.4"/>
+<text x="415.0" y="378" text-anchor="middle" fill="#27ae60" font-size="11" font-weight="bold">10× MBI5264 (G 绿色)</text>
+<text x="415.0" y="394" text-anchor="middle" fill="white" font-size="9">驱动 160 列阴极, 每颗 16 通道</text>
+<text x="415.0" y="408" text-anchor="middle" fill="#95a5a6" font-size="8">SDI_G[0..9] 来自 FPGA</text>
+<rect x="517.0" y="360" width="196.0" height="56" fill="#1a1a2e" opacity="0.4"/>
+<text x="615.0" y="378" text-anchor="middle" fill="#3498db" font-size="11" font-weight="bold">10× MBI5264 (B 蓝色)</text>
+<text x="615.0" y="394" text-anchor="middle" fill="white" font-size="9">驱动 160 列阴极, 每颗 16 通道</text>
+<text x="615.0" y="408" text-anchor="middle" fill="#95a5a6" font-size="8">SDI_B[0..9] 来自 FPGA</text>
+<line x1="135" y1="358" x2="135" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="175" y1="358" x2="175" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="215" y1="358" x2="215" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="255" y1="358" x2="255" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="295" y1="358" x2="295" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="335" y1="358" x2="335" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="375" y1="358" x2="375" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="415" y1="358" x2="415" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="455" y1="358" x2="455" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="495" y1="358" x2="495" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="535" y1="358" x2="535" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="575" y1="358" x2="575" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="615" y1="358" x2="615" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="655" y1="358" x2="655" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="695" y1="358" x2="695" y2="348" stroke="#e67e22" stroke-width="1" opacity="0.5"/>
+<line x1="115" y1="432" x2="715" y2="432" stroke="#555" stroke-width="3"/>
+<text x="723" y="436" font-size="11" fill="#555">GND</text>
+<line x1="60.0" y1="40" x2="60.0" y2="70" stroke="#e74c3c" stroke-width="2.5"/>
+<text x="68.0" y="45" font-size="11" fill="#e74c3c" font-weight="bold">+VLED 5V</text>
+<text x="450.0" y="440" text-anchor="middle" font-size="11" fill="#16a085" font-weight="bold">Stripe 资源: 4×MBI5989 行管 + 30×MBI5264 列驱 + 480 列 × 60 行有效输出</text>
+</svg>
+<table>
+<tr><th>项目</th><th>数量</th><th>说明</th></tr>
+<tr><td>MBI5264 (列驱)</td><td>30</td><td>10 颗 R + 10 G + 10 B, 每颗 16 通道驱动 160 列阴极</td></tr>
+<tr><td>MBI5989 (行驱)</td><td>4</td><td>每颗 16 通道, 共 64 输出中使用 60 行 (4 多余, 留作扩展)</td></tr>
+<tr><td>LED 总数</td><td>28,800</td><td>160 × 60 × 3 RGB</td></tr>
+<tr><td>SDI 路数</td><td>30 列 + 1 行 (级联)</td><td>列驱每颗独立 SDI; 4 颗行驱串联用 1 根 Row_SDI</td></tr>
+<tr><td>共享时钟</td><td>DCLK / LE / GCLK</td><td>NB3N551 fanout buffer 分发到全部 chip</td></tr>
+</table>
+</div>
+
+<div class="section" id="sec5">
+<h2>5. 整面板架构：3 Stripe 完整接线</h2>
+<svg viewBox="0 0 900 620" xmlns="http://www.w3.org/2000/svg" style="background:#fcfcfc;border:1px solid #ddd;width:100%;max-width:920px;display:block;margin:0 auto;">
+<text x="450.0" y="24" text-anchor="middle" font-size="15" font-weight="bold" fill="#1a1a2e">整面板架构：160×180 RGB POV3D 完整接线 (3 stripe × 30 MBI5264 + 12 MBI5989)</text>
+<text x="450.0" y="42" text-anchor="middle" font-size="11" fill="#666">总 90× MBI5264 + 12× MBI5989 + 1× Zynq 7020 CLG484, 主 FPGA ~101 PL IO</text>
+<rect x="30" y="220" width="180" height="180" rx="10" fill="#16a085" stroke="#0e6655" stroke-width="2"/>
+<text x="120.0" y="248" text-anchor="middle" fill="white" font-size="14" font-weight="bold">Zynq 7020</text>
+<text x="120.0" y="266" text-anchor="middle" fill="white" font-size="11">CLG484 (PL IO 200)</text>
+<text x="120.0" y="290" text-anchor="middle" fill="#d1f2eb" font-size="10">PS: DDR3 帧缓存 + 软件</text>
+<text x="120.0" y="306" text-anchor="middle" fill="#d1f2eb" font-size="10">PL: 90-ch SDI 发生器</text>
+<text x="120.0" y="322" text-anchor="middle" fill="#d1f2eb" font-size="10">+ Row 时序 + 旋转同步</text>
+<text x="120.0" y="350" text-anchor="middle" fill="#fef9e7" font-size="10" font-weight="bold">输出:</text>
+<text x="120.0" y="365" text-anchor="middle" fill="#fef9e7" font-size="9">90× SDI_Col[89:0]</text>
+<text x="120.0" y="378" text-anchor="middle" fill="#fef9e7" font-size="9">1× SDI_Row (串行)</text>
+<text x="120.0" y="391" text-anchor="middle" fill="#fef9e7" font-size="9">+ DCLK/LE/GCLK 共享</text>
+<rect x="290" y="80.0" width="580" height="153.33333333333334" rx="6" fill="#fdebd0" stroke="#856404" stroke-width="1.5"/>
+<text x="302" y="98.0" font-size="12" font-weight="bold" fill="#5d4037">Stripe 0 · Row 0..59</text>
+<rect x="310" y="112.0" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="326" y="126.0" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="326" y="136.0" text-anchor="middle" fill="#bdc3c7" font-size="6">#0</text>
+<rect x="348" y="112.0" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="364" y="126.0" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="364" y="136.0" text-anchor="middle" fill="#bdc3c7" font-size="6">#1</text>
+<rect x="386" y="112.0" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="402" y="126.0" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="402" y="136.0" text-anchor="middle" fill="#bdc3c7" font-size="6">#2</text>
+<rect x="424" y="112.0" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="440" y="126.0" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="440" y="136.0" text-anchor="middle" fill="#bdc3c7" font-size="6">#3</text>
+<text x="535" y="104.0" text-anchor="middle" font-size="9" fill="#e74c3c" font-weight="bold">R 色 10 颗</text>
+<rect x="470" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="480" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="492" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="502" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="514" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="524" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="536" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="546" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="558" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="568" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="470" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="480" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="492" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="502" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="514" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="524" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="536" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="546" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="558" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="568" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<text x="665" y="104.0" text-anchor="middle" font-size="9" fill="#27ae60" font-weight="bold">G 色 10 颗</text>
+<rect x="600" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="610" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="622" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="632" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="644" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="654" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="666" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="676" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="688" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="698" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="600" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="610" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="622" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="632" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="644" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="654" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="666" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="676" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="688" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="698" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<text x="795" y="104.0" text-anchor="middle" font-size="9" fill="#3498db" font-weight="bold">B 色 10 颗</text>
+<rect x="730" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="740" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="752" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="762" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="774" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="784" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="796" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="806" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="818" y="108.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="828" y="118.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="730" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="740" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="752" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="762" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="774" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="784" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="796" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="806" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="818" y="126.0" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="828" y="136.0" text-anchor="middle" fill="white" font-size="5">5264</text>
+<text x="858" y="223.33333333333334" text-anchor="end" font-size="9" fill="#5d4037">30 列驱 + 4 行驱 = 9,600 RGB 像素</text>
+<rect x="290" y="243.33333333333334" width="580" height="153.33333333333334" rx="6" fill="#fadbd8" stroke="#856404" stroke-width="1.5"/>
+<text x="302" y="261.33333333333337" font-size="12" font-weight="bold" fill="#5d4037">Stripe 1 · Row 60..119</text>
+<rect x="310" y="275.33333333333337" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="326" y="289.33333333333337" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="326" y="299.33333333333337" text-anchor="middle" fill="#bdc3c7" font-size="6">#4</text>
+<rect x="348" y="275.33333333333337" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="364" y="289.33333333333337" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="364" y="299.33333333333337" text-anchor="middle" fill="#bdc3c7" font-size="6">#5</text>
+<rect x="386" y="275.33333333333337" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="402" y="289.33333333333337" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="402" y="299.33333333333337" text-anchor="middle" fill="#bdc3c7" font-size="6">#6</text>
+<rect x="424" y="275.33333333333337" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="440" y="289.33333333333337" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="440" y="299.33333333333337" text-anchor="middle" fill="#bdc3c7" font-size="6">#7</text>
+<text x="535" y="267.33333333333337" text-anchor="middle" font-size="9" fill="#e74c3c" font-weight="bold">R 色 10 颗</text>
+<rect x="470" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="480" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="492" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="502" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="514" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="524" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="536" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="546" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="558" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="568" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="470" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="480" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="492" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="502" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="514" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="524" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="536" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="546" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="558" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="568" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<text x="665" y="267.33333333333337" text-anchor="middle" font-size="9" fill="#27ae60" font-weight="bold">G 色 10 颗</text>
+<rect x="600" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="610" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="622" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="632" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="644" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="654" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="666" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="676" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="688" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="698" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="600" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="610" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="622" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="632" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="644" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="654" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="666" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="676" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="688" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="698" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<text x="795" y="267.33333333333337" text-anchor="middle" font-size="9" fill="#3498db" font-weight="bold">B 色 10 颗</text>
+<rect x="730" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="740" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="752" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="762" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="774" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="784" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="796" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="806" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="818" y="271.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="828" y="281.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="730" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="740" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="752" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="762" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="774" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="784" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="796" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="806" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="818" y="289.33333333333337" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="828" y="299.33333333333337" text-anchor="middle" fill="white" font-size="5">5264</text>
+<text x="858" y="386.6666666666667" text-anchor="end" font-size="9" fill="#5d4037">30 列驱 + 4 行驱 = 9,600 RGB 像素</text>
+<rect x="290" y="406.6666666666667" width="580" height="153.33333333333334" rx="6" fill="#d5f5e3" stroke="#856404" stroke-width="1.5"/>
+<text x="302" y="424.6666666666667" font-size="12" font-weight="bold" fill="#5d4037">Stripe 2 · Row 120..179</text>
+<rect x="310" y="438.6666666666667" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="326" y="452.6666666666667" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="326" y="462.6666666666667" text-anchor="middle" fill="#bdc3c7" font-size="6">#8</text>
+<rect x="348" y="438.6666666666667" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="364" y="452.6666666666667" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="364" y="462.6666666666667" text-anchor="middle" fill="#bdc3c7" font-size="6">#9</text>
+<rect x="386" y="438.6666666666667" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="402" y="452.6666666666667" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="402" y="462.6666666666667" text-anchor="middle" fill="#bdc3c7" font-size="6">#10</text>
+<rect x="424" y="438.6666666666667" width="32" height="32" rx="3" fill="#34495e"/>
+<text x="440" y="452.6666666666667" text-anchor="middle" fill="white" font-size="7">5989</text>
+<text x="440" y="462.6666666666667" text-anchor="middle" fill="#bdc3c7" font-size="6">#11</text>
+<text x="535" y="430.6666666666667" text-anchor="middle" font-size="9" fill="#e74c3c" font-weight="bold">R 色 10 颗</text>
+<rect x="470" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="480" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="492" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="502" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="514" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="524" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="536" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="546" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="558" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="568" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="470" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="480" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="492" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="502" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="514" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="524" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="536" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="546" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="558" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="568" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<text x="665" y="430.6666666666667" text-anchor="middle" font-size="9" fill="#27ae60" font-weight="bold">G 色 10 颗</text>
+<rect x="600" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="610" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="622" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="632" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="644" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="654" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="666" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="676" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="688" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="698" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="600" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="610" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="622" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="632" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="644" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="654" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="666" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="676" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="688" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="698" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<text x="795" y="430.6666666666667" text-anchor="middle" font-size="9" fill="#3498db" font-weight="bold">B 色 10 颗</text>
+<rect x="730" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="740" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="752" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="762" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="774" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="784" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="796" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="806" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="818" y="434.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="828" y="444.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="730" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="740" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="752" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="762" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="774" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="784" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="796" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="806" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<rect x="818" y="452.6666666666667" width="20" height="14" rx="2" fill="#2c3e50"/>
+<text x="828" y="462.6666666666667" text-anchor="middle" fill="white" font-size="5">5264</text>
+<text x="858" y="550.0" text-anchor="end" font-size="9" fill="#5d4037">30 列驱 + 4 行驱 = 9,600 RGB 像素</text>
+<path d="M 210 300 Q 250.0 228.33333333333334 290 156.66666666666669" fill="none" stroke="#e67e22" stroke-width="2.5"/>
+<text x="230.0" y="223.33333333333334" font-size="9" fill="#e67e22">30 SDI</text>
+<path d="M 210 330 Q 250.0 325.0 290 320.0" fill="none" stroke="#e67e22" stroke-width="2.5"/>
+<text x="230.0" y="320.0" font-size="9" fill="#e67e22">30 SDI</text>
+<path d="M 210 360 Q 250.0 421.6666666666667 290 483.33333333333337" fill="none" stroke="#e67e22" stroke-width="2.5"/>
+<text x="230.0" y="416.6666666666667" font-size="9" fill="#e67e22">30 SDI</text>
+<path d="M 210 380 Q 250.0 430 290 550" fill="none" stroke="#3498db" stroke-width="2.5"/>
+<text x="230.0" y="420" font-size="9" fill="#3498db">DCLK/LE/GCLK/Row_SDI</text>
+<rect x="210.0" y="450" width="80" height="34" rx="4" fill="#9b59b6" stroke="#6c3483"/>
+<text x="250.0" y="464" text-anchor="middle" fill="white" font-size="9" font-weight="bold">NB3N551</text>
+<text x="250.0" y="476" text-anchor="middle" fill="white" font-size="8">1:48 时钟扇出</text>
+<rect x="30" y="560" width="840" height="50" rx="6" fill="#f8f9fa" stroke="#dee2e6"/>
+<text x="50" y="578" font-size="11" font-weight="bold" fill="#34495e">信号图例:</text>
+<line x1="160" y1="592" x2="180" y2="592" stroke="#e67e22" stroke-width="3"/>
+<text x="184" y="596" font-size="10" fill="#444">SDI_Col[89:0] · 列数据</text>
+<line x1="360" y1="592" x2="380" y2="592" stroke="#3498db" stroke-width="3"/>
+<text x="384" y="596" font-size="10" fill="#444">SDI_Row + 共享时钟 (DCLK/LE/GCLK)</text>
+<line x1="560" y1="592" x2="580" y2="592" stroke="#e74c3c" stroke-width="3"/>
+<text x="584" y="596" font-size="10" fill="#444">VLED +5V</text>
+<line x1="760" y1="592" x2="780" y2="592" stroke="#555" stroke-width="3"/>
+<text x="784" y="596" font-size="10" fill="#444">GND</text>
+</svg>
+
+<table>
+<tr><th>资源类型</th><th>数量</th><th>布局位置</th></tr>
+<tr><td>MBI5264 列驱</td><td>90 = 30 × 3 stripe</td><td>面板背面下方, 每 stripe 横向 30 颗</td></tr>
+<tr><td>MBI5989 行驱</td><td>12 = 4 × 3 stripe</td><td>面板背面左侧, 每 stripe 4 颗串联</td></tr>
+<tr><td>NB3N551 时钟扇出</td><td>2~3</td><td>主控板, 1:48 分发 DCLK / LE / GCLK</td></tr>
+<tr><td>Zynq 7020 CLG484</td><td>1</td><td>主控板, PL IO 200 占用 ~101 = 50%</td></tr>
+<tr><td>RGB LED 灯珠 (共阳)</td><td>28,800</td><td>0.94 mm pitch P0.94, 共阳封装</td></tr>
+<tr><td>FFC 连接</td><td>60-pin × 6 条</td><td>主控 ↔ 面板, 短距离 (&lt;10cm)</td></tr>
+</table>
+
+<div class="info">
+<strong>PL IO 详细分配 (~101)</strong>:
+<ul>
+<li>90× <code>SDI_Col[89:0]</code> · 列数据信号 (LVCMOS33 单端)</li>
+<li>1× <code>SDI_Row</code> · 行驱串行入口 (12 颗 MBI5989 级联)</li>
+<li>3× <code>DCLK</code> / <code>LE</code> / <code>GCLK</code> · 共享时钟 (经 fanout buf)</li>
+<li>1× <code>Row_DCLK</code> · 行驱时钟 (与列驱不同步)</li>
+<li>1× <code>Row_LE</code> · 行驱锁存</li>
+<li>1× <code>VSYNC</code> · 帧同步</li>
+<li>1× <code>nRESET</code> · 全局复位</li>
+<li>1× <code>POV_SYNC</code> · 旋转编码器同步信号</li>
+<li>2× <code>DBG_UART_TX/RX</code> · 调试</li>
+</ul>
+</div>
+</div>
+
+<div class="section" id="sec6">
+<h2>6. 扩展方向：4 种升级路径</h2>
+<svg viewBox="0 0 900 540" xmlns="http://www.w3.org/2000/svg" style="background:#fcfcfc;border:1px solid #ddd;width:100%;max-width:920px;display:block;margin:0 auto;">
+<text x="450.0" y="22" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a1a2e">扩展方向：4 种升级路径</text>
+<rect x="30" y="50" width="410" height="130" rx="8" fill="white" stroke="#3498db" stroke-width="2"/>
+<rect x="30" y="50" width="410" height="32" rx="8" fill="#3498db"/>
+<rect x="30" y="70" width="410" height="12" fill="#3498db"/>
+<text x="44" y="72" font-size="13" font-weight="bold" fill="white">① 双倍宽屏 320 × 180</text>
+<text x="44" y="105" font-size="11" fill="#333">复制一组 Stripe 组合, BOM × 2 (180 颗 MBI5264 + 24 颗</text>
+<text x="44" y="121" font-size="11" fill="#333">MBI5989), 主 FPGA 升级到 7Z045 (PL IO 362)</text>
+<rect x="460" y="50" width="410" height="130" rx="8" fill="white" stroke="#27ae60" stroke-width="2"/>
+<rect x="460" y="50" width="410" height="32" rx="8" fill="#27ae60"/>
+<rect x="460" y="70" width="410" height="12" fill="#27ae60"/>
+<text x="474" y="72" font-size="13" font-weight="bold" fill="white">② 16-bit 灰度升级</text>
+<text x="474" y="105" font-size="11" fill="#333">硬件不变, 软件 reflash MBI5264 寄存器从 8-bit 切到 16-bit</text>
+<text x="474" y="121" font-size="11" fill="#333">S-PWM. 屏幕刷新降到 3.9 kHz, POV 改为 360×11 Hz 或 240×16</text>
+<text x="474" y="137" font-size="11" fill="#333">Hz</text>
+<rect x="30" y="200" width="410" height="130" rx="8" fill="white" stroke="#9b59b6" stroke-width="2"/>
+<rect x="30" y="200" width="410" height="32" rx="8" fill="#9b59b6"/>
+<rect x="30" y="220" width="410" height="12" fill="#9b59b6"/>
+<text x="44" y="222" font-size="13" font-weight="bold" fill="white">③ 加 9 颗 CPLD 桥接 (Phase 2 升级)</text>
+<text x="44" y="255" font-size="11" fill="#333">PCB 预留焊盘, 加 9× MachXO2-640HC (~$13.5). 主 FPGA IO 从</text>
+<text x="44" y="271" font-size="11" fill="#333">101 降到 30, 改走 9 对 LVDS @ 600 Mbps. 屏幕刷新上限不变</text>
+<text x="44" y="287" font-size="11" fill="#333">(driver 仍是瓶颈)</text>
+<rect x="460" y="200" width="410" height="130" rx="8" fill="white" stroke="#e67e22" stroke-width="2"/>
+<rect x="460" y="200" width="410" height="32" rx="8" fill="#e67e22"/>
+<rect x="460" y="220" width="410" height="12" fill="#e67e22"/>
+<text x="474" y="222" font-size="13" font-weight="bold" fill="white">④ 升级新一代 driver (Phase 3)</text>
+<text x="474" y="255" font-size="11" fill="#333">同 PCB 同位置, MBI5264 换 Macroblock DaVinci 系列或</text>
+<text x="474" y="271" font-size="11" fill="#333">MBS7264 (V-by-One 输入). 单颗带宽 3~5× 提升, 可冲 503×30Hz</text>
+<text x="474" y="287" font-size="11" fill="#333">终极目标</text>
+<rect x="30" y="360" width="840" height="150" rx="8" fill="#fff9e6" stroke="#f39c12" stroke-width="2"/>
+<text x="450" y="384" text-anchor="middle" font-size="14" font-weight="bold" fill="#7d6608">终极组合 (Phase 3): ② + ③ + ④</text>
+<text x="450" y="404" text-anchor="middle" font-size="11" fill="#7d6608">同一块 PCB, 软件切到 16-bit + 焊上 9 颗 CPLD + 换装 DaVinci 系列 driver</text>
+<text x="50" y="430" font-size="10" fill="#7d6608" font-weight="bold">当前 Phase 1</text>
+<text x="180" y="430" font-size="10" fill="#333">90× MBI5264 + Zynq 7020 直驱</text>
+<text x="510" y="430" font-size="10" fill="#16a085">360×20Hz × 8-bit</text>
+<text x="820" y="430" text-anchor="end" font-size="10" fill="#c0392b">$1,108</text>
+<text x="50" y="452" font-size="10" fill="#7d6608" font-weight="bold">Phase 2 升级</text>
+<text x="180" y="452" font-size="10" fill="#333">+ 9× CPLD (LVDS 桥接)</text>
+<text x="510" y="452" font-size="10" fill="#16a085">同上, IO 砍 70%</text>
+<text x="820" y="452" text-anchor="end" font-size="10" fill="#c0392b">+$30</text>
+<text x="50" y="474" font-size="10" fill="#7d6608" font-weight="bold">Phase 3 升级</text>
+<text x="180" y="474" font-size="10" fill="#333">换 DaVinci/MBS7264 driver</text>
+<text x="510" y="474" font-size="10" fill="#16a085">503×30Hz × 16-bit ✓</text>
+<text x="820" y="474" text-anchor="end" font-size="10" fill="#c0392b">+$200</text>
+</svg>
+
+<div class="note">
+<strong>设计原则: 主面板 PCB 一次设计, Phase 2/3 升级不动 PCB</strong><br>
+PCB layout 时预留:
+<ul>
+<li>9 个 MachXO2-640HC CPLD 焊盘位置 (BGA256), 默认 0 欧姆电阻短接 SDI 直通</li>
+<li>8 对 LVDS 走线 + 阻抗控制 50 Ω 差分, 主控接口预留</li>
+<li>MBI5264 footprint 兼容下一代 DaVinci 系列 (Macroblock 通常保持 pin-compatible)</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>附录 · 参考资料</h2>
+<ul>
+<li>MBI5264 datasheet: <code>D:\workspace\zynq_pov\docs\mbi\MBI5264_advance.pdf</code> (V0.01)</li>
+<li>MBI5353 (48-ch 备选): <code>D:\workspace\zynq_pov\docs\mbi\MBI5353_full.pdf</code> (VB.02)</li>
+<li>ICND3019 datasheet: <code>D:\workspace\zynq_pov\docs\ICND3019_datasheet_CN_V2.0_20220106.pdf</code></li>
+<li>ICND1069 编程指导: <code>D:\workspace\zynq_pov\docs\ICND1069_编程指导_CN_2024_V1.2_*.pdf</code></li>
+<li>Macroblock Hawkeye 150 (MBI5264 + MBI5989) 参考方案: <a href="https://www.mblock.com.tw/en/Driver_ICs/combination/detail/14">mblock.com.tw</a></li>
+</ul>
+</div>
+
+<p style="text-align:center;margin-top:32px;color:#888;font-size:12px;">
+POV3D LED 接线方案 · Zynq 7020 + MBI5264 + MBI5989 · 生成于 2026-05-12
+</p>
+
+</body>
+</html>

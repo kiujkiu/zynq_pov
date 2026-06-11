@@ -2600,21 +2600,22 @@ int main(void)
                          1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
                     };
                     const u8 *fb_src = (const u8 *)fb_bufs[write_idx];
+                    /* 孤立点过滤已试已撤 (2026-06-11): 点云人物本身是稀疏单点,
+                     * 过滤吃本体留噪点簇, 净负收益 */
                     for (int yf = 0; yf < 64; yf++) {
                         UINTPTR bank1 = (yf < 32) ? (HUB75E_BASE_BR + 0x8000)
                                                   : (HUB75E_BASE_BR + 0xC000);
                         UINTPTR bank2 = (yf < 32) ? (HUB75E_BASE_BR + 0x18000)
                                                   : (HUB75E_BASE_BR + 0x1C000);
                         int row = yf & 31;
-                        int sx2 = 63 - yf;                 /* panel2 逻辑列 */
-                        int sx1 = 127 - ((yf + 32) & 63);  /* panel1 逻辑列 */
+                        int sx2 = 63 - yf;
+                        int sx1 = 127 - ((yf + 32) & 63);
                         int fx2 = LED_CROP_X + sx2 * LED_SRC / 128;
                         int fx1 = LED_CROP_X + sx1 * LED_SRC / 128;
                         for (int xf = 0; xf < 128; xf++) {
-                            int fy = LED_CROP_Y + xf * LED_SRC / 128;  /* 逻辑行 = xf */
+                            int fy = LED_CROP_Y + xf * LED_SRC / 128;
                             const u8 *p2 = fb_src + fy * STRIDE + fx2 * 3;
                             const u8 *p1 = fb_src + fy * STRIDE + fx1 * 3;
-                            /* fb GBR 字节序 */
                             u32 w2 = (u32)led_lut_b[p2[1]] | ((u32)led_lut_r[p2[2]] << 8)
                                                            | ((u32)led_lut_g[p2[0]] << 16);
                             u32 w1 = (u32)led_lut_b[p1[1]] | ((u32)led_lut_r[p1[2]] << 8)

@@ -198,7 +198,7 @@
                 "MX": "/hub75e_panel_seq_0",
                 "MI": "m_axi",
                 "MS": "SEG_processing_system7_0_HP2_DDR_LOWOCM",
-                "MV": "xilinx.com:module_ref:hub75e_panel_seq_v6:1.0",
+                "MV": "xilinx.com:module_ref:hub75e_panel_seq_v7:1.0",
                 "SX": "/processing_system7_0",
                 "SI": "S_AXI_HP2",
                 "SS": "HP2_DDR_LOWOCM",
@@ -292,7 +292,7 @@
                 "SX": "/hub75e_panel_seq_0",
                 "SI": "s_axi",
                 "SS": "reg0",
-                "SV": "xilinx.com:module_ref:hub75e_panel_seq_v6:1.0",
+                "SV": "xilinx.com:module_ref:hub75e_panel_seq_v7:1.0",
                 "TM": "both",
                 "TU": "register"
             },

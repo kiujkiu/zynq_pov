@@ -1,0 +1,7 @@
+the_ROM_image:
+{
+	[bootloader]D:\claude_workspace\pov3d\zynq_pov\flash_boot\fsbl.elf
+	D:\claude_workspace\pov3d\zynq_pov\flash_boot\system.bit
+	D:\claude_workspace\pov3d\zynq_pov\flash_boot\pov_boot.elf
+	[load=0x18000000]D:\claude_workspace\pov3d\zynq_pov\flash_boot\anime.bin
+}

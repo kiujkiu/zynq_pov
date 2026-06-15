@@ -1,0 +1,6 @@
+# 大二进制不入库 (可由 bif + 各源重建)
+BOOT.bin
+*.bit
+*.elf
+anime.bin
+*.bin

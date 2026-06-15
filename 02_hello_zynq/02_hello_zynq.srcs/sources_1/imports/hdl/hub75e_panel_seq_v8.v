@@ -324,23 +324,23 @@ module hub75e_panel_seq_v8 #(
     // *** (input sensor_pulse, output [15:0] slice_idx), 把它的 slice_idx 接到
     // *** slice_idx_live (改成 wire). DMA FSM / 0x24 读口都只认 slice_idx_live.
     //==========================================================================
-    reg [31:0] angle_div;
-    reg [15:0] fake_slice_idx;   // v8: 假角度计数器 (sensor_en=0 用)
 
-    // v8: angle_tracker 真角度源 (multivox 式光电开关时间插值)
-    (* keep = "true" *) wire        sensor_en = reg_ctrl[15];   // CTRL[15]: 0=假角度(现状) 1=光电开关
-    (* keep = "true" *) wire [15:0] trk_slice;
+    // v8b: angle_tracker 做唯一角度源 (去掉外部 mux + 独立假计数器, 防综合判 slice 链无用).
+    //   CTRL[15]=sensor_en: 0=angle_tracker 内部 fake 自由跑(同旧假计数器行为) 1=光电开关.
+    //   fake_en = ~sensor_en, fake_period = reg_angle_period (复用 0x1C).
+    //   slice_idx_live = trk_slice 直接, 无条件在 slice→araddr 链上 → sensor_pulse 不会被 trim.
+    wire        sensor_en = reg_ctrl[15];
+    wire [15:0] trk_slice;
     wire [31:0] trk_rev_period;
     wire        trk_locked;
-    (* dont_touch = "true" *)
     angle_tracker #(.CLK_HZ(75000000)) u_angle_trk (
         .clk(s_axi_aclk), .rst_n(s_axi_aresetn),
         .sensor_in(sensor_pulse),
-        .fake_en(1'b0), .fake_period(32'd0),
+        .fake_en(~sensor_en), .fake_period(reg_angle_period),
         .n_slices(n_slices_eff),
         .slice_idx(trk_slice), .rev_period(trk_rev_period), .locked(trk_locked)
     );
-    wire [15:0] slice_idx_live = sensor_en ? trk_slice : fake_slice_idx;
+    wire [15:0] slice_idx_live = trk_slice;
 
     // v8 保命: sensor_pulse 直接驱动可读计数器 (绕开 angle_tracker, 综合不敢删被读出的寄存器)
     // 0x2C 读: {raw_lvl[31], pulse_cnt[15:0]}. 验电路通断 + 脉冲数, 不依赖 angle_tracker
@@ -357,24 +357,6 @@ module hub75e_panel_seq_v8 #(
         end
     end
     wire [31:0] sens_dbg_word = {sens_sync[1], 15'b0, sens_pulse_cnt};
-
-    always @(posedge s_axi_aclk) begin
-        if (!s_axi_aresetn) begin
-            angle_div      <= 32'd0;
-            fake_slice_idx <= 16'd0;
-        end else begin
-            if (reg_angle_period == 32'd0) begin
-                angle_div      <= 32'd0;
-                fake_slice_idx <= 16'd0;
-            end else if (angle_div >= reg_angle_period - 32'd1) begin
-                angle_div      <= 32'd0;
-                fake_slice_idx <= (fake_slice_idx >= n_slices_eff - 16'd1)
-                                  ? 16'd0 : fake_slice_idx + 16'd1;
-            end else begin
-                angle_div <= angle_div + 32'd1;
-            end
-        end
-    end
 
     //==========================================================================
     // v6: DMA FSM (AXI4 read master, 单 outstanding)

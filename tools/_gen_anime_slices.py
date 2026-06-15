@@ -26,7 +26,7 @@ vx=np.clip(x+64,0,G-1); vy=np.clip(y+64,0,G-1); vz=np.clip(z+64,0,G-1)
 vox[vx,vy,vz] = col
 print(f'voxelized: {np.any(vox>0,axis=3).sum()} occupied cells')
 
-N_SLICES = 360
+N_SLICES = int(sys.argv[1]) if len(sys.argv) > 1 else 360
 d  = np.arange(-64,64)                 # 带符号半径 (panel 横向 128 列)
 h  = np.arange(-64,64)                 # 高度 (panel 纵向 128 行)
 HH, DD = np.meshgrid(h, d, indexing='ij')   # [row(py), col(px)]
@@ -47,5 +47,6 @@ for a in range(N_SLICES):
     t2,b2 = pack_panel_bin(transform_for_panel2(fx.crop((0,0,64,128))))
     out += t2+b2+t1+b1   # 转接板 PANEL_BANK_SWAP
     if a % 90 == 0: print(f'slice {a}: {int((img_a.sum(axis=2)>0).sum())} lit px')
-open(r'D:\claude_workspace\pov3d\zynq_pov\tools\anime_slices_360.bin','wb').write(bytes(out))
-print(f'anime_slices_360.bin: {len(out)} bytes ({N_SLICES} multivox-style slices)')
+OUT = rf'D:\claude_workspace\pov3d\zynq_pov\tools\anime_slices_{N_SLICES}.bin'
+open(OUT,'wb').write(bytes(out))
+print(f'{OUT}: {len(out)} bytes ({N_SLICES} multivox-style slices)')

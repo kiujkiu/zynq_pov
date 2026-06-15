@@ -304,6 +304,7 @@ module hub75e_panel_seq_v8 #(
                     4'd9: s_axi_rdata <= dma_status_word;    // v6 0x24 RO (v8: bit23=locked)
                     4'd10: s_axi_rdata <= trk_rev_period;    // v8 0x28 RO 实测每转周期
                     4'd11: s_axi_rdata <= sens_dbg_word;     // v8 0x2C RO {raw_lvl[31],pulse_cnt[15:0]} 保命计数器
+                    4'd12: s_axi_rdata <= trk_dbg_word;      // v8 0x30 RO {locked_ever[31], slice_max[15:0]} 转动峰值锁存
                     default: s_axi_rdata <= 32'h0;
                 endcase
                 s_axi_rvalid <= 1'b1;
@@ -357,6 +358,20 @@ module hub75e_panel_seq_v8 #(
         end
     end
     wire [31:0] sens_dbg_word = {sens_sync[1], 15'b0, sens_pulse_cnt};
+
+    // v8 调试锁存: 转动中达到的 slice 峰值 + 是否 locked 过. 转动中 JTAG 读不到 (读必停转,
+    // 停转 slice 被 stall 复位0). 转完停下读 0x30: slice_max≈719 + locked_ever=1 → 闭环跟踪成立.
+    reg [15:0] slice_max;
+    reg        locked_ever;
+    always @(posedge s_axi_aclk) begin
+        if (!s_axi_aresetn) begin
+            slice_max <= 16'd0; locked_ever <= 1'b0;
+        end else begin
+            if (trk_slice > slice_max) slice_max <= trk_slice;
+            if (trk_locked)            locked_ever <= 1'b1;
+        end
+    end
+    wire [31:0] trk_dbg_word = {locked_ever, 15'b0, slice_max};
 
     //==========================================================================
     // v6: DMA FSM (AXI4 read master, 单 outstanding)
@@ -1187,10 +1202,8 @@ module angle_tracker #(
                 rev_cnt     <= 32'd1;            // this cycle belongs to new rev
                 prev_period <= rev_cnt;
                 have_pulse  <= 1'b1;
-                if (!have_pulse || stable) begin
-                    rev_period <= rev_cnt;       // accept measurement
-                    div_start  <= 1'b1;          // recompute slice step
-                end
+                rev_period  <= rev_cnt;          // FIX: 每圈都更新周期, 变速也跟最新一圈
+                div_start   <= 1'b1;             // FIX: 每圈重算 slice_period (原来门控 stable, 变速时永不更新→卡垃圾初值)
             end else if (rev_cnt != 32'hFFFF_FFFF) begin
                 rev_cnt <= rev_cnt + 32'd1;      // saturate, never wrap
             end
@@ -1223,7 +1236,7 @@ module angle_tracker #(
             slice_period_valid <= 1'b0;
         end else if (div_start && (n_slices != 16'd0)) begin
             div_busy     <= 1'b1;
-            div_dividend <= rev_cnt;             // period just measured
+            div_dividend <= rev_period;          // FIX: div_start 晚一拍, rev_cnt 已被 pulse_ok 复位为1; 用 latch 的 rev_period (cycle T 已置正确周期)
             div_rem      <= 48'd0;
             div_quot     <= 32'd0;
             div_bit      <= 6'd0;

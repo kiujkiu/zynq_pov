@@ -1,7 +1,7 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0xA6490FDF18DFBC99",
+      "boundary_crc": "0xE0F7A832B5FECF53",
       "device": "xc7z020clg484-2",
       "gen_directory": "../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq",
       "name": "hello_zynq",
@@ -29,7 +29,6 @@
       "pov_project_batch_0": "",
       "sc_pov_axilite": "",
       "axi_gpio_panel": "",
-      "xlconst_sensor0": "",
       "axi_smc_hp2": "",
       "hub75e_panel_seq_0": ""
     },
@@ -382,6 +381,9 @@
         "direction": "O",
         "left": "4",
         "right": "0"
+      },
+      "sensor_pulse": {
+        "direction": "I"
       }
     },
     "components": {
@@ -2585,21 +2587,6 @@
           }
         }
       },
-      "xlconst_sensor0": {
-        "vlnv": "xilinx.com:ip:xlconstant:1.1",
-        "ip_revision": "9",
-        "xci_name": "hello_zynq_xlconst_sensor0_0",
-        "xci_path": "ip\\hello_zynq_xlconst_sensor0_0\\hello_zynq_xlconst_sensor0_0.xci",
-        "inst_hier_path": "xlconst_sensor0",
-        "parameters": {
-          "CONST_VAL": {
-            "value": "0"
-          },
-          "CONST_WIDTH": {
-            "value": "1"
-          }
-        }
-      },
       "axi_smc_hp2": {
         "vlnv": "xilinx.com:ip:smartconnect:1.0",
         "ip_revision": "25",
@@ -3489,17 +3476,17 @@
           "proc_sys_reset_0/ext_reset_in"
         ]
       },
+      "sensor_pulse_1": {
+        "ports": [
+          "sensor_pulse",
+          "hub75e_panel_seq_0/sensor_pulse"
+        ]
+      },
       "util_vector_logic_eth_Res": {
         "ports": [
           "util_vector_logic_eth/Res",
           "gmii_to_rgmii_0/rx_reset",
           "gmii_to_rgmii_0/tx_reset"
-        ]
-      },
-      "xlconst_sensor0_dout": {
-        "ports": [
-          "xlconst_sensor0/dout",
-          "hub75e_panel_seq_0/sensor_pulse"
         ]
       },
       "xlconstant_0_dout": {

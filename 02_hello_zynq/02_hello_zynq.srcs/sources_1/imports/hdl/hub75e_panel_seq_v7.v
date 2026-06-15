@@ -301,7 +301,8 @@ module hub75e_panel_seq_v7 #(
                     4'd6: s_axi_rdata <= reg_slice_base;     // v6
                     4'd7: s_axi_rdata <= reg_angle_period;   // v6
                     4'd8: s_axi_rdata <= reg_n_slices;       // v6
-                    4'd9: s_axi_rdata <= dma_status_word;    // v6 0x24 RO
+                    4'd9: s_axi_rdata <= dma_status_word;    // v6 0x24 RO (v8: bit23=locked)
+                    4'd10: s_axi_rdata <= trk_rev_period;    // v8 0x28 RO 实测每转周期
                     default: s_axi_rdata <= 32'h0;
                 endcase
                 s_axi_rvalid <= 1'b1;
@@ -323,22 +324,34 @@ module hub75e_panel_seq_v7 #(
     // *** slice_idx_live (改成 wire). DMA FSM / 0x24 读口都只认 slice_idx_live.
     //==========================================================================
     reg [31:0] angle_div;
-    reg [15:0] slice_idx_live;
-    // 防 sensor_pulse 现在没人用被 port 优化告警 (综合会剪掉, 无副作用)
-    wire       sensor_pulse_unused = sensor_pulse;
+    reg [15:0] fake_slice_idx;   // v8: 假角度计数器 (sensor_en=0 用)
+
+    // v8: angle_tracker 真角度源 (multivox 式光电开关时间插值)
+    wire        sensor_en = reg_ctrl[15];   // CTRL[15]: 0=假角度(现状) 1=光电开关
+    wire [15:0] trk_slice;
+    wire [31:0] trk_rev_period;
+    wire        trk_locked;
+    angle_tracker #(.CLK_HZ(75000000)) u_angle_trk (
+        .clk(s_axi_aclk), .rst_n(s_axi_aresetn),
+        .sensor_in(sensor_pulse),
+        .fake_en(1'b0), .fake_period(32'd0),
+        .n_slices(n_slices_eff),
+        .slice_idx(trk_slice), .rev_period(trk_rev_period), .locked(trk_locked)
+    );
+    wire [15:0] slice_idx_live = sensor_en ? trk_slice : fake_slice_idx;
 
     always @(posedge s_axi_aclk) begin
         if (!s_axi_aresetn) begin
             angle_div      <= 32'd0;
-            slice_idx_live <= 16'd0;
+            fake_slice_idx <= 16'd0;
         end else begin
             if (reg_angle_period == 32'd0) begin
                 angle_div      <= 32'd0;
-                slice_idx_live <= 16'd0;
+                fake_slice_idx <= 16'd0;
             end else if (angle_div >= reg_angle_period - 32'd1) begin
                 angle_div      <= 32'd0;
-                slice_idx_live <= (slice_idx_live >= n_slices_eff - 16'd1)
-                                  ? 16'd0 : slice_idx_live + 16'd1;
+                fake_slice_idx <= (fake_slice_idx >= n_slices_eff - 16'd1)
+                                  ? 16'd0 : fake_slice_idx + 16'd1;
             end else begin
                 angle_div <= angle_div + 32'd1;
             end
@@ -404,7 +417,7 @@ module hub75e_panel_seq_v7 #(
     wire [11:0] dma_waddr12 = fetch_compact ? {3'b000, dma_word[8:0]} : dma_word[11:0];
 
     // 0x24 RO: {err[31:28], dma_state[27:24], 8'b0, cur_slice_idx[15:0]}
-    wire [31:0] dma_status_word = {dma_err_count, dstate, 8'b0, slice_idx_live};
+    wire [31:0] dma_status_word = {dma_err_count, dstate, 7'b0, trk_locked, slice_idx_live};
 
     always @(posedge s_axi_aclk) begin
         if (!s_axi_aresetn) begin

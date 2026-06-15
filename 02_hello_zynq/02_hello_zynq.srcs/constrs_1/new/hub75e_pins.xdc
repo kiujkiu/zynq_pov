@@ -68,3 +68,6 @@ set_property -dict { PACKAGE_PIN AA18 IOSTANDARD LVCMOS33 } [get_ports { hub75e_
 ##   pin 11 C    = J1.29  pin 12 D    = J1.11
 ##   pin 13 CLK  = J1.17  pin 14 LAT  = J1.14
 ##   pin 15 OE   = J1.12  pin 16 GND  = J1 GND
+
+## --- v8: 光电开关 SPIN_SYNC (直连期临时位 J1.15; 转接板时代切 hub75e_pins_mtr_v01.xdc 用 V14) ---
+set_property -dict { PACKAGE_PIN AB16 IOSTANDARD LVCMOS33 PULLTYPE PULLUP } [get_ports { sensor_pulse }];

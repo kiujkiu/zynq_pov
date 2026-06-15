@@ -26,14 +26,14 @@ import os, struct, sys
 from PIL import Image
 
 def transform_for_panel1(img_half):
-    """Panel 1: rotate(-90) then swap hw rows 0..31 with 32..63 (panel addr offset 32)."""
+    """Panel 1: rotate(-90). v34mtr: 去掉 row-swap (转接板上右屏不再需要,
+    否则屏上半幅 [5,6]/[7,8] 对调). 直连时代需要 row-swap."""
     hw = img_half.rotate(-90, expand=True)
-    top = hw.crop((0, 0, 128, 32))
-    bot = hw.crop((0, 32, 128, 64))
-    swapped = Image.new('RGB', (128, 64))
-    swapped.paste(bot, (0, 0))
-    swapped.paste(top, (0, 32))
-    return swapped
+    if PANEL1_ROWSWAP:
+        top = hw.crop((0, 0, 128, 32)); bot = hw.crop((0, 32, 128, 64))
+        sw = Image.new('RGB', (128, 64)); sw.paste(bot,(0,0)); sw.paste(top,(0,32))
+        return sw
+    return hw
 
 def transform_for_panel2(img_half):
     """Panel 2 (viewer left): mirrored mount, pre-flip horizontally."""
@@ -44,6 +44,8 @@ def transform_for_panel2(img_half):
 
 # 两屏亮度均衡: panel 1 (右) 比 panel 2 (左) 亮 ~8% (DCLK2 走普通脚 Y14, 见 memory).
 # 把亮的 panel 1 软件降到跟 panel 2 一致. 1.0 = 不动.
+PANEL1_ROWSWAP = False   # 转接板: 去 row-swap
+PANEL_BANK_SWAP = True   # 转接板: panel1/2 输出物理接反
 PANEL1_BRIGHT = 0.90
 PANEL2_BRIGHT = 1.00
 
@@ -90,6 +92,10 @@ def write_panels(img, out_dir):
     panel2_hw = transform_for_panel2(img_left)
     top1, bot1 = pack_panel_bin(panel1_hw, PANEL1_BRIGHT)
     top2, bot2 = pack_panel_bin(panel2_hw, PANEL2_BRIGHT)
+    # PANEL_BANK_SWAP (2026-06-15 转接板): panel1/panel2 输出 bank 物理接反,
+    # 把两块数据写到对方的 BRAM 区. 直连时代 = False.
+    if PANEL_BANK_SWAP:
+        top1, bot1, top2, bot2 = top2, bot2, top1, bot1
     files = {
         'fb_anime_128_top1.bin': top1,
         'fb_anime_128_bot1.bin': bot1,

@@ -45,7 +45,7 @@ for a in range(N_SLICES):
     fx = Image.new('RGB',(128,128)); fx.paste(R,(0,0)); fx.paste(L,(64,0))
     t1,b1 = pack_panel_bin(transform_for_panel1(fx.crop((64,0,128,128))))
     t2,b2 = pack_panel_bin(transform_for_panel2(fx.crop((0,0,64,128))))
-    out += t1+b1+t2+b2
+    out += t2+b2+t1+b1   # 转接板 PANEL_BANK_SWAP
     if a % 90 == 0: print(f'slice {a}: {int((img_a.sum(axis=2)>0).sum())} lit px')
 open(r'D:\claude_workspace\pov3d\zynq_pov\tools\anime_slices_360.bin','wb').write(bytes(out))
 print(f'anime_slices_360.bin: {len(out)} bytes ({N_SLICES} multivox-style slices)')

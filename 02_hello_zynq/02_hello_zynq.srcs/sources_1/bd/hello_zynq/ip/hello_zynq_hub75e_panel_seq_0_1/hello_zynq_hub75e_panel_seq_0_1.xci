@@ -1,11 +1,11 @@
 {
   "schema": "xilinx.com:schema:json_instance:1.0",
   "ip_inst": {
-    "xci_name": "hello_zynq_hub75e_panel_seq_0_3",
+    "xci_name": "hello_zynq_hub75e_panel_seq_0_1",
     "cell_name": "hub75e_panel_seq_0",
-    "component_reference": "xilinx.com:module_ref:hub75e_panel_seq_v7:1.0",
+    "component_reference": "xilinx.com:module_ref:hub75e_panel_seq_v8:1.0",
     "ip_revision": "1",
-    "gen_directory": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_hub75e_panel_seq_0_3",
+    "gen_directory": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_hub75e_panel_seq_0_1",
     "parameters": {
       "component_parameters": {
         "DCLK_DIV": [ { "value": "2", "resolve_type": "user", "format": "long", "usage": "all" } ],
@@ -19,7 +19,7 @@
         "ADDR_SET_CYC": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "OE_PRE_CYC": [ { "value": "15", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "FB_DEPTH": [ { "value": "8192", "resolve_type": "user", "format": "long", "usage": "all" } ],
-        "Component_Name": [ { "value": "hello_zynq_hub75e_panel_seq_0_3", "resolve_type": "user", "usage": "all" } ]
+        "Component_Name": [ { "value": "hello_zynq_hub75e_panel_seq_0_1", "resolve_type": "user", "usage": "all" } ]
       },
       "model_parameters": {
         "DCLK_DIV": [ { "value": "2", "resolve_type": "generated", "format": "long", "usage": "all" } ],
@@ -51,7 +51,7 @@
         "IPCONTEXT": [ { "value": "IP_Integrator" } ],
         "IPREVISION": [ { "value": "1" } ],
         "MANAGED": [ { "value": "TRUE" } ],
-        "OUTPUTDIR": [ { "value": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_hub75e_panel_seq_0_3" } ],
+        "OUTPUTDIR": [ { "value": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_hub75e_panel_seq_0_1" } ],
         "SELECTEDSIMMODEL": [ { "value": "" } ],
         "SHAREDDIR": [ { "value": "../../ipshared" } ],
         "SWVERSION": [ { "value": "2024.2" } ],

@@ -48,27 +48,27 @@ set_property -dict { PACKAGE_PIN J22  IOSTANDARD TMDS_33 } [get_ports { hdmi_tmd
 ## panel_seq_dclk → Y18  (DCLK)
 ## panel_seq_le   → Y19  (LATIN/LE)
 ## panel_seq_sdi[0..8] → 9 个 SDI pin (R1/G1/B1/R2/G2/B2/R3/G3/B3 顺序)
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN Y18  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_dclk    }];  # DCLK
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN Y19  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_le      }];  # LAT
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AA19 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_row     }];  # GCLK/ROW (PL IP 控, 精确 12 DCLK 脉冲)
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AA22 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[0] }];  # R1
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AB22 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[1] }];  # G1
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AA21 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[2] }];  # B1
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[3] }];  # R2
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN Y20  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[4] }];  # G2
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[5] }];  # B2
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AB19 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[6] }];  # R3
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AA18 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[7] }];  # G3
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AB20 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[8] }];  # B3
+set_property -dict { PACKAGE_PIN Y18  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_dclk    }];  # DCLK
+set_property -dict { PACKAGE_PIN Y19  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_le      }];  # LAT
+set_property -dict { PACKAGE_PIN AA19 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_row     }];  # GCLK/ROW (PL IP 控, 精确 12 DCLK 脉冲)
+set_property -dict { PACKAGE_PIN AA22 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[0] }];  # R1
+set_property -dict { PACKAGE_PIN AB22 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[1] }];  # G1
+set_property -dict { PACKAGE_PIN AA21 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[2] }];  # B1
+set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[3] }];  # R2
+set_property -dict { PACKAGE_PIN Y20  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[4] }];  # G2
+set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[5] }];  # B2
+set_property -dict { PACKAGE_PIN AB19 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[6] }];  # R3
+set_property -dict { PACKAGE_PIN AA18 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[7] }];  # G3
+set_property -dict { PACKAGE_PIN AB20 IOSTANDARD LVCMOS33 } [get_ports { panel_seq_sdi[8] }];  # B3
 # 2026-05-27: ICND3019 SDI/DCLK/RCLK 移到 PL IP led_panel_seq 直驱
 # 用户确认: CIN (W16) = ICND3019 SDI/DIN. AIN (W18) = DCLK (bin 反解: 行进 narrow pulses).
 # BIN (W17) = RCLK (config clock).
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN W18  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_icnd_dclk }];  # ICND3019 DCLK (原 AIN 标)
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN W17  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_icnd_rclk }];  # ICND3019 RCLK (原 BIN 标)
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN W16  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_icnd_sdi  }];  # ICND3019 SDI/DIN (原 CIN 标)
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AA17 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[15] }];  # SPI_CLK
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AB17 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[16] }];  # SPI_CS
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AA16 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[17] }];  # SPI_MOSI
+set_property -dict { PACKAGE_PIN W18  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_icnd_dclk }];  # ICND3019 DCLK (原 AIN 标)
+set_property -dict { PACKAGE_PIN W17  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_icnd_rclk }];  # ICND3019 RCLK (原 BIN 标)
+set_property -dict { PACKAGE_PIN W16  IOSTANDARD LVCMOS33 } [get_ports { panel_seq_icnd_sdi  }];  # ICND3019 SDI/DIN (原 CIN 标)
+set_property -dict { PACKAGE_PIN AA17 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[15] }];  # SPI_CLK
+set_property -dict { PACKAGE_PIN AB17 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[16] }];  # SPI_CS
+set_property -dict { PACKAGE_PIN AA16 IOSTANDARD LVCMOS33 } [get_ports { panel_gpio_tri_o[17] }];  # SPI_MOSI
 
 ## SPI_MISO 走单独的 1-bit input axi_gpio channel
-## v34mtr 注释(跟转接板 mtr 抢脚): set_property -dict { PACKAGE_PIN AB16 IOSTANDARD LVCMOS33 } [get_ports { panel_spi_miso_tri_i[0] }];  # SPI_MISO
+set_property -dict { PACKAGE_PIN AB16 IOSTANDARD LVCMOS33 } [get_ports { panel_spi_miso_tri_i[0] }];  # SPI_MISO

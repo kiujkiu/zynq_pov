@@ -2652,14 +2652,14 @@
         }
       },
       "hub75e_panel_seq_0": {
-        "vlnv": "xilinx.com:module_ref:hub75e_panel_seq_v7:1.0",
+        "vlnv": "xilinx.com:module_ref:hub75e_panel_seq_v8:1.0",
         "ip_revision": "1",
-        "xci_name": "hello_zynq_hub75e_panel_seq_0_3",
-        "xci_path": "ip\\hello_zynq_hub75e_panel_seq_0_3\\hello_zynq_hub75e_panel_seq_0_3.xci",
+        "xci_name": "hello_zynq_hub75e_panel_seq_0_1",
+        "xci_path": "ip\\hello_zynq_hub75e_panel_seq_0_1\\hello_zynq_hub75e_panel_seq_0_1.xci",
         "inst_hier_path": "hub75e_panel_seq_0",
         "reference_info": {
           "ref_type": "hdl",
-          "ref_name": "hub75e_panel_seq_v7",
+          "ref_name": "hub75e_panel_seq_v8",
           "boundary_crc": "0x0"
         },
         "interface_ports": {

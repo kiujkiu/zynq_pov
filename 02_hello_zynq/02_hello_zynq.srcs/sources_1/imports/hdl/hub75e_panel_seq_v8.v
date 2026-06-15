@@ -303,6 +303,7 @@ module hub75e_panel_seq_v8 #(
                     4'd8: s_axi_rdata <= reg_n_slices;       // v6
                     4'd9: s_axi_rdata <= dma_status_word;    // v6 0x24 RO (v8: bit23=locked)
                     4'd10: s_axi_rdata <= trk_rev_period;    // v8 0x28 RO 实测每转周期
+                    4'd11: s_axi_rdata <= sens_dbg_word;     // v8 0x2C RO {raw_lvl[31],pulse_cnt[15:0]} 保命计数器
                     default: s_axi_rdata <= 32'h0;
                 endcase
                 s_axi_rvalid <= 1'b1;
@@ -340,6 +341,22 @@ module hub75e_panel_seq_v8 #(
         .slice_idx(trk_slice), .rev_period(trk_rev_period), .locked(trk_locked)
     );
     wire [15:0] slice_idx_live = sensor_en ? trk_slice : fake_slice_idx;
+
+    // v8 保命: sensor_pulse 直接驱动可读计数器 (绕开 angle_tracker, 综合不敢删被读出的寄存器)
+    // 0x2C 读: {raw_lvl[31], pulse_cnt[15:0]}. 验电路通断 + 脉冲数, 不依赖 angle_tracker
+    (* dont_touch = "true" *) reg [1:0]  sens_sync;
+    reg [15:0] sens_pulse_cnt;
+    reg        sens_lvl;
+    always @(posedge s_axi_aclk) begin
+        if (!s_axi_aresetn) begin
+            sens_sync <= 2'b0; sens_pulse_cnt <= 16'd0; sens_lvl <= 1'b0;
+        end else begin
+            sens_sync <= {sens_sync[0], sensor_pulse};
+            sens_lvl  <= sens_sync[1];
+            if (sens_sync[1] & ~sens_lvl) sens_pulse_cnt <= sens_pulse_cnt + 16'd1;  // 上升沿计数
+        end
+    end
+    wire [31:0] sens_dbg_word = {sens_sync[1], 15'b0, sens_pulse_cnt};
 
     always @(posedge s_axi_aclk) begin
         if (!s_axi_aresetn) begin

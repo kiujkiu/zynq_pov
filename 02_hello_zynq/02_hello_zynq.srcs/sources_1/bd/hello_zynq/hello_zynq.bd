@@ -30,7 +30,7 @@
       "axi_gpio_panel": "",
       "axi_smc_hp2": "",
       "hub75e_panel_seq_0": "",
-      "pov_proj_0": ""
+      "pov_render_full_0": ""
     },
     "interface_ports": {
       "DDR": {
@@ -2236,7 +2236,7 @@
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
             "parameters": {
               "NUM_READ_OUTSTANDING": {
-                "value": "8"
+                "value": "16"
               },
               "NUM_WRITE_OUTSTANDING": {
                 "value": "16"
@@ -3106,27 +3106,37 @@
           }
         }
       },
-      "pov_proj_0": {
-        "vlnv": "povlab:user:pov_proj:1.0",
-        "ip_revision": "2114656138",
-        "xci_name": "hello_zynq_pov_proj_0_0",
-        "xci_path": "ip\\hello_zynq_pov_proj_0_0\\hello_zynq_pov_proj_0_0.xci",
-        "inst_hier_path": "pov_proj_0",
+      "pov_render_full_0": {
+        "vlnv": "povlab:user:pov_render_full:1.0",
+        "ip_revision": "2114656296",
+        "xci_name": "hello_zynq_pov_render_full_0_0",
+        "xci_path": "ip\\hello_zynq_pov_render_full_0_0\\hello_zynq_pov_render_full_0_0.xci",
+        "inst_hier_path": "pov_render_full_0",
         "interface_ports": {
-          "m_axi_gmem0": {
+          "m_axi_gmem_pts": {
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
             "mode": "Master",
-            "address_space_ref": "Data_m_axi_gmem0",
+            "address_space_ref": "Data_m_axi_gmem_pts",
             "base_address": {
               "minimum": "0x00000000",
               "maximum": "0xFFFFFFFFFFFFFFFF",
               "width": "64"
             }
           },
-          "m_axi_gmem1": {
+          "m_axi_gmem_vox": {
             "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
             "mode": "Master",
-            "address_space_ref": "Data_m_axi_gmem1",
+            "address_space_ref": "Data_m_axi_gmem_vox",
+            "base_address": {
+              "minimum": "0x00000000",
+              "maximum": "0xFFFFFFFFFFFFFFFF",
+              "width": "64"
+            }
+          },
+          "m_axi_gmem_out": {
+            "vlnv": "xilinx.com:interface:aximm_rtl:1.0",
+            "mode": "Master",
+            "address_space_ref": "Data_m_axi_gmem_out",
             "base_address": {
               "minimum": "0x00000000",
               "maximum": "0xFFFFFFFFFFFFFFFF",
@@ -3136,11 +3146,15 @@
         },
         "addressing": {
           "address_spaces": {
-            "Data_m_axi_gmem0": {
+            "Data_m_axi_gmem_out": {
               "range": "16E",
               "width": "64"
             },
-            "Data_m_axi_gmem1": {
+            "Data_m_axi_gmem_pts": {
+              "range": "16E",
+              "width": "64"
+            },
+            "Data_m_axi_gmem_vox": {
               "range": "16E",
               "width": "64"
             }
@@ -3241,14 +3255,20 @@
       },
       "pov_project_0_m_axi_gmem0": {
         "interface_ports": [
-          "pov_proj_0/m_axi_gmem0",
+          "pov_render_full_0/m_axi_gmem_pts",
           "axi_smc_pov_hp/S00_AXI"
         ]
       },
       "pov_project_0_m_axi_gmem1": {
         "interface_ports": [
-          "pov_proj_0/m_axi_gmem1",
+          "pov_render_full_0/m_axi_gmem_vox",
           "axi_smc_pov_hp/S01_AXI"
+        ]
+      },
+      "pov_render_full_0_m_axi_gmem_out": {
+        "interface_ports": [
+          "pov_render_full_0/m_axi_gmem_out",
+          "axi_smc_pov_hp/S02_AXI"
         ]
       },
       "processing_system7_0_DDR": {
@@ -3296,7 +3316,7 @@
       "sc_pov_axilite_M00_AXI": {
         "interface_ports": [
           "sc_pov_axilite/M00_AXI",
-          "pov_proj_0/s_axi_control"
+          "pov_render_full_0/s_axi_control"
         ]
       },
       "v_axi4s_vid_out_0_vid_io_out": {
@@ -3413,7 +3433,7 @@
           "proc_sys_reset_pov/peripheral_aresetn",
           "axi_smc_pov_hp/aresetn",
           "sc_pov_axilite/aresetn",
-          "pov_proj_0/ap_rst_n"
+          "pov_render_full_0/ap_rst_n"
         ]
       },
       "processing_system7_0_FCLK_CLK0": {
@@ -3458,7 +3478,7 @@
           "sc_pov_axilite/aclk",
           "axi_smc/aclk1",
           "processing_system7_0/S_AXI_HP1_ACLK",
-          "pov_proj_0/ap_clk"
+          "pov_render_full_0/ap_clk"
         ]
       },
       "processing_system7_0_FCLK_RESET0_N": {
@@ -3508,8 +3528,8 @@
                 "offset": "0x40020000",
                 "range": "128K"
               },
-              "SEG_pov_proj_0_Reg": {
-                "address_block": "/pov_proj_0/s_axi_control/Reg",
+              "SEG_pov_render_full_0_Reg": {
+                "address_block": "/pov_render_full_0/s_axi_control/Reg",
                 "offset": "0x43C20000",
                 "range": "64K",
                 "offset_base_param": "C_S_AXI_CONTROL_BASEADDR",
@@ -3550,23 +3570,32 @@
           }
         }
       },
-      "/pov_proj_0": {
+      "/pov_render_full_0": {
         "address_spaces": {
-          "Data_m_axi_gmem0": {
+          "Data_m_axi_gmem_out": {
             "segments": {
               "SEG_processing_system7_0_HP1_DDR_LOWOCM": {
                 "address_block": "/processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM",
                 "offset": "0x0000000000000000",
-                "range": "1G"
+                "range": "512M"
               }
             }
           },
-          "Data_m_axi_gmem1": {
+          "Data_m_axi_gmem_pts": {
             "segments": {
               "SEG_processing_system7_0_HP1_DDR_LOWOCM": {
                 "address_block": "/processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM",
                 "offset": "0x0000000000000000",
-                "range": "1G"
+                "range": "512M"
+              }
+            }
+          },
+          "Data_m_axi_gmem_vox": {
+            "segments": {
+              "SEG_processing_system7_0_HP1_DDR_LOWOCM": {
+                "address_block": "/processing_system7_0/S_AXI_HP1/HP1_DDR_LOWOCM",
+                "offset": "0x0000000000000000",
+                "range": "512M"
               }
             }
           }

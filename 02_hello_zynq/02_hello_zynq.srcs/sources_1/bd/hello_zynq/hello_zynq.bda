@@ -208,6 +208,60 @@
             },
             "V4": {
                 "VT": "AC",
+                "BA": "0x0000000000000000",
+                "HA": "0x000000001FFFFFFF",
+                "BP": "C_BASEADDR",
+                "HP": "C_HIGHADDR",
+                "MA": "Data_m_axi_gmem_out",
+                "MX": "/pov_render_full_0",
+                "MI": "m_axi_gmem_out",
+                "MS": "SEG_processing_system7_0_HP1_DDR_LOWOCM",
+                "MV": "povlab:user:pov_render_full:1.0",
+                "SX": "/processing_system7_0",
+                "SI": "S_AXI_HP1",
+                "SS": "HP1_DDR_LOWOCM",
+                "SV": "xilinx.com:ip:processing_system7:5.5",
+                "TM": "both",
+                "TU": "memory"
+            },
+            "V5": {
+                "VT": "AC",
+                "BA": "0x0000000000000000",
+                "HA": "0x000000001FFFFFFF",
+                "BP": "C_BASEADDR",
+                "HP": "C_HIGHADDR",
+                "MA": "Data_m_axi_gmem_pts",
+                "MX": "/pov_render_full_0",
+                "MI": "m_axi_gmem_pts",
+                "MS": "SEG_processing_system7_0_HP1_DDR_LOWOCM",
+                "MV": "povlab:user:pov_render_full:1.0",
+                "SX": "/processing_system7_0",
+                "SI": "S_AXI_HP1",
+                "SS": "HP1_DDR_LOWOCM",
+                "SV": "xilinx.com:ip:processing_system7:5.5",
+                "TM": "both",
+                "TU": "memory"
+            },
+            "V6": {
+                "VT": "AC",
+                "BA": "0x0000000000000000",
+                "HA": "0x000000001FFFFFFF",
+                "BP": "C_BASEADDR",
+                "HP": "C_HIGHADDR",
+                "MA": "Data_m_axi_gmem_vox",
+                "MX": "/pov_render_full_0",
+                "MI": "m_axi_gmem_vox",
+                "MS": "SEG_processing_system7_0_HP1_DDR_LOWOCM",
+                "MV": "povlab:user:pov_render_full:1.0",
+                "SX": "/processing_system7_0",
+                "SI": "S_AXI_HP1",
+                "SS": "HP1_DDR_LOWOCM",
+                "SV": "xilinx.com:ip:processing_system7:5.5",
+                "TM": "both",
+                "TU": "memory"
+            },
+            "V7": {
+                "VT": "AC",
                 "BA": "0x00000000",
                 "HA": "0x3FFFFFFF",
                 "BP": "C_BASEADDR",
@@ -224,43 +278,7 @@
                 "TM": "both",
                 "TU": "memory"
             },
-            "V5": {
-                "VT": "AC",
-                "BA": "0x0000000000000000",
-                "HA": "0x000000003FFFFFFF",
-                "BP": "C_BASEADDR",
-                "HP": "C_HIGHADDR",
-                "MA": "Data_m_axi_gmem0",
-                "MX": "/pov_proj_0",
-                "MI": "m_axi_gmem0",
-                "MS": "SEG_processing_system7_0_HP1_DDR_LOWOCM",
-                "MV": "povlab:user:pov_proj:1.0",
-                "SX": "/processing_system7_0",
-                "SI": "S_AXI_HP1",
-                "SS": "HP1_DDR_LOWOCM",
-                "SV": "xilinx.com:ip:processing_system7:5.5",
-                "TM": "both",
-                "TU": "memory"
-            },
-            "V6": {
-                "VT": "AC",
-                "BA": "0x0000000000000000",
-                "HA": "0x000000003FFFFFFF",
-                "BP": "C_BASEADDR",
-                "HP": "C_HIGHADDR",
-                "MA": "Data_m_axi_gmem1",
-                "MX": "/pov_proj_0",
-                "MI": "m_axi_gmem1",
-                "MS": "SEG_processing_system7_0_HP1_DDR_LOWOCM",
-                "MV": "povlab:user:pov_proj:1.0",
-                "SX": "/processing_system7_0",
-                "SI": "S_AXI_HP1",
-                "SS": "HP1_DDR_LOWOCM",
-                "SV": "xilinx.com:ip:processing_system7:5.5",
-                "TM": "both",
-                "TU": "memory"
-            },
-            "V7": {
+            "V8": {
                 "VT": "AC",
                 "BA": "0x40000000",
                 "HA": "0x4000FFFF",
@@ -278,7 +296,7 @@
                 "TM": "both",
                 "TU": "register"
             },
-            "V8": {
+            "V9": {
                 "VT": "AC",
                 "BA": "0x40020000",
                 "HA": "0x4003FFFF",
@@ -296,7 +314,7 @@
                 "TM": "both",
                 "TU": "register"
             },
-            "V9": {
+            "V10": {
                 "VT": "AC",
                 "BA": "0x41200000",
                 "HA": "0x4120FFFF",
@@ -314,7 +332,7 @@
                 "TM": "both",
                 "TU": "register"
             },
-            "V10": {
+            "V11": {
                 "VT": "AC",
                 "BA": "0x43C00000",
                 "HA": "0x43C0FFFF",
@@ -332,7 +350,7 @@
                 "TM": "both",
                 "TU": "register"
             },
-            "V11": {
+            "V12": {
                 "VT": "AC",
                 "BA": "0x43C10000",
                 "HA": "0x43C1FFFF",
@@ -350,7 +368,7 @@
                 "TM": "both",
                 "TU": "register"
             },
-            "V12": {
+            "V13": {
                 "VT": "AC",
                 "BA": "0x43C20000",
                 "HA": "0x43C2FFFF",
@@ -359,12 +377,12 @@
                 "MA": "Data",
                 "MX": "/processing_system7_0",
                 "MI": "M_AXI_GP0",
-                "MS": "SEG_pov_proj_0_Reg",
+                "MS": "SEG_pov_render_full_0_Reg",
                 "MV": "xilinx.com:ip:processing_system7:5.5",
-                "SX": "/pov_proj_0",
+                "SX": "/pov_render_full_0",
                 "SI": "s_axi_control",
                 "SS": "Reg",
-                "SV": "povlab:user:pov_proj:1.0",
+                "SV": "povlab:user:pov_render_full:1.0",
                 "TM": "both",
                 "TU": "register"
             }
@@ -425,6 +443,11 @@
             },
             {
                 "src": "V12",
+                "trg": "V2",
+                "EH": "2"
+            },
+            {
+                "src": "V13",
                 "trg": "V2",
                 "EH": "2"
             }

@@ -1,0 +1,9 @@
+# regenerable TB inputs (产自 _gen_tb_inputs.py) + 编译产物
+tb_globe_voxel.bin
+tb_transform_lut.bin
+tb_globe_golden_compact.bin
+tb_out_compact.bin
+pov_proj_tb
+proj_povproj/
+pov_proj_ip.zip
+__pycache__/

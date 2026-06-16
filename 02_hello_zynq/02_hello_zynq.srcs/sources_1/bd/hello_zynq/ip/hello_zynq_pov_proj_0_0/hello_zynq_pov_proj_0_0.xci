@@ -1,16 +1,16 @@
 {
   "schema": "xilinx.com:schema:json_instance:1.0",
   "ip_inst": {
-    "xci_name": "hello_zynq_pov_project_batch_0_0",
-    "cell_name": "pov_project_batch_0",
-    "component_reference": "povlab:user:pov_project_batch:1.10",
-    "ip_revision": "2114618485",
-    "gen_directory": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_pov_project_batch_0_0",
+    "xci_name": "hello_zynq_pov_proj_0_0",
+    "cell_name": "pov_proj_0",
+    "component_reference": "povlab:user:pov_proj:1.0",
+    "ip_revision": "2114656138",
+    "gen_directory": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_pov_proj_0_0_1",
     "parameters": {
       "component_parameters": {
         "C_M_AXI_GMEM0_ENABLE_ID_PORTS": [ { "value": "true", "resolve_type": "user", "format": "bool", "usage": "all" } ],
         "C_M_AXI_GMEM0_ID_WIDTH": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
-        "C_M_AXI_GMEM0_DATA_WIDTH": [ { "value": "128", "resolve_type": "user", "format": "long", "usage": "all" } ],
+        "C_M_AXI_GMEM0_DATA_WIDTH": [ { "value": "32", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "C_M_AXI_GMEM0_ENABLE_USER_PORTS": [ { "value": "false", "resolve_type": "user", "format": "bool", "usage": "all" } ],
         "C_M_AXI_GMEM0_AWUSER_WIDTH": [ { "value": "1", "resolve_type": "user", "format": "long", "enabled": false, "usage": "all" } ],
         "C_M_AXI_GMEM0_WUSER_WIDTH": [ { "value": "1", "resolve_type": "user", "format": "long", "enabled": false, "usage": "all" } ],
@@ -22,7 +22,7 @@
         "C_M_AXI_GMEM0_CACHE_VALUE": [ { "value": "\"0011\"", "resolve_type": "user", "format": "bitString", "usage": "all" } ],
         "C_M_AXI_GMEM1_ENABLE_ID_PORTS": [ { "value": "true", "resolve_type": "user", "format": "bool", "usage": "all" } ],
         "C_M_AXI_GMEM1_ID_WIDTH": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
-        "C_M_AXI_GMEM1_DATA_WIDTH": [ { "value": "32", "value_src": "user", "resolve_type": "user", "format": "long", "usage": "all" } ],
+        "C_M_AXI_GMEM1_DATA_WIDTH": [ { "value": "32", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "C_M_AXI_GMEM1_ENABLE_USER_PORTS": [ { "value": "false", "resolve_type": "user", "format": "bool", "usage": "all" } ],
         "C_M_AXI_GMEM1_AWUSER_WIDTH": [ { "value": "1", "resolve_type": "user", "format": "long", "enabled": false, "usage": "all" } ],
         "C_M_AXI_GMEM1_WUSER_WIDTH": [ { "value": "1", "resolve_type": "user", "format": "long", "enabled": false, "usage": "all" } ],
@@ -32,19 +32,19 @@
         "C_M_AXI_GMEM1_USER_VALUE": [ { "value": "0x00000000", "resolve_type": "user", "format": "bitString", "enabled": false, "usage": "all" } ],
         "C_M_AXI_GMEM1_PROT_VALUE": [ { "value": "\"000\"", "resolve_type": "user", "format": "bitString", "usage": "all" } ],
         "C_M_AXI_GMEM1_CACHE_VALUE": [ { "value": "\"0011\"", "resolve_type": "user", "format": "bitString", "usage": "all" } ],
-        "Component_Name": [ { "value": "hello_zynq_pov_project_batch_0_0", "resolve_type": "user", "usage": "all" } ],
+        "Component_Name": [ { "value": "hello_zynq_pov_proj_0_0", "resolve_type": "user", "usage": "all" } ],
         "clk_period": [ { "value": "6.67", "enabled": false, "usage": "all" } ],
         "machine": [ { "value": "64", "enabled": false, "usage": "all" } ],
         "combinational": [ { "value": "0", "enabled": false, "usage": "all" } ],
-        "latency": [ { "value": "5516784", "enabled": false, "usage": "all" } ],
-        "II": [ { "value": "5516785 ~ 10286313", "enabled": false, "usage": "all" } ]
+        "latency": [ { "value": "67667", "enabled": false, "usage": "all" } ],
+        "II": [ { "value": "67668 ~ 25179509", "enabled": false, "usage": "all" } ]
       },
       "model_parameters": {
         "C_S_AXI_CONTROL_ADDR_WIDTH": [ { "value": "7", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_S_AXI_CONTROL_DATA_WIDTH": [ { "value": "32", "format": "long", "usage": "all" } ],
         "C_M_AXI_GMEM0_ID_WIDTH": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_M_AXI_GMEM0_ADDR_WIDTH": [ { "value": "64", "format": "long", "usage": "all" } ],
-        "C_M_AXI_GMEM0_DATA_WIDTH": [ { "value": "128", "resolve_type": "generated", "format": "long", "usage": "all" } ],
+        "C_M_AXI_GMEM0_DATA_WIDTH": [ { "value": "32", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "C_M_AXI_GMEM0_AWUSER_WIDTH": [ { "value": "1", "resolve_type": "generated", "format": "long", "enabled": false, "usage": "all" } ],
         "C_M_AXI_GMEM0_ARUSER_WIDTH": [ { "value": "1", "resolve_type": "generated", "format": "long", "enabled": false, "usage": "all" } ],
         "C_M_AXI_GMEM0_WUSER_WIDTH": [ { "value": "1", "resolve_type": "generated", "format": "long", "enabled": false, "usage": "all" } ],
@@ -80,9 +80,9 @@
       },
       "runtime_parameters": {
         "IPCONTEXT": [ { "value": "IP_Integrator" } ],
-        "IPREVISION": [ { "value": "2114618485" } ],
+        "IPREVISION": [ { "value": "2114656138" } ],
         "MANAGED": [ { "value": "TRUE" } ],
-        "OUTPUTDIR": [ { "value": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_pov_project_batch_0_0" } ],
+        "OUTPUTDIR": [ { "value": "../../../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq/ip/hello_zynq_pov_proj_0_0_1" } ],
         "SELECTEDSIMMODEL": [ { "value": "" } ],
         "SHAREDDIR": [ { "value": "../../ipshared" } ],
         "SWVERSION": [ { "value": "2024.2" } ],
@@ -139,17 +139,17 @@
         "m_axi_gmem0_BREADY": [ { "direction": "out" } ],
         "m_axi_gmem0_BRESP": [ { "direction": "in", "size_left": "1", "size_right": "0" } ],
         "m_axi_gmem0_BVALID": [ { "direction": "in" } ],
-        "m_axi_gmem0_RDATA": [ { "direction": "in", "size_left": "127", "size_right": "0" } ],
+        "m_axi_gmem0_RDATA": [ { "direction": "in", "size_left": "31", "size_right": "0" } ],
         "m_axi_gmem0_RID": [ { "direction": "in", "size_left": "0", "size_right": "0" } ],
         "m_axi_gmem0_RLAST": [ { "direction": "in" } ],
         "m_axi_gmem0_RREADY": [ { "direction": "out" } ],
         "m_axi_gmem0_RRESP": [ { "direction": "in", "size_left": "1", "size_right": "0" } ],
         "m_axi_gmem0_RVALID": [ { "direction": "in" } ],
-        "m_axi_gmem0_WDATA": [ { "direction": "out", "size_left": "127", "size_right": "0" } ],
+        "m_axi_gmem0_WDATA": [ { "direction": "out", "size_left": "31", "size_right": "0" } ],
         "m_axi_gmem0_WID": [ { "direction": "out", "size_left": "0", "size_right": "0" } ],
         "m_axi_gmem0_WLAST": [ { "direction": "out" } ],
         "m_axi_gmem0_WREADY": [ { "direction": "in" } ],
-        "m_axi_gmem0_WSTRB": [ { "direction": "out", "size_left": "15", "size_right": "0" } ],
+        "m_axi_gmem0_WSTRB": [ { "direction": "out", "size_left": "3", "size_right": "0" } ],
         "m_axi_gmem0_WVALID": [ { "direction": "out" } ],
         "m_axi_gmem1_ARADDR": [ { "direction": "out", "size_left": "63", "size_right": "0" } ],
         "m_axi_gmem1_ARBURST": [ { "direction": "out", "size_left": "1", "size_right": "0" } ],
@@ -299,7 +299,7 @@
           "mode": "master",
           "address_space_ref": "Data_m_axi_gmem0",
           "parameters": {
-            "NUM_READ_OUTSTANDING": [ { "value": "8", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
+            "NUM_READ_OUTSTANDING": [ { "value": "16", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
             "NUM_WRITE_OUTSTANDING": [ { "value": "16", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
             "MAX_READ_BURST_LENGTH": [ { "value": "64", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
             "MAX_WRITE_BURST_LENGTH": [ { "value": "16", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
@@ -309,14 +309,14 @@
             "HAS_BURST": [ { "value": "0", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
             "SUPPORTS_NARROW_BURST": [ { "value": "0", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
             "ADDR_WIDTH": [ { "value": "64", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
-            "DATA_WIDTH": [ { "value": "128", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "DATA_WIDTH": [ { "value": "32", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "FREQ_HZ": [ { "value": "150000000", "value_src": "user_prop", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "ID_WIDTH": [ { "value": "1", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "AWUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "ARUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "WUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "RUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "BUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "ID_WIDTH": [ { "value": "1", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "AWUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "ARUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "WUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "RUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "BUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_LOCK": [ { "value": "1", "value_src": "constant", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_PROT": [ { "value": "1", "value_src": "constant", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_CACHE": [ { "value": "1", "value_src": "constant", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
@@ -392,14 +392,14 @@
             "HAS_BURST": [ { "value": "0", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
             "SUPPORTS_NARROW_BURST": [ { "value": "0", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
             "ADDR_WIDTH": [ { "value": "64", "value_src": "constant", "value_permission": "bd_and_user", "usage": "all" } ],
-            "DATA_WIDTH": [ { "value": "32", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "DATA_WIDTH": [ { "value": "32", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "FREQ_HZ": [ { "value": "150000000", "value_src": "user_prop", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "ID_WIDTH": [ { "value": "1", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "AWUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "ARUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "WUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "RUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
-            "BUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "ID_WIDTH": [ { "value": "1", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "AWUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "ARUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "WUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "RUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
+            "BUSER_WIDTH": [ { "value": "0", "value_src": "auto", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_LOCK": [ { "value": "1", "value_src": "constant", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_PROT": [ { "value": "1", "value_src": "constant", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
             "HAS_CACHE": [ { "value": "1", "value_src": "constant", "value_permission": "bd_and_user", "resolve_type": "generated", "format": "long", "is_ips_inferred": true, "is_static_object": false } ],
@@ -625,136 +625,136 @@
                     }
                   }
                 },
-                "model_1": {
+                "voxel_grid_1": {
                   "address_offset": "16",
                   "size": 32,
-                  "display_name": "model_1",
-                  "description": "Data signal of model",
+                  "display_name": "voxel_grid_1",
+                  "description": "Data signal of voxel_grid",
                   "access": "write-only",
                   "reset_value": "0",
                   "fields": {
-                    "model": {
+                    "voxel_grid": {
                       "bit_offset": 0,
                       "bit_width": 32,
-                      "description": "Bit 31 to 0 of model",
+                      "description": "Bit 31 to 0 of voxel_grid",
                       "access": "write-only"
                     }
                   }
                 },
-                "model_2": {
+                "voxel_grid_2": {
                   "address_offset": "20",
                   "size": 32,
-                  "display_name": "model_2",
-                  "description": "Data signal of model",
+                  "display_name": "voxel_grid_2",
+                  "description": "Data signal of voxel_grid",
                   "access": "write-only",
                   "reset_value": "0",
                   "fields": {
-                    "model": {
+                    "voxel_grid": {
                       "bit_offset": 0,
                       "bit_width": 32,
-                      "description": "Bit 63 to 32 of model",
+                      "description": "Bit 63 to 32 of voxel_grid",
                       "access": "write-only"
                     }
                   }
                 },
-                "num_points": {
+                "lut_1": {
                   "address_offset": "28",
                   "size": 32,
-                  "display_name": "num_points",
-                  "description": "Data signal of num_points",
+                  "display_name": "lut_1",
+                  "description": "Data signal of lut",
                   "access": "write-only",
                   "reset_value": "0",
                   "fields": {
-                    "num_points": {
+                    "lut": {
                       "bit_offset": 0,
                       "bit_width": 32,
-                      "description": "Bit 31 to 0 of num_points",
+                      "description": "Bit 31 to 0 of lut",
                       "access": "write-only"
                     }
                   }
                 },
-                "ring_base_1": {
-                  "address_offset": "36",
+                "lut_2": {
+                  "address_offset": "32",
                   "size": 32,
-                  "display_name": "ring_base_1",
-                  "description": "Data signal of ring_base",
+                  "display_name": "lut_2",
+                  "description": "Data signal of lut",
                   "access": "write-only",
                   "reset_value": "0",
                   "fields": {
-                    "ring_base": {
+                    "lut": {
                       "bit_offset": 0,
                       "bit_width": 32,
-                      "description": "Bit 31 to 0 of ring_base",
+                      "description": "Bit 63 to 32 of lut",
                       "access": "write-only"
                     }
                   }
                 },
-                "ring_base_2": {
+                "slice_base_1": {
                   "address_offset": "40",
                   "size": 32,
-                  "display_name": "ring_base_2",
-                  "description": "Data signal of ring_base",
+                  "display_name": "slice_base_1",
+                  "description": "Data signal of slice_base",
                   "access": "write-only",
                   "reset_value": "0",
                   "fields": {
-                    "ring_base": {
+                    "slice_base": {
                       "bit_offset": 0,
                       "bit_width": 32,
-                      "description": "Bit 63 to 32 of ring_base",
+                      "description": "Bit 31 to 0 of slice_base",
                       "access": "write-only"
                     }
                   }
                 },
-                "slot_bytes": {
-                  "address_offset": "48",
+                "slice_base_2": {
+                  "address_offset": "44",
                   "size": 32,
-                  "display_name": "slot_bytes",
-                  "description": "Data signal of slot_bytes",
+                  "display_name": "slice_base_2",
+                  "description": "Data signal of slice_base",
                   "access": "write-only",
                   "reset_value": "0",
                   "fields": {
-                    "slot_bytes": {
+                    "slice_base": {
                       "bit_offset": 0,
                       "bit_width": 32,
-                      "description": "Bit 31 to 0 of slot_bytes",
+                      "description": "Bit 63 to 32 of slice_base",
                       "access": "write-only"
                     }
                   }
                 },
-                "slot_stride": {
-                  "address_offset": "56",
+                "n_total": {
+                  "address_offset": "52",
                   "size": 32,
-                  "display_name": "slot_stride",
-                  "description": "Data signal of slot_stride",
+                  "display_name": "n_total",
+                  "description": "Data signal of n_total",
                   "access": "write-only",
                   "reset_value": "0",
                   "fields": {
-                    "slot_stride": {
+                    "n_total": {
                       "bit_offset": 0,
                       "bit_width": 32,
-                      "description": "Bit 31 to 0 of slot_stride",
+                      "description": "Bit 31 to 0 of n_total",
                       "access": "write-only"
                     }
                   }
                 },
-                "phase": {
-                  "address_offset": "64",
+                "slot_start": {
+                  "address_offset": "60",
                   "size": 32,
-                  "display_name": "phase",
-                  "description": "Data signal of phase",
+                  "display_name": "slot_start",
+                  "description": "Data signal of slot_start",
                   "access": "write-only",
                   "reset_value": "0",
                   "fields": {
-                    "phase": {
+                    "slot_start": {
                       "bit_offset": 0,
                       "bit_width": 32,
-                      "description": "Bit 31 to 0 of phase",
+                      "description": "Bit 31 to 0 of slot_start",
                       "access": "write-only"
                     }
                   }
                 },
                 "n_slots": {
-                  "address_offset": "72",
+                  "address_offset": "68",
                   "size": 32,
                   "display_name": "n_slots",
                   "description": "Data signal of n_slots",
@@ -765,38 +765,6 @@
                       "bit_offset": 0,
                       "bit_width": 32,
                       "description": "Bit 31 to 0 of n_slots",
-                      "access": "write-only"
-                    }
-                  }
-                },
-                "slice_mode": {
-                  "address_offset": "80",
-                  "size": 32,
-                  "display_name": "slice_mode",
-                  "description": "Data signal of slice_mode",
-                  "access": "write-only",
-                  "reset_value": "0",
-                  "fields": {
-                    "slice_mode": {
-                      "bit_offset": 0,
-                      "bit_width": 32,
-                      "description": "Bit 31 to 0 of slice_mode",
-                      "access": "write-only"
-                    }
-                  }
-                },
-                "slice_half_thick": {
-                  "address_offset": "88",
-                  "size": 32,
-                  "display_name": "slice_half_thick",
-                  "description": "Data signal of slice_half_thick",
-                  "access": "write-only",
-                  "reset_value": "0",
-                  "fields": {
-                    "slice_half_thick": {
-                      "bit_offset": 0,
-                      "bit_width": 32,
-                      "description": "Bit 31 to 0 of slice_half_thick",
                       "access": "write-only"
                     }
                   }

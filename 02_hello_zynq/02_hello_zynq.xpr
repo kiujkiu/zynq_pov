@@ -49,6 +49,7 @@
     <Option Name="ProjectType" Val="Default"/>
     <Option Name="IPRepoPath" Val="$PPRDIR/../hls_proj/proj_pov/solution1/impl/ip"/>
     <Option Name="IPRepoPath" Val="$PPRDIR/../vivado-library"/>
+    <Option Name="IPRepoPath" Val="$PPRDIR/hls_pov/ip_repo"/>
     <Option Name="IPOutputRepo" Val="$PCACHEDIR/ip"/>
     <Option Name="IPDefaultOutputPath" Val="$PGENDIR/sources_1"/>
     <Option Name="IPCachePermission" Val="read"/>

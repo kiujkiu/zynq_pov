@@ -42,9 +42,9 @@ void pov_proj(
     int                   n_slots
 ) {
 #pragma HLS INTERFACE m_axi     port=voxel_grid offset=slave bundle=gmem0 \
-    depth=2097152 max_read_burst_length=16 num_read_outstanding=16
+    depth=2097152 max_read_burst_length=64 num_read_outstanding=16
 #pragma HLS INTERFACE m_axi     port=lut        offset=slave bundle=gmem0 \
-    depth=16384 max_read_burst_length=64 num_read_outstanding=8
+    depth=16384 max_read_burst_length=64 num_read_outstanding=16
 #pragma HLS INTERFACE m_axi     port=slice_base offset=slave bundle=gmem1 \
     depth=1474560 max_write_burst_length=256 num_write_outstanding=16 max_widen_bitwidth=64
 #pragma HLS INTERFACE s_axilite port=voxel_grid bundle=control

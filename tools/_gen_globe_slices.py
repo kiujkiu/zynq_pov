@@ -7,6 +7,7 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(__file__))
 import display_128x128 as dm
 from display_128x128 import transform_for_panel1, transform_for_panel2, pack_panel_bin
+import _q15
 dm.R_GAIN = dm.G_GAIN = dm.B_GAIN = 1.00   # 1-bit 旁路增益
 
 N_SLICES = int(sys.argv[1]) if len(sys.argv) > 1 else 720
@@ -45,10 +46,9 @@ d = np.arange(-64, 64); h = np.arange(-64, 64)
 HH, DD = np.meshgrid(h, d, indexing='ij')
 out = bytearray()
 for a in range(N_SLICES):
-    th = 2*math.pi*a/N_SLICES
-    c, s = math.cos(th), math.sin(th)
-    wx = np.clip(np.rint(DD*c).astype(np.int32)+64, 0, G-1)
-    wz = np.clip(np.rint(DD*s).astype(np.int32)+64, 0, G-1)
+    wxq, wzq = _q15.sample_xz(DD, a)   # Q15 定点, 跟板端 HLS pov_proj.cpp 逐位一致
+    wx = np.clip(wxq.astype(np.int32)+64, 0, G-1)
+    wz = np.clip(wzq.astype(np.int32)+64, 0, G-1)
     wy = np.clip(-HH+64-1, 0, G-1)
     img_a = vox[wx, wy, wz]
     img_a = np.where(img_a >= 128, 255, 0).astype(np.uint8)   # 1-bit 阈值

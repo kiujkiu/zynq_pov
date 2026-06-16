@@ -35,4 +35,4 @@ set_property -dict { PACKAGE_PIN AA19 IOSTANDARD LVCMOS33 } [get_ports { hub75e_
 set_property -dict { PACKAGE_PIN AA16 IOSTANDARD LVCMOS33 } [get_ports { hub75e_addr2[3] }]; # D' J1.16 L18P
 set_property -dict { PACKAGE_PIN AB20 IOSTANDARD LVCMOS33 } [get_ports { hub75e_addr2[4] }]; # E' J1.12 L10N
 ## 光电开关 (转接板 RC+10k 上拉在板上, FPGA 端不再上拉)
-set_property -dict { PACKAGE_PIN V14  IOSTANDARD LVCMOS33 PULLTYPE PULLUP } [get_ports { sensor_pulse }];   # SPIN_SYNC J1.34 L19P
+set_property -dict { PACKAGE_PIN V14  IOSTANDARD LVCMOS33 PULLTYPE PULLUP } [get_ports { panel_spi_miso_tri_i[0] }];   # SPIN_SYNC J1.34 L19P (workaround: 复用已验证 input port)

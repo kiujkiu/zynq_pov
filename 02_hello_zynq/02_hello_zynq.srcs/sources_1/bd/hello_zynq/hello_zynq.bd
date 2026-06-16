@@ -1,7 +1,7 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0xE0F7A832B5FECF53",
+      "boundary_crc": "0xA6490FDF18DFBC99",
       "device": "xc7z020clg484-2",
       "gen_directory": "../../../../02_hello_zynq.gen/sources_1/bd/hello_zynq",
       "name": "hello_zynq",
@@ -381,9 +381,6 @@
         "direction": "O",
         "left": "4",
         "right": "0"
-      },
-      "sensor_pulse": {
-        "direction": "I"
       }
     },
     "components": {
@@ -3391,7 +3388,8 @@
       "panel_spi_miso_tri_i_1": {
         "ports": [
           "panel_spi_miso_tri_i",
-          "axi_gpio_panel/gpio2_io_i"
+          "axi_gpio_panel/gpio2_io_i",
+          "hub75e_panel_seq_0/sensor_pulse"
         ]
       },
       "proc_sys_reset_0_peripheral_aresetn": {
@@ -3469,12 +3467,6 @@
           "util_vector_logic_eth/Op1",
           "proc_sys_reset_pov/ext_reset_in",
           "proc_sys_reset_0/ext_reset_in"
-        ]
-      },
-      "sensor_pulse_1": {
-        "ports": [
-          "sensor_pulse",
-          "hub75e_panel_seq_0/sensor_pulse"
         ]
       },
       "util_vector_logic_eth_Res": {

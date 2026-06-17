@@ -9,13 +9,14 @@
     "parameters": {
       "component_parameters": {
         "DCLK_DIV": [ { "value": "2", "resolve_type": "user", "format": "long", "usage": "all" } ],
-        "PANEL_WIDTH": [ { "value": "128", "resolve_type": "user", "format": "long", "usage": "all" } ],
+        "PANEL_WIDTH": [ { "value": "16", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "ADDR_BITS": [ { "value": "5", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "BCM_PLANES": [ { "value": "6", "resolve_type": "user", "format": "long", "usage": "all" } ],
-        "T_UNIT_DEF": [ { "value": "8", "resolve_type": "user", "format": "long", "usage": "all" } ],
+        "T_UNIT_DEF": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "DISP_CYCLES": [ { "value": "1000", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "LATCH_CYC": [ { "value": "2", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "BLANK_CYC": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
+        "LATCH_GAP_CYC": [ { "value": "2", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "ADDR_SET_CYC": [ { "value": "1", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "OE_PRE_CYC": [ { "value": "8", "resolve_type": "user", "format": "long", "usage": "all" } ],
         "FB_DEPTH": [ { "value": "8192", "resolve_type": "user", "format": "long", "usage": "all" } ],
@@ -23,13 +24,14 @@
       },
       "model_parameters": {
         "DCLK_DIV": [ { "value": "2", "resolve_type": "generated", "format": "long", "usage": "all" } ],
-        "PANEL_WIDTH": [ { "value": "128", "resolve_type": "generated", "format": "long", "usage": "all" } ],
+        "PANEL_WIDTH": [ { "value": "16", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "ADDR_BITS": [ { "value": "5", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "BCM_PLANES": [ { "value": "6", "resolve_type": "generated", "format": "long", "usage": "all" } ],
-        "T_UNIT_DEF": [ { "value": "8", "resolve_type": "generated", "format": "long", "usage": "all" } ],
+        "T_UNIT_DEF": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "DISP_CYCLES": [ { "value": "1000", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "LATCH_CYC": [ { "value": "2", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "BLANK_CYC": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
+        "LATCH_GAP_CYC": [ { "value": "2", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "ADDR_SET_CYC": [ { "value": "1", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "OE_PRE_CYC": [ { "value": "8", "resolve_type": "generated", "format": "long", "usage": "all" } ],
         "FB_DEPTH": [ { "value": "8192", "resolve_type": "generated", "format": "long", "usage": "all" } ]

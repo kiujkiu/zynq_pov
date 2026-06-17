@@ -332,23 +332,23 @@ module hub75e_panel_seq_v2 #(
                 pattern_24_bot_lut = pattern_24_top_lut;
             end
             3'd2: begin
-                pattern_24_top_lut = color_lut(col_idx[6:4]);
+                pattern_24_top_lut = color_lut(col_eff[6:4]);
                 pattern_24_bot_lut = pattern_24_top_lut;
             end
             3'd3: begin
-                pattern_24_top_lut = (col_idx[3] ^ row_idx[2]) ? 24'h0000FF : 24'h00FF00;
-                pattern_24_bot_lut = (col_idx[3] ^ row_idx[2]) ? 24'h00FF00 : 24'h0000FF;
+                pattern_24_top_lut = (col_eff[3] ^ row_idx[2]) ? 24'h0000FF : 24'h00FF00;
+                pattern_24_bot_lut = (col_eff[3] ^ row_idx[2]) ? 24'h00FF00 : 24'h0000FF;
             end
             3'd4: begin
                 pattern_24_top_lut = (row_idx == walk_pos[4:0]) ? 24'hFFFFFF : 24'h000000;
                 pattern_24_bot_lut = pattern_24_top_lut;
             end
             3'd5: begin
-                pattern_24_top_lut = (col_idx[7:0] == walk_pos) ? 24'hFFFFFF : 24'h000000;
+                pattern_24_top_lut = (col_eff[7:0] == walk_pos) ? 24'hFFFFFF : 24'h000000;
                 pattern_24_bot_lut = pattern_24_top_lut;
             end
             3'd6: begin
-                pattern_24_top_lut = {col_idx[7:0], col_idx[7:0], col_idx[7:0]};
+                pattern_24_top_lut = {col_eff[7:0], col_eff[7:0], col_eff[7:0]};
                 pattern_24_bot_lut = pattern_24_top_lut;
             end
             default: begin
@@ -360,14 +360,25 @@ module hub75e_panel_seq_v2 #(
 
     // BCM plane slice — pick the bit-`plane` from each of R/G/B for top + bot.
     // For 6-plane 6-bit per channel, plane = 0..5.
+    // 色序重映射: 实测 panel 内部 IP_r→蓝/IP_g→红/IP_b→绿 (循环置换)。
+    // 故 lane 喂入: rgb[0](→蓝LED)=pattern.B, rgb[1](→红LED)=pattern.R, rgb[2](→绿LED)=pattern.G
     wire [4:0] plane_ext = {2'b0, plane};
-    wire r1_bit = pattern_24_top[plane_ext];
-    wire g1_bit = pattern_24_top[plane_ext + 5'd8];
-    wire b1_bit = pattern_24_top[plane_ext + 5'd16];
-    wire r2_bit = pattern_24_bot[plane_ext];
-    wire g2_bit = pattern_24_bot[plane_ext + 5'd8];
-    wire b2_bit = pattern_24_bot[plane_ext + 5'd16];
+    wire r1_bit = pattern_24_top[plane_ext + 5'd16];  // R1 pin → 蓝LED : 喂 B
+    wire g1_bit = pattern_24_top[plane_ext];          // G1 pin → 红LED : 喂 R
+    wire b1_bit = pattern_24_top[plane_ext + 5'd8];   // B1 pin → 绿LED : 喂 G
+    wire r2_bit = pattern_24_bot[plane_ext + 5'd16];
+    wire g2_bit = pattern_24_bot[plane_ext];
+    wire b2_bit = pattern_24_bot[plane_ext + 5'd8];
     wire [5:0] plane_rgb = {b2_bit, g2_bit, r2_bit, b1_bit, g1_bit, r1_bit};
+
+    // 运行时可调列偏移: 补偿 LE 命令边沿造成 SR 多移 + 数据-DCLK 流水线相位 (实测左移)。
+    // reg_param[15:12] = col_shift (0~15). pattern 取 (col_idx + col_shift) mod (width) 列。
+    // 这样不用反复 rebuild, 用 mwr 0x40020008 调 PARAM[15:12] 即可现场对齐偏移。
+    wire [3:0]  col_shift = reg_param[15:12];
+    // 左移补偿: 在 col_idx 处生成 (col_idx - col_shift) 列的图案 (带 wrap)。
+    wire [11:0] col_eff   = (col_idx >= {8'd0, col_shift})
+                              ? (col_idx - {8'd0, col_shift})
+                              : (col_idx + width_max + 12'd1 - {8'd0, col_shift});
 
     //==========================================================================
     // ADDR mux — always external ABCDE in this driver (SR mode dropped)
@@ -440,10 +451,8 @@ module hub75e_panel_seq_v2 #(
 
                     if (col_idx == width_max) begin
                         col_idx          <= 12'd0;
-                        // Compute LE command word for this (plane, row) transition.
-                        //   plane==0, row_idx==0  → N=5 (first row)
-                        //   plane==0, row_idx>0   → N=4 (row advance)
-                        //   plane!=0              → N=3 (normal, row stays)
+                        // LE 命令边沿数: 首行5 / 换行4 / 普通3 (LE 全程在数据移完之后发,
+                        // datasheet: 数据传完后才产生 latch; LE 高期间芯片不收数据)
                         if (plane == 3'd0) begin
                             if (row_idx == 5'd0)
                                 latch_edges_target <= 4'd5;
@@ -473,17 +482,18 @@ module hub75e_panel_seq_v2 #(
                 // driving plane_rgb so SR ends up with consistent content.
                 //--------------------------------------------------------------
                 S_LATCH: begin
-                    hub75e_oe_out  <= 1'b1;
-                    hub75e_lat_out <= 1'b1;
-                    hub75e_rgb_out <= plane_rgb;
-                    // Each aclk = 1 DCLK edge while LE=1
-                    hub75e_dclk_out <= ~hub75e_dclk_out;
+                    // 纯 LE 脉冲 (普通双锁存模式): LE 高电平期间 CLK 停在低、不打边沿。
+                    // 外部 ABCDE 行选 → 不用片内行计数器 → 不需要 3/4/5 边沿命令。
+                    // 去掉 LE 期间的 CLK 边沿 = 不再多移数据 → 从根上消除像素偏移。
+                    hub75e_oe_out   <= 1'b1;
+                    hub75e_lat_out  <= 1'b1;
+                    hub75e_dclk_out <= 1'b0;       // CLK 停低, LE 期间无边沿
+                    hub75e_rgb_out  <= plane_rgb;
+                    // LE 脉冲保持 latch_edges_target 拍 (脉宽), 然后落沿锁存
                     if (latch_edge_count == latch_edges_target - 4'd1) begin
-                        // Final edge produced this cycle. Drop LE next cycle.
-                        hub75e_lat_out  <= 1'b0;
-                        // Park DCLK low after the last edge (next cycle won't toggle)
-                        ctrl_count <= 4'd0;
-                        state      <= S_LATCH_GAP;
+                        hub75e_lat_out <= 1'b0;
+                        ctrl_count     <= 4'd0;
+                        state          <= S_LATCH_GAP;
                     end else begin
                         latch_edge_count <= latch_edge_count + 4'd1;
                     end

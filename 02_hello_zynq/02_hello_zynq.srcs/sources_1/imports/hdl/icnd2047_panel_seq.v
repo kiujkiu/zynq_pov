@@ -146,8 +146,10 @@ module hub75e_panel_seq_v2 #(
 
     wire        enable        = reg_ctrl[0];
     wire [2:0]  test_mode     = reg_ctrl[3:1];
-    // reg_ctrl[4] (addr_sr) and reg_ctrl[6] (overlap_en) intentionally unused
     wire        use_fb        = reg_ctrl[5];
+    wire        overlap_en    = reg_ctrl[6];                 // 1=移位藏到显示下 (shift-while-display)
+    // 运行时 BCM plane 数 (1-bit 测速用): reg_ctrl[15:13]==0 → 默认 BCM_PLANES, 否则取该值
+    wire [2:0]  planes_cfg    = (reg_ctrl[15:13] == 3'd0) ? BCM_PLANES[2:0] : reg_ctrl[15:13];
     wire [4:0]  addr_bits_cfg = (reg_ctrl[12:8] == 5'd0) ? 5'd5 : reg_ctrl[12:8];
     wire [4:0]  row_max       = (5'd1 << addr_bits_cfg) - 5'd1;
     wire [23:0] user_color_top = reg_color[23:0];
@@ -196,7 +198,9 @@ module hub75e_panel_seq_v2 #(
                 w_done       <= 1'b1;
                 if (aw_done || s_axi_awvalid) begin
                     if (cur_aw_addr[15]) begin
-                        // FB region: stub (no BRAM in MVP). Count writes for debug.
+                        // FB write: addr[14] 选上/下半, addr[13:2]=半内 pixel idx (row*128+col)
+                        if (cur_aw_addr[14]) fb_bot[cur_aw_addr[13:2]] <= s_axi_wdata[23:0];
+                        else                 fb_top[cur_aw_addr[13:2]] <= s_axi_wdata[23:0];
                         last_fb_wdata <= s_axi_wdata[23:0];
                         last_fb_waddr <= cur_aw_addr[13:2];
                         fb_we_count   <= fb_we_count + 16'h1;
@@ -265,9 +269,17 @@ module hub75e_panel_seq_v2 #(
         S_LATCH_GAP   = 4'd3,
         S_ADDR_ABCDE  = 4'd4,
         S_DISPLAY     = 4'd5,
-        S_DISPLAY_END = 4'd6;
+        S_DISPLAY_END = 4'd6,
+        // overlap 路径 (shift-while-display): row_idx/plane=移位索引, disp_*=显示索引
+        S_PRIME       = 4'd7,   // 首行预移入 reg1 (无显示)
+        S_OV_LATCH    = 4'd8,   // LE 锁存 reg1→reg2, 推进索引
+        S_OV_ADDR     = 4'd9,   // 设 ABCDE=disp_row, 算 disp_target
+        S_OV_RUN      = 4'd10;  // OE=0 显示 disp, 同时移入下一行到 reg1
 
     reg [3:0]  state;
+    reg [4:0]  disp_row;        // overlap: 当前显示行 (reg2 内容)
+    reg [2:0]  disp_plane;      // overlap: 当前显示 plane
+    reg        sh_done;         // overlap: 本行 128 列移位完成
     reg [11:0] col_idx;
     reg [4:0]  row_idx;
     reg [4:0]  row_displayed;
@@ -297,9 +309,15 @@ module hub75e_panel_seq_v2 #(
     reg [23:0] pattern_24_top_lut;
     reg [23:0] pattern_24_bot_lut;
 
-    // FB stub: all-zero. Real BRAM left for later.
-    wire [23:0] fb_top_dout = 24'h0;
-    wire [23:0] fb_bot_dout = 24'h0;
+    // Framebuffer: 128×64 = 上半32行(fb_top) + 下半32行(fb_bot), 各 4096×24bit BRAM.
+    // 单时钟域 (s_axi_aclk): AXI 写口 + 显示读口 (简单双口 BRAM, 无需 CDC)。
+    // AXI 地址 0x8000+ (addr[15]=1), pixel idx=addr[14:2]:
+    //   idx[12](=addr[14])=0→fb_top / =1→fb_bot, idx[11:0](=addr[13:2])=row*128+col。
+    reg [23:0] fb_top [0:4095];
+    reg [23:0] fb_bot [0:4095];
+    reg [23:0] fb_top_q, fb_bot_q;     // 同步读输出 (1 cyc latency, 由 col_shift 补相位)
+    wire [23:0] fb_top_dout = fb_top_q;
+    wire [23:0] fb_bot_dout = fb_bot_q;
 
     wire [23:0] pattern_24_top = use_fb ? fb_top_dout : pattern_24_top_lut;
     wire [23:0] pattern_24_bot = use_fb ? fb_bot_dout : pattern_24_bot_lut;
@@ -380,6 +398,11 @@ module hub75e_panel_seq_v2 #(
                               ? (col_idx - {8'd0, col_shift})
                               : (col_idx + width_max + 12'd1 - {8'd0, col_shift});
 
+    // FB 读地址 = row*128 + col. fb 比 LUT 多一级 BRAM 读寄存器 → 内容晚 1 列,
+    // 故读地址超前 1 列抵消 (col_eff+1, wrap)。col_shift 仍可在此基础上微调。
+    wire [11:0] col_eff_p1 = (col_eff >= width_max) ? 12'd0 : (col_eff + 12'd1);
+    wire [11:0] fb_raddr   = {row_idx[4:0], col_eff_p1[6:0]};
+
     //==========================================================================
     // ADDR mux — always external ABCDE in this driver (SR mode dropped)
     //==========================================================================
@@ -422,7 +445,15 @@ module hub75e_panel_seq_v2 #(
             hub75e_lat_out     <= 1'b0;
             hub75e_oe_out      <= 1'b1;
             addr_abcde_lat     <= 5'b0;
+            fb_top_q           <= 24'h0;
+            fb_bot_q           <= 24'h0;
+            disp_row           <= 5'd0;
+            disp_plane         <= 3'd0;
+            sh_done            <= 1'b0;
         end else begin
+            // FB 同步读 (每拍): 显示当前 row_idx 行、col_eff 列的像素 (1 cyc latency)。
+            fb_top_q <= fb_top[fb_raddr];
+            fb_bot_q <= fb_bot[fb_raddr];
             case (state)
                 //--------------------------------------------------------------
                 S_IDLE: begin
@@ -433,7 +464,10 @@ module hub75e_panel_seq_v2 #(
                     col_idx         <= 12'd0;
                     row_idx         <= 5'd0;
                     plane           <= 3'd0;
-                    if (enable) state <= S_SHIFT;
+                    disp_row        <= 5'd0;
+                    disp_plane      <= 3'd0;
+                    sh_done         <= 1'b0;
+                    if (enable) state <= overlap_en ? S_PRIME : S_SHIFT;
                 end
 
                 //--------------------------------------------------------------
@@ -560,7 +594,7 @@ module hub75e_panel_seq_v2 #(
                     hub75e_oe_out   <= 1'b1;
                     hub75e_lat_out  <= 1'b0;
                     hub75e_dclk_out <= 1'b0;
-                    if (plane == BCM_PLANES[2:0] - 3'd1) begin
+                    if (plane >= planes_cfg - 3'd1) begin
                         plane <= 3'd0;
                         if (row_idx == row_max) begin
                             row_idx     <= 5'd0;
@@ -583,6 +617,84 @@ module hub75e_panel_seq_v2 #(
                         plane <= plane + 1;
                     end
                     state <= enable ? S_SHIFT : S_IDLE;
+                end
+
+                //==============================================================
+                // OVERLAP 路径: row_idx/plane=移位索引(数据源, pattern/fb 自动用),
+                // disp_row/disp_plane=显示索引(ABCDE/时长). 显示当前行时移入下一行。
+                //==============================================================
+                S_PRIME: begin
+                    // 首行 (0,0) 预移入 reg1, 不显示
+                    hub75e_oe_out   <= 1'b1;
+                    hub75e_lat_out  <= 1'b0;
+                    hub75e_rgb_out  <= plane_rgb;
+                    hub75e_dclk_out <= ~hub75e_dclk_out;
+                    if (col_idx == width_max) begin
+                        col_idx          <= 12'd0;
+                        latch_edge_count <= 4'd0;
+                        state            <= S_OV_LATCH;
+                    end else begin
+                        col_idx <= col_idx + 1;
+                    end
+                end
+
+                S_OV_LATCH: begin
+                    // 纯 LE 脉冲锁存 reg1→reg2. 刚移完的(row_idx,plane)成为显示索引,
+                    // 移位索引推进到下一(row,plane)。
+                    hub75e_oe_out   <= 1'b1;
+                    hub75e_lat_out  <= 1'b1;
+                    hub75e_dclk_out <= 1'b0;
+                    if (latch_edge_count >= 4'd2) begin   // ~3 拍 LE 宽度
+                        hub75e_lat_out <= 1'b0;
+                        disp_row   <= row_idx;
+                        disp_plane <= plane;
+                        if (plane >= planes_cfg - 3'd1) begin
+                            plane <= 3'd0;
+                            if (row_idx == row_max) begin
+                                row_idx     <= 5'd0;
+                                frame_count <= frame_count + 1;
+                            end else row_idx <= row_idx + 1;
+                        end else plane <= plane + 1;
+                        ctrl_count <= 4'd0;
+                        state      <= S_OV_ADDR;
+                    end else begin
+                        latch_edge_count <= latch_edge_count + 4'd1;
+                    end
+                end
+
+                S_OV_ADDR: begin
+                    hub75e_oe_out  <= 1'b1;
+                    hub75e_lat_out <= 1'b0;
+                    addr_abcde_lat <= disp_row;
+                    row_displayed  <= disp_row;
+                    if (ctrl_count >= ADDR_SET_CYC[3:0] - 1) begin
+                        disp_count  <= 16'd0;
+                        disp_target <= {8'd0, t_unit} << disp_plane;
+                        col_idx     <= 12'd0;
+                        sh_done     <= 1'b0;
+                        state       <= S_OV_RUN;
+                    end else begin
+                        ctrl_count <= ctrl_count + 4'd1;
+                    end
+                end
+
+                S_OV_RUN: begin
+                    // OE=0 显示 disp(reg2); 同时把下一行(row_idx,plane)移入 reg1
+                    hub75e_oe_out  <= enable ? 1'b0 : 1'b1;
+                    hub75e_lat_out <= 1'b0;
+                    if (!sh_done) begin
+                        hub75e_dclk_out <= ~hub75e_dclk_out;
+                        hub75e_rgb_out  <= plane_rgb;
+                        if (col_idx == width_max) sh_done <= 1'b1;
+                        else col_idx <= col_idx + 1;
+                    end else begin
+                        hub75e_dclk_out <= 1'b0;
+                    end
+                    if (disp_count < disp_target) disp_count <= disp_count + 1;
+                    if (sh_done && disp_count >= disp_target) begin
+                        latch_edge_count <= 4'd0;
+                        state <= enable ? S_OV_LATCH : S_IDLE;
+                    end
                 end
 
                 default: state <= S_IDLE;

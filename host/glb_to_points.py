@@ -223,7 +223,8 @@ def sample_triangles(triangles, n_total,
     cum = np.cumsum(probs)
 
     face_r = np.random.random(n_total)
-    face_idx = np.searchsorted(cum, face_r)
+    # float32 cumsum 误差可让 cum[-1] < 1.0, searchsorted 会越界, 必须 clip
+    face_idx = np.minimum(np.searchsorted(cum, face_r), len(triangles) - 1)
     u = np.random.random(n_total)
     v = np.random.random(n_total)
     mask = u + v > 1

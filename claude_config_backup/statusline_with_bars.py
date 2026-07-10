@@ -52,6 +52,18 @@ def fmt_remaining(secs: int) -> str:
     return f"{secs // 86400}d{(secs % 86400) // 3600}h"
 
 
+def model_info(model_id: str) -> tuple:
+    """Return (short_tag, cost_weight_vs_opus). Higher weight = burns pool faster."""
+    mid = (model_id or "").lower()
+    if "opus" in mid:
+        return ("Opus", 1.0)
+    if "sonnet" in mid:
+        return ("Sonnet", 0.2)
+    if "haiku" in mid:
+        return ("Haiku", 0.053)
+    return ("?", 1.0)
+
+
 def time_bar(resets_at, window_secs: int) -> tuple:
     """Return (elapsed_pct, remaining_str, reset_clock_str) or (None,None,None)."""
     if not resets_at:

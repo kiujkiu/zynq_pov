@@ -48,6 +48,11 @@ originSessionId: 0be7a193-9bc9-4973-bf90-99272813831e
 - PetaLinux **不能 root 安装**, installer 自检会拒绝
 - /tools 权限由 prereq 脚本提前设给 $SUDO_USER
 
+## 2026-06-15 复核 + WiFi 配置预生成
+
+核实: 脚本仍在 (2026-06-04) **一步没跑** — apt/libtinfo5/installer/PetaLinux 全未装, sudo 仍需密码 (Claude 跑不了 apt), `~/dl/` 空. 两个阻塞动作只能用户做: ① `sudo bash 01_install_prereqs.sh` ② AMD SSO 下 installer→`~/dl/`.
+已并行预生成 (放 `~/projects/lxb-linux/configs/`): `system-user.dtsi`(SD1 EMIO+rtw8822cs) / `rtw88-wifi.cfg`(kernel fragment) / `add_sd1_emio_export_xsa.tcl`(⚠跑 Linux 分支副本别动 POV 工程). README 阻塞动作已置顶. 评估报告 `D:\claude_workspace\pov3d\upgrade_eval_report.html`.
+
 ## 下次接力入口
 
-打开 `~/lxb-linux-setup/README.md` 看顺序; `TaskList` 看进度; 已铺设但未跑的脚本不需要重写。
+打开 `~/lxb-linux-setup/README.md` 看顺序; `TaskList` 看进度; 已铺设但未跑的脚本不需要重写。配置产物已在 configs/ 备好, 装完 PetaLinux 直接 drop-in。

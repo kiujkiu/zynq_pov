@@ -6,7 +6,7 @@ originSessionId: a079e7ff-01aa-4018-abc1-014cf07015a0
 ---
 **Board/host connection**:
 - USB-Serial CH340 = ARM UART, COM port may drift across reboots (was COM7, became COM9 — GUI auto-detects)
-- JTAG via same/separate USB; occasionally drops, fix is physical USB replug
+- JTAG cable = **Digilent JTAG-SMT2 module** (淘宝"7020 配套下载器"内部集成的 OEM module, SN 210251A08870, FT2232H 内核, EEPROM 配 D2XX-only). Windows enum 成 `USB Serial Converter VID_0403/PID_6014`, 无 VCP COM child. `xsdb` 看到 `digilent-ftdi cables 1 / Digilent JTAG-SMT2`. 卡住时 fix = `taskkill /F /IM hw_server.exe` + 板子冷循环 (拔 USB + 断电 + 等 10s + 重插)
 - HDMI capture: USB3 device "C1-1 USB3 Video" (VID 345F:2130). OpenCV DSHOW/MSMF cannot see it — use ffmpeg dshow input via `tools/capture_ffmpeg.py` (imageio bundles ffmpeg). Output goes to `hdmi_ff.jpg`.
 
 **Windows toolchain (called from WSL via `powershell.exe`)**:

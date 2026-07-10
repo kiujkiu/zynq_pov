@@ -26,3 +26,9 @@ originSessionId: 37686ade-ae15-4bcf-a387-f01c094bd546
 **相关**: `feedback_vivado_bd_module_ref_update.md` 提了类似问题但是改 xci JSON 方案, 这里说明 xci 改完会被 make_wrapper 覆盖, 必须 rename module.
 
 **调试时间**: 2026-06-01 花 8 个 build (~1 小时) 才定位.
+
+## module_ref 后加子模块依赖不认 (2026-06-15)
+v7 IP 集成 angle_tracker 后, sensor_pulse 端口被综合 trim 掉 (synth log 无 angle_tracker 的 8-3491 绑定行). 根因: **module_ref 在 create_bd_cell 时锁定子模块依赖集; angle_tracker.v 是之后才加的, 不在依赖集里 → OOC/global 综合时 angle_tracker 实例不被 elaborate → 其唯一消费的 sensor_pulse 无负载 → trim**.
+排查无效: reset_target/generate_target/reset_run synth 都不重扫依赖; used_in_synthesis=1 也没用; 只有一份 v7.v 且含实例也没用.
+**唯一 fix**: rename module (v7→v8) + recreate cell (create_bd_cell 重扫依赖, 这次含 angle_tracker). recreate 脚本里 sensor_pulse 要接 external port (删 xlconstant 段, 否则两源抢 sink 报 BD 5-676).
+判别: `grep angle_tracker synth_1/runme.log` 无 "8-3491 ... bound" 行 = 子模块没进综合.

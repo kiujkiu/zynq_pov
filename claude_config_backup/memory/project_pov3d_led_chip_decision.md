@@ -4,6 +4,8 @@ description: 360×20Hz × 8-bit RGB POV3D 方案锁定 — Zynq 7020 CLG484 + 90
 type: project
 originSessionId: 4842be5b-0551-4e89-8f4c-90c7918ef105
 ---
+> ⚠ 2026-07-10 更新: 新候选 **ICND2260 行列合一** 在"正反屏+15rps"前提下测算成立且 IO/BOM 更优 (免 3019 行驱, ~56 PL IO, ~10.8bit 灰度), 见 [[pov3d-icnd2260-eval]]; 本文件的 MBI5264 方案仍是 >10k fps 单面路线的基准。
+
 # 最终锁定方案
 
 **目标参数**：360 slice × 20 Hz × 8-bit RGB，屏幕刷新 7.2 kHz

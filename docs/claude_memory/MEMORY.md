@@ -87,3 +87,10 @@
 - [Vivado IBIS .pkg = BGA pin map 权威源](reference_vivado_ibis_pkg.md) — `C:\Xilinx\Vivado\<ver>\data\parts\xilinx\<family>\public\ibis\pkg\*.pkg` 含 ball→net 全表 (除 GND)
 - [自做 PCB 工具选 KiCad 不选立创EDA](feedback_kicad_vs_lceda.md) — claude 要参与画板就 KiCad (文本工程文件), 立创EDA 只能当顾问
 - [KiCad 10 schematic 生成器 (kicad_sch_lib.py)](reference_kicad_sch_generator.md) — 自建 .kicad_sch 生成器, 解决 extends/grid/label/lib_id 几个坑, 配 kicad-cli erc/svg/pdf 全 CLI 流程
+- [转接板 v1.2 引脚重映射 (2026-07-27)](project_pov3d_trans_v12_pinmap.md) — 屏侧 J1 未变, P1 整体重排 → 19 ball 纯置换, 已上板点亮; 顺带解掉 DCLK/LAT/OE 相邻的老 SI 问题
+- [oe_window 调太低会暗到看不见](feedback_oe_window_too_low_invisible.md) — pov6_colors.py 写死 8 沿(4%占空) vs 能跑的 192 沿(98%), 差 24 倍; 别误判成"屏不亮"
+- [正反双屏有间距 → 偏移平面切片](project_pov3d_offset_axis_geometry.md) — gap 13.8mm 屏不过圆心; PHASE_B=180 与单份 DDR 不受影响, 只改 host 采样; 中心盲区仅占截面积 0.85%
+- [Altium PDF 抽网表 + 引脚推导工具](reference_sch_netlist_tools.md) — sch_netlist.py / derive_panel_pins.py, 带"能复现旧 XDC 才认新结果"自检 + 差分对结构性校验
+- [FS03 板子远程操作方式](reference_fs03_board_access.md) — WiFi 10.10.21.3 uisrc/root, WSL 用 plink/pscp, busybox devmem; ⚠ WiFi 会掉且不自愈, 屏还亮≠Linux活着
+- [pov6 板上调试脚本现状](reference_pov6_board_scripts.md) — pov6_colors2/hold 用法, povcolors.service 开机自启, 板上与仓库有漂移
+- [POV 内容模型库位置](reference_model_library.md) — models/ 下几十个 GLB (bonsai 盆景/Groot/英雄联盟角色), 直接喂 gen_anime_slices.py

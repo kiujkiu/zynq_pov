@@ -94,3 +94,6 @@
 - [FS03 板子远程操作方式](reference_fs03_board_access.md) — WiFi 10.10.21.3 uisrc/root, WSL 用 plink/pscp, busybox devmem; ⚠ WiFi 会掉且不自愈, 屏还亮≠Linux活着
 - [pov6 板上调试脚本现状](reference_pov6_board_scripts.md) — pov6_colors2/hold 用法, povcolors.service 开机自启, 板上与仓库有漂移
 - [POV 内容模型库位置](reference_model_library.md) — models/ 下几十个 GLB (bonsai 盆景/Groot/英雄联盟角色), 直接喂 gen_anime_slices.py
+- [换 bitstream 必须冷启动](feedback_cold_boot_required_for_bit.md) — reboot 不重载 PL; 用"写新寄存器位再回读"判定, 比看 uptime 硬
+- [🎯 双屏 POV 体显示端到端跑通](project_pov3d_dual_panel_volumetric_ok.md) — 2026-07-28 首次完整验证; 含正确配置照抄表 + 11.1rps 实测基线
+- [PC→WiFi 实时推流通路 (PVS1)](reference_pov_wifi_streaming.md) — stream/ 下早已建好, 别重复造轮子; 实测 9.89fps 压缩 35.9×

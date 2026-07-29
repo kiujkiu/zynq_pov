@@ -42,7 +42,15 @@ def _get_accessor_data(gltf, accessor_idx):
     dtype = dtype_map[acc.componentType]
     ncomp = count_map[acc.type]
     start = (bv.byteOffset or 0) + (acc.byteOffset or 0)
-    nbytes = acc.count * ncomp * np.dtype(dtype).itemsize
+    tight = ncomp * np.dtype(dtype).itemsize
+    stride = getattr(bv, 'byteStride', None)
+    if stride and stride != tight:
+        # interleaved bufferView: gather each element by stride
+        nbytes = stride * (acc.count - 1) + tight
+        raw = np.frombuffer(buf[start:start + nbytes], dtype=np.uint8)
+        idx = np.arange(acc.count)[:, None] * stride + np.arange(tight)[None, :]
+        return raw[idx].copy().view(dtype).reshape(acc.count, ncomp)
+    nbytes = acc.count * tight
     arr = np.frombuffer(buf[start:start + nbytes], dtype=dtype)
     return arr.reshape(acc.count, ncomp).copy()
 
@@ -95,8 +103,11 @@ def _decode_image(gltf, image_idx):
     start = bv.byteOffset or 0
     data = buf[start:start + bv.byteLength]
     try:
-        im = Image.open(io.BytesIO(data)).convert("RGB")
-        return im
+        im = Image.open(io.BytesIO(data))
+        # 保留 alpha: 半透明贴图 (alphaMode=BLEND) 的透明区若按 RGB 处理会变成
+        # 实心底色, 把真正该显示的内容 (如 holo1 星星) 淹没。见 sample_triangles
+        # 的 alpha_thresh。无 alpha 的图统一补成不透明。
+        return im.convert("RGBA") if im.mode in ("RGBA", "LA", "PA") else im.convert("RGB")
     except Exception as e:
         print(f"  image decode failed: {e}")
         return None
@@ -198,7 +209,7 @@ def load_glb(path, verbose=False):
 
 def sample_triangles(triangles, n_total,
                      lighting="none", ambient=0.35,
-                     light_dir=(0.3, 0.7, 0.6)):
+                     light_dir=(0.3, 0.7, 0.6), alpha_thresh=128):
     """Area-weighted uniform sampling. Handles textured + flat triangles.
 
     lighting:
@@ -286,6 +297,9 @@ def sample_triangles(triangles, n_total,
             tx = int((uv[0] % 1.0) * tex.shape[1]) % tex.shape[1]
             ty = int((uv[1] % 1.0) * tex.shape[0]) % tex.shape[0]
             px = tex[ty, tx]
+            # RGBA 贴图: alpha 低于阈值的采样点直接丢弃, 否则半透明片会渲成实心块
+            if alpha_thresh > 0 and px.shape[0] >= 4 and int(px[3]) < alpha_thresh:
+                continue
             r_, g_, b_ = int(px[0]), int(px[1]), int(px[2])
         else:
             _, c = color_info

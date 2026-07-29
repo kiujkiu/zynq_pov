@@ -97,3 +97,7 @@
 - [换 bitstream 必须冷启动](feedback_cold_boot_required_for_bit.md) — reboot 不重载 PL; 用"写新寄存器位再回读"判定, 比看 uptime 硬
 - [🎯 双屏 POV 体显示端到端跑通](project_pov3d_dual_panel_volumetric_ok.md) — 2026-07-28 首次完整验证; 含正确配置照抄表 + 11.1rps 实测基线
 - [PC→WiFi 实时推流通路 (PVS1)](reference_pov_wifi_streaming.md) — stream/ 下早已建好, 别重复造轮子; 实测 9.89fps 压缩 35.9×
+- [pov_rxd 逐帧 ACK 是帧率瓶颈](feedback_povrxd_stop_and_wait_limit.md) — 传输与解码串行; 三步流水方案 (窗口/三缓冲双线程/双核), 上限 32.5 fps = 2×转速
+- [pov_rxd 不支持多客户端并发](feedback_povrxd_single_client_only.md) — 两路同推丢帧 45%; 画面异常先查 `ss -tn | grep 9500` 连接数
+- [glb_to_points 丢 alpha → 半透明贴图渲成实心块](feedback_glb_alpha_texture_lost.md) — 星星消失之谜; 附点云缓存 + 采样数两个连带坑
+- [glbanim 并集 bbox 让动画缩小 39%](feedback_glbanim_union_bbox_shrinks.md) — --fit-frames 逐帧自适应 + 循环平滑; 量包络必须用整段动画

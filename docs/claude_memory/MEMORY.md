@@ -101,3 +101,6 @@
 - [pov_rxd 不支持多客户端并发](feedback_povrxd_single_client_only.md) — 两路同推丢帧 45%; 画面异常先查 `ss -tn | grep 9500` 连接数
 - [glb_to_points 丢 alpha → 半透明贴图渲成实心块](feedback_glb_alpha_texture_lost.md) — 星星消失之谜; 附点云缓存 + 采样数两个连带坑
 - [glbanim 并集 bbox 让动画缩小 39%](feedback_glbanim_union_bbox_shrinks.md) — --fit-frames 逐帧自适应 + 循环平滑; 量包络必须用整段动画
+- [推理前先确认信号"接没接"](feedback_verify_signal_actually_connected.md) — 一天踩三次: 悬空寄存器读噪声当实测、遗留位当功能已开; 附数量级自检
+- [面板刷新率 vs 转速不匹配](project_pov3d_refresh_vs_rpm.md) — xsim 扫 oe_window 实测表; oe≤111 免费(overlap 固有); 16.22rps 每片仅扫 0.59-0.81 遍
+- [换 FPGA 平台的依赖清单](reference_port_to_other_fpga_deps.md) — RTL 仅 14 处 ODDR 其余纯 Verilog; 工作量取决于 PS 侧有无硬核+BSP; 换平台前必问的 5 个问题

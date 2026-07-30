@@ -105,3 +105,4 @@
 - [面板刷新率 vs 转速不匹配](project_pov3d_refresh_vs_rpm.md) — xsim 扫 oe_window 实测表; oe≤111 免费(overlap 固有); 16.22rps 每片仅扫 0.59-0.81 遍
 - [换 FPGA 平台的依赖清单](reference_port_to_other_fpga_deps.md) — RTL 仅 14 处 ODDR 其余纯 Verilog; 工作量取决于 PS 侧有无硬核+BSP; 换平台前必问的 5 个问题
 - [🔴 提交 = 推两个远端](reference_git_dual_remote.md) — origin(kiujkiu) + yjhh(pov-yjhh); 说"提交"就两边都推
+- [aibrain-app 项目](reference_aibrain_app_project.md) — PC 侧 3D Viewer + PVS1 推流, 与 POV 同链; pvs_streamer.js 已有滑动窗口(我重复劳动了); Docker 纯软件 demo 跑法

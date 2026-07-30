@@ -104,3 +104,4 @@
 - [推理前先确认信号"接没接"](feedback_verify_signal_actually_connected.md) — 一天踩三次: 悬空寄存器读噪声当实测、遗留位当功能已开; 附数量级自检
 - [面板刷新率 vs 转速不匹配](project_pov3d_refresh_vs_rpm.md) — xsim 扫 oe_window 实测表; oe≤111 免费(overlap 固有); 16.22rps 每片仅扫 0.59-0.81 遍
 - [换 FPGA 平台的依赖清单](reference_port_to_other_fpga_deps.md) — RTL 仅 14 处 ODDR 其余纯 Verilog; 工作量取决于 PS 侧有无硬核+BSP; 换平台前必问的 5 个问题
+- [🔴 提交 = 推两个远端](reference_git_dual_remote.md) — origin(kiujkiu) + yjhh(pov-yjhh); 说"提交"就两边都推

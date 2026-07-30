@@ -62,11 +62,30 @@ cd aibrain-app && docker compose up --build     # → http://localhost:9070
 装机脚本 `/mnt/d/claude_workspace/pov3d/setup-docker.sh`。装到 Docker 29.6.2 + compose v5.3.1。
 ⚠ Docker 官方源无 resolute 仓库 → 脚本回退用 noble(24.04) 源, 二进制兼容。
 
+## ✅ 已配成自动 (2026-07-30) — 下次开个终端 + 浏览器即可
+
+```
+① ~/.bashrc 末尾: 检测 dockerd 未运行则 nohup 拉起 (需免密 sudo, 已配)
+② docker-compose.yml: restart "no" → unless-stopped (dockerd 回来容器自己起)
+```
+**实测验证**: `pkill dockerd` → 网页 HTTP 000 → 开一个新 shell → **27 秒后自动 HTTP 200**。
+
+⇒ 下次用法: **开任意一个 WSL 终端** (触发 .bashrc), 等 ~30s, 浏览器 http://localhost:9070。
+
+若想连终端都不开, 在 Windows 侧建开机启动项 (PowerShell 执行一次):
+```powershell
+$s = New-Object -ComObject WScript.Shell
+$lnk = $s.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\wsl-docker.lnk")
+$lnk.TargetPath = "wsl.exe"
+$lnk.Arguments  = '-u root -e sh -c "nohup dockerd --host=unix:///var/run/docker.sock >/var/log/dockerd-manual.log 2>&1 &"'
+$lnk.Save()
+```
+
 🔴 **两个必须记住的坑:**
 
 **① SysV 脚本在 WSL 下起不来 dockerd**
 `/etc/init.d/docker:62 ulimit: error setting limit (Invalid argument)`, 且 systemctl 是 offline。
-绕过它直接起 (2 秒就绪), **每次重开 WSL 都要跑一次**:
+必须绕过它直接起 (2 秒就绪) —— 这就是上面 .bashrc 那段做的事:
 ```bash
 sudo sh -c 'nohup dockerd --host=unix:///var/run/docker.sock > /var/log/dockerd-manual.log 2>&1 &'
 ```
@@ -82,3 +101,27 @@ for f in $(find . -name "*.sh" -not -path "./node_modules/*" -not -path "./.git/
 
 ⚠ 构建位置: 仓库在 /mnt/d 走 9P 跨界访问很慢, 已 `cp -r` 到 `~/aibrain-app` 再 build (300MB, 4.7s)。
 `.dockerignore` 已排掉 reference/ docs/ ai/models/ .git/ node_modules/ 等大件。
+
+## 🔴 WSL2 的 IP 与 Windows 不同 — 我为此误判了一整轮
+
+`aibrain-app` UI 报 `Push error: EHOSTUNREACH 10.10.21.3:9500`, 我从 WSL 命令行探测
+9500 得到 5 次里 4 次失败, 于是判定"板子无线链路 80% 丢包"。**结论是错的。**
+
+容器内实测才暴露真相:
+```
+容器 → 10.10.21.3:9500    ✅ 通 (板子其实一直可达)
+容器 → 223.5.5.5:53       ✅ 通 (外网)
+容器 → 10.10.20.125:9070  ❌ 连不到"宿主机"
+容器 → 192.168.0.1:53     ❌ 连不到"网关"
+```
+关键: **WSL 的 IP 是 `192.168.2.204`, 不是 Windows 的 `10.10.20.125`**。
+WSL2 走 NAT、在独立私有段, 出站经 Windows 转发。所以:
+- WSL/容器 → 板子: 走 NAT 出站, **通的**
+- WSL 里 ping/TCP 探测偶尔失败: 是 **NAT 转发抖动**, 与板子 WiFi 无关
+- Windows `Test-Connection` False: 是 Windows 侧 ICMP, 与 WSL 这条路无关
+
+同期板子侧一切正常: `pov_rxd` 在 9500 LISTEN、`pov.service` active、SSH 可登、
+WiFi 网卡 UP、开机 8.3 小时。
+
+⚠ **教训**(与 [[feedback_verify_signal_actually_connected]] 同源): **拿中间层的现象
+去推断另一端的状态之前, 先确认自己站在哪个网络位置**。当天这是第四次同类错误。

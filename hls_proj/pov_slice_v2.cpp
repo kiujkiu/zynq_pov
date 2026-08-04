@@ -46,13 +46,17 @@ SLICES:
         const int cs = (int)PV2_COS8[angle];
         const int sn = (int)PV2_SIN8[angle];
 
-        /* 偏移分量与列无关, 每片算一次:
+        /* 偏移分量与列无关, 每片算一次。世界坐标与 gen_anime_slices.py 一致:
          *   world = u·û(θ) + axis_off·n̂(θ),  û=(cos,sin), n̂=(-sin,cos)
-         *   ⇒ mx = (u·cs - axis_off·sn) >> 8
-         *     mz = (u·sn + axis_off·cs) >> 8
-         * axis_off 本身是 Q8, 所以它那两项要多右移 8 位。 */
-        const int off_x = -((axis_off_q8 * sn) >> 16);
-        const int off_z =  ((axis_off_q8 * cs) >> 16);
+         *   ⇒ wx = u·cos - axis_off·sin
+         *     wz = u·sin + axis_off·cos
+         *
+         * 🔴 全程保持 Q8, **只在最后取整一次** —— Python 参考是
+         *   `np.rint(D*c - axis_off*s)`, 对**和**取整。若分开右移会各截断一次,
+         *   产生系统性半像素偏差, 对拍必然对不上。
+         * axis_off_q8 已是 Q8, 乘 Q8 的 sn/cs 得 Q16, 故 >>8 回到 Q8。 */
+        const int off_x_q8 = -((axis_off_q8 * sn) >> 8);
+        const int off_z_q8 =  ((axis_off_q8 * cs) >> 8);
 
         uint64_t *slot = slot_base + (long)g * PV2_SLOT_BEATS;
 
@@ -63,8 +67,9 @@ COLUMNS:
             int u = px - PV2_CX;
             if (mirror_u) u = -u;
 
-            const int rx = ((u * cs) >> 8) + off_x + PV2_VOX_HALF;
-            const int rz = ((u * sn) >> 8) + off_z + PV2_VOX_HALF;
+            /* Q8 求和后四舍五入一次 (+128 再 >>8), 与 Python 的 np.rint 对齐 */
+            const int rx = ((u * cs + off_x_q8 + 128) >> 8) + PV2_VOX_HALF;
+            const int rz = ((u * sn + off_z_q8 + 128) >> 8) + PV2_VOX_HALF;
 
             const bool inside = (rx >= 0) && (rx < PV2_VOX_XZ)
                              && (rz >= 0) && (rz < PV2_VOX_XZ);

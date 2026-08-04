@@ -33,19 +33,43 @@
 
 #include <stdint.h>
 
-/* ── 面板几何 (150 × 168.75 mm, 像素间距 0.78125 mm) ── */
-#define PV2_PANEL_W    192          /* 沿半径 (整直径) */
-#define PV2_PANEL_H    216          /* 沿高度 */
+/* ── 面板几何 ────────────────────────────────────────────────────────────
+ * 两套配置, 编译期切换。**验证策略**: 先用 -DPV2_CFG_1BIT 在手上这块
+ * 160×180 / 360 档的 1-bit 平台上跑通几何, 再切回 ICND2260 目标配置。
+ *
+ *   目标 (默认)   192×216 / 603 档  — 150 × 168.75 mm, 像素间距 0.78125 mm
+ *   验证 (1BIT)   160×180 / 360 档  — 现有 ICND2049 屏
+ *
+ * ⚠ PV2_PANEL_H 必须能被 4 整除 (64 位端口一拍 4 个 RGB565)。216/4=54, 180/4=45 ✓
+ */
+#ifdef PV2_CFG_1BIT
+#  define PV2_PANEL_W    160
+#  define PV2_PANEL_H    180
+#  define PV2_LUT_N      360
+#else
+#  define PV2_PANEL_W    192        /* 沿半径 (整直径) */
+#  define PV2_PANEL_H    216        /* 沿高度 */
+#  define PV2_LUT_N      603        /* 由最外圈像素间距定: 2π×96 */
+#endif
 
-/* ── 体素网格: xz 平面 192×192, y 216。**y 是最内维** ──
+/* ── 体素网格: xz 平面 W×W, y = H。**y 是最内维** ──
  * idx = (vz * PV2_VOX_XZ + vx) * PV2_VOX_Y + vy
- * 大小 = 192×192×216×2 B = 15.9 MB */
-#define PV2_VOX_XZ     192
-#define PV2_VOX_Y      216
-#define PV2_VOX_HALF   96           /* PV2_VOX_XZ / 2 */
+ * 目标配置 192×192×216×2 B = 15.9 MB; 验证配置 160×160×180×2 B = 9.2 MB
+ *
+ * 🔴 **接口约定: 体素 y 轴与面板行号同向 (自上而下)。**
+ * 切片器对 y **直拷不翻转** —— 翻转会破坏连续突发, 整个性能优势就没了。
+ * 而 gen_anime_slices.py 用的是 `gy = (H-1) - arange(H)` (面板行 0 在上、体素 y 向上),
+ * 所以 **voxelize 侧必须按本约定写入 (y 已翻好)**, 否则成像上下颠倒。 */
+/* 角度档数。表体在 pov_slice_v2_lut.h, 但这个数是**几何量**, 放这里
+ * 让只包几何头的使用方(测试台/驱动)也能拿到。 */
+#define PV2_NUM_ANGLES PV2_LUT_N
+
+#define PV2_VOX_XZ     PV2_PANEL_W
+#define PV2_VOX_Y      PV2_PANEL_H
+#define PV2_VOX_HALF   (PV2_VOX_XZ / 2)
 
 /* 面板列 px → 半径坐标 u = px - PV2_CX */
-#define PV2_CX         96           /* PV2_PANEL_W / 2 */
+#define PV2_CX         (PV2_PANEL_W / 2)
 
 /* 每片尺寸 (列优先, RGB565) */
 #define PV2_SLOT_ELEMS (PV2_PANEL_W * PV2_PANEL_H)      /* 41,472 元素 */

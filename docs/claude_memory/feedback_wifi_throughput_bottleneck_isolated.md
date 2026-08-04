@@ -1,7 +1,75 @@
 ---
-name: WiFi 吞吐只有 ~20 Mbps — 瓶颈锁定在 mt7921u 的 USB 传输, 已穷尽软件手段
-description: 空口协商 432-1200Mbit/s 零重传, 板内回环 1238Mbps, 但过 USB-WiFi 只有 15-26Mbps; SG 不能关(关了卡死)
+name: 🔴 已推翻 — "WiFi 只有 20 Mbps" 的真因是我自己写的看门狗, 不是 USB
+description: 看门狗拿 ping 网关当判据, 办公网网关不回 ICMP ⇒ 6 小时 3582 次重连; 停掉后 23→58 Mbps, 8 分钟零掉线
 type: feedback
+---
+
+# 🔴 2026-08-04 晚 — 本文原结论被推翻, 先读这一节
+
+**真因: 我自己 2026-08-01 写的 `wifi_watchdog.sh` 把链路每 15 秒拆一次。**
+
+```sh
+# /home/uisrc/wifi_watchdog.sh:49
+[ -n "$GW" ] && ! ping -c2 -W2 "$GW" >/dev/null 2>&1 && reconnect "GW_DEAD($GW)"
+```
+拿 **ping 网关**当链路健康判据。**办公网网关不回 ICMP 是常态** ⇒ 每次都判"链路死了"
+⇒ 重启 wpa_supplicant。日志坐实: 6 小时 **3,582 次 reconnect vs 3,566 次 OK**, 日志 647 KB。
+dmesg 侧每 15-16 秒一次 `deauthenticating ... **by local choice**` —— **是板子自己断的,
+不是 AP 踢的、不是信号差、不是转子遮挡。**
+
+⚠ 而且**装了两个看门狗在打架**: `povwifi.timer`(15s, 我加的) + `wifi-watchdog.timer`(30s, 7/28 的)。
+`povwifi.service` 长期停在 `activating (start)` —— 跟之前端口冲突那次一样, **状态不是 `failed` 所以不查就发现不了**。
+
+## 停掉看门狗后的实测 (2026-08-04 12:13-12:16, 板子刚重启, povrxd 已停)
+
+| 方向 | 结果 |
+|---|---|
+| PC→板 50 MB | **51.6 Mbps** |
+| PC→板 100 MB ×2 | **62.9 / 58.5 Mbps** |
+| 板→PC 100 MB | **46.9 Mbps** |
+| **掉线事件** | **0** (8 分钟内只有开机那 2 次 USB 枚举 reset) |
+| 传输时板子 CPU | **两核各约 50% idle** ⇒ 板端不是瓶颈 |
+
+⇒ **23 → ~58 Mbps, 2.5×。仅仅是停掉看门狗。**
+
+## 🔴 因此下面原文的核心结论作废
+
+原文写"瓶颈是 mt7921u 驱动的 USB 批量传输实现"。**那次测出的 23.1/23.7 Mbps 是在
+看门狗每 15 秒拆一次链路的情况下测的**(看门狗 8/1 部署, 测量 8/4)。TCP 拥塞窗口
+根本长不起来, 且链路有一半时间是断的。**结论建立在被污染的测量上。**
+
+⚠ 用户当时的质疑是对的: "USB 本该比 SDIO 快, 这应该是 bug" —— 确实是 bug, 而且是软件的。
+**差点据此去买 SDIO 硬件(200 Mbps), 去替换一条本该 280-320 Mbps 的 USB 通路。**
+
+## 🔴 看门狗的升级路径会把板子弄成不可远程恢复
+```sh
+if [ $n -ge 3 ]; then    # 连续 3 次修不好 → 重挂 USB PHY
+    echo ci_hdrc.0 > /sys/bus/platform/drivers/ci_hdrc/unbind
+```
+unbind 后若没 rebind 回来, **WiFi 网卡整个消失, 只能物理重启**。2026-08-04 实际发生过一次。
+
+## 处置 (已做)
+`povwifi.timer/service` 与 `wifi-watchdog.timer/service` **全部 `disable --now`**。
+⚠ 重做看门狗的话三条都得改:
+1. 判据**不能用 ping 网关** —— 用 carrier + associated + 有 IP, 或探一个**确认可达**的 TCP 端口
+2. 触发要**连续失败数分钟**, 不是 15 秒
+3. **删掉 USB unbind 那条升级路径**
+
+## 还没定的事 (别再overclaim)
+~58 Mbps **是不是天花板、卡在哪一层, 仍未确定**。候选: mt76/USB、空口/AP 拥塞、
+我这侧 WSL2 NAT。USB 2.0 高速实用值 280-320 Mbps, 所以 58 仍只有 ~20%, **可能还有空间**。
+决定性实验(同口插 U 盘测裸吞吐)**仍未做** —— 板上当时没插 U 盘。
+
+## 对项目的实际影响
+- 现 PVS1 **720 片双面 @30fps 需 63 Mbps** ⇒ 58 Mbps 已接近, 帧率上限从 13 fps 抬到 **~27 fps**
+- 🔴 **但解码接棒成为新瓶颈**: 双核并行 `dec_avg≈78-88ms/帧` ⇒ 只有 **11-12 fps**。
+  见 [[project_pov3d_v31_dualface_geometry_solved]]。**下一步该打解码, 不是链路。**
+
+## 顺带
+- **静态 IP 10.10.21.250 又被 dhcpcd 推翻**, 板子实际在 `10.10.20.239` (dynamic)。
+- 排查方法: plink 里 `nohup ... &` **起不来后台进程**(会话一退就没), 用
+  `systemd-run --unit=xxx` 才可靠; 该板 `journalctl` 需要 sudo。
+
 ---
 
 2026-08-04 系统排查。**结论: 不是无线、不是 CPU、不是配置, 是 mt7921u 驱动的 USB

@@ -9,7 +9,8 @@
 - [In-repo doc index](reference_docs.md) — where to find HOWTO/STATUS/DEBUG_LOG files inside the cloned repo
 - [Hardware + Windows toolchain](reference_hardware.md) — COM/JTAG/HDMI-capture details, Vivado/Vitis paths called from WSL（本机走 `D:\` 符号链接 → `C:\Xilinx\...`）
 - [Win Python 安装](reference_python_install.md) — Python 3.12.10 在 `%LOCALAPPDATA%\Programs\Python\Python312`，已装 pyserial/trimesh/numpy/pillow/pygltflib/PyQt6/obs-websocket-py/imageio
-- [POV3D 最终目标参数](project_pov3d_final_target.md) — 720 slice × 30 Hz × 160×180，推出 46 μs/slice 硬预算
+- [POV3D 最终目标参数](project_pov3d_final_target.md) — 720 slice × 30 Hz × 160×180，推出 46 μs/slice 硬预算 ⚠ **2026-08-04 修正: "30Hz=1800RPM" 是错的, 体帧率=2×转速 ⇒ 30Hz 只需 900RPM**
+- [渲染 IP 架构定案 (2026-08-04)](project_pov3d_hls_slicer_arch.md) — csynth 实证: 点云投影版单IP占 **66% BRAM** ⇒ 4路并行物理不可能(4x 计划全作废); 改 **voxel 切片版** 只占1%、快3.7×; 还需 II=3→1 + 体素布局改 **y-innermost**(y轴不参与旋转)
 - [Phase 4b HLS pov IP 已完成](project_pov3d_hls_ip_done.md) — 基址、性能、限制、优化方向
 - [产品路径决策 (ADR-001)](project_pov3d_path_decision.md) — 锁 A voxel 4× IP, mesh 路径备货等 LED + 精简 BD 时再考虑
 - [slicemap LUT 实验分支](project_slicemap_lut.md) — experiment/slicemap-lut + worktree zynq_pov_slicemap, 设计文档 commit 0d3b4a2, 代码未实现
@@ -78,6 +79,7 @@
 - [POV3D panel 静态渲染管线 v1 (2026-05-29)](project_pov3d_panel_render_v1.md) — baremetal 完整 PNG→panel 跑通但目标未对齐 (静态 2D vs POV 3D), 等用户回答 4 个问题
 - [Multivox POV→Zynq 移植 + 48-IO 方案 (2026-05-29)](project_multivox_zynq_port.md) — multivox 项目 (D:\claude_workspace\pov3d\multivox), 拆 daisy 改 48 SDI, 7350 fps × 8-bit BCM, **下次直接开干 Verilog**
 - [LED IC 选型对比 (POV + 静态屏 + DDR)](reference_pov_chip_selection.md) — FM6124/MBI/ICN, BCM vs PWM vs S-PWM 时间预算, ICN2065 SDR 100M 最实用
+- [ICND2260 规格与 POV 可行性 (2026-08-04)](reference_icnd2260_spec.md) — 行列合一 120通道+48行管; mLVDS 3对=1.02Gbps/颗; **帧频=GCLK/(灰度等级×扫描数)**; 线上位宽固定16bit; 色深天花板 10-bit; 🔴 瓶颈变成差分对数(96对), 双面30Hz需146对 ⇒ 首次出现换 FPGA 的技术理由
 - [HUB75E FM6124 panel + v28 overlap+OE_PRE (2026-06-02)](project_hub75e_fm6124_lit.md) — 128×64, CTRL[6]=overlap_en runtime 切换: serial 462 fps / overlap 645 fps (+39%), BCM 6-bit 都保留
 - [HUB75E overlap 翻案: 需 OE-fall setup delay](feedback_hub75e_no_overlap_shift_display.md) — v27 直接 overlap 翻车; v28 加 8 cyc OE_PRE 让 FM6124DJ 缓存 SR → 正常 +39% fps
 - [Vivado BD module_ref ADDR_WIDTH 顽固缓存](feedback_vivado_bd_addr_width_cache.md) — 改 PL IP port width 后 BD 永远按旧 5-bit elaborate. 唯一 fix: rename module + 删 ip cache 目录 + recreate cell
@@ -89,7 +91,10 @@
 - [KiCad 10 schematic 生成器 (kicad_sch_lib.py)](reference_kicad_sch_generator.md) — 自建 .kicad_sch 生成器, 解决 extends/grid/label/lib_id 几个坑, 配 kicad-cli erc/svg/pdf 全 CLI 流程
 - [转接板 v1.2 引脚重映射 (2026-07-27)](project_pov3d_trans_v12_pinmap.md) — 屏侧 J1 未变, P1 整体重排 → 19 ball 纯置换, 已上板点亮; 顺带解掉 DCLK/LAT/OE 相邻的老 SI 问题
 - [oe_window 调太低会暗到看不见](feedback_oe_window_too_low_invisible.md) — pov6_colors.py 写死 8 沿(4%占空) vs 能跑的 192 沿(98%), 差 24 倍; 别误判成"屏不亮"
-- [正反双屏有间距 → 偏移平面切片](project_pov3d_offset_axis_geometry.md) — gap 13.8mm 屏不过圆心; PHASE_B=180 与单份 DDR 不受影响, 只改 host 采样; 中心盲区仅占截面积 0.85%
+- [正反双屏几何 → 偏移平面切片](project_pov3d_offset_axis_geometry.md) — v3 对称 gap13.8 (PHASE_B=180 共用单份); **v3.1 偏心屏把该等价作废** → A面穿心0mm/B面13.4mm; A-only 数据减半帧率翻倍(亮度减半)
+- [v3.1 偏心全链路交付 + 分支/固件状态](project_pov3d_v31_delivery.md) — feature/v3.1-eccentric 六层已完成待上板; **固件版本判定法**(写mirror_a回读/读0x24); 三个被修正的数字(540解码64ms非48/拆流代价≈0/A9实测108ms)
+  └ 2026-08-04 对账: 任务 2/3/4 ✅, 1 只完成 2/5, 5 未开始, 6 半完成; **四个瓶颈里前两个是硬件(转子 5V 余量)**, 软件侧基本做完
+- [v3.1 偏心双面调通 + 空闲动画](project_pov3d_v31_dualface_geometry_solved.md) — mirror_a=0/b=0/**PHASE_B=180**(补偿渲染侧面B 符号+手性); 空闲动画上电即显示/有推让位; codec 是 flag 位不是序号(踩过)
 - [Altium PDF 抽网表 + 引脚推导工具](reference_sch_netlist_tools.md) — sch_netlist.py / derive_panel_pins.py, 带"能复现旧 XDC 才认新结果"自检 + 差分对结构性校验
 - [FS03 板子远程操作方式](reference_fs03_board_access.md) — WiFi 10.10.21.3 uisrc/root, WSL 用 plink/pscp, busybox devmem; ⚠ WiFi 会掉且不自愈, 屏还亮≠Linux活着
 - [pov6 板上调试脚本现状](reference_pov6_board_scripts.md) — pov6_colors2/hold 用法, povcolors.service 开机自启, 板上与仓库有漂移
@@ -102,7 +107,11 @@
 - [glb_to_points 丢 alpha → 半透明贴图渲成实心块](feedback_glb_alpha_texture_lost.md) — 星星消失之谜; 附点云缓存 + 采样数两个连带坑
 - [glbanim 并集 bbox 让动画缩小 39%](feedback_glbanim_union_bbox_shrinks.md) — --fit-frames 逐帧自适应 + 循环平滑; 量包络必须用整段动画
 - [推理前先确认信号"接没接"](feedback_verify_signal_actually_connected.md) — 一天踩三次: 悬空寄存器读噪声当实测、遗留位当功能已开; 附数量级自检
-- [面板刷新率 vs 转速不匹配](project_pov3d_refresh_vs_rpm.md) — xsim 扫 oe_window 实测表; oe≤111 免费(overlap 固有); 16.22rps 每片仅扫 0.59-0.81 遍
+- [面板刷新率 vs 转速不匹配](project_pov3d_refresh_vs_rpm.md) — xsim 扫 oe 实测表; **2026-08-03 定案 oe=111**(免费亮度上限, 非 96), 2D 刷新 3417→4748Hz(+39%), 已固化进 pov_boot.sh; 4748Hz 是架构天花板(192拍/行)
 - [换 FPGA 平台的依赖清单](reference_port_to_other_fpga_deps.md) — RTL 仅 14 处 ODDR 其余纯 Verilog; 工作量取决于 PS 侧有无硬核+BSP; 换平台前必问的 5 个问题
 - [🔴 提交 = 推两个远端](reference_git_dual_remote.md) — origin(kiujkiu) + yjhh(pov-yjhh); 说"提交"就两边都推
 - [aibrain-app 项目](reference_aibrain_app_project.md) — PC 侧 3D Viewer + PVS1 推流, 与 POV 同链; pvs_streamer.js 已有滑动窗口(我重复劳动了); Docker 纯软件 demo 跑法
+- [安路 DR1 替代 Zynq7020 评估](reference_anlogic_dr1_fs03_eval.md) — 484 球逐脚核对 pin2pin 成立 + CEP2 与现板 J12 一致(线束零改); 风险全在 PS: RISC-V 单核/Buildroot/内核无无线栈
+- [机械/3D 在另一个工作区 macha](reference_macha_mechanical_repo.md) — CAD 不在本仓, 在 `D:\claude_workspace\macha\`(有独立记忆库); v3.1 偏心屏 = 屏面 X=0/+13.4, 3 孔可切回居中
+- [亮度控制的能力边界](reference_pov3d_brightness_control_limits.md) — **硬件做不到按半径调亮度**(3区并行扫描一行=3个不同半径 + 整屏共用一个OE); 只有数据域抖动密度可行(--radial-comp); 偏移面真实半径是√(u²+off²)不是|u|
+- [WiFi 吞吐只有 ~20Mbps, 瓶颈在 mt7921u 的 USB 传输](feedback_wifi_throughput_bottleneck_isolated.md) — 空口零重传+回环1238Mbps 排除无线/CPU; SG 唯一参数且关了卡死=软件手段穷尽; ⚠povstream 的 "@28Mbps" 是硬编码不是实测

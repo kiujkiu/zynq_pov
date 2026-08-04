@@ -142,7 +142,11 @@ PWM 内置芯片有两个时间成本: **shift** (16-bit gray 推进 SR) 跟 **G
 - **ICN2053** (现 memory 已列): SDR DCLK 65 MHz, BCM-friendly, 比 FM6124 快 2× (单 chain 带宽 65 vs 30 Mbps)
 - **ICN2065**: SDR DCLK 100 MHz, BCM-friendly. 单 chain 100Mbps. 比 FM6124 快 3.3×
 
-DDR + BCM 真同时存在的芯片我**没确认见过**主流型号. 候选 ICND2153, 但需要拿到 datasheet 看 binary mode 是否带 DDR.
+✅ **2026-08-04 已解决: ICND2260** —— 行列合一(120通道+48行管一颗), mLVDS 3 对 × 340Mbps
+= **1.02 Gbps/颗**, 比这里列的所有型号高一个量级, 且 GCLK 600MHz。详见 [[reference_icnd2260_spec]]。
+⚠ 但线上像素位宽**固定 16-bit**(省不了带宽), 且 POV 10,800Hz 下色深天花板是 **10-bit**。
+
+~~DDR + BCM 真同时存在的芯片我没确认见过主流型号. 候选 ICND2153, 但需要拿到 datasheet 看 binary mode 是否带 DDR.~~
 
 ### POV-3D 升级路径建议 (2026-06-02 更新)
 

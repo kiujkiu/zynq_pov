@@ -11,6 +11,7 @@
 - [Win Python 安装](reference_python_install.md) — Python 3.12.10 在 `%LOCALAPPDATA%\Programs\Python\Python312`，已装 pyserial/trimesh/numpy/pillow/pygltflib/PyQt6/obs-websocket-py/imageio
 - [POV3D 最终目标参数](project_pov3d_final_target.md) — 720 slice × 30 Hz × 160×180，推出 46 μs/slice 硬预算 ⚠ **2026-08-04 修正: "30Hz=1800RPM" 是错的, 体帧率=2×转速 ⇒ 30Hz 只需 900RPM**
 - [渲染 IP 架构定案 (2026-08-04)](project_pov3d_hls_slicer_arch.md) — csynth 实证: 点云投影版单IP占 **66% BRAM** ⇒ 4路并行物理不可能(4x 计划全作废); 改 **voxel 切片版** 只占1%、快3.7×; 还需 II=3→1 + 体素布局改 **y-innermost**(y轴不参与旋转)
+- [ICND2260 数据通路与传输预算 (2026-08-04)](project_pov3d_icnd2260_datapath.md) — 🔴 现在 WiFi 传的是**切片不是点云**; 实测占据体素 13-22万 ⇒ 30Hz 需 216 Mbps, 现链路只够 **2-5 Hz 内容**; **对现 1-bit 屏传几何比传压缩切片还贵**, 几何只在 ICND2260 目标上省 4-7×; 板上那步只是 scatter 不是真 voxelize
 - [Phase 4b HLS pov IP 已完成](project_pov3d_hls_ip_done.md) — 基址、性能、限制、优化方向
 - [产品路径决策 (ADR-001)](project_pov3d_path_decision.md) — 锁 A voxel 4× IP, mesh 路径备货等 LED + 精简 BD 时再考虑
 - [slicemap LUT 实验分支](project_slicemap_lut.md) — experiment/slicemap-lut + worktree zynq_pov_slicemap, 设计文档 commit 0d3b4a2, 代码未实现

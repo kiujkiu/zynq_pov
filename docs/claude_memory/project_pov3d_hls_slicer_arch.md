@@ -148,6 +148,36 @@ SLICES_LOOP_YY_LOOP_XX_LOOP:  achieved II = 3 (target 1)
      →[PL 左移对齐 16-bit]→ mini-LVDS → 48× ICND2260
 ```
 
+## ✅ 几何对拍已过 (csim, 2026-08-04)
+
+`hls_proj/gen_pv2_golden.py` + `pov_slice_v2_tb.cpp`。黄金参考用**与 HLS 完全相同的
+定点算法** (同一张 Q8 LUT、同样 `+128>>8` 取整), 任何不一致都是真 bug 而非量化差异。
+体素内容做成三重不对称 (x 侧红块 / z 侧绿块 / y 渐变 / 轴心蓝柱),
+旋转、镜像、偏心三类错误都必然暴露。
+
+覆盖 `axis_off ∈ {0, 13.4mm} × mirror_u ∈ {0,1}` 各 8 片:
+**4/4 case × 230,400 元素逐位相同** ✅。定点 vs 浮点参考差 143/230400 = 0.062% (Q8 量化)。
+顺带交叉验证: `13.4mm → 14.293px`, 与 [[project_pov3d_v31_dualface_geometry_solved]]
+记的 `axis_off=+14.2933px` 对上。
+
+### 🔴 两个只有对拍才能发现的错误 (都已修)
+1. **定点取整差半像素**: 原来 `(u*cs)>>8` 与偏移项**各截断一次**, 而 Python 参考是
+   `np.rint(D*c - axis_off*s)` 对**和**取整。改为全程 Q8、最后 `(+128)>>8` 取整一次。
+2. **y 方向约定冲突**: `gen_anime_slices.py` 用 `gy=(H-1)-arange(H)` (面板行 0 在上、
+   体素 y 向上), 而切片器**必须直拷不翻转**(翻转破坏连续突发)。
+   ⇒ 约定改为**体素 y 与面板行号同向**, 由 voxelize/scatter 侧负责翻好。
+   **不写清楚上板必定上下颠倒。**
+
+### 几何参数化
+`-DPV2_CFG_1BIT` 一个开关切 **160×180 / 360 档**(手上这块 ICND2049 屏),
+不加则是目标 **192×216 / 603 档**。LUT 两份, `pov_slice_v2_lut.h` 按 `PV2_LUT_N` 分发。
+
+### ⚠ 已知环境问题: csim 退出状态不可信
+本机 (Windows 版 Vitis HLS 2024.2) 无论 `return 0` 还是 `exit(0)`,
+`csim_design` **恒报 "nonzero return value"**; 已用 `[DIAG]` 打印证实 rc 确实是 0,
+单独跑 `csim.exe` 则报 Windows 加载器错误 53 (缺运行时 DLL)。**根因未定位。**
+⇒ **判据看测试台自己打印的 ✅/✗**, 自动化要 grep 日志里的 "全部 N 个 case 通过"。
+
 ## 工具链备忘
 
 - `C:\Xilinx\Vitis_HLS\2024.2\bin\vitis_hls.bat -f run.tcl` 从 WSL 用 `cmd.exe /c` 调, 可用。

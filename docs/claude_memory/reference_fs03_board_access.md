@@ -3,6 +3,47 @@ name: FS03 板子远程操作方式 (WiFi/SSH, 2026-07-27)
 description: 板子走 WiFi @ **静态 10.10.21.250** (2026-08-01 固定, 原 DHCP 会变); uisrc/root; PuTTY plink/pscp; WiFi 会掉且不自愈
 type: reference
 ---
+
+# 🔴 2026-08-04 晚 — 寻址方式定案: 用 mDNS + `tools/board_ip.sh`, **不要设静态 IP**
+
+## 之前的认知是错的
+记忆里写"IP **静态** 10.10.21.250 (2026-08-01 固定)"、"静态 IP 被 dhcpcd 推翻"。
+实际查证:
+- `/etc/dhcpcd.conf` 里有 **`denyinterfaces wlx90de80351941`** —— dhcpcd 根本不管这块网卡
+- `pov_boot.sh:82` 直接跑 **`dhclient $IF`** ⇒ 地址一直是 DHCP 来的
+- `/etc/network/interfaces` / `dhcpcd.conf` / `rc.local` 里 **没有任何 10.10.21.250 的痕迹**
+⇒ **从来就没有持久化的静态配置**, 不是"被推翻", 是压根没设成。
+
+## 为什么不该硬设静态 IP
+DHCP 服务器就是网关 **10.10.20.1**, 历史租约横跨 `.20/.21` 两个半段
+(10.10.20.234 / .239 / 10.10.21.3)。**池子很可能覆盖任何我们想占的地址**。
+办公网上占用池内地址迟早撞车, 而**撞车现象与"WiFi 掉线"完全相同** ——
+刚在 [[feedback_wifi_throughput_bottleneck_isolated]] 上为这类误判付过一整轮代价。
+
+## ✅ 定案: mDNS + 解析脚本
+板子跑 avahi, 主机名 **`pov.local`**。
+🔴 **但 WSL2 在 NAT 后面, mDNS 组播出不去** —— 在 WSL 里装 `libnss-mdns`+`avahi-daemon`
+**实测无效**(nsswitch 已含 mdns4_minimal 仍解析不到)。Windows 直连局域网可以。
+⇒ 借 `cmd.exe ping -4`。⚠ **必须带 `-4`**, 否则 Windows 回 IPv6 链路本地
+(`fe80::92de:80ff:fe35:1941%11`), WSL 用不了。
+
+**`mlkpai_fs03/tools/board_ip.sh`** 封装了这套逻辑, 三级候选 + 逐个验证:
+```bash
+IP=$(tools/board_ip.sh) && ssh uisrc@$IP ...
+tools/board_ip.sh --check
+```
+① mDNS(`ping -4 pov.local`) → ② Windows ARP 表按 MAC `90-de-80-35-19-41`
+→ ③ 已知地址列表。**每个候选返回前都探 22 端口**, 并跳过 `*.255`/`*.0`
+(实测: ARP 里广播 MAC 会带出 10.10.21.255, 不验证就会当成板子)。
+
+踩过的坑: 脚本必须 `#!/bin/bash`(用了 `/dev/tcp`, dash 不支持);
+Windows 命令输出是 GBK, `grep` 会判定为二进制 ⇒ 要 `grep -a`。
+
+## 当前实测吞吐 (2026-08-04, 看门狗已停)
+**持续 500 MB 单流 = 115.9 Mbps**(尾段 130), 空口 level −42 dBm, retry 0, 掉线 0。
+详见 [[feedback_wifi_throughput_bottleneck_isolated]]。
+
+---
 FS03 跑 Linux（`buster-armhf`, 内核 `6.6.0-xilinx-g343f487d6341`），日常靠 **WiFi + SSH** 操作，串口可以不接。
 
 ## 连接

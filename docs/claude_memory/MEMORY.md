@@ -115,4 +115,4 @@
 - [安路 DR1 替代 Zynq7020 评估](reference_anlogic_dr1_fs03_eval.md) — 484 球逐脚核对 pin2pin 成立 + CEP2 与现板 J12 一致(线束零改); 风险全在 PS: RISC-V 单核/Buildroot/内核无无线栈
 - [机械/3D 在另一个工作区 macha](reference_macha_mechanical_repo.md) — CAD 不在本仓, 在 `D:\claude_workspace\macha\`(有独立记忆库); v3.1 偏心屏 = 屏面 X=0/+13.4, 3 孔可切回居中
 - [亮度控制的能力边界](reference_pov3d_brightness_control_limits.md) — **硬件做不到按半径调亮度**(3区并行扫描一行=3个不同半径 + 整屏共用一个OE); 只有数据域抖动密度可行(--radial-comp); 偏移面真实半径是√(u²+off²)不是|u|
-- [🔴 WiFi "只有 20 Mbps" 的真因是我写的看门狗](feedback_wifi_throughput_bottleneck_isolated.md) — 拿 ping 网关当判据, 办公网网关不回 ICMP ⇒ 6h 内 3582 次重连; **停掉后 23→58 Mbps, 8 分钟零掉线**; 原"USB 瓶颈"结论作废(测量被污染); 看门狗的 ci_hdrc unbind 升级会让板子只能物理重启
+- [🔴 WiFi "只有 20 Mbps" 的真因是我写的看门狗](feedback_wifi_throughput_bottleneck_isolated.md) — 拿 ping 网关当判据, 办公网网关不回 ICMP ⇒ 6h 内 3582 次重连; **停掉后 23→**125 Mbps**(打到极限, WSL/Windows/UDP 三法互印), 8 分钟零掉线**; 原"USB 瓶颈"结论作废(测量被污染); 看门狗的 ci_hdrc unbind 升级会让板子只能物理重启 ⇒ 200M 做不到, 效率仅 PHY 的 25-28% 但差距未归因(mt76-USB vs AP 争用); 决定性实验=同口插U盘

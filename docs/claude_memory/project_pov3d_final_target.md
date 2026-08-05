@@ -11,7 +11,10 @@ originSessionId: bafc105a-a8db-471f-ae33-42571927b4da
 [[project_pov3d_v31_dualface_geometry_solved]] 里 `PHASE_B=180` + 手性翻转的物理来源;
 `fold_a_en` 半圈折叠功能本身就是这条的硬证据)。
 
-⇒ **30 Hz 体帧率只需 900 RPM。** 下面原文的 1800 RPM 实际对应 **60 Hz**。
+⇒ **30 Hz 体帧率只需 900 RPM。** 
+🔴 **2026-08-05 用户确认: 只能用 900 RPM, 再高振动太大。**
+⇒ 内容帧率上限被钉死在 **15 fps**; 想提角分辨率只能提**面板刷新率**, 不能靠多切片
+  (900RPM 下面板每圈只显示得了 316 片, 见 [[project_pov3d_link_budget_status]])。 下面原文的 1800 RPM 实际对应 **60 Hz**。
 ✅ 独立佐证: [[project_pov3d_refresh_vs_rpm]] 已写明 "体积帧率 = 2×转速,
 13.19 rps 已对应 26.4 fps", 那篇是按设计文档核过的。
 

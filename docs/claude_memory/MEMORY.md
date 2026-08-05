@@ -118,3 +118,4 @@
 - [🔴 WiFi "只有 20 Mbps" 的真因是我写的看门狗](feedback_wifi_throughput_bottleneck_isolated.md) — 拿 ping 网关当判据, 办公网网关不回 ICMP ⇒ 6h 内 3582 次重连; **停掉后 23→**125 Mbps**(打到极限, WSL/Windows/UDP 三法互印), 8 分钟零掉线**; 原"USB 瓶颈"结论作废(测量被污染); 看门狗的 ci_hdrc unbind 升级会让板子只能物理重启 ⇒ 200M 做不到, 效率仅 PHY 的 25-28% 但差距未归因(mt76-USB vs AP 争用); 决定性实验=同口插U盘
 - [解码瓶颈的解法是 lz4-HC 不是 FPGA](feedback_codec_lz4_beats_zlib_4x.md) — A9 实测 zlib 51.6 / **zstd 53.6(并不快!)** / **lz4-HC9 204.6 MB/s**; lz4-HC9 压缩比 22.8× 对 zlib 23.5× ⇒ 双核 **12→48 fps**, 30fps 达标不用 FPGA inflate; RLE 实测 7.1× 更差
 - [lz4 上板实测 — 外推大半没兑现](feedback_lz4_onboard_reality_check.md) — 解码 120→28ms(4.3×)兑现, 但**并行加速只有 1.06×**(编解码越快并行比越低), 端到端只 7.41→10-11.4fps; 瓶颈转到 cpy20+wait31; **翻页天花板=转速 16.1fps**; 🔴 附读 pov_rxd.log 窗口的判据(空闲动画会伪装成推流, 我连错三次)
+- [🔴 链路各级余量现状 (2026-08-05)](project_pov3d_link_budget_status.md) — **先读这篇**: 900RPM/内容15fps 口径的实测余量表; 链路3.7×解码2.4×已宽松, 三级不达标=**翻页1.0×(相位没锁)/面板0.88×(每圈只显示316片)/dec+cpy1.39×**; 含'多切片提角分辨率收益为零'的论证

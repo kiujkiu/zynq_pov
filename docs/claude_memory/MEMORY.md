@@ -118,12 +118,13 @@
 - [跨架构 codec 基准套件 bench_codec](reference_bench_codec_kit.md) — `dr1v90/bench/`, riscv64/aarch64/arm/x86 全静态, 固定用 frames_robot/frame_0000.bin, crc 0x7902c2a5 自检
 - [DR1 出厂 Linux 启动方式](reference_dr1_factory_linux_boot.md) — TF卡+读卡器**标配**; boot mode PIN1-2 **OFF-OFF=SD**; 🔴 rootfs 是 **initrd 跑 RAM, 重启即丢**; ttyS0 115200, root/root, eth0 千兆
 - [🎯 DR1 运行时加载 PL bit — 不用 JTAG 不用重启(已跑通)](feedback_dr1_load_bit_without_jtag.md) — 关键: bin 必须 **bootgen `-arch dr1v90 -process_bitstream bin`**, TD 的 `bit_to_bin` 出的用不了; overlay 别写 #address-cells(报错时其实已烧进去了); ⚠ LFSR 表征顶层不可接屏加载
-- [DR1 WiFi (mt7921u) — **必须换内核镜像**](project_dr1_wifi_modules.md) — 🔴 "只编模块"**已证伪**: `CRYPTO_ALGAPI=y` ⇒ MANAGER2 恒 y ⇒ mac80211 要的 aead.o **必然内建**, 板上没有; 附 Kconfig 条件提示符陷阱(`--disable` 关不掉要先开 EXPERT)+ 符号比对法
+- [🎯 DR1 WiFi 跑通: 换内核 + mt7921u 加载, wlan0 就绪](project_dr1_wifi_modules.md) — 🔴 "只编模块"**已证伪**: `CRYPTO_ALGAPI=y` ⇒ MANAGER2 恒 y ⇒ mac80211 要的 aead.o **必然内建**, 板上没有; 附 Kconfig 条件提示符陷阱(`--disable` 关不掉要先开 EXPERT)+ 符号比对法
 - [🎯 DR1V90 RISC-V 上板判决 (2026-08-05)](project_dr1_riscv_verdict.md) — 同 libc 同帧对照: lz4_dec **104.5 vs A9 217.8 MB/s**, 整帧 **115.5ms vs 一圈 62ms 预算** ⇒ **慢 2.15×, 不能 drop-in**; 但 crc32 反而快 1.38×, 瓶颈是访存(无L2+16bit DDR); 主频实测 **800MHz 非 600**
 - [ADR 平台锁定 DR1V90 (RISC-V)](project_dr1_sku_decision.md) — 2026-08-06 定案, DR1M90 太贵; **知代价而选** ⇒ **PL 解码从可选升级为必做**; 别再重提"双核救场"(实测只值1.06×)
 - [DR1V90 代码仓库](../../../dr1v90/README.md) — 🔴 **`D:\claude_workspace\pov3d\dr1v90\`**(用芯片命名, 2026-08-06 建, git 已 init 无远端); 目录: rtl/lz4hw/td_panel/dclk_probe/bench/tools/host/board; 厂商包与构建产物全 gitignore
 - [🎯 DR1 RTL 移植 + DCLK 上板实测](project_dr1_rtl_port_step1.md) — ODDR 兼容层**源码零改动**, 12 个全落 IOL; 50MHz 收敛(hold 要开 `fix_hold`); **`SAME_EDGE` 半拍延迟实测 19.75ns vs 理论 20.00**(逻辑分析仪抓包反算, 不用示波器); "占空比60%"是**门限偏置假象**(加一路已知参考做差分才分清); 🔴 TD 约束必须在 tcl 里 `read_sdc` 否则静默用 DeriveClock
-- [🎯 PL lz4 解码器 v1 跑通](project_lz4_pl_decoder.md) — 字节串行+64KB片上历史(**不回读DDR**, 且重叠拷贝天然正确); **16/16 真 liblz4 向量通过**; 0.93-0.96 B/clk; DR1 上 eram10%/slice0.83%/**100MHz 收敛**; 2 引擎即过 143MB/s; 附三个同步RAM差一拍的坑
+- [🎯 PL lz4 解码器 v1 跑通 (+2026-08-07 Zynq 综合)](project_lz4_pl_decoder.md) — 字节串行+64KB片上历史(**不回读DDR**, 且重叠拷贝天然正确); **16/16 真 liblz4 向量通过**; 0.93-0.96 B/clk; DR1 eram10%/**113MHz**; 🎯 **Zynq 源码零改 OOC: LUT1.41%/BRAM 16 RAMB36(11.4%)/DSP0/Fmax 136.8MHz, 比 DR1 宽 21%**; **必须 2 引擎**(1 个连 316 片都压线); Zynq 有 JTAG ⇒ 可当首次上板平台; 附三个同步RAM差一拍的坑
+- [CPU→PL 可搬项清单 + 必须留 CPU 的 (2026-08-07)](project_pov3d_cpu_to_pl_offload.md) — PL 5% 空 / PS **163%满**; **PL lz4 一项砍掉 51ms/帧且顺带消掉 memcpy**(片上历史 ⇒ CPU 那条"不能解压进WC bank"的限制对PL不成立); 翻页搬 PL 连相位问题一起消; 🔴 WiFi/TCP+协议控制面**搬不了**(PL 无 MAC 无 PHY)
 - [🔴 RISC-V 上 glibc 静态程序必崩](feedback_riscv_glibc_ifunc_sigill.md) — IFUNC 靠 riscv_hwprobe(6.4+) 探测, 6.1 内核上选了**向量版** ⇒ SIGILL(vsetivli); hello world 也崩; **必须换 musl**; 附 badaddr 解码指令法
 - [🔴 解码带宽在屏刷新时腰斩](feedback_decode_bandwidth_halves_under_display_load.md) — A9 实测 空载 **215.2** vs 带载 **111-131** MB/s; 30fps 的 132.7 门槛要拿**带载**数比; 换平台对账必须同工况
 - [机械/3D 在另一个工作区 macha](reference_macha_mechanical_repo.md) — CAD 不在本仓, 在 `D:\claude_workspace\macha\`(有独立记忆库); v3.1 偏心屏 = 屏面 X=0/+13.4, 3 孔可切回居中

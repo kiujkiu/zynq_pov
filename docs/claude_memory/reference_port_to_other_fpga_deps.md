@@ -9,7 +9,7 @@ type: reference
 
 | 依赖 | 数量 | 说明 |
 |---|---|---|
-| **ODDR 原语** | **14 处** | ⚠ 唯一硬骨头 |
+| **ODDR 原语** | ~~14 处~~ → **4 处例化 / 12 实例** | ⚠ 唯一硬骨头; 2026-08-06 重数并已移植完, 见 [[project_dr1_rtl_port_step1]] |
 | 其他原语 (BUFG/MMCM/RAMB/DSP48/XPM…) | **0** | BRAM 与时钟全是推断的 |
 | Xilinx IP | 3 (processing_system7 / smartconnect / proc_sys_reset) | 看新平台形态 |
 

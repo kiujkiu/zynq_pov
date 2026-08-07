@@ -48,6 +48,7 @@
 - [鹿小班 boot mode 拨码 = SW3](feedback_lxb_boot_mode_sw3.md) — SW1/SW2 是 PL_KEY 跟 boot 无关; SW3 dual SPST 控制 MIO[2..8] strap, 切 QSPI 需 toggle 配置
 - [鹿小班 QSPI = W25Q256 (32 MB) + W25Q512 升级路径 + Linux 预算](reference_luxiaoban_qspi_flash.md) — 7020 Linux 三档方案 / 32 MB & 64 MB 分区表 / 4-byte 地址改 FSBL+U-Boot+Linux / 量产再换
 - [Zynq Linux vs 裸机 10 维对比](reference_zynq_linux_vs_baremetal.md) — 决策框架: IRQ 延迟/调度/网络/学习曲线; 硬实时必在 PL, Linux 杀手锏在网络+多任务+FS
+- [XC7Z020 没有 PCIe，无线只有 USB2.0/SDIO/SPI 三条](reference_zynq7020_no_pcie.md) — 7Z010/7Z020 无 PCIe 硬核也无 GTP 收发器, 软核救不了; 要 PCIe/USB3 只能换 UltraScale+
 - [WiFi 带宽不够先质疑需求再选硬件](feedback_wifi_bandwidth_first_question_demand.md) — 压数据 vs 加硬件; 实测需求 vs 预算上限; 避免为虚高带宽白学 Linux
 - [LED panel 硬件 reference](reference_led_panel_hardware.md) — 160×180 RGB, 24× ICND3019 行 + 108× ICND1069 列 + 8× 74HC245, **VCC=3.8V / VCC_R=2.8V** (datasheet 确认)
 - [ICND1069 协议 reference (V1.2)](reference_icnd1069_protocol.md) — LE 长度编码 / 寄存器配置 4 步流程 / 显示时序 / 关键寄存器默认值
@@ -113,9 +114,23 @@
 - [🔴 提交 = 推两个远端](reference_git_dual_remote.md) — origin(kiujkiu) + yjhh(pov-yjhh); 说"提交"就两边都推
 - [aibrain-app 项目](reference_aibrain_app_project.md) — PC 侧 3D Viewer + PVS1 推流, 与 POV 同链; pvs_streamer.js 已有滑动窗口(我重复劳动了); Docker 纯软件 demo 跑法
 - [安路 DR1 替代 Zynq7020 评估](reference_anlogic_dr1_fs03_eval.md) — 484 球逐脚核对 pin2pin 成立 + CEP2 与现板 J12 一致(线束零改); 风险全在 PS: RISC-V 单核/Buildroot/内核无无线栈
+- [安路 TD/FD 工具链装好可用](reference_anlogic_td_toolchain_setup.md) — 版本 **2025.1 不是 2024.10**; ✅ **license 2026-08-06 已换新**(TD 到 2027-03-31 / FD 到 **2026-12-31 先到期**), 全流程 syn→place→route→bitgen 实测通; `.al` 是纯 XML + `td_commands_prompt.exe` ⇒ **全 CLI 无头驱动**
+- [跨架构 codec 基准套件 bench_codec](reference_bench_codec_kit.md) — `dr1v90/bench/`, riscv64/aarch64/arm/x86 全静态, 固定用 frames_robot/frame_0000.bin, crc 0x7902c2a5 自检
+- [DR1 出厂 Linux 启动方式](reference_dr1_factory_linux_boot.md) — TF卡+读卡器**标配**; boot mode PIN1-2 **OFF-OFF=SD**; 🔴 rootfs 是 **initrd 跑 RAM, 重启即丢**; ttyS0 115200, root/root, eth0 千兆
+- [🎯 DR1 运行时加载 PL bit — 不用 JTAG 不用重启(已跑通)](feedback_dr1_load_bit_without_jtag.md) — 关键: bin 必须 **bootgen `-arch dr1v90 -process_bitstream bin`**, TD 的 `bit_to_bin` 出的用不了; overlay 别写 #address-cells(报错时其实已烧进去了); ⚠ LFSR 表征顶层不可接屏加载
+- [DR1 WiFi (mt7921u) — **必须换内核镜像**](project_dr1_wifi_modules.md) — 🔴 "只编模块"**已证伪**: `CRYPTO_ALGAPI=y` ⇒ MANAGER2 恒 y ⇒ mac80211 要的 aead.o **必然内建**, 板上没有; 附 Kconfig 条件提示符陷阱(`--disable` 关不掉要先开 EXPERT)+ 符号比对法
+- [🎯 DR1V90 RISC-V 上板判决 (2026-08-05)](project_dr1_riscv_verdict.md) — 同 libc 同帧对照: lz4_dec **104.5 vs A9 217.8 MB/s**, 整帧 **115.5ms vs 一圈 62ms 预算** ⇒ **慢 2.15×, 不能 drop-in**; 但 crc32 反而快 1.38×, 瓶颈是访存(无L2+16bit DDR); 主频实测 **800MHz 非 600**
+- [ADR 平台锁定 DR1V90 (RISC-V)](project_dr1_sku_decision.md) — 2026-08-06 定案, DR1M90 太贵; **知代价而选** ⇒ **PL 解码从可选升级为必做**; 别再重提"双核救场"(实测只值1.06×)
+- [DR1V90 代码仓库](../../../dr1v90/README.md) — 🔴 **`D:\claude_workspace\pov3d\dr1v90\`**(用芯片命名, 2026-08-06 建, git 已 init 无远端); 目录: rtl/lz4hw/td_panel/dclk_probe/bench/tools/host/board; 厂商包与构建产物全 gitignore
+- [🎯 DR1 RTL 移植 + DCLK 上板实测](project_dr1_rtl_port_step1.md) — ODDR 兼容层**源码零改动**, 12 个全落 IOL; 50MHz 收敛(hold 要开 `fix_hold`); **`SAME_EDGE` 半拍延迟实测 19.75ns vs 理论 20.00**(逻辑分析仪抓包反算, 不用示波器); "占空比60%"是**门限偏置假象**(加一路已知参考做差分才分清); 🔴 TD 约束必须在 tcl 里 `read_sdc` 否则静默用 DeriveClock
+- [🎯 PL lz4 解码器 v1 跑通](project_lz4_pl_decoder.md) — 字节串行+64KB片上历史(**不回读DDR**, 且重叠拷贝天然正确); **16/16 真 liblz4 向量通过**; 0.93-0.96 B/clk; DR1 上 eram10%/slice0.83%/**100MHz 收敛**; 2 引擎即过 143MB/s; 附三个同步RAM差一拍的坑
+- [🔴 RISC-V 上 glibc 静态程序必崩](feedback_riscv_glibc_ifunc_sigill.md) — IFUNC 靠 riscv_hwprobe(6.4+) 探测, 6.1 内核上选了**向量版** ⇒ SIGILL(vsetivli); hello world 也崩; **必须换 musl**; 附 badaddr 解码指令法
+- [🔴 解码带宽在屏刷新时腰斩](feedback_decode_bandwidth_halves_under_display_load.md) — A9 实测 空载 **215.2** vs 带载 **111-131** MB/s; 30fps 的 132.7 门槛要拿**带载**数比; 换平台对账必须同工况
 - [机械/3D 在另一个工作区 macha](reference_macha_mechanical_repo.md) — CAD 不在本仓, 在 `D:\claude_workspace\macha\`(有独立记忆库); v3.1 偏心屏 = 屏面 X=0/+13.4, 3 孔可切回居中
 - [亮度控制的能力边界](reference_pov3d_brightness_control_limits.md) — **硬件做不到按半径调亮度**(3区并行扫描一行=3个不同半径 + 整屏共用一个OE); 只有数据域抖动密度可行(--radial-comp); 偏移面真实半径是√(u²+off²)不是|u|
 - [🔴 WiFi "只有 20 Mbps" 的真因是我写的看门狗](feedback_wifi_throughput_bottleneck_isolated.md) — 拿 ping 网关当判据, 办公网网关不回 ICMP ⇒ 6h 内 3582 次重连; **停掉后 23→**125 Mbps**(打到极限, WSL/Windows/UDP 三法互印), 8 分钟零掉线**; 原"USB 瓶颈"结论作废(测量被污染); 看门狗的 ci_hdrc unbind 升级会让板子只能物理重启 ⇒ 200M 做不到, 效率仅 PHY 的 25-28% 但差距未归因(mt76-USB vs AP 争用); 决定性实验=同口插U盘
 - [解码瓶颈的解法是 lz4-HC 不是 FPGA](feedback_codec_lz4_beats_zlib_4x.md) — A9 实测 zlib 51.6 / **zstd 53.6(并不快!)** / **lz4-HC9 204.6 MB/s**; lz4-HC9 压缩比 22.8× 对 zlib 23.5× ⇒ 双核 **12→48 fps**, 30fps 达标不用 FPGA inflate; RLE 实测 7.1× 更差
 - [lz4 上板实测 — 外推大半没兑现](feedback_lz4_onboard_reality_check.md) — 解码 120→28ms(4.3×)兑现, 但**并行加速只有 1.06×**(编解码越快并行比越低), 端到端只 7.41→10-11.4fps; 瓶颈转到 cpy20+wait31; **翻页天花板=转速 16.1fps**; 🔴 附读 pov_rxd.log 窗口的判据(空闲动画会伪装成推流, 我连错三次)
-- [🔴 链路各级余量现状 (2026-08-05)](project_pov3d_link_budget_status.md) — **先读这篇**: 900RPM/内容15fps 口径的实测余量表; 链路3.7×解码2.4×已宽松, 三级不达标=**翻页1.0×(相位没锁)/面板0.88×(每圈只显示316片)/dec+cpy1.39×**; 含'多切片提角分辨率收益为零'的论证
+- [🔴 链路各级余量现状 (2026-08-05, 08-06 已修订)](project_pov3d_link_budget_status.md) — **先读这篇**: 900RPM/内容15fps 口径的实测余量表 + 口径推导; ⚠ 链路与翻页两行**已作废**(见下两条), 仍成立的是 **面板0.88×(每圈只显示316片)** 与'多切片提角分辨率收益为零'
+- [🎯 15 fps 达成 — 收包元凶是 setsockopt(SO_RCVBUF) 自己](feedback_recv_setsockopt_rcvbuf_lock.md) — 设 SO_RCVBUF 会置 `SOCK_RCVBUF_LOCK` **关掉内核接收窗自动放大**, 窗口钉死 32844B ⇒ 2.83→**24.7 MB/s**, 上屏 **flip 中位 15.00/s**; 🔴 **`--fps` 要设成转速(15)不是越高越好**(40→12.99 / 15→15.00); 附"C 比 Python 慢 3 倍"的归因阶梯
+- [翻页相位锁定 — 立项前提是错的, 默认 off](feedback_phase_lock_premise_wrong.md) — drop=0/668 ⇒ 相位可回收量为 0, "wait 33ms"是 flip 线程空转不是错过机会; 随机相位本就自纠; 🔴 附**测量必须交错 A/B 报中位数**(单次窗口 8.0↔12.0 乱跳) + journalctl 按 unit 累积会污染对照组

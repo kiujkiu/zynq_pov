@@ -76,13 +76,47 @@ type: reference
 
 ## 5. 工具链
 
-TD **5.9.1_DR1_2024.10**(≈Vivado) + FD **2024.10**(≈Vitis) + 安路 JTAG 驱动; 要装 license;
+⚠ **2026-08-05 修正**: 版本写错了, 随板教程实际指定 **TD_5.9.1_DR1_2025.1_151.508 + FD_2025.1**;
+且 **license 已过期是硬卡点**(NL 版照样查) — 安装实测全过程见 [[reference_anlogic_td_toolchain_setup]]。
+
+~~TD **5.9.1_DR1_2024.10**(≈Vivado) + FD **2024.10**(≈Vitis)~~ + 安路 JTAG 驱动; 要装 license;
 有在线逻辑分析仪(≈ILA), 可配 ModelSim 仿真。
 流程同构: TD 建工程 → Export Hardware Platform File(**.hpf** ≈ .xsa) → FD 建 platform + **soc_fsbl** →
 虚拟机里 `uisrc-lab-anlogic` 那套 `make_rootfs/uboot/kernel/create_image.sh` → 烧 TF 卡 → SW1/SW2 拨 OFF-OFF 从 SD 启动。
 **没有 HLS 对等物** — 现设计已是纯 RTL, 不受影响; 但以后想再用 HLS 就断路了。
 
 ## 6. 结论 / 下单建议
+
+> ### 🔴 2026-08-05 定案与重新评估
+> **SKU 已定: 走 RISC-V 版 (DR1V90G)。** 下面第 88 行"优先问有没有 ARM 版"这条建议不再适用。
+>
+> **而且当初对 RISC-V 的担忧被实测大幅削弱了**: 本文第 4 节第 4 条写
+> "单核跑不动 ⇒ 三步流水/双核方案直接失效, 推流架构要重设计" —— 那是 7-30 写的。
+> 8-05 上板实测 ([[feedback_lz4_onboard_reality_check]]) 发现 **双核并行加速只有 1.06×**
+> (lz4 计算少、吃内存带宽, 两核互抢)。⇒ **丢掉第二个核只值 6-18%, 不是 2×。**
+>
+> 同日在现役 Zynq 上用同一二进制同一帧复测 ([[reference_bench_codec_kit]]):
+> 单核 lz4_dec **空载 215.2 / 带载 111-131 MB/s**，与那条记忆的 41.2ms/8.85MB=214.8 MB/s 互印。
+>
+> ⇒ **RISC-V 的真实风险已从"没有第二个核"转移到"无 L2 + DDR3L 只有 16-bit"**,
+> 因为 lz4 解码被证明是**内存带宽瓶颈型**负载。这正是 bench 要在板上量的东西。
+> 另注: 目标不是"越快越好" —— 翻页天花板 = 转速 = 16.1 fps ⇒ 一圈 62 ms,
+> CPU 只要把 `dec×2 + cpy` 压进 62 ms 就不再是瓶颈。
+>
+> 出厂 Linux/制卡/boot mode 见 [[reference_dr1_factory_linux_boot]]。
+>
+> ### 板子首次点亮实测 (2026-08-05 傍晚, 串口 COM5)
+> ```
+> Linux anlogic 6.1.111-rt42 #1 PREEMPT  riscv64      nproc = 1
+> isa = rv64imafdc   mmu = sv39   mvendorid 0x536 / marchid 0xc900 / mimpid 0x20300
+> MemTotal 479,420 kB (468 MB)    /mnt/mmcblk0p1 = TF 卡 FAT 分区自动挂载
+> ```
+> 🔴 **主频 `clock-frequency = 0x2FAF0800` = 800 MHz, 不是本文第 4 节写的 600 MHz。**
+> 那个 600 MHz 读的是资料包里的**参考 dts**(`anlogic-dr1.dts`)，**实板 dtb 是 800 MHz** ⇒ 白捡 33%。
+> ⚠ 教训: 参考 dts ≠ 实板 dtb，性能参数必须从**板子自己的** `/proc/device-tree` 读。
+>
+> 板上工具: `wget` / `tftp` / `base64` / `md5sum` 有；**`scp`/`ssh`/`nc` 没有**(Buildroot busybox)。
+
 
 - **能替代, 且是同类项目里最省事的一种换平台**: 板级插座和线束零改动, RTL 只有 14 处 ODDR + 约束要改。
 - **优先问米联客 FS03 有没有 DR1M90(ARM A35) 版 + 对应 aarch64 BSP**; 有就买 ARM 版, 软件栈几乎可平移。

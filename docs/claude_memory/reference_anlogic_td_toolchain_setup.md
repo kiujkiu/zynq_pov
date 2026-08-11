@@ -115,3 +115,30 @@ WSL 里没有 unrar/p7zip；`C:\Program Files\7-Zip\7z.exe` 在，能解 rar:
 "/mnt/c/Program Files/7-Zip/7z.exe" x "D:\...\01_board_test.rar" -o"D:\claude_workspace\pov3d\dr1v90\_demo" -y
 ```
 demo 已解到 `D:\claude_workspace\pov3d\dr1v90\_demo\`。
+
+## 🔴 时序报告 SWNS/HWNS **全 0** = 约束没生效, 不是"时序完美"
+
+踩过两次, 症状不一样但根子一样 —— **约束的对象不是实际驱动逻辑的那条时钟**:
+
+1. `read_sdc` / `read_adc` 没写进 run tcl ⇒ `Constraint File:` 一栏是空的,
+   时钟变成 `DeriveClock`(那次恰好也是 50 MHz, 更容易骗过去)。
+2. 顶层用参数切了时钟源 (`aclk = CLK_SRC ? p2f_clk0 : sysclk`), SDC 却还约束着
+   已经不驱动任何东西的 `sysclk` ⇒ **SWNS/HWNS 全 0**, 因为一条路径都没分析。
+
+**判据**: 跑完必须回读**四条**, 缺一不可
+- `grep "Constraint File"` 非空
+- `grep -E "SWNS|HWNS"` 不是全 0
+- 时钟表里的**时钟名**与预期一致
+- 🔴 时钟表里的 **Fanout 不是 0**, `Report Clock Domain Luts` 表**不是空的**
+
+最后两条是最隐蔽的: `create_clock ... [get_nets p2f_clk0]` 会被 TD 接受、
+`Constraint File` 也非空, 但报告里是
+```
+Clock-Id:  C-Freq   Fanout   Clock-Name
+    clk0:  50.000        0   sysclk        <- 绑到了不驱动逻辑的网上, 且不报错
+```
+⇒ **约束绑错网时 TD 完全不告警**, 只能靠 Fanout=0 和空的 Domain Luts 表认出来。
+可用的写法是指顶层里实际驱动逻辑的那条网 (本例 `[get_nets aclk]`)。
+
+顺带: `p2f_clk0` 这种内部网用 `[get_nets p2f_clk0]`;
+`[get_pins u_ps/p2f_clk0]` 在 TD 里找不到 (报 `USR-8134`)。

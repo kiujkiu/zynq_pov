@@ -4,6 +4,40 @@ description: 板子走 WiFi @ **静态 10.10.21.250** (2026-08-01 固定, 原 DH
 type: reference
 ---
 
+## 🎯 2026-08-10 实操补充 (踩了两个坑)
+
+**① mDNS 有效, 但 `board_ip.sh` 会先于板子就绪而失败。**
+刚上电时 `board_ip.sh --check` 报"候选都不通 22", **等一会再试就好** ——
+不是寻址坏了, 是 sshd 还没起。
+`cmd.exe /c "ping -4 -n 1 pov.local"` 当时已经能解析到 IP, **比 `--check` 更早可用**
+⇒ 上电后先用它探, 通了再走 `board_ip.sh`。当次实测 IP = **10.10.20.239**(DHCP, 会变)。
+
+**② 🔴 `/dev/mem` 要 root, 而登录身份是 `uisrc` ⇒ 只读探针也会 `Permission denied`。**
+`busybox devmem` 和 python 的 `os.open('/dev/mem')` 一样挂。
+解法 (密码 `root`, 与账号同名):
+```sh
+echo root | sudo -S -v 2>/dev/null    # 先缓存凭据, 同一次会话后续 sudo 免密
+sudo busybox devmem 0x40010000 32
+sudo python3 - <<'PY'
+...
+PY
+```
+⚠ 不能对着 heredoc 用 `sudo -S`(密码和脚本抢 stdin), 所以要先 `sudo -S -v` 单独缓存。
+
+**③ 板上有原生 `gcc 8.3.0` (armv7l, Debian buster)** ⇒ 需要快采样的探针**直接在板上编**,
+不用交叉编译。`pscp` 送 `.c` 上去 `gcc -O2` 即可。
+
+**现成量具 (2026-08-10 建, 已验证)**:
+- `mlkpai_fs03/tools/probe_ddr_slow.sh` —— 三段只读证据 (启动脚本常量 / 寄存器 / OE 节拍)
+- `mlkpai_fs03/tools/oeprobe.c` —— **测面板行周期的唯一可信量具**。
+  🔴 为什么必须用 C: Python 读一次 AXI-Lite 要 **1.7 µs**, 而行周期才 ~14 µs
+  ⇒ 每段 3-5 个样本, 量化误差 ±20-33%, **量具量不了要量的东西**。
+  C 版 dt=**0.47 µs**, 29.5 样本/行。且主判据从"run-length 中位数"改成
+  **"固定时间窗内数跳变" `row = 2T/edges`**, 对上万行取平均, 不受小整数量化影响。
+  自检门槛 **≥10 样本/段**否则拒答(采样过慢的误差是**单向的**, 会把 fast 误报成 slow)。
+
+---
+
 # 🔴 2026-08-04 晚 — 寻址方式定案: 用 mDNS + `tools/board_ip.sh`, **不要设静态 IP**
 
 ## 之前的认知是错的

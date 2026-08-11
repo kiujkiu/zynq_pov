@@ -8,7 +8,7 @@
 - [多色 LED panel bring-up 没厂家文档不要盲试](feedback_led_panel_blind_bringup.md) — 协议规范 + panel-specific 参数缺一不可, 没 demo code 不开工
 - [In-repo doc index](reference_docs.md) — where to find HOWTO/STATUS/DEBUG_LOG files inside the cloned repo
 - [Hardware + Windows toolchain](reference_hardware.md) — COM/JTAG/HDMI-capture details, Vivado/Vitis paths called from WSL（本机走 `D:\` 符号链接 → `C:\Xilinx\...`）
-- [Win Python 安装](reference_python_install.md) — Python 3.12.10 在 `%LOCALAPPDATA%\Programs\Python\Python312`，已装 pyserial/trimesh/numpy/pillow/pygltflib/PyQt6/obs-websocket-py/imageio
+- [Win Python 安装](reference_python_install.md) — ⚠ 那份清单属于**另一台机**(`kiujkiu`); 🔴 **当前机(`wanqi.liu`)根本没装 Win Python**, WSL 只有 numpy+pillow 无 pip/lz4/pygltflib; 附**零依赖推流配方**(`--anim palace --codec zlib` + 必须先预渲染)
 - [POV3D 最终目标参数](project_pov3d_final_target.md) — 720 slice × 30 Hz × 160×180，推出 46 μs/slice 硬预算 ⚠ **2026-08-04 修正: "30Hz=1800RPM" 是错的, 体帧率=2×转速 ⇒ 30Hz 只需 900RPM**
 - [渲染 IP 架构定案 (2026-08-04)](project_pov3d_hls_slicer_arch.md) — csynth 实证: 点云投影版单IP占 **66% BRAM** ⇒ 4路并行物理不可能(4x 计划全作废); 改 **voxel 切片版** 只占1%、快3.7×; 还需 II=3→1 + 体素布局改 **y-innermost**(y轴不参与旋转)
 - [ICND2260 数据通路与传输预算 (2026-08-04)](project_pov3d_icnd2260_datapath.md) — 🔴 现在 WiFi 传的是**切片不是点云**; 实测占据体素 13-22万 ⇒ 30Hz 需 216 Mbps, 现链路只够 **2-5 Hz 内容**; **对现 1-bit 屏传几何比传压缩切片还贵**, 几何只在 ICND2260 目标上省 4-7×; 板上那步只是 scatter 不是真 voxelize
@@ -91,6 +91,16 @@
 - [Vivado IBIS .pkg = BGA pin map 权威源](reference_vivado_ibis_pkg.md) — `C:\Xilinx\Vivado\<ver>\data\parts\xilinx\<family>\public\ibis\pkg\*.pkg` 含 ball→net 全表 (除 GND)
 - [自做 PCB 工具选 KiCad 不选立创EDA](feedback_kicad_vs_lceda.md) — claude 要参与画板就 KiCad (文本工程文件), 立创EDA 只能当顾问
 - [KiCad 10 schematic 生成器 (kicad_sch_lib.py)](reference_kicad_sch_generator.md) — 自建 .kicad_sch 生成器, 解决 extends/grid/label/lib_id 几个坑, 配 kicad-cli erc/svg/pdf 全 CLI 流程
+- [改了量具又改了被测物, 结论就废了](feedback_changed_instrument_and_design_together.md) — skid FIFO "100.4→108.5MHz" 是假的; 量具固定后 100.1 等于没动; 正解是 3 引擎@75MHz 而非 2 引擎@100MHz
+- [探 DR1 的 PL 总线必须不可能挂死](feedback_dr1_pl_probe_must_be_hang_proof.md) — 清掉 gp_proten 后读无从机地址会挂死单核(之前只是干净 fault); 板子约3分钟自行重启; 从机要用板载晶振而非 p2f_clk0
+- [TD 的 RAM 推断进不了 generate 块](feedback_td_infer_ram_skips_generate_blocks.md) — 数组声明在 generate 里会静默变触发器(Inferred 0 RAMs, 不报错); 抽成独立模块即可; 综合完先 grep 推断结果别等布局失败
+- [DR1 帧区内存: 照搬 Zynq 会静默错帧](reference_dr1_cache_and_frame_memory.md) — CPU 无 Svpbmt ⇒ pgprot_writecombine/noncached 全空操作, 且 HP0 与 cache 不一致; 正解 CMA 带 cache + 显式回写; 别动那个唯一的非缓存窗口; 🎯 **08-10 上板实测 `cpy`=162ms**(Zynq 只要 20-26ms, 差 6-8×) ⇒ **第二堵墙, 比解码那堵更高**, Step6 的 PL 解码器**必须直写帧 bank**; 🔴 **"加 no-map 节点当帧区"已证伪**(no-map 不进线性映射 ⇒ 弄坏 `arch_sync_dma_for_device` 的 `phys_to_virt` 回写通路), 且 CMA 对齐被 `CONFIG_CMA_ALIGNMENT=8` 钳在 1MB(原"64MB 天然对齐"是假的)
+- [拿到 FAIL 先怀疑判据](feedback_verdict_design_before_blaming_dut.md) — 取片验证连着三次 FAIL 全是判据错; "自由跑+可打断"的通路无法由计数反推内容, 判据必须与计数无关
+- [✅ DR1 PS↔PL 双向打通 (Step 1)](project_dr1_soc_step1_done.md) — GP0 窗口实测 0x8000_0000, HP0 写 DDR 返回 OKAY, p2f_clk0 活着; 直接 Verilog 例化 PS 全命令行; 使能三寄存器必须在加载 bit 之前; 🔴 **08-10 重写恢复流程**: 旧 cmds_restore_all 跑完系统起不来(ko 只 cp 不 insmod), 换成 `board/povboot.sh` 逐步判据; **`MAGIC 0x44523156` 对 pov.bit 永远不成立**(那是 Step1 探针的); 附三条"健康板子也会 FAIL"的坏判据
+- [DR1 的 PS↔PL 接口默认是关的](reference_dr1_ps_pl_enable.md) — 出厂 BOOT.bin 不开 gp_proten, 读 PL 窗口直接 fault; Linux 里 devmem 写 0xF8800080/F8801078/F8800084 三条即可, 重启后失效要写进开机脚本
+- [DR1 对齐 Zynq: 差距清单 + 7 步计划](project_dr1_parity_plan.md) — 🎯对齐目标是 **15.00 fps** 非 10-11.4; PS 模板就在 _demo2/ (HP0=64bit, p2f_clk 6.25-200MHz, PL 窗 0x8000_0000); 现役系统在 mlkpai_fs03/ 不是 zynq_pov/; 🔴 **08-10: §5 Step0b 的 no-map bank 建议已作废**(改走 CMA, 地址是运行时 sysfs 值不是常量) + **§6 bit29 悬案已结案(属实)** ⇒ 别把降级 bug 移植到 DR1, 且"对齐"的是个降级基准
+- [恒 ready 的 TB 测不出握手 bug](feedback_always_ready_tb_hides_handshake_bugs.md) — lz4 核过 16/16 后接 AXI 加 33% 反压才暴露 2 个真 bug; 75% 反压都还是潜伏的; 改完要把 bug 塞回去验测试有牙
+- [屏 OE 全链路无外部上拉](reference_panel_oe_no_pullup_anywhere.md) — 四块板逐块查证; 但 FS03 HSWAPEN=0 使配置期自带片内上拉, 真危险只有 PhaseRAMP, 而 Zynq 同链路已长期验证可接受 → 可直接接屏
 - [转接板 v1.2 引脚重映射 (2026-07-27)](project_pov3d_trans_v12_pinmap.md) — 屏侧 J1 未变, P1 整体重排 → 19 ball 纯置换, 已上板点亮; 顺带解掉 DCLK/LAT/OE 相邻的老 SI 问题
 - [oe_window 调太低会暗到看不见](feedback_oe_window_too_low_invisible.md) — pov6_colors.py 写死 8 沿(4%占空) vs 能跑的 192 沿(98%), 差 24 倍; 别误判成"屏不亮"
 - [正反双屏几何 → 偏移平面切片](project_pov3d_offset_axis_geometry.md) — v3 对称 gap13.8 (PHASE_B=180 共用单份); **v3.1 偏心屏把该等价作废** → A面穿心0mm/B面13.4mm; A-only 数据减半帧率翻倍(亮度减半)
@@ -98,7 +108,7 @@
   └ 2026-08-04 对账: 任务 2/3/4 ✅, 1 只完成 2/5, 5 未开始, 6 半完成; **四个瓶颈里前两个是硬件(转子 5V 余量)**, 软件侧基本做完
 - [v3.1 偏心双面调通 + 空闲动画](project_pov3d_v31_dualface_geometry_solved.md) — mirror_a=0/b=0/**PHASE_B=180**(补偿渲染侧面B 符号+手性); 空闲动画上电即显示/有推让位; codec 是 flag 位不是序号(踩过)
 - [Altium PDF 抽网表 + 引脚推导工具](reference_sch_netlist_tools.md) — sch_netlist.py / derive_panel_pins.py, 带"能复现旧 XDC 才认新结果"自检 + 差分对结构性校验
-- [FS03 板子远程操作方式](reference_fs03_board_access.md) — WiFi 10.10.21.3 uisrc/root, WSL 用 plink/pscp, busybox devmem; ⚠ WiFi 会掉且不自愈, 屏还亮≠Linux活着
+- [FS03 板子远程操作方式](reference_fs03_board_access.md) — mDNS `pov.local`+`board_ip.sh`(DHCP,IP会变), plink/pscp; ⚠ WiFi 会掉且不自愈, 屏还亮≠Linux活着; 🎯 **08-10 补**: `/dev/mem` 要 `sudo -S -v` 先缓存凭据 / 板上有原生 gcc / **量具 `tools/oeprobe.c`**(Python 采样 1.7µs 量不了 14µs 行周期, 必须用 C)
 - [pov6 板上调试脚本现状](reference_pov6_board_scripts.md) — pov6_colors2/hold 用法, povcolors.service 开机自启, 板上与仓库有漂移
 - [POV 内容模型库位置](reference_model_library.md) — models/ 下几十个 GLB (bonsai 盆景/Groot/英雄联盟角色), 直接喂 gen_anime_slices.py
 - [换 bitstream 必须冷启动](feedback_cold_boot_required_for_bit.md) — reboot 不重载 PL; 用"写新寄存器位再回读"判定, 比看 uptime 硬
@@ -109,7 +119,9 @@
 - [glb_to_points 丢 alpha → 半透明贴图渲成实心块](feedback_glb_alpha_texture_lost.md) — 星星消失之谜; 附点云缓存 + 采样数两个连带坑
 - [glbanim 并集 bbox 让动画缩小 39%](feedback_glbanim_union_bbox_shrinks.md) — --fit-frames 逐帧自适应 + 循环平滑; 量包络必须用整段动画
 - [推理前先确认信号"接没接"](feedback_verify_signal_actually_connected.md) — 一天踩三次: 悬空寄存器读噪声当实测、遗留位当功能已开; 附数量级自检
-- [面板刷新率 vs 转速不匹配](project_pov3d_refresh_vs_rpm.md) — xsim 扫 oe 实测表; **2026-08-03 定案 oe=111**(免费亮度上限, 非 96), 2D 刷新 3417→4748Hz(+39%), 已固化进 pov_boot.sh; 4748Hz 是架构天花板(192拍/行)
+- [面板刷新率 vs 转速不匹配](project_pov3d_refresh_vs_rpm.md) — xsim 扫 oe 实测表; oe=111 是 fast 模式的免费亮度上限; 🔴 **2026-08-10 板上实测: bit29=1 坐实(降级为真), 但实测 2D 刷新是 **1335Hz** —— 4748(账上)和 2393(按模型重算)都不可信, 模型比实测短 1.79× 且原因未定位; 占空比 0.574 精确吻合 oe=111
+- [把 n_slices 匹配到面板真实能力](project_pov3d_nslices_match_panel.md) — 面板每圈只画得出 ~89 个角度却在渲 360 ⇒ 3/4 白付; **PC 侧 `--n-slices` 已做好实测 ÷4**(渲染也快 4.3×); 🔴 板端双面拆分把 360 写死会 NAK(单面路径可用); ⏸ 电机没转所以显示收益未验证; **对 DR1 可能比 memcpy 优化和 PL lz4 都便宜**
+- [🔴 位"改义"让屏静默降速一个月](feedback_reg_bit_semantics_reversed.md) — bit29 从 `dclk_fast`(1=全速) 反转成 `ddr_slow`(1=降级) 而老脚本没跟着改; **回读配置只证明写进去了, 不证明它现在什么意思**; 兜底口 frame_period 规划了但没引出
 - [换 FPGA 平台的依赖清单](reference_port_to_other_fpga_deps.md) — RTL 仅 14 处 ODDR 其余纯 Verilog; 工作量取决于 PS 侧有无硬核+BSP; 换平台前必问的 5 个问题
 - [🔴 提交 = 推两个远端](reference_git_dual_remote.md) — origin(kiujkiu) + yjhh(pov-yjhh); 说"提交"就两边都推
 - [aibrain-app 项目](reference_aibrain_app_project.md) — PC 侧 3D Viewer + PVS1 推流, 与 POV 同链; pvs_streamer.js 已有滑动窗口(我重复劳动了); Docker 纯软件 demo 跑法
@@ -132,6 +144,6 @@
 - [🔴 WiFi "只有 20 Mbps" 的真因是我写的看门狗](feedback_wifi_throughput_bottleneck_isolated.md) — 拿 ping 网关当判据, 办公网网关不回 ICMP ⇒ 6h 内 3582 次重连; **停掉后 23→**125 Mbps**(打到极限, WSL/Windows/UDP 三法互印), 8 分钟零掉线**; 原"USB 瓶颈"结论作废(测量被污染); 看门狗的 ci_hdrc unbind 升级会让板子只能物理重启 ⇒ 200M 做不到, 效率仅 PHY 的 25-28% 但差距未归因(mt76-USB vs AP 争用); 决定性实验=同口插U盘
 - [解码瓶颈的解法是 lz4-HC 不是 FPGA](feedback_codec_lz4_beats_zlib_4x.md) — A9 实测 zlib 51.6 / **zstd 53.6(并不快!)** / **lz4-HC9 204.6 MB/s**; lz4-HC9 压缩比 22.8× 对 zlib 23.5× ⇒ 双核 **12→48 fps**, 30fps 达标不用 FPGA inflate; RLE 实测 7.1× 更差
 - [lz4 上板实测 — 外推大半没兑现](feedback_lz4_onboard_reality_check.md) — 解码 120→28ms(4.3×)兑现, 但**并行加速只有 1.06×**(编解码越快并行比越低), 端到端只 7.41→10-11.4fps; 瓶颈转到 cpy20+wait31; **翻页天花板=转速 16.1fps**; 🔴 附读 pov_rxd.log 窗口的判据(空闲动画会伪装成推流, 我连错三次)
-- [🔴 链路各级余量现状 (2026-08-05, 08-06 已修订)](project_pov3d_link_budget_status.md) — **先读这篇**: 900RPM/内容15fps 口径的实测余量表 + 口径推导; ⚠ 链路与翻页两行**已作废**(见下两条), 仍成立的是 **面板0.88×(每圈只显示316片)** 与'多切片提角分辨率收益为零'
+- [🔴 链路各级余量现状 (2026-08-05, 08-06 已修订)](project_pov3d_link_budget_status.md) — **先读这篇**: 900RPM/内容15fps 口径的实测余量表 + 口径推导; ⚠ 链路与翻页两行**已作废**(见下两条), 🔴 **面板那行 08-10 再修正: 不是 0.88× 是 0.44×**(每圈只显示 **160** 片, 因 bit29 降级), 翻 `B8→98` 可免费拿回 2.0×; '多切片提角分辨率收益为零'仍成立且更强
 - [🎯 15 fps 达成 — 收包元凶是 setsockopt(SO_RCVBUF) 自己](feedback_recv_setsockopt_rcvbuf_lock.md) — 设 SO_RCVBUF 会置 `SOCK_RCVBUF_LOCK` **关掉内核接收窗自动放大**, 窗口钉死 32844B ⇒ 2.83→**24.7 MB/s**, 上屏 **flip 中位 15.00/s**; 🔴 **`--fps` 要设成转速(15)不是越高越好**(40→12.99 / 15→15.00); 附"C 比 Python 慢 3 倍"的归因阶梯
 - [翻页相位锁定 — 立项前提是错的, 默认 off](feedback_phase_lock_premise_wrong.md) — drop=0/668 ⇒ 相位可回收量为 0, "wait 33ms"是 flip 线程空转不是错过机会; 随机相位本就自纠; 🔴 附**测量必须交错 A/B 报中位数**(单次窗口 8.0↔12.0 乱跳) + journalctl 按 unit 累积会污染对照组

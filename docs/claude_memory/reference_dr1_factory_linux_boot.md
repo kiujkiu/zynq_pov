@@ -105,3 +105,31 @@ vendor demo `01_run_led/uisrc/01_rtl/run_led.v` 的初值是 `7'b0111_1111` —�
 我踩过一次: 替换脚本**无条件打印"已改"却没做校验**, 静默失败, 白烧一轮
 (现象: 重新综合、重新 bootgen, 但 bin 的 MD5 与上一版**逐字节相同**)。
 ⇒ 任何"改文件"的脚本都要**回读校验**, 并且改完先看 MD5 变没变再上板。
+
+## 🔴 重打 rootfs 的两个致命细节 (2026-08-07)
+
+### ① lz4 帧格式: kernel 用 modern, rootfs 用 **legacy**
+
+```
+kernel.bin  : lz4 -f -9   → modern frame 魔数 0x184D2204
+rootfs.bin  : lz4 -l -9   → **LEGACY frame** 魔数 0x184C2102
+```
+🔴 **`mkimage -l` 分辨不出来** —— 两者都显示 "lz4 compressed"。只能 hexdump 偏移 0x40
+(64 字节 uImage 头之后的第一个字)。用错帧格式板子起不来, 而起不来只能拔卡恢复。
+`dr1v90/tools/mkrootfs.sh` 里对这 4 字节做了硬断言。
+
+### ② 基底必须是**卡上正在跑的那份**, 三个候选互不相同
+
+| 文件 | md5 | 大小 |
+|---|---|---|
+| **卡上 `rootfs.bin`(实际在跑)** | `0e68555093ef01f86c24505f1491b547` | 4,984,832 |
+| `dr1v90/tfboot/uInitrd.lz4` (来自 03_restore_factory/boot.zip) | `ca0b0467f997eb81462d91cde05b7404` | 5,422,770 |
+| SDK `boards/DR1V/buildroot/output/uInitrd.lz4` | `157931dc73f25f2c861e134556705ce0` | 4,984,795 |
+
+**卡上跑的是第三个版本**, 两份"官方"资料都不是它。用错基底 = 把 userland 悄悄换成另一个
+厂商版本(busybox 构建不同、strace 有无不同、shadow salt 不同)，可能几天后才以怪现象暴露。
+⇒ **重打 rootfs 前必须先 `md5sum` 卡上那份并与基底对齐**。
+从板上取文件用 `dr1v90/host/serial_recv.ps1`(板子有 wget 能拉, 但没有任何上传工具)。
+
+⚠ 顺带: 卡上这套的文件名是 `kernel.bin`/`rootfs.bin`/`dtb.bin`, 资料包那套是
+`uImage.lz4`/`uInitrd.lz4`/`system.dtb` —— **命名不同说明是不同的出厂发布**, 别混用。

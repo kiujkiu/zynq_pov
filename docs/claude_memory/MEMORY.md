@@ -44,7 +44,8 @@
 - [鹿小班 MIO 物理引脚分配](reference_luxiaoban_mio_pinout.md) — MIO1-6=QSPI flash, MIO40-45/47=板载 microSD, 扩展连接器只走 PL 引脚
 - [鹿小班无 USB host 能力](reference_lxb_no_usb_host.md) — MIO 28-39 全悬空 + 无 ULPI PHY + USB-C 只是 CH340E UART, USB WiFi 必须换板 (ALINX/米尔/正点原子)
 - [LXB SDIO WiFi 升级方案 RTL8822CS](project_lxb_sdio_wifi_plan.md) — PetaLinux + SD1 EMIO + rtw88 driver, 接受 200 Mbps SDIO 上限, 取代 ESP32 桥
-- [鹿小班 GPIO1 connector pinout](reference_lxb_gpio1_pinout.md) — GPIO1 2×40 排针 17 对 BANK 33 site → CLG484 PACKAGE_PIN 完整表
+- [鹿小班 GPIO1 排针脚号→site→ball](reference_lxb_gpio1_pinout.md) — 2×**20** 排针(不是2×40), 电源在 35~40; 🔴 **2026-08-19 更正**: 旧表脚 19~24/31~38 全错(把 site 顺序当脚号); 顺带教训: 符号图的连线 pdftotext 不可信, 要渲染成图看
+- [🎯 鹿小班 × ICND2260 首次点亮工程 (2026-08-19)](project_lxb_icnd2260_bringup.md) — 转接板 zynq-lxb_2260_V0.1 网表(信号用 site 名标注); **两块 2260 板只有鹿小班这块画完了**, 且 SCH 的 PDF 是旧版会骗人; 定 TTL 3 通道(3.3V bank 出不了 LVDS); 电源 EN 归 FPGA 管 = 唯一复位手段; 代码在 `zynq_pov/icnd2260/`, 仿真+布线全过但**没上过板**
 - [鹿小班 boot mode 拨码 = SW3](feedback_lxb_boot_mode_sw3.md) — SW1/SW2 是 PL_KEY 跟 boot 无关; SW3 dual SPST 控制 MIO[2..8] strap, 切 QSPI 需 toggle 配置
 - [鹿小班 QSPI = W25Q256 (32 MB) + W25Q512 升级路径 + Linux 预算](reference_luxiaoban_qspi_flash.md) — 7020 Linux 三档方案 / 32 MB & 64 MB 分区表 / 4-byte 地址改 FSBL+U-Boot+Linux / 量产再换
 - [Zynq Linux vs 裸机 10 维对比](reference_zynq_linux_vs_baremetal.md) — 决策框架: IRQ 延迟/调度/网络/学习曲线; 硬实时必在 PL, Linux 杀手锏在网络+多任务+FS

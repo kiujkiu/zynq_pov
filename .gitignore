@@ -38,6 +38,16 @@ hls_proj/vitis_hls*.str
 hls_proj/pov_project_ip.zip
 hls_proj/proj_pov_csim/
 
+# B1 (pov_render_full) HLS build + host TB outputs
+02_hello_zynq/hls_pov/proj_full/
+02_hello_zynq/hls_pov/proj_povproj/
+02_hello_zynq/hls_pov/*_ip.zip
+02_hello_zynq/hls_pov/pov_render_full_tb
+02_hello_zynq/hls_pov/pov_proj_tb
+02_hello_zynq/hls_pov/tb_*.bin
+02_hello_zynq/hls_pov/*.log
+02_hello_zynq/hls_pov/vitis_hls.log
+
 # === Transient HDMI capture / render outputs ===
 hdmi_obs.jpg
 hdmi_ff.jpg
@@ -171,3 +181,10 @@ esp32_bridge/firmware/build/
 esp32_bridge/firmware/sdkconfig
 esp32_bridge/firmware/managed_components/
 esp32_bridge/firmware/dependencies.lock
+
+# icnd2260 工程的构建产物 (Vivado 报告/dcp/仿真中间件)
+icnd2260/build/
+icnd2260/.Xil/
+icnd2260/vivado*.jou
+icnd2260/vivado*.log
+icnd2260/build_lvds/

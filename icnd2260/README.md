@@ -41,6 +41,7 @@ tools/
   synth_check.tcl        TTL  版综合+布局布线+时序+DRC 自检
   synth_check_lvds.tcl   LVDS 版同上
   build_bit.tcl          出 bitstream: -tclargs lvds | ttl
+  build_bit_dbg.tcl      出带 VIO 调试核的 bit (+ .ltx), 见 docs/04_fps_sweep.md
 sw/icnd2260_regs.h       PS 侧要用时的同一份寄存器表 ← 生成物
 ```
 
@@ -98,7 +99,16 @@ LED2 比"屏亮不亮"硬得多：屏不亮还可能是电流、灰度、LED 板
 
 板子到了按 [`docs/03_branches.md`](docs/03_branches.md) 的分支矩阵二分：
 主线 `feature/icnd2260-lvds`，另有 `-ttl`（不用改电阻就能先试）/ `-phase270`（相位）/
-`-nocrc`（CRC 推断）/ `-slow`（速率）四个变体，每个只改一处。
+`-nocrc`（CRC 推断）/ `-slow`（速率）四个二分变体，
+外加 **`-debug`（VIO 调试核）—— 作为验证平台真正要用的那个**。
+
+## 作为 2260 验证平台
+
+立项目的是实测这颗芯片的帧率上限（目标 ≥9,000 fps）。两件事要分清：
+**链路可发帧率**由 `CLK_DIV` 定（只有 `CLK_DIV=6` 那一档能过 9,045），
+**芯片显示帧率**由 2260 寄存器定（默认表只有 763 fps，必须改 `0x00`/`0x01`）。
+算法、扫参数的步骤、以及高速档要同步放宽时序约束这件事，全在
+[`docs/04_fps_sweep.md`](docs/04_fps_sweep.md)。
 
 ## 参数在哪调
 

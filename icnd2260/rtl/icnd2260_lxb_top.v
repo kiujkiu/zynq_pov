@@ -131,6 +131,15 @@ module icnd2260_lxb_top #(
     wire [NLANE-1:0]     bit_r, bit_f;
     wire                 isync;
 
+    // 本顶层不带调试核, 调试口全接常量 (行为与加调试口之前完全一致)
+    wire        dbg_reg_we    = 1'b0;
+    wire [7:0]  dbg_reg_addr  = 8'h00;
+    wire [15:0] dbg_reg_data  = 16'h0000;
+    wire        dbg_probe_en  = 1'b0;
+    wire [7:0]  dbg_probe_off = 8'h00;
+    wire [3:0]  dbg_ph;
+    wire [1:0]  dbg_sub;
+
     icnd2260_seq #(
         .NLANE        (NLANE),
         .PIX_PER_LINE (PIX),
@@ -146,7 +155,11 @@ module icnd2260_lxb_top #(
         .cmd_device (cmd_device), .cmd_offset (cmd_offset),
         .cmd_length (cmd_length), .cmd_rows (cmd_rows), .cmd_cascade (cmd_cascade),
         .pl_next (pl_next), .pl_data (pl_data), .pl_last (pl_last),
-        .tx_busy (tx_busy), .running (running), .frame_cnt (frame_cnt)
+        .tx_busy (tx_busy), .running (running), .frame_cnt (frame_cnt),
+        .dbg_reg_we (dbg_reg_we), .dbg_reg_addr (dbg_reg_addr),
+        .dbg_reg_data (dbg_reg_data),
+        .dbg_probe_en (dbg_probe_en), .dbg_probe_off (dbg_probe_off),
+        .dbg_ph (dbg_ph), .dbg_sub (dbg_sub)
     );
 
     icnd2260_tx #(.NLANE (NLANE)) u_tx (

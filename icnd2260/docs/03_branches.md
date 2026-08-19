@@ -26,6 +26,10 @@ cmd.exe /c "cd /d D:\claude_workspace\pov3d\zynq_pov\icnd2260 && \
 | `feature/icnd2260-lvds-phase270` | `CLK_PHASE = 270.0` | 采样相位反了吗？（这是最可能的失败原因之一） | 同主线 |
 | `feature/icnd2260-lvds-nocrc` | `VID_CRC = 0` | 图像数据的 per-chip CRC 是不是我推错了？ | 同主线 |
 | `feature/icnd2260-lvds-slow` | `CLK_DIV = 48` + XDC `BITCLK_NS 48.0` | 是速率问题还是协议问题？20.8MHz 位时钟 | 同主线 |
+| **`feature/icnd2260-lvds-debug`** | 加 VIO 调试核（`DEBUG=1`） | **实时读 frame_cnt / ACK 回包，实时 poke 寄存器** —— 扫帧率参数不用重出 bit | 同主线 |
+
+`-debug` 那个不是二分用的变体，是**验证平台的正式形态**：没有它就只能盯两个 LED，
+读不出实际帧率、也改不了寄存器。测帧率上限见 [`04_fps_sweep.md`](04_fps_sweep.md)。
 
 ## 建议顺序
 

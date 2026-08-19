@@ -75,7 +75,12 @@ module icnd2260_lvds_tb;
         .cmd_device (cmd_device), .cmd_offset (cmd_offset),
         .cmd_length (cmd_length), .cmd_rows (cmd_rows), .cmd_cascade (cmd_cascade),
         .pl_next (pl_next), .pl_data (pl_data), .pl_last (pl_last),
-        .tx_busy (tx_busy), .running (running), .frame_cnt (frame_cnt)
+        .tx_busy (tx_busy), .running (running), .frame_cnt (frame_cnt),
+        // 调试口显式接死: 悬空的话是 z, dbg_probe_en 会把 cmd_offset 传成 x,
+        // 而 TB 又不检查读指令的 offset ⇒ 悄悄放过去。别留悬空输入。
+        .dbg_reg_we (1'b0), .dbg_reg_addr (8'h00), .dbg_reg_data (16'h0000),
+        .dbg_probe_en (1'b0), .dbg_probe_off (8'h00),
+        .dbg_ph (), .dbg_sub ()
     );
 
     icnd2260_lvds_tx #(.NLANE (NLANE), .IDLE_CLK (IDLE_CLK), .VID_CRC (1)) u_tx (

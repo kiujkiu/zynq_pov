@@ -41,7 +41,10 @@ module icnd2260_lxb_lvds_top #(
     // 打不出来时的第一个备选是 270 (等效反相), 见 docs/03_branches.md 的 phase270 变体。
     parameter real    CLK_PHASE = 90.0,
     parameter integer BLANK_FRAMES = 64,
-    parameter integer VID_CRC = 1
+    parameter integer VID_CRC = 1,
+    // 1 = 例化 VIO 调试核 (JTAG 直连, 不需要 PS/Linux)。DEBUG=0 时下面的 generate
+    // 完全不展开 ⇒ 与不带调试的已验证版本逐门相同。用 synth_design -generic DEBUG=1 打开。
+    parameter integer DEBUG = 0
 ) (
     input  wire clk50,        // M19  PL_CLK_50M
 
@@ -65,6 +68,7 @@ module icnd2260_lxb_lvds_top #(
 );
 
     localparam integer TOTAL_PIX = PIX * LINES * CASCADE;
+    localparam integer BITCLK_HZ = 1_000_000_000 / CLK_DIV;
     localparam integer FB_AW     = (TOTAL_PIX <= 2048) ? 11 : 12;
 
     // ---------------------------------------------------------------------
@@ -135,6 +139,18 @@ module icnd2260_lxb_lvds_top #(
     wire [NLANE-1:0]     bit_r, bit_f;
     wire                 isync;
 
+    // ---- 调试口 ---------------------------------------------------------
+    wire        dbg_reg_we;
+    wire [7:0]  dbg_reg_addr;
+    wire [15:0] dbg_reg_data;
+    wire        dbg_probe_en;
+    wire [7:0]  dbg_probe_off;
+    wire        dbg_soft_rst;
+    wire [3:0]  dbg_ph;
+    wire [1:0]  dbg_sub;
+
+    wire rst_n_eff = rst_n & ~dbg_soft_rst;   // VIO 可以重跑整个上电流程(含电源 EN)
+
     icnd2260_seq #(
         .NLANE        (NLANE),
         .PIX_PER_LINE (PIX),
@@ -144,18 +160,22 @@ module icnd2260_lxb_lvds_top #(
         .FB_AW        (FB_AW),
         .REG_MEM      ("icnd2260_regs_lvds.mem")
     ) u_seq (
-        .clk (clkbit), .rst_n (rst_n),
+        .clk (clkbit), .rst_n (rst_n_eff),
         .en_3v8 (en_3v8), .en_2v8 (en_2v8), .out_en (out_en),
         .fb_addr (fb_addr), .fb_q (fb_q),
         .cmd_valid (cmd_valid), .cmd_ready (cmd_ready), .cmd_kind (cmd_kind),
         .cmd_device (cmd_device), .cmd_offset (cmd_offset),
         .cmd_length (cmd_length), .cmd_rows (cmd_rows), .cmd_cascade (cmd_cascade),
         .pl_next (pl_next), .pl_data (pl_data), .pl_last (pl_last),
-        .tx_busy (tx_busy), .running (running), .frame_cnt (frame_cnt)
+        .tx_busy (tx_busy), .running (running), .frame_cnt (frame_cnt),
+        .dbg_reg_we (dbg_reg_we), .dbg_reg_addr (dbg_reg_addr),
+        .dbg_reg_data (dbg_reg_data),
+        .dbg_probe_en (dbg_probe_en), .dbg_probe_off (dbg_probe_off),
+        .dbg_ph (dbg_ph), .dbg_sub (dbg_sub)
     );
 
     icnd2260_lvds_tx #(.NLANE (NLANE), .VID_CRC (VID_CRC)) u_tx (
-        .clk (clkbit), .rst_n (rst_n),
+        .clk (clkbit), .rst_n (rst_n_eff),
         .cmd_valid (cmd_valid), .cmd_ready (cmd_ready), .cmd_kind (cmd_kind),
         .cmd_device (cmd_device), .cmd_offset (cmd_offset),
         .cmd_length (cmd_length), .cmd_rows (cmd_rows), .cmd_cascade (cmd_cascade),
@@ -207,8 +227,6 @@ module icnd2260_lxb_lvds_top #(
     // crc_ok 一旦为真, 就同时坐实了三件事: 芯片活着 / 收到了我们的指令 /
     // CRC 那套推断是对的。这是首光阶段最硬的判据 —— 比"屏亮没亮"硬得多,
     // 因为屏不亮还可能是电流、灰度、LED 板的问题。
-    localparam integer BITCLK_HZ = 1_000_000_000 / CLK_DIV;
-
     wire        ack_frame_valid, ack_crc_ok, ack_frame_err;
     wire [3:0]  ack_f_ack, ack_f_dev;
     wire [7:0]  ack_f_off, ack_f_len;
@@ -216,7 +234,7 @@ module icnd2260_lxb_lvds_top #(
     wire [8:0]  ack_f_nbits;
 
     icnd2260_ack_rx #(.CLK_HZ (BITCLK_HZ), .MAX_WORDS (4)) u_ack (
-        .clk (clkbit), .rst_n (rst_n), .ack_pin (ack),
+        .clk (clkbit), .rst_n (rst_n_eff), .ack_pin (ack),
         .frame_valid (ack_frame_valid), .crc_ok (ack_crc_ok),
         .frame_err (ack_frame_err),
         .f_ack (ack_f_ack), .f_dev (ack_f_dev), .f_off (ack_f_off),
@@ -225,11 +243,103 @@ module icnd2260_lxb_lvds_top #(
         .f_nbits (ack_f_nbits), .busy ()
     );
 
-    reg ack_ok_sticky = 1'b0;
+    // ---- 硬件测帧率: 1 秒窗口锁存 -------------------------------------
+    // 位时钟频率是精确已知的 (MMCM 从 50MHz 晶振分出来), 所以直接在片内数
+    // 「一秒内发了多少帧」比在 GUI 里拿秒表读两次 frame_cnt 相减靠谱得多。
+    // 读 probe_in7 就是 fps, 不用换算。
+    reg [31:0] sec_cnt     = 32'd0;
+    reg [31:0] frame_mark  = 32'd0;
+    reg [31:0] fps_latched = 32'd0;
     always @(posedge clkbit) begin
-        if (!rst_n) ack_ok_sticky <= 1'b0;
-        else if (ack_crc_ok) ack_ok_sticky <= 1'b1;
+        if (!rst_n_eff) begin
+            sec_cnt     <= 32'd0;
+            frame_mark  <= 32'd0;
+            fps_latched <= 32'd0;
+        end else if (sec_cnt >= BITCLK_HZ - 1) begin
+            sec_cnt     <= 32'd0;
+            fps_latched <= frame_cnt - frame_mark;
+            frame_mark  <= frame_cnt;
+        end else begin
+            sec_cnt <= sec_cnt + 32'd1;
+        end
     end
+
+    reg ack_ok_sticky = 1'b0;
+    reg [15:0] ack_frame_cnt = 16'd0;
+    reg [15:0] ack_err_cnt   = 16'd0;
+    always @(posedge clkbit) begin
+        if (!rst_n_eff) begin
+            ack_ok_sticky <= 1'b0;
+            ack_frame_cnt <= 16'd0;
+            ack_err_cnt   <= 16'd0;
+        end else begin
+            if (ack_crc_ok)      ack_ok_sticky <= 1'b1;
+            if (ack_frame_valid) ack_frame_cnt <= ack_frame_cnt + 16'd1;
+            if (ack_frame_err)   ack_err_cnt   <= ack_err_cnt + 16'd1;
+        end
+    end
+
+    // ---------------------------------------------------------------------
+    // 调试核 (DEBUG=1 才展开)
+    //
+    // 为什么是 VIO 而不是别的: 这块板上 PL 侧没有 UART/以太网 (都在 PS 上),
+    // 纯 PL 设计对外只有 JTAG 一条路。VIO 走 BSCANE2, 不碰 PS, 不用 Linux,
+    // 在 Vivado Hardware Manager 里就能实时读写。
+    //
+    // 能干的事:
+    //   * 读: frame_cnt(实际跑了多少帧) / ACK 回包的全部字段 / 状态机在哪一步
+    //   * 写: 任意 poke 一个 2260 寄存器 —— **扫帧率参数不用重出 bit**
+    //         (0x00[14:8] 分组数, 0x01[12:0] Width_X, 0x00[5:4] 倍率档)
+    //         poke 完等下一次整表刷新 (REG_REFRESH_FR 帧) 才生效
+    //   * 改读探针地址; 软复位重跑整个上电流程 (含电源 EN 关再开)
+    // ---------------------------------------------------------------------
+    generate
+    if (DEBUG != 0) begin : g_dbg
+        wire [7:0]  o_addr;
+        wire [15:0] o_data;
+        wire [0:0]  o_we_tog, o_probe_en, o_soft_rst;
+        wire [7:0]  o_probe_off;
+
+        // VIO 的输出是电平, 用「变化沿」当写脉冲: 在 GUI 里把这一位一翻就写一次
+        reg we_tog_d = 1'b0;
+        always @(posedge clkbit) we_tog_d <= o_we_tog[0];
+        assign dbg_reg_we    = (o_we_tog[0] != we_tog_d);
+        assign dbg_reg_addr  = o_addr;
+        assign dbg_reg_data  = o_data;
+        assign dbg_probe_en  = o_probe_en[0];
+        assign dbg_probe_off = o_probe_off;
+        assign dbg_soft_rst  = o_soft_rst[0];
+
+        wire [15:0] status = {mmcm_locked, running, out_en, en_3v8,
+                              en_2v8, ack_ok_sticky, ack_crc_ok, ack_frame_err,
+                              dbg_ph, dbg_sub, 2'b00};
+
+        vio_dbg u_vio (
+            .clk        (clkbit),
+            .probe_in0  (frame_cnt),                 // 32
+            .probe_in1  (status),                    // 16
+            .probe_in2  (ack_f_data0),               // 16
+            .probe_in3  ({ack_f_ack, ack_f_dev, ack_f_off, ack_f_len}), // 24
+            .probe_in4  (ack_frame_cnt),             // 16
+            .probe_in5  (ack_err_cnt),               // 16
+            .probe_in6  (ack_f_nbits),               // 9
+            .probe_in7  (fps_latched),               // 32  <-- 直接就是 fps
+            .probe_out0 (o_addr),                    // 8
+            .probe_out1 (o_data),                    // 16
+            .probe_out2 (o_we_tog),                  // 1
+            .probe_out3 (o_probe_off),               // 8
+            .probe_out4 (o_probe_en),                // 1
+            .probe_out5 (o_soft_rst)                 // 1
+        );
+    end else begin : g_nodbg
+        assign dbg_reg_we    = 1'b0;
+        assign dbg_reg_addr  = 8'h00;
+        assign dbg_reg_data  = 16'h0000;
+        assign dbg_probe_en  = 1'b0;
+        assign dbg_probe_off = 8'h00;
+        assign dbg_soft_rst  = 1'b0;
+    end
+    endgenerate
 
     assign led[0] = running ? hb[24] : 1'b1;   // 没跑起来 = 常亮
     assign led[1] = ack_ok_sticky;             // 亮 = 收到过一条 CRC 正确的 ACK 回包

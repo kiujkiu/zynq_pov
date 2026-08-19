@@ -31,7 +31,7 @@ module icnd2260_seq #(
     // 每多少帧插一条「读寄存器」指令 (0 = 关)。回包走 ACK 引脚, 由 icnd2260_ack_rx 解。
     // 这是判断「芯片到底活没活」最硬的判据, 也是验证 CRC 推断对不对的唯一手段。
     parameter integer READ_PROBE_FR   = 16,
-    parameter integer READ_PROBE_OFF  = 8'h00,   // 探哪个寄存器
+    parameter integer READ_PROBE_OFF  = 8'h00,   // 探哪个寄存器 (可被 dbg_probe_off 覆盖)
     parameter integer POWER_2V8_FIRST = 1,
     parameter integer RAIL_STAGGER    = 25_000,   // 两路 EN 之间的间隔 (clk 拍)
     parameter integer RAIL_SETTLE     = 500_000,  // 电源稳定等待 (clk 拍), 25MHz -> 20 ms
@@ -66,9 +66,20 @@ module icnd2260_seq #(
     output wire                    pl_last,
     input  wire                    tx_busy,
 
+    // ---- 调试口 (不接就是 0, 行为与不带调试时完全一致) --------------------
+    // 寄存器表做成可写: VIO/JTAG 把 (addr,data) poke 进来, **下一次整表刷新**
+    // 就会带上新值 ⇒ 扫帧率参数 (0x00 分组数 / 0x01 Width_X / 倍率档) 不用重出 bit。
+    input  wire                    dbg_reg_we,
+    input  wire [7:0]              dbg_reg_addr,
+    input  wire [15:0]             dbg_reg_data,
+    input  wire                    dbg_probe_en,   // 1 = 用 dbg_probe_off 覆盖参数
+    input  wire [7:0]              dbg_probe_off,
+
     // ---- 状态 -------------------------------------------------------------
     output wire                    running,      // 已进入正常显示
-    output reg  [31:0]             frame_cnt
+    output reg  [31:0]             frame_cnt,
+    output wire [3:0]              dbg_ph,
+    output wire [1:0]              dbg_sub
 );
 
     localparam integer TOTAL_PIX = PIX_PER_LINE * LINES * CASCADE;
@@ -90,8 +101,11 @@ module icnd2260_seq #(
     //   第 7 拍就要拿到「下一个字」, 所以送进存储器的地址要用 pl_next 做一拍前瞻;
     //   reg_addr / pix_addr 本身仍在第 6 拍的沿更新, 好让 pl_last 与总线上的字对齐。
     // ---------------------------------------------------------------------
+    // ⚠ 这里是 **RAM 不是 ROM**: $readmemh 给初值, dbg 口可以改。
+    //   改完不会立刻生效, 要等下一条整表写 (每 REG_REFRESH_FR 帧一次) 才送进芯片。
     reg [15:0] reg_rom [0:255];
     initial $readmemh(REG_MEM, reg_rom);
+    always @(posedge clk) if (dbg_reg_we) reg_rom[dbg_reg_addr] <= dbg_reg_data;
 
     reg [7:0]  reg_addr;
     reg [15:0] reg_q;
@@ -162,6 +176,8 @@ module icnd2260_seq #(
     reg [31:0] probe_cnt;
 
     assign running = (ph == P_RUN) || ((ph == P_WAIT) && (ph_next == P_RUN));
+    assign dbg_ph  = ph;
+    assign dbg_sub = sub;
 
     task issue(input [2:0] k, input [1:0] s, input [3:0] nxt,
                input [1:0] nsub, input adv, input clrm);
@@ -272,7 +288,7 @@ module icnd2260_seq #(
                 2'd2: begin
                     if (READ_PROBE_FR != 0 && probe_cnt == 0) begin
                         // 读 1 个寄存器: OFFSET=READ_PROBE_OFF, LENGTH=0 (0 对应 1 个)
-                        cmd_offset <= READ_PROBE_OFF[7:0];
+                        cmd_offset <= dbg_probe_en ? dbg_probe_off : READ_PROBE_OFF[7:0];
                         cmd_length <= 8'd0;
                         issue(KIND_READ_DEV, SRC_ZERO, P_RUN, 2'd3, 1'b0, 1'b0);
                     end else sub <= 2'd3;

@@ -65,7 +65,7 @@ module icnd2260_lvds_tb;
     icnd2260_seq #(
         .NLANE (NLANE), .REG_COUNT (REG_COUNT), .PIX_PER_LINE (PIX),
         .LINES (LINES), .CASCADE (CASCADE), .BLANK_FRAMES (BLANK_FRAMES),
-        .REG_REFRESH_FR (64), .RAIL_STAGGER (20), .RAIL_SETTLE (40),
+        .REG_REFRESH_FR (64), .READ_PROBE_FR (2), .RAIL_STAGGER (20), .RAIL_SETTLE (40),
         .FB_AW (FB_AW), .REG_MEM ("icnd2260_regs_lvds.mem")
     ) u_seq (
         .clk (clk), .rst_n (rst_n),
@@ -107,7 +107,8 @@ module icnd2260_lvds_tb;
                        D_VCRC  = 8;
 
     integer errors  = 0;
-    integer n_cfg   = 0;      // 配置包条数
+    integer n_cfg   = 0;      // 配置包条数 (写整表)
+    integer n_read  = 0;      // 读寄存器包条数
     integer n_disp  = 0;      // 显示包条数
     integer n_sync  = 0;      // I_SYNC 翻转次数
     integer blank_seen = 0;
@@ -206,11 +207,19 @@ module icnd2260_lvds_tb;
                     if (nb == 24) begin
                         f_cmd = acc[23:20];  f_dev = acc[19:16];
                         f_off = acc[15:8];   f_len = acc[7:0];
-                        n_cfg = n_cfg + 1;
-                        if (f_cmd !== 4'b0101)        fail("cfg_cmd_not_write_all");
-                        if (f_off !== 8'h00)          fail("cfg_offset_not_0");
-                        if (f_len !== REG_COUNT - 1)  fail("cfg_length_wrong");
-                        dst = D_CDATA;  nb = 0;  widx = 0;  wacc[0] = 16'h0;
+                        if (f_cmd === 4'b0101) begin
+                            n_cfg = n_cfg + 1;
+                            if (f_off !== 8'h00)          fail("cfg_offset_not_0");
+                            if (f_len !== REG_COUNT - 1)  fail("cfg_length_wrong");
+                            dst = D_CDATA;  nb = 0;  widx = 0;  wacc[0] = 16'h0;
+                        end else if (f_cmd === 4'b1010) begin
+                            // 读寄存器: 没有数据域, 头后直接跟 CHKSUM
+                            n_read = n_read + 1;
+                            dst = D_CCRC;  acc = 56'h0;  nb = 0;
+                        end else begin
+                            fail("cfg_cmd_unknown");
+                            dst = D_IDLE;  zeros = 0;
+                        end
                     end
                 end
             end
@@ -381,12 +390,13 @@ module icnd2260_lvds_tb;
 
         if (!en_3v8 || !en_2v8)         fail("rails_not_enabled");
         if (n_cfg  < 3)                 fail("too_few_cfg_packets");
+        if (n_read < 1)                 fail("read_probe_never_fired");
         if (n_disp < BLANK_FRAMES + 2)  fail("too_few_display_packets");
         if (n_sync < BLANK_FRAMES + 2)  fail("too_few_isync_toggles");
 
         $display("-----------------------------------------------------------");
-        $display("CFG=%0d  DISPLAY=%0d  ISYNC_TOGGLE=%0d  frame_cnt=%0d",
-                 n_cfg, n_disp, n_sync, frame_cnt);
+        $display("CFG=%0d  READ=%0d  DISPLAY=%0d  ISYNC_TOGGLE=%0d  frame_cnt=%0d",
+                 n_cfg, n_read, n_disp, n_sync, frame_cnt);
         if (errors == 0) $display("*** PASS ***");
         else begin
             $display("*** FAIL: %0d mismatches ***", errors);

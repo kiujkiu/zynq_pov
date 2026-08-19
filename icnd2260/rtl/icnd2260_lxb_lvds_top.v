@@ -37,6 +37,9 @@ module icnd2260_lxb_lvds_top #(
     // 位时钟 = 1000 MHz / CLK_DIV。24→41.7MHz  12→83.3MHz  6→166.7MHz(手册上限)
     // 首光建议从 24 起步, 通了再往上推。每对速率 = 位时钟 × 2 (双沿)。
     parameter integer CLK_DIV = 24,
+    // 转发时钟相对数据的相移。90 = 时钟沿落在位中间 (mini-LVDS tSTU/tHLD=1/4 tLVCP 的要求)。
+    // 打不出来时的第一个备选是 270 (等效反相), 见 docs/03_branches.md 的 phase270 变体。
+    parameter real    CLK_PHASE = 90.0,
     parameter integer BLANK_FRAMES = 64,
     parameter integer VID_CRC = 1
 ) (
@@ -57,6 +60,8 @@ module icnd2260_lxb_lvds_top #(
     output wire en_2v8,       // V15
 
     output wire [1:0] led     // P20 / P21
+                              //   LED1: 常亮=没进正常显示, 闪=帧循环在跑
+                              //   LED2: 亮=收到过 CRC 正确的 ACK 回包 (芯片确认活着)
 );
 
     localparam integer TOTAL_PIX = PIX * LINES * CASCADE;
@@ -77,7 +82,7 @@ module icnd2260_lxb_lvds_top #(
         .DIVCLK_DIVIDE    (1),
         .CLKOUT0_DIVIDE_F (CLK_DIV),       // 数据用, 0°
         .CLKOUT1_DIVIDE   (CLK_DIV),       // 转发时钟用, 90°
-        .CLKOUT1_PHASE    (90.000),
+        .CLKOUT1_PHASE    (CLK_PHASE),
         .STARTUP_WAIT     ("FALSE")
     ) u_mmcm (
         .CLKIN1   (clk50),
@@ -197,19 +202,37 @@ module icnd2260_lxb_lvds_top #(
     reg [26:0] hb = 27'd0;
     always @(posedge clkbit) hb <= hb + 27'd1;
 
-    reg ack_d = 1'b0, ack_seen = 1'b0;
+    // ---- ACK 回传解调 ---------------------------------------------------
+    // 序列器每 READ_PROBE_FR 帧发一条读寄存器指令, 回包从这里解出来。
+    // crc_ok 一旦为真, 就同时坐实了三件事: 芯片活着 / 收到了我们的指令 /
+    // CRC 那套推断是对的。这是首光阶段最硬的判据 —— 比"屏亮没亮"硬得多,
+    // 因为屏不亮还可能是电流、灰度、LED 板的问题。
+    localparam integer BITCLK_HZ = 1_000_000_000 / CLK_DIV;
+
+    wire        ack_frame_valid, ack_crc_ok, ack_frame_err;
+    wire [3:0]  ack_f_ack, ack_f_dev;
+    wire [7:0]  ack_f_off, ack_f_len;
+    wire [15:0] ack_f_data0, ack_f_crc_rx, ack_f_crc_calc;
+    wire [8:0]  ack_f_nbits;
+
+    icnd2260_ack_rx #(.CLK_HZ (BITCLK_HZ), .MAX_WORDS (4)) u_ack (
+        .clk (clkbit), .rst_n (rst_n), .ack_pin (ack),
+        .frame_valid (ack_frame_valid), .crc_ok (ack_crc_ok),
+        .frame_err (ack_frame_err),
+        .f_ack (ack_f_ack), .f_dev (ack_f_dev), .f_off (ack_f_off),
+        .f_len (ack_f_len), .f_data0 (ack_f_data0),
+        .f_crc_rx (ack_f_crc_rx), .f_crc_calc (ack_f_crc_calc),
+        .f_nbits (ack_f_nbits), .busy ()
+    );
+
+    reg ack_ok_sticky = 1'b0;
     always @(posedge clkbit) begin
-        if (!rst_n) begin
-            ack_d    <= 1'b0;
-            ack_seen <= 1'b0;
-        end else begin
-            ack_d <= ack;
-            if (ack != ack_d) ack_seen <= 1'b1;
-        end
+        if (!rst_n) ack_ok_sticky <= 1'b0;
+        else if (ack_crc_ok) ack_ok_sticky <= 1'b1;
     end
 
     assign led[0] = running ? hb[24] : 1'b1;   // 没跑起来 = 常亮
-    assign led[1] = ack_seen;
+    assign led[1] = ack_ok_sticky;             // 亮 = 收到过一条 CRC 正确的 ACK 回包
 
 endmodule
 

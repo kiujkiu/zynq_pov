@@ -69,7 +69,7 @@ module icnd2260_seq_tb;
     icnd2260_seq #(
         .NLANE (NLANE), .REG_COUNT (REG_COUNT), .PIX_PER_LINE (PIX),
         .LINES (LINES), .CASCADE (CASCADE), .BLANK_FRAMES (BLANK_FRAMES),
-        .REG_REFRESH_FR (64),
+        .REG_REFRESH_FR (64), .READ_PROBE_FR (2),
         .RAIL_STAGGER (20), .RAIL_SETTLE (40), .FB_AW (FB_AW)
     ) u_seq (
         .clk (clk), .rst_n (rst_n),
@@ -100,6 +100,7 @@ module icnd2260_seq_tb;
     integer errors  = 0;
     integer n_vsync = 0;
     integer n_wreg  = 0;
+    integer n_read  = 0;      // 读寄存器指令 (CMD=1010) 的条数
     integer n_disp  = 0;
     integer blank_disp_seen = 0;
 
@@ -152,7 +153,7 @@ module icnd2260_seq_tb;
         if (in_cmd) begin
             if (dph != PH_TRAIL)          fail("cmd_ended_before_payload_done");
             if (trail_zero < IDLE_DCLK)   fail("trailing_idle_too_short");
-            if (kind == K_CMD && cmd_f != 4'b0011 && pay_idx != pay_len)
+            if (kind == K_CMD && cmd_f == 4'b0101 && pay_idx != pay_len)
                 fail("reg_payload_count_mismatch");
             if (kind == K_VH && pay_idx != TOTAL_PIX)
                 fail("disp_payload_count_mismatch");
@@ -226,8 +227,14 @@ module icnd2260_seq_tb;
                         n_wreg = n_wreg + 1;
                         if (off_f != 8'h00)          fail("write_all_offset_not_0");
                         if (len_f != REG_COUNT - 1)  fail("write_all_length_wrong");
+                        dph = PH_PAY;
+                    end else if (cmd_f == 4'b1010) begin
+                        // 读寄存器: **没有数据域**, 头后面直接是 IDLE, 返回值走 ACK
+                        n_read = n_read + 1;
+                        dph    = PH_TRAIL;
+                    end else begin
+                        dph = PH_PAY;
                     end
-                    dph = PH_PAY;
                 end else if (kind == K_VH && hdr_bits == 48) begin
                     n_disp = n_disp + 1;
                     if (hdr[47:32] != 16'hA5A5)     fail("vhead_magic");
@@ -320,10 +327,11 @@ module icnd2260_seq_tb;
         if (n_wreg < 3)         fail("too_few_reg_writes");
         if (n_disp < BLANK_FRAMES + 2) fail("too_few_display_cmds");
         if (n_vsync < BLANK_FRAMES + 2) fail("too_few_vsync");
+        if (n_read  < 1)                fail("read_probe_never_fired");
 
         $display("-----------------------------------------------------------");
-        $display("VSYNC=%0d  WRITE_ALL=%0d  DISPLAY=%0d  frame_cnt=%0d",
-                 n_vsync, n_wreg, n_disp, frame_cnt);
+        $display("VSYNC=%0d  WRITE_ALL=%0d  READ=%0d  DISPLAY=%0d  frame_cnt=%0d",
+                 n_vsync, n_wreg, n_read, n_disp, frame_cnt);
         if (errors == 0) $display("*** PASS ***");
         else begin
             $display("*** FAIL: %0d mismatches ***", errors);

@@ -19,16 +19,19 @@
 rtl/
   icnd2260_tx.v            TTL 协议层: I_SYNC 分隔的指令帧格 + 双沿位串行化
   icnd2260_lvds_tx.v       mini-LVDS 协议层: RSYNC/4倍过采样/CRC/I_SYNC 每帧一翻
-  icnd2260_seq.v           上电流程 (编程指导 §12) + 帧循环 + 载荷源切换 (两套共用)
+  icnd2260_seq.v           上电流程 (编程指导 §12) + 帧循环 + 读探针 (两套共用)
+  icnd2260_ack_rx.v        ACK 回传解调 (脉宽编码 -> 拆包 -> CRC 校验, 两套共用)
   icnd2260_lxb_top.v       TTL 顶层
   icnd2260_lxb_lvds_top.v  mini-LVDS 顶层 (90° 移相时钟 + OBUFDS)
   icnd2260_regs.mem        寄存器默认值 TTL 版      ← 生成物, 别手改
   icnd2260_regs_lvds.mem   寄存器默认值 LVDS 版 (0x06[9]=1, 0x1a[9]=1)
   icnd2260_fb.mem          帧缓存测试图 {B,G,R}     ← TTL 用
   icnd2260_fb_lvds.mem     帧缓存测试图 {R,G,B}     ← LVDS 用 (第一通道是 B!)
+  icnd2260_regs_lvds1.mem  单通道寄存器表 (0xb4[5:4]=00) —— 数据通路未实现, 见 docs/03
 tb/
   icnd2260_seq_tb.v        TTL  自校验测试台 (内含协议解码器, 逐字段对拍)
   icnd2260_lvds_tb.v       LVDS 自校验测试台 (含独立重算 CRC)
+  icnd2260_ack_rx_tb.v     ACK 解调自校验测试台 (造波形 + 改坏 CRC + 毛刺)
 xdc/lxb_icnd2260_pins.xdc, xdc/lxb_icnd2260_lvds_pins.xdc
 tools/
   gen_reg_defaults.py    从手册 §11 表格生成 .mem + sw/icnd2260_regs.h (带自检)
@@ -37,6 +40,7 @@ tools/
   run_sim.sh             跑仿真 (TTL + LVDS 两套)
   synth_check.tcl        TTL  版综合+布局布线+时序+DRC 自检
   synth_check_lvds.tcl   LVDS 版同上
+  build_bit.tcl          出 bitstream: -tclargs lvds | ttl
 sw/icnd2260_regs.h       PS 侧要用时的同一份寄存器表 ← 生成物
 ```
 
@@ -53,9 +57,12 @@ cmd.exe /c "cd /d D:\claude_workspace\pov3d\zynq_pov\icnd2260 && \
   vivado -mode batch -source tools\synth_check.tcl"
 ```
 
-当前状态：**两套仿真全尺寸 PASS**；布线都过 ——
-TTL WNS +0.411 / WHS +0.154（307 LUT），LVDS WNS +0.212 / WHS +0.120（465 LUT / 2 BRAM / 16 IOB）；
+当前状态：**三套自校验仿真全过**（TTL / LVDS 全尺寸 + ACK 解调 4 个用例）；
+布线都过 —— TTL WNS +0.411 / WHS +0.118，LVDS WNS +0.212 / WHS +0.037；
 DRC 只剩纯 PL 设计固有的 `ZPS7-1`。**还没上过板。**
+
+⚠ LVDS 的 WHS 余量小是因为约束用的是「数据沿卡在时钟沿 ±(1/4周期−1ns)」这个
+**自定的**窗口（手册没给 TTL/LVDS 的板级 tSU/tHLD），不是真实器件余量。
 
 ## 上板前先做这几件事
 
@@ -80,8 +87,18 @@ DRC 只剩纯 PL 设计固有的 `ZPS7-1`。**还没上过板。**
 
 | LED | 含义 |
 |---|---|
-| LED1 (P20) | 常亮 = 卡在上电/配置阶段没进正常显示；~1.5 Hz 闪 = 帧循环在跑 |
-| LED2 (P21) | 亮 = ACK 脚上出现过跳变（芯片有回话） |
+| LED1 (P20) | 常亮 = 卡在上电/配置阶段没进正常显示；闪 = 帧循环在跑 |
+| LED2 (P21) | **亮 = 收到过一条 CRC 正确的 ACK 回包** |
+
+LED2 比"屏亮不亮"硬得多：屏不亮还可能是电流、灰度、LED 板的事，而 LED2 亮说明
+**链路通 + 芯片收到了指令 + CRC 那套推断是对的**三件事同时成立。
+序列器每 `READ_PROBE_FR` 帧（默认 16）插一条读寄存器指令来产生这个回包。
+
+## 分支
+
+板子到了按 [`docs/03_branches.md`](docs/03_branches.md) 的分支矩阵二分：
+主线 `feature/icnd2260-lvds`，另有 `-ttl`（不用改电阻就能先试）/ `-phase270`（相位）/
+`-nocrc`（CRC 推断）/ `-slow`（速率）四个变体，每个只改一处。
 
 ## 参数在哪调
 

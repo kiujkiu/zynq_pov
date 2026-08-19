@@ -17,6 +17,7 @@ foreach m [glob -nocomplain $root/rtl/*.mem] { file copy -force $m $build }
 
 read_verilog [list \
     $root/rtl/icnd2260_tx.v \
+    $root/rtl/icnd2260_ack_rx.v \
     $root/rtl/icnd2260_seq.v \
     $root/rtl/icnd2260_lxb_top.v ]
 read_xdc $root/xdc/lxb_icnd2260_pins.xdc

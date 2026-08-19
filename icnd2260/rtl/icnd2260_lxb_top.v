@@ -224,19 +224,23 @@ module icnd2260_lxb_top #(
     reg [23:0] hb = 24'd0;
     always @(posedge clk25) hb <= hb + 24'd1;
 
-    reg ack_d = 1'b0, ack_seen = 1'b0;
-    always @(posedge clk25 or negedge rst_n) begin
-        if (!rst_n) begin
-            ack_d    <= 1'b0;
-            ack_seen <= 1'b0;
-        end else begin
-            ack_d <= ack;
-            if (ack != ack_d) ack_seen <= 1'b1;
-        end
+    // ---- ACK 回传解调 (与 LVDS 版同一个模块) -----------------------------
+    wire ack_crc_ok;
+    icnd2260_ack_rx #(.CLK_HZ (25_000_000), .MAX_WORDS (4)) u_ack (
+        .clk (clk25), .rst_n (rst_n), .ack_pin (ack),
+        .frame_valid (), .crc_ok (ack_crc_ok), .frame_err (),
+        .f_ack (), .f_dev (), .f_off (), .f_len (), .f_data0 (),
+        .f_crc_rx (), .f_crc_calc (), .f_nbits (), .busy ()
+    );
+
+    reg ack_ok_sticky = 1'b0;
+    always @(posedge clk25) begin
+        if (!rst_n) ack_ok_sticky <= 1'b0;
+        else if (ack_crc_ok) ack_ok_sticky <= 1'b1;
     end
 
     assign led[0] = running ? hb[23] : 1'b1;   // 没跑起来 = 常亮
-    assign led[1] = ack_seen;
+    assign led[1] = ack_ok_sticky;             // 亮 = 收到过 CRC 正确的 ACK 回包
 
 endmodule
 

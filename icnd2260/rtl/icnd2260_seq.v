@@ -28,6 +28,10 @@ module icnd2260_seq #(
     parameter integer CASCADE         = 1,        // 级联颗数
     parameter integer BLANK_FRAMES    = 64,       // §12 第 2 步
     parameter integer REG_REFRESH_FR  = 64,       // 每多少帧重发一次整表 (手册建议定期刷新)
+    // 每多少帧插一条「读寄存器」指令 (0 = 关)。回包走 ACK 引脚, 由 icnd2260_ack_rx 解。
+    // 这是判断「芯片到底活没活」最硬的判据, 也是验证 CRC 推断对不对的唯一手段。
+    parameter integer READ_PROBE_FR   = 16,
+    parameter integer READ_PROBE_OFF  = 8'h00,   // 探哪个寄存器
     parameter integer POWER_2V8_FIRST = 1,
     parameter integer RAIL_STAGGER    = 25_000,   // 两路 EN 之间的间隔 (clk 拍)
     parameter integer RAIL_SETTLE     = 500_000,  // 电源稳定等待 (clk 拍), 25MHz -> 20 ms
@@ -71,6 +75,7 @@ module icnd2260_seq #(
 
     localparam [2:0] KIND_VSYNC     = 3'd0;
     localparam [2:0] KIND_WRITE_ALL = 3'd1;
+    localparam [2:0] KIND_READ_DEV  = 3'd3;
     localparam [2:0] KIND_DISPLAY   = 3'd4;
 
     localparam [1:0] SRC_REG = 2'd0, SRC_FB = 2'd1, SRC_ZERO = 2'd2;
@@ -154,6 +159,7 @@ module icnd2260_seq #(
     reg [31:0] dly;
     reg [31:0] blank_cnt;
     reg [31:0] refresh_cnt;
+    reg [31:0] probe_cnt;
 
     assign running = (ph == P_RUN) || ((ph == P_WAIT) && (ph_next == P_RUN));
 
@@ -182,6 +188,7 @@ module icnd2260_seq #(
             dly          <= 32'd0;
             blank_cnt    <= 32'd0;
             refresh_cnt  <= 32'd0;
+            probe_cnt    <= 32'd0;
             frame_cnt    <= 32'd0;
             en_3v8       <= 1'b0;
             en_2v8       <= 1'b0;
@@ -248,15 +255,27 @@ module icnd2260_seq #(
                 endcase
             end
 
-            // ---- 正常显示 -------------------------------------------------
+            // ---- 正常显示: VSYNC -> [整表] -> [读探针] -> 显示 ------------
             P_RUN: begin
                 case (sub)
-                2'd0: issue(KIND_VSYNC, SRC_ZERO, P_RUN, 2'd1, 1'b0, 1'b0);
+                2'd0: begin
+                    cmd_offset <= 8'h00;
+                    cmd_length <= REG_COUNT[7:0] - 8'd1;
+                    issue(KIND_VSYNC, SRC_ZERO, P_RUN, 2'd1, 1'b0, 1'b0);
+                end
                 2'd1: begin
                     if (refresh_cnt == 0)
                         issue(KIND_WRITE_ALL, SRC_REG, P_RUN, 2'd2, 1'b0, 1'b0);
                     else
                         sub <= 2'd2;              // 这帧不刷寄存器
+                end
+                2'd2: begin
+                    if (READ_PROBE_FR != 0 && probe_cnt == 0) begin
+                        // 读 1 个寄存器: OFFSET=READ_PROBE_OFF, LENGTH=0 (0 对应 1 个)
+                        cmd_offset <= READ_PROBE_OFF[7:0];
+                        cmd_length <= 8'd0;
+                        issue(KIND_READ_DEV, SRC_ZERO, P_RUN, 2'd3, 1'b0, 1'b0);
+                    end else sub <= 2'd3;
                 end
                 default: issue(KIND_DISPLAY, SRC_FB, P_RUN, 2'd0, 1'b1, 1'b0);
                 endcase
@@ -274,6 +293,9 @@ module icnd2260_seq #(
                         frame_cnt   <= frame_cnt + 32'd1;
                         refresh_cnt <= (refresh_cnt >= REG_REFRESH_FR - 1)
                                        ? 32'd0 : (refresh_cnt + 32'd1);
+                        if (READ_PROBE_FR != 0)
+                            probe_cnt <= (probe_cnt >= READ_PROBE_FR - 1)
+                                         ? 32'd0 : (probe_cnt + 32'd1);
                     end
                 end
             end

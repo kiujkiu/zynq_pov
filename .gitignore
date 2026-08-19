@@ -188,3 +188,4 @@ icnd2260/.Xil/
 icnd2260/vivado*.jou
 icnd2260/vivado*.log
 icnd2260/build_lvds/
+icnd2260/build_bit/

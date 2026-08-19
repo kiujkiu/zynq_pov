@@ -49,6 +49,15 @@ POWERON_MASK = {0x00: (1 << 3), 0x15: (1 << 5)}
 # 0xb4[5:4]=10 (3 通道) 两种模式共用, 默认表里已经是 10, 不用动。
 LVDS_SET = {0x06: (1 << 9), 0x1a: (1 << 9)}
 
+# 0xb4[5:4] = 通道数: 00=1 通道, 01=2 通道, 10=3 通道, 11=6 通道(仅 TTL)
+CH_CODE = {1: 0b00, 2: 0b01, 3: 0b10, 6: 0b11}
+
+
+def set_channels(regs, n):
+    r = list(regs)
+    r[0xb4] = (r[0xb4] & ~0x0030) | (CH_CODE[n] << 4)
+    return r
+
 
 def build():
     regs = [0] * 256
@@ -91,10 +100,12 @@ def main():
     info = selfcheck(regs)
     regs_lvds = to_lvds(regs)
     selfcheck(regs_lvds, lvds=True)
+    regs_lvds1 = set_channels(regs_lvds, 1)
 
     for name, tbl, desc in [
-            ("icnd2260_regs.mem",      regs,      "TTL-3 通道 (手册 §11 原值)"),
-            ("icnd2260_regs_lvds.mem", regs_lvds, "mini-LVDS 3 通道 (0x06[9]=1, 0x1a[9]=1)")]:
+            ("icnd2260_regs.mem",       regs,       "TTL-3 通道 (手册 §11 原值)"),
+            ("icnd2260_regs_lvds.mem",  regs_lvds,  "mini-LVDS 3 通道 (0x06[9]=1, 0x1a[9]=1)"),
+            ("icnd2260_regs_lvds1.mem", regs_lvds1, "mini-LVDS **单通道** (0xb4[5:4]=00), 只用 D0 对")]:
         mem = os.path.join(root, "rtl", name)
         with open(mem, "w") as f:
             f.write("// 由 tools/gen_reg_defaults.py 生成, 勿手改\n")
@@ -102,8 +113,10 @@ def main():
             f.write(f"// 有效范围 0x00..0x{REG_LAST:02X} ({REG_COUNT} 个), 其余补 0 只为凑满 256 深度\n")
             for a in range(256):
                 tag = f"// 0x{a:02X}" + ("  <-- 表外补零" if a > REG_LAST else "")
-                if a in LVDS_SET and tbl is regs_lvds:
+                if a in LVDS_SET and tbl is not regs:
                     tag += "  <-- LVDS 使能位"
+                if a == 0xb4:
+                    tag += f"  <-- 通道数 [5:4]={(tbl[a] >> 4) & 3:02b}"
                 f.write(f"{tbl[a]:04x}   {tag}\n")
         print(f"OK  {REG_COUNT} regs -> {mem}   ({desc})")
 
@@ -129,6 +142,7 @@ def main():
 
     print(f"OK  {REG_COUNT} regs -> {hdr}")
     print(f"selfcheck: {info}")
+    print(f"  单通道版 0xb4 = 0x{regs_lvds1[0xb4]:04x} ([5:4]={(regs_lvds1[0xb4] >> 4) & 3:02b})")
 
 
 if __name__ == "__main__":

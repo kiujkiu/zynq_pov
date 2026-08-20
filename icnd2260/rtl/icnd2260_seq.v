@@ -89,6 +89,17 @@ module icnd2260_seq #(
 
     localparam integer TOTAL_PIX = PIX_PER_LINE * LINES * CASCADE;
 
+    // 🔴 FB_AW 装不下 TOTAL_PIX 的话, pl_last 里的 TOTAL_PIX[FB_AW-1:0] 会被**截断**,
+    //    于是每颗芯片发到一半就误判"发完了"。踩过一次: 9 颗 40x45 时 FB_AW 还是 11,
+    //    16199 截成 11 位 = 1863, 第 2 颗就提前收尾。这种不同步必须在仿真里就炸掉。
+    initial begin
+        if ((1 << FB_AW) < TOTAL_PIX) begin
+            $display("[icnd2260_seq] FB_AW=%0d 装不下 TOTAL_PIX=%0d (需要 %0d 位)",
+                     FB_AW, TOTAL_PIX, $clog2(TOTAL_PIX));
+            $fatal(1);
+        end
+    end
+
     localparam [2:0] KIND_VSYNC     = 3'd0;
     localparam [2:0] KIND_WRITE_ALL = 3'd1;
     localparam [2:0] KIND_READ_DEV  = 3'd3;

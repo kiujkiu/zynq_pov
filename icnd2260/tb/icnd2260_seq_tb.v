@@ -35,8 +35,15 @@ module icnd2260_seq_tb;
     localparam integer PIX       = 40;
     localparam integer CASCADE   = 1;
     localparam integer REG_COUNT = 238;
+    function integer clog2(input integer v);
+        integer i;
+        begin
+            clog2 = 0;
+            for (i = v - 1; i > 0; i = i >> 1) clog2 = clog2 + 1;
+        end
+    endfunction
     localparam integer TOTAL_PIX    = PIX * LINES * CASCADE;
-    localparam integer FB_AW        = 11;
+    localparam integer FB_AW     = clog2(TOTAL_PIX);
 
     localparam integer LEAD_DCLK = 16;
     localparam integer IDLE_DCLK = 160;

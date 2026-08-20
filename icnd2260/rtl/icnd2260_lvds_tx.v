@@ -38,7 +38,10 @@
 module icnd2260_lvds_tx #(
     parameter integer NLANE    = 3,     // mini-LVDS 数据对数: 1 / 2 / 3
     parameter integer IDLE_CLK = 64,    // 段间 IDLE 长度 (手册标注 64 mLVDS_CLOCK)
-    parameter integer VID_CRC  = 1      // 1 = 每颗芯片图像数据后追加 CHKSUM
+    parameter integer VID_CRC  = 1,     // 1 = 每颗芯片图像数据后追加 CHKSUM
+    // 一颗芯片的字数 = 每颗像素数 x 扫描行数。CRC 按**每颗**插一个 —— 手册原话是
+    // 「每颗芯片接收的图像数据最后需计算 CHECKSUM」。1 颗时看不出区别, 9 颗时必须分开。
+    parameter integer WORDS_PER_CHIP = 1800
 ) (
     input  wire                    clk,          // = mini-LVDS 位时钟
     input  wire                    rst_n,
@@ -124,6 +127,8 @@ module icnd2260_lvds_tx #(
     reg [3:0]  bitcnt;
     reg        pay_last_r;
     reg [16*NLANE-1:0] pay_sr;
+    reg [15:0] wcnt;           // 当前芯片内已发了多少个字
+    reg        last_chip;      // 这颗是不是最后一颗
 
     reg [15:0] vcrc [0:NLANE-1];
 
@@ -160,6 +165,8 @@ module icnd2260_lvds_tx #(
             bitcnt     <= 4'd0;
             pay_last_r <= 1'b0;
             pay_sr     <= {16*NLANE{1'b0}};
+            wcnt       <= 16'd0;
+            last_chip  <= 1'b0;
             kind_r     <= 3'd0;
             for (i = 0; i < NLANE; i = i + 1) vcrc[i] <= 16'hFFFF;
         end else begin
@@ -176,6 +183,8 @@ module icnd2260_lvds_tx #(
                     os_phase   <= 1'b0;
                     bitcnt     <= 4'd0;
                     pay_last_r <= 1'b0;
+                    wcnt       <= 16'd0;
+                    last_chip  <= 1'b0;
                     for (i = 0; i < NLANE; i = i + 1) vcrc[i] <= 16'hFFFF;
                     if (cmd_kind == KIND_VSYNC) begin
                         isync <= ~isync;          // VSYNC = I_SYNC 翻转一次
@@ -286,6 +295,7 @@ module icnd2260_lvds_tx #(
                     pay_sr     <= pl_data;
                     bitcnt     <= 4'd0;
                     pay_last_r <= 1'b0;
+                    wcnt       <= 16'd0;
                     st         <= S_VID;
                 end else nbits <= nbits - 7'd2;
             end
@@ -302,11 +312,23 @@ module icnd2260_lvds_tx #(
 
                 if (bitcnt == 4'd6 && pl_last) pay_last_r <= 1'b1;
                 if (bitcnt == 4'd7) begin
-                    if (pay_last_r) begin
-                        nbits <= 7'd16;
-                        gcnt  <= IDLE_CLK[8:0];
-                        st    <= (VID_CRC != 0) ? S_VCRC : S_POST;
-                    end else pay_sr <= pl_data;
+                    // 一颗芯片的数据发完 -> 插这颗的 CHKSUM; 是最后一颗就顺势收尾
+                    if (wcnt == WORDS_PER_CHIP[15:0] - 16'd1) begin
+                        last_chip <= pay_last_r;
+                        nbits     <= 7'd16;
+                        wcnt      <= 16'd0;
+                        if (VID_CRC != 0) begin
+                            st <= S_VCRC;
+                        end else begin
+                            if (pay_last_r) begin
+                                gcnt <= IDLE_CLK[8:0];
+                                st   <= S_POST;
+                            end else pay_sr <= pl_data;
+                        end
+                    end else begin
+                        wcnt   <= wcnt + 16'd1;
+                        pay_sr <= pl_data;
+                    end
                 end
                 bitcnt <= (bitcnt == 4'd7) ? 4'd0 : (bitcnt + 4'd1);
             end
@@ -319,8 +341,16 @@ module icnd2260_lvds_tx #(
                     vcrc[i]  <= {vcrc[i][13:0], 2'b00};
                 end
                 if (nbits <= 7'd2) begin
-                    gcnt <= IDLE_CLK[8:0];
-                    st   <= S_POST;
+                    if (last_chip) begin
+                        gcnt <= IDLE_CLK[8:0];
+                        st   <= S_POST;
+                    end else begin
+                        // 还有下一颗: 重置这颗的 CRC, 接着发
+                        for (i = 0; i < NLANE; i = i + 1) vcrc[i] <= 16'hFFFF;
+                        pay_sr     <= pl_data;
+                        bitcnt     <= 4'd0;
+                        st         <= S_VID;
+                    end
                 end else nbits <= nbits - 7'd2;
             end
 

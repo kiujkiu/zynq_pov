@@ -30,8 +30,8 @@
 module icnd2260_lxb_top #(
     parameter integer NLANE      = 3,
     parameter integer PIX        = 40,
-    parameter integer LINES      = 48,
-    parameter integer CASCADE    = 1,
+    parameter integer LINES      = 45,
+    parameter integer CASCADE    = 9,
     // DCLK 相位: 0 = 与数据同沿 (手册「上升沿开始、下降沿结束」的字面实现)
     //            1 = 反相 (数据眼中心对齐时钟沿, 首光打不出来时先试这个)
     parameter integer DCLK_INV   = 0,
@@ -57,7 +57,16 @@ module icnd2260_lxb_top #(
 );
 
     localparam integer TOTAL_PIX = PIX * LINES * CASCADE;
-    localparam integer FB_AW     = (TOTAL_PIX <= 2048) ? 11 : 12;
+    // ⚠ 旧版这里写死成 (TOTAL_PIX<=2048)?11:12, 只够 1 颗 40x48(1920 字);
+    //   换成 9 颗 40x45(16200 字) 时 12 位根本不够 ⇒ 地址回绕、图像乱。用 clog2 算。
+    function integer clog2(input integer v);
+        integer i;
+        begin
+            clog2 = 0;
+            for (i = v - 1; i > 0; i = i >> 1) clog2 = clog2 + 1;
+        end
+    endfunction
+    localparam integer FB_AW     = clog2(TOTAL_PIX);
 
     // ---------------------------------------------------------------------
     // 时钟: 50 MHz -> 25 MHz (DCLK 域). 手册 FDCLK Max = 25 MHz (TTL-DDR)

@@ -28,15 +28,24 @@
 
 module icnd2260_lvds_tb;
 
-    parameter integer LINES        = 4;       // 真板 48
+    parameter integer LINES        = 4;       // 真板 45
+    parameter integer CASCADE      = 2;       // 真板 9 —— 多颗才测得到「每颗一个 CRC」
     parameter integer BLANK_FRAMES = 2;       // 真板 64
+
+    function integer clog2(input integer v);
+        integer i;
+        begin
+            clog2 = 0;
+            for (i = v - 1; i > 0; i = i >> 1) clog2 = clog2 + 1;
+        end
+    endfunction
 
     localparam integer NLANE     = 3;
     localparam integer PIX       = 40;
-    localparam integer CASCADE   = 1;
+    localparam integer WPC       = PIX * LINES;   // 每颗芯片的字数
     localparam integer REG_COUNT = 238;
     localparam integer TOTAL_PIX = PIX * LINES * CASCADE;
-    localparam integer FB_AW     = 11;
+    localparam integer FB_AW     = clog2(TOTAL_PIX);
     localparam integer IDLE_CLK  = 64;
 
     reg clk = 1'b0, rst_n = 1'b0;
@@ -83,7 +92,8 @@ module icnd2260_lvds_tb;
         .dbg_ph (), .dbg_sub ()
     );
 
-    icnd2260_lvds_tx #(.NLANE (NLANE), .IDLE_CLK (IDLE_CLK), .VID_CRC (1)) u_tx (
+    icnd2260_lvds_tx #(.NLANE (NLANE), .IDLE_CLK (IDLE_CLK), .VID_CRC (1),
+        .WORDS_PER_CHIP (WPC)) u_tx (
         .clk (clk), .rst_n (rst_n),
         .cmd_valid (cmd_valid), .cmd_ready (cmd_ready), .cmd_kind (cmd_kind),
         .cmd_device (cmd_device), .cmd_offset (cmd_offset),
@@ -134,6 +144,7 @@ module icnd2260_lvds_tb;
     reg expect_zero_disp;
     integer i;
     integer ci, cj;          // D_VCRC 里重算 CRC 的循环变量 (别复用 widx/nb!)
+    integer chip_base;       // 当前芯片的数据块起始字号
 
     task fail(input [255:0] tag);
         begin
@@ -293,7 +304,7 @@ module icnd2260_lvds_tb;
                     end
                     expect_zero_disp = (blank_seen < BLANK_FRAMES);
                     blank_seen = blank_seen + 1;
-                    dst = D_VDATA;  nb = 0;  widx = 0;
+                    dst = D_VDATA;  nb = 0;  widx = 0;  chip_base = 0;
                     for (i = 0; i < NLANE; i = i + 1) wacc[i] = 16'h0;
                 end
             end
@@ -306,7 +317,11 @@ module icnd2260_lvds_tb;
                 if (nb == 16) begin
                     for (i = 0; i < NLANE; i = i + 1) begin
                         if (expect_zero_disp) begin
-                            if (wacc[i] !== 16'h0) fail("blank_frame_not_zero");
+                            if (wacc[i] !== 16'h0) begin
+                                $display("  widx=%0d chip_base=%0d (widx-base=%0d, WPC=%0d) lane%0d got %04x",
+                                         widx, chip_base, widx-chip_base, WPC, i, wacc[i]);
+                                fail("blank_frame_not_zero");
+                            end
                         end else if (wacc[i] !== fb[widx][16*i +: 16]) begin
                             $display("  px%0d lane%0d got %04x want %04x",
                                      widx, i, wacc[i], fb[widx][16*i +: 16]);
@@ -315,7 +330,8 @@ module icnd2260_lvds_tb;
                     end
                     nb   = 0;
                     widx = widx + 1;
-                    if (widx == TOTAL_PIX) begin
+                    // 🔴 每颗芯片的数据块后面各跟一个 CHKSUM (手册: 每颗芯片…最后需计算)
+                    if (widx - chip_base == WPC) begin
                         dst = D_VCRC;
                         for (i = 0; i < NLANE; i = i + 1) wacc[i] = 16'h0;
                     end
@@ -330,7 +346,7 @@ module icnd2260_lvds_tb;
                 if (nb == 16) begin
                     for (i = 0; i < NLANE; i = i + 1) begin
                         crc_calc = 16'hFFFF;
-                        for (ci = 0; ci < TOTAL_PIX; ci = ci + 1) begin
+                        for (ci = chip_base; ci < widx; ci = ci + 1) begin
                             for (cj = 15; cj >= 0; cj = cj - 1)
                                 crc_calc = crc_step(crc_calc,
                                     expect_zero_disp ? 1'b0 : fb[ci][16*i + cj]);
@@ -341,7 +357,14 @@ module icnd2260_lvds_tb;
                             fail("video_crc_mismatch");
                         end
                     end
-                    dst = D_IDLE;  zeros = 0;  nb = 0;
+                    // 还有下一颗就接着收, 否则整帧结束
+                    if (widx == TOTAL_PIX) begin
+                        dst = D_IDLE;  zeros = 0;  nb = 0;
+                    end else begin
+                        chip_base = widx;
+                        dst = D_VDATA;  nb = 0;
+                        for (i = 0; i < NLANE; i = i + 1) wacc[i] = 16'h0;
+                    end
                 end
             end
             endcase
@@ -358,6 +381,7 @@ module icnd2260_lvds_tb;
 
     // I_SYNC 每帧只翻一次
     always @(isync) if (rst_n) n_sync = n_sync + 1;
+
 
     //-------------------------------------------------------------------------
     // §12 上电: 头两条整表写要屏蔽 0x00[3] / 0x15[5]

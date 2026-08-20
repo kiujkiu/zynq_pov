@@ -32,8 +32,9 @@
 module icnd2260_lxb_lvds_top #(
     parameter integer NLANE   = 3,
     parameter integer PIX     = 40,
-    parameter integer LINES   = 48,
-    parameter integer CASCADE = 1,
+    // 供应商样板实测: 9 颗级联, 每颗 40 像素 x 45 扫描行 (2026-08-20 用户确认)
+    parameter integer LINES   = 45,
+    parameter integer CASCADE = 9,
     // 位时钟 = 1000 MHz / CLK_DIV。24→41.7MHz  12→83.3MHz  6→166.7MHz(手册上限)
     // 首光建议从 24 起步, 通了再往上推。每对速率 = 位时钟 × 2 (双沿)。
     parameter integer CLK_DIV = 24,
@@ -69,7 +70,16 @@ module icnd2260_lxb_lvds_top #(
 
     localparam integer TOTAL_PIX = PIX * LINES * CASCADE;
     localparam integer BITCLK_HZ = 1_000_000_000 / CLK_DIV;
-    localparam integer FB_AW     = (TOTAL_PIX <= 2048) ? 11 : 12;
+    // ⚠ 旧版这里写死成 (TOTAL_PIX<=2048)?11:12, 只够 1 颗 40x48(1920 字);
+    //   换成 9 颗 40x45(16200 字) 时 12 位根本不够 ⇒ 地址回绕、图像乱。用 clog2 算。
+    function integer clog2(input integer v);
+        integer i;
+        begin
+            clog2 = 0;
+            for (i = v - 1; i > 0; i = i >> 1) clog2 = clog2 + 1;
+        end
+    endfunction
+    localparam integer FB_AW     = clog2(TOTAL_PIX);
 
     // ---------------------------------------------------------------------
     // 时钟: 50 MHz -> VCO 1000 MHz -> 位时钟 (0° 给数据, 90° 给转发时钟)
@@ -176,7 +186,8 @@ module icnd2260_lxb_lvds_top #(
         .dbg_ph (dbg_ph), .dbg_sub (dbg_sub)
     );
 
-    icnd2260_lvds_tx #(.NLANE (NLANE), .VID_CRC (VID_CRC)) u_tx (
+    icnd2260_lvds_tx #(.NLANE (NLANE), .VID_CRC (VID_CRC),
+                      .WORDS_PER_CHIP (PIX * LINES)) u_tx (
         .clk (clkbit), .rst_n (rst_n_eff),
         .cmd_valid (cmd_valid), .cmd_ready (cmd_ready), .cmd_kind (cmd_kind),
         .cmd_device (cmd_device), .cmd_offset (cmd_offset),

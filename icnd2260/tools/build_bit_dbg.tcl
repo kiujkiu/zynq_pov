@@ -14,6 +14,14 @@
 #
 # ⚠ 纯 PL 设计走 JTAG 配置, 鹿小班 boot mode 拨到 JTAG。
 
+# -tclargs <CLK_DIV>   24=41.7MHz(默认)  48=20.8MHz  12=83.3MHz  6=166.7MHz
+set CLK_DIV 24
+if {[llength $argv] > 0} { set CLK_DIV [lindex $argv 0] }
+# XDC 里的时序窗口跟着位时钟走; 位时钟周期(ns) = CLK_DIV
+set BITCLK_NS [expr {double($CLK_DIV)}]
+set MARGIN    [expr {$CLK_DIV >= 12 ? 1.0 : 0.3}]
+puts "=== 构建配置: CLK_DIV=$CLK_DIV -> 位时钟 [format %.2f [expr {1000.0/$CLK_DIV}]] MHz, BITCLK_NS=$BITCLK_NS, MARGIN=$MARGIN ==="
+
 set root  [file normalize [file dirname [info script]]/..]
 set build $root/build_dbg
 file mkdir $build
@@ -36,13 +44,14 @@ set_property -dict [list \
     CONFIG.C_PROBE_IN5_WIDTH  {16} \
     CONFIG.C_PROBE_IN6_WIDTH   {9} \
     CONFIG.C_PROBE_IN7_WIDTH  {32} \
-    CONFIG.C_NUM_PROBE_OUT     {6} \
+    CONFIG.C_NUM_PROBE_OUT     {7} \
     CONFIG.C_PROBE_OUT0_WIDTH  {8} \
     CONFIG.C_PROBE_OUT1_WIDTH {16} \
     CONFIG.C_PROBE_OUT2_WIDTH  {1} \
     CONFIG.C_PROBE_OUT3_WIDTH  {8} \
     CONFIG.C_PROBE_OUT4_WIDTH  {1} \
     CONFIG.C_PROBE_OUT5_WIDTH  {1} \
+    CONFIG.C_PROBE_OUT6_WIDTH  {4} \
     CONFIG.C_PROBE_OUT0_INIT_VAL {0x00} \
     CONFIG.C_PROBE_OUT3_INIT_VAL {0x00} \
 ] [get_ips vio_dbg]
@@ -57,12 +66,13 @@ read_verilog [list \
     $root/rtl/icnd2260_lxb_lvds_top.v ]
 read_xdc $root/xdc/lxb_icnd2260_lvds_pins.xdc
 
-synth_design -top icnd2260_lxb_lvds_top -part xc7z020clg484-1 -generic DEBUG=1
+synth_design -top icnd2260_lxb_lvds_top -part xc7z020clg484-1 \
+    -generic DEBUG=1 -generic CLK_DIV=$CLK_DIV
 opt_design
 place_design
 route_design
 
-set name icnd2260_lvds_dbg
+set name icnd2260_lvds_dbg_div$CLK_DIV
 report_utilization    -file $build/$name.util.rpt
 report_timing_summary -file $build/$name.timing.rpt
 report_drc            -file $build/$name.drc.rpt

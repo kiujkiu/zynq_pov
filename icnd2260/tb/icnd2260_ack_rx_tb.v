@@ -27,7 +27,7 @@ module icnd2260_ack_rx_tb;
 
     reg ack_pin = 1'b1;                        // 空闲高
 
-    wire        frame_valid, crc_ok, frame_err, busy;
+    wire        frame_valid, frame_ok, crc_ok, frame_err, busy;
     wire [3:0]  f_ack, f_dev;
     wire [7:0]  f_off, f_len;
     wire [15:0] f_data0, f_crc_rx, f_crc_calc;
@@ -35,7 +35,8 @@ module icnd2260_ack_rx_tb;
 
     icnd2260_ack_rx #(.CLK_HZ (CLK_HZ), .MAX_WORDS (4), .REV_CRC (1)) dut (
         .clk (clk), .rst_n (rst_n), .ack_pin (ack_pin),
-        .frame_valid (frame_valid), .crc_ok (crc_ok), .frame_err (frame_err),
+        .frame_valid (frame_valid), .frame_ok (frame_ok), .crc_ok (crc_ok),
+        .frame_err (frame_err),
         .f_ack (f_ack), .f_dev (f_dev), .f_off (f_off), .f_len (f_len),
         .f_data0 (f_data0), .f_crc_rx (f_crc_rx), .f_crc_calc (f_crc_calc),
         .f_nbits (f_nbits), .busy (busy)
@@ -140,7 +141,11 @@ module icnd2260_ack_rx_tb;
     endtask
 
     reg frame_valid_seen = 1'b0;
-    always @(posedge clk) if (frame_valid) frame_valid_seen <= 1'b1;
+    reg frame_ok_seen    = 1'b0;
+    always @(posedge clk) begin
+        if (frame_valid) frame_valid_seen <= 1'b1;
+        if (frame_ok)    frame_ok_seen    <= 1'b1;
+    end
 
     initial begin
         rst_n = 1'b0;
@@ -149,11 +154,12 @@ module icnd2260_ack_rx_tb;
         repeat (20) @(posedge clk);
 
         // ---- 用例 1: 1 个寄存器, CRC 正确 ---------------------------------
-        frame_valid_seen = 1'b0;
+        frame_valid_seen = 1'b0;  frame_ok_seen = 1'b0;
         build(4'b0010, 4'h0, 8'h00, 1, 16'h3F3C, 1'b0);
         send_frame;
         repeat (40) @(posedge clk);
         expect_frame(4'b0010, 4'h0, 8'h00, 1, 16'h3F3C, 1'b1, "case1");
+        if (!frame_ok_seen) fail("case1_frame_ok_should_be_1");
 
         // ---- 用例 2: 4 个寄存器 -------------------------------------------
         frame_valid_seen = 1'b0;
@@ -168,6 +174,15 @@ module icnd2260_ack_rx_tb;
         send_frame;
         repeat (40) @(posedge clk);
         expect_frame(4'b0010, 4'h0, 8'h00, 1, 16'h1234, 1'b0, "case3_corrupt");
+
+        // ---- 用例 3b: 头部码不对 -> frame_ok 必须为 0 ---------------------
+        // 悬空脚放大噪声解出来的垃圾帧就是靠这道闸挡掉的 (上板实测过 18k 帧/秒)
+        frame_valid_seen = 1'b0;  frame_ok_seen = 1'b0;
+        build(4'b1011, 4'h0, 8'h00, 1, 16'h1234, 1'b0);   // ACK 码 1011, 不是 0010
+        send_frame;
+        repeat (40) @(posedge clk);
+        if (!frame_valid_seen) fail("case3b_no_frame");
+        if (frame_ok_seen)     fail("case3b_frame_ok_should_be_0");
 
         // ---- 用例 4: 毛刺不能触发 ----------------------------------------
         frame_valid_seen = 1'b0;

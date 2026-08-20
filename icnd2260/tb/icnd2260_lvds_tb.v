@@ -79,7 +79,7 @@ module icnd2260_lvds_tb;
         // 调试口显式接死: 悬空的话是 z, dbg_probe_en 会把 cmd_offset 传成 x,
         // 而 TB 又不检查读指令的 offset ⇒ 悄悄放过去。别留悬空输入。
         .dbg_reg_we (1'b0), .dbg_reg_addr (8'h00), .dbg_reg_data (16'h0000),
-        .dbg_probe_en (1'b0), .dbg_probe_off (8'h00),
+        .dbg_probe_en (1'b0), .dbg_probe_off (8'h00), .dbg_probe_dev (4'h0),
         .dbg_ph (), .dbg_sub ()
     );
 
@@ -220,6 +220,8 @@ module icnd2260_lvds_tb;
                         end else if (f_cmd === 4'b1010) begin
                             // 读寄存器: 没有数据域, 头后直接跟 CHKSUM
                             n_read = n_read + 1;
+                            // 🔴 「读指定设备」, DEVICE 必须是真实设备号 (第 1 颗 = 0)
+                            if (f_dev !== 4'h0) fail("read_device_not_0");
                             dst = D_CCRC;  acc = 56'h0;  nb = 0;
                         end else begin
                             fail("cfg_cmd_unknown");

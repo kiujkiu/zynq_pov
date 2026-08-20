@@ -145,6 +145,7 @@ module icnd2260_lxb_lvds_top #(
     wire [15:0] dbg_reg_data;
     wire        dbg_probe_en;
     wire [7:0]  dbg_probe_off;
+    wire [3:0]  dbg_probe_dev;
     wire        dbg_soft_rst;
     wire [3:0]  dbg_ph;
     wire [1:0]  dbg_sub;
@@ -171,6 +172,7 @@ module icnd2260_lxb_lvds_top #(
         .dbg_reg_we (dbg_reg_we), .dbg_reg_addr (dbg_reg_addr),
         .dbg_reg_data (dbg_reg_data),
         .dbg_probe_en (dbg_probe_en), .dbg_probe_off (dbg_probe_off),
+        .dbg_probe_dev (dbg_probe_dev),
         .dbg_ph (dbg_ph), .dbg_sub (dbg_sub)
     );
 
@@ -227,7 +229,7 @@ module icnd2260_lxb_lvds_top #(
     // crc_ok 一旦为真, 就同时坐实了三件事: 芯片活着 / 收到了我们的指令 /
     // CRC 那套推断是对的。这是首光阶段最硬的判据 —— 比"屏亮没亮"硬得多,
     // 因为屏不亮还可能是电流、灰度、LED 板的问题。
-    wire        ack_frame_valid, ack_crc_ok, ack_frame_err;
+    wire        ack_frame_valid, ack_frame_ok, ack_crc_ok, ack_frame_err;
     wire [3:0]  ack_f_ack, ack_f_dev;
     wire [7:0]  ack_f_off, ack_f_len;
     wire [15:0] ack_f_data0, ack_f_crc_rx, ack_f_crc_calc;
@@ -235,7 +237,7 @@ module icnd2260_lxb_lvds_top #(
 
     icnd2260_ack_rx #(.CLK_HZ (BITCLK_HZ), .MAX_WORDS (4)) u_ack (
         .clk (clkbit), .rst_n (rst_n_eff), .ack_pin (ack),
-        .frame_valid (ack_frame_valid), .crc_ok (ack_crc_ok),
+        .frame_valid (ack_frame_valid), .frame_ok (ack_frame_ok), .crc_ok (ack_crc_ok),
         .frame_err (ack_frame_err),
         .f_ack (ack_f_ack), .f_dev (ack_f_dev), .f_off (ack_f_off),
         .f_len (ack_f_len), .f_data0 (ack_f_data0),
@@ -267,15 +269,21 @@ module icnd2260_lxb_lvds_top #(
     reg ack_ok_sticky = 1'b0;
     reg [15:0] ack_frame_cnt = 16'd0;
     reg [15:0] ack_err_cnt   = 16'd0;
+    reg        ack_err_d     = 1'b0;
     always @(posedge clkbit) begin
         if (!rst_n_eff) begin
             ack_ok_sticky <= 1'b0;
             ack_frame_cnt <= 16'd0;
             ack_err_cnt   <= 16'd0;
+            ack_err_d     <= 1'b0;
         end else begin
             if (ack_crc_ok)      ack_ok_sticky <= 1'b1;
-            if (ack_frame_valid) ack_frame_cnt <= ack_frame_cnt + 16'd1;
-            if (ack_frame_err)   ack_err_cnt   <= ack_err_cnt + 16'd1;
+            if (ack_frame_ok)    ack_frame_cnt <= ack_frame_cnt + 16'd1;
+            // ⚠ frame_err 是**电平**不是脉冲(它在解调器的 A_IDLE 才清),
+            //   直接 if(level) 会在电平持续期间每拍加一次, 数出来的值没有意义。
+            //   这里取上升沿, 一次错误只记一次。
+            ack_err_d <= ack_frame_err;
+            if (ack_frame_err && !ack_err_d) ack_err_cnt <= ack_err_cnt + 16'd1;
         end
     end
 
@@ -299,6 +307,7 @@ module icnd2260_lxb_lvds_top #(
         wire [15:0] o_data;
         wire [0:0]  o_we_tog, o_probe_en, o_soft_rst;
         wire [7:0]  o_probe_off;
+        wire [3:0]  o_probe_dev;
 
         // VIO 的输出是电平, 用「变化沿」当写脉冲: 在 GUI 里把这一位一翻就写一次
         reg we_tog_d = 1'b0;
@@ -308,6 +317,7 @@ module icnd2260_lxb_lvds_top #(
         assign dbg_reg_data  = o_data;
         assign dbg_probe_en  = o_probe_en[0];
         assign dbg_probe_off = o_probe_off;
+        assign dbg_probe_dev = o_probe_dev;
         assign dbg_soft_rst  = o_soft_rst[0];
 
         wire [15:0] status = {mmcm_locked, running, out_en, en_3v8,
@@ -329,7 +339,8 @@ module icnd2260_lxb_lvds_top #(
             .probe_out2 (o_we_tog),                  // 1
             .probe_out3 (o_probe_off),               // 8
             .probe_out4 (o_probe_en),                // 1
-            .probe_out5 (o_soft_rst)                 // 1
+            .probe_out5 (o_soft_rst),                // 1
+            .probe_out6 (o_probe_dev)                // 4  <-- 扫设备号找级联芯片
         );
     end else begin : g_nodbg
         assign dbg_reg_we    = 1'b0;
@@ -337,6 +348,7 @@ module icnd2260_lxb_lvds_top #(
         assign dbg_reg_data  = 16'h0000;
         assign dbg_probe_en  = 1'b0;
         assign dbg_probe_off = 8'h00;
+        assign dbg_probe_dev = 4'h0;
         assign dbg_soft_rst  = 1'b0;
     end
     endgenerate

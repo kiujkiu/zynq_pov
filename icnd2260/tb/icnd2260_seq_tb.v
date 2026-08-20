@@ -83,7 +83,7 @@ module icnd2260_seq_tb;
         // 调试口显式接死: 悬空的话是 z, dbg_probe_en 会把 cmd_offset 传成 x,
         // 而 TB 又不检查读指令的 offset ⇒ 悄悄放过去。别留悬空输入。
         .dbg_reg_we (1'b0), .dbg_reg_addr (8'h00), .dbg_reg_data (16'h0000),
-        .dbg_probe_en (1'b0), .dbg_probe_off (8'h00),
+        .dbg_probe_en (1'b0), .dbg_probe_off (8'h00), .dbg_probe_dev (4'h0),
         .dbg_ph (), .dbg_sub ()
     );
 
@@ -119,6 +119,7 @@ module icnd2260_seq_tb;
     integer    hdr_len;
     integer    kind;                 // 0=未定 1=命令 2=VHEAD
     reg [3:0]  cmd_f;
+    reg [3:0]  rd_dev;
     reg [7:0]  off_f, len_f;
     reg [15:0] pay [0:NLANE-1];
     integer    pay_bit, pay_idx, pay_len;
@@ -216,6 +217,7 @@ module icnd2260_seq_tb;
 
                 if (kind == K_CMD && hdr_bits == 20 && hdr_len == 20) begin
                     cmd_f = hdr[7:4];
+                    rd_dev = hdr[3:0];
                     if (hdr[3:0] != 4'hF && cmd_f == 4'b0101) fail("write_all_device_not_F");
                     if (cmd_f == 4'b0011) begin        // VSYNC: 到此为止
                         n_vsync = n_vsync + 1;
@@ -236,6 +238,9 @@ module icnd2260_seq_tb;
                     end else if (cmd_f == 4'b1010) begin
                         // 读寄存器: **没有数据域**, 头后面直接是 IDLE, 返回值走 ACK
                         n_read = n_read + 1;
+                        // 🔴 读是「读指定设备」, DEVICE 必须是真实设备号 (第 1 颗 = 0),
+                        //    不能跟写广播一样填 0xF —— 早先就是这里写死 0xF 导致上板零回包。
+                        if (rd_dev !== 4'h0) fail("read_device_not_0");
                         dph    = PH_TRAIL;
                     end else begin
                         dph = PH_PAY;

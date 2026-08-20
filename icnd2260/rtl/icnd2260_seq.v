@@ -32,6 +32,10 @@ module icnd2260_seq #(
     // 这是判断「芯片到底活没活」最硬的判据, 也是验证 CRC 推断对不对的唯一手段。
     parameter integer READ_PROBE_FR   = 16,
     parameter integer READ_PROBE_OFF  = 8'h00,   // 探哪个寄存器 (可被 dbg_probe_off 覆盖)
+    // 🔴 读寄存器是「读指定设备」, 不支持广播。设备号 **第 1 颗 = 0**, 第 16 颗 = 0xF。
+    //    早先这里跟写指令共用了 0xF ⇒ 等于一直在点名第 16 颗, 板上没那么多颗就永远没人回。
+    //    两个 TB 当时也没检查读指令的 DEVICE, 所以没抓到。
+    parameter integer READ_PROBE_DEV  = 4'h0,
     parameter integer POWER_2V8_FIRST = 1,
     parameter integer RAIL_STAGGER    = 25_000,   // 两路 EN 之间的间隔 (clk 拍)
     parameter integer RAIL_SETTLE     = 500_000,  // 电源稳定等待 (clk 拍), 25MHz -> 20 ms
@@ -72,8 +76,9 @@ module icnd2260_seq #(
     input  wire                    dbg_reg_we,
     input  wire [7:0]              dbg_reg_addr,
     input  wire [15:0]             dbg_reg_data,
-    input  wire                    dbg_probe_en,   // 1 = 用 dbg_probe_off 覆盖参数
+    input  wire                    dbg_probe_en,   // 1 = 用 dbg_probe_off/dev 覆盖参数
     input  wire [7:0]              dbg_probe_off,
+    input  wire [3:0]              dbg_probe_dev,  // 扫 0..15 可反推级联了几颗
 
     // ---- 状态 -------------------------------------------------------------
     output wire                    running,      // 已进入正常显示
@@ -91,7 +96,9 @@ module icnd2260_seq #(
 
     localparam [1:0] SRC_REG = 2'd0, SRC_FB = 2'd1, SRC_ZERO = 2'd2;
 
-    assign cmd_device  = 4'hF;
+    // 写所有设备(0101) 时 DEVICE 是无关位; 读指定设备(1010) 时它是真正的设备号。
+    wire [3:0] probe_dev = dbg_probe_en ? dbg_probe_dev : READ_PROBE_DEV[3:0];
+    assign cmd_device  = (cmd_kind == KIND_READ_DEV) ? probe_dev : 4'hF;
     assign cmd_rows    = LINES[7:0] - 8'd1;
     assign cmd_cascade = CASCADE[3:0] - 4'd1;
 

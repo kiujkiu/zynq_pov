@@ -42,6 +42,7 @@ module icnd2260_ack_rx #(
     input  wire        ack_pin,          // 直接接引脚, 内部做同步
 
     output reg         frame_valid,      // 收完一帧, 打一拍脉冲
+    output reg         frame_ok,         // 迟一拍的脉冲: 头部字段合理才拉高
     output reg         crc_ok,
     output reg         frame_err,        // 位宽越界 / 溢出 / 帧太短
     output reg  [3:0]  f_ack,
@@ -222,13 +223,18 @@ module icnd2260_ack_rx #(
     end
 
     // f_crc_rx / f_crc_calc 在 A_DONE 那拍写入 ⇒ 下一拍比较
+    // frame_valid 那一拍 f_* 才刚写进去, 所以迟一拍再判。
+    // frame_ok 只看「这帧长得像不像一帧」: ACK[3:0] 手册默认 0b0010。
+    // 悬空脚放大噪声解出来的垃圾帧几乎不可能凑出这个码 ⇒ 用它过滤计数。
     reg valid_d;
     always @(posedge clk) begin
         if (!rst_n) begin
-            valid_d <= 1'b0;
-            crc_ok  <= 1'b0;
+            valid_d  <= 1'b0;
+            crc_ok   <= 1'b0;
+            frame_ok <= 1'b0;
         end else begin
-            valid_d <= frame_valid;
+            valid_d  <= frame_valid;
+            frame_ok <= valid_d && (f_ack == 4'b0010);
             if (valid_d) crc_ok <= (f_crc_rx == f_crc_calc);
         end
     end

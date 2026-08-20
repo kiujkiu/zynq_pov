@@ -137,6 +137,7 @@ module icnd2260_lxb_top #(
     wire [15:0] dbg_reg_data  = 16'h0000;
     wire        dbg_probe_en  = 1'b0;
     wire [7:0]  dbg_probe_off = 8'h00;
+    wire [3:0]  dbg_probe_dev = 4'h0;
     wire [3:0]  dbg_ph;
     wire [1:0]  dbg_sub;
 
@@ -159,6 +160,7 @@ module icnd2260_lxb_top #(
         .dbg_reg_we (dbg_reg_we), .dbg_reg_addr (dbg_reg_addr),
         .dbg_reg_data (dbg_reg_data),
         .dbg_probe_en (dbg_probe_en), .dbg_probe_off (dbg_probe_off),
+        .dbg_probe_dev (dbg_probe_dev),
         .dbg_ph (dbg_ph), .dbg_sub (dbg_sub)
     );
 
@@ -241,7 +243,7 @@ module icnd2260_lxb_top #(
     wire ack_crc_ok;
     icnd2260_ack_rx #(.CLK_HZ (25_000_000), .MAX_WORDS (4)) u_ack (
         .clk (clk25), .rst_n (rst_n), .ack_pin (ack),
-        .frame_valid (), .crc_ok (ack_crc_ok), .frame_err (),
+        .frame_valid (), .frame_ok (), .crc_ok (ack_crc_ok), .frame_err (),
         .f_ack (), .f_dev (), .f_off (), .f_len (), .f_data0 (),
         .f_crc_rx (), .f_crc_calc (), .f_nbits (), .busy ()
     );

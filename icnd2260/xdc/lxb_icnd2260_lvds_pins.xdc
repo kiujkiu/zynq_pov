@@ -34,7 +34,11 @@ set_property -dict { PACKAGE_PIN W22  IOSTANDARD LVDS_25 } [get_ports { r_n }]; 
 ## --- 单端控制 (BANK 33 ⇒ 跟着变 LVCMOS25) -----------------------------------
 set_property -dict { PACKAGE_PIN AA18 IOSTANDARD LVCMOS25 DRIVE 8 SLEW FAST } [get_ports { sync }]; # L12N_33 J1.23 I_SYNC
 set_property -dict { PACKAGE_PIN AA13 IOSTANDARD LVCMOS25 DRIVE 8 } [get_ports { dclk }];           # L23N_33 J1.21 (LVDS 模式恒 0)
-set_property -dict { PACKAGE_PIN AB15 IOSTANDARD LVCMOS25 } [get_ports { ack }];                    # L24N_33 J1.22 ACK_O
+# 🔴 ACK 必须加上拉: 手册里 ACK 的**空闲态是高电平**, 而芯片没接/没驱动时这根是悬空的。
+#   悬空的 CMOS 输入会在阈值附近放大耦合噪声 ⇒ 解调器不停解出垃圾帧
+#   (实测过: 18,245 帧/秒, 而我们每秒只问 83 次, 差 220 倍, 且帧帧 CRC 错)。
+#   加上拉后线被钉在空闲电平, "收到 0 帧"才重新变成有意义的观测。
+set_property -dict { PACKAGE_PIN AB15 IOSTANDARD LVCMOS25 PULLUP TRUE } [get_ports { ack }];        # L24N_33 J1.22 ACK_O
 set_property -dict { PACKAGE_PIN V14  IOSTANDARD LVCMOS25 DRIVE 8 SLEW SLOW } [get_ports { en_3v8 }];
 set_property -dict { PACKAGE_PIN V15  IOSTANDARD LVCMOS25 DRIVE 8 SLEW SLOW } [get_ports { en_2v8 }];
 
@@ -54,8 +58,10 @@ set_property -dict { PACKAGE_PIN P21 IOSTANDARD LVCMOS33 } [get_ports { led[1] }
 ##   CLK_DIV 12 -> 83.333MHz -> 12.0 ns
 ##   CLK_DIV  6 ->166.667MHz ->  6.0 ns      (手册上限)
 ## ============================================================================
-set BITCLK_NS 24.0
-set MARGIN     1.0
+# BITCLK_NS 必须等于顶层的 CLK_DIV (位时钟周期正好是 CLK_DIV 纳秒)。
+# 构建脚本可以在 read_xdc 之前先 set 好这两个变量来覆盖; 没设就用默认值。
+if {![info exists BITCLK_NS]} { set BITCLK_NS 24.0 }
+if {![info exists MARGIN]}    { set MARGIN     1.0 }
 set TSU [expr {$BITCLK_NS/4.0 - $MARGIN}]
 set THD [expr {$BITCLK_NS/4.0 - $MARGIN}]
 

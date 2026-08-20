@@ -12,7 +12,9 @@
 ## 时钟: 板载 PL_CLK_50M -> IO_L13P_T2_MRCC_34 = M19 (原理图 P3 / P7)
 ## LED : P20 / P21, 高电平点亮 (BANK 34)
 ##
-## 电平: BANK 33 / 34 的 VCCO 都是 3.3V ⇒ LVCMOS33。DRIVE 4 / SLEW FAST 沿用
+## 🔴 电平: BANK 33 的 VCCO 已改成 **2.5V**(为了出 LVDS_25) ⇒ 这份 TTL 约束里
+##    BANK 33 的脚全部是 **LVCMOS25**; 只有 clk50(M19) 和 LED(P20/P21) 在 BANK 34,
+##    仍是 3.3V。混用会被 Vivado 判 bank VCCO 冲突。DRIVE 4 / SLEW FAST 沿用
 ##       ssn_2260/CONCLUSION.md 的定案 (这里才 13 根, SSN 根本不是问题)。
 ## ============================================================================
 
@@ -21,27 +23,27 @@ set_property -dict { PACKAGE_PIN M19 IOSTANDARD LVCMOS33 } [get_ports { clk50 }]
 create_clock -period 20.000 -name clk50 [get_ports clk50]
 
 ## --- 2260 控制线 ------------------------------------------------------------
-set_property -dict { PACKAGE_PIN AA13 IOSTANDARD LVCMOS33 DRIVE 4 SLEW FAST } [get_ports { dclk  }]; # L23N_33  -R5(33Ω)-  J1.21 DCLK
-set_property -dict { PACKAGE_PIN AA18 IOSTANDARD LVCMOS33 DRIVE 4 SLEW FAST } [get_ports { sync  }]; # L12N_33  -R12(33Ω)- J1.23 I_SYNC
-set_property -dict { PACKAGE_PIN AB15 IOSTANDARD LVCMOS33 } [get_ports { ack }];                     # L24N_33  -R11(100Ω)- J1.22 ACK_O (输入)
+set_property -dict { PACKAGE_PIN AA13 IOSTANDARD LVCMOS25 DRIVE 4 SLEW FAST } [get_ports { dclk  }]; # L23N_33  -R5(33Ω)-  J1.21 DCLK
+set_property -dict { PACKAGE_PIN AA18 IOSTANDARD LVCMOS25 DRIVE 4 SLEW FAST } [get_ports { sync  }]; # L12N_33  -R12(33Ω)- J1.23 I_SYNC
+set_property -dict { PACKAGE_PIN AB15 IOSTANDARD LVCMOS25 } [get_ports { ack }];                     # L24N_33  -R11(100Ω)- J1.22 ACK_O (输入)
 
 ## --- 数据: TTL 3 通道走 P 侧 (= 芯片 SDI_R1/G1/B1 = 球 D1/E1/F1) -------------
 ## N 侧 = SDI_R2/G2/B2, 3 通道模式下芯片忽略。RTL 把 N 驱动成与 P 同电平,
 ## 让跨接的 100Ω (R7~R10) 两端等电位 ⇒ 零电流。⚠ 别改成反相驱动。
-set_property -dict { PACKAGE_PIN V22  IOSTANDARD LVCMOS33 DRIVE 4 SLEW FAST } [get_ports { r_p }];   # L3P_33  J1.34
-set_property -dict { PACKAGE_PIN W22  IOSTANDARD LVCMOS33 DRIVE 4 SLEW FAST } [get_ports { r_n }];   # L3N_33  J1.35
-set_property -dict { PACKAGE_PIN Y20  IOSTANDARD LVCMOS33 DRIVE 4 SLEW FAST } [get_ports { g_p }];   # L9P_33  J1.31
-set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS33 DRIVE 4 SLEW FAST } [get_ports { g_n }];   # L9N_33  J1.32
-set_property -dict { PACKAGE_PIN AA22 IOSTANDARD LVCMOS33 DRIVE 4 SLEW FAST } [get_ports { b_p }];   # L7P_33  J1.28
-set_property -dict { PACKAGE_PIN AB22 IOSTANDARD LVCMOS33 DRIVE 4 SLEW FAST } [get_ports { b_n }];   # L7N_33  J1.29
+set_property -dict { PACKAGE_PIN V22  IOSTANDARD LVCMOS25 DRIVE 4 SLEW FAST } [get_ports { r_p }];   # L3P_33  J1.34
+set_property -dict { PACKAGE_PIN W22  IOSTANDARD LVCMOS25 DRIVE 4 SLEW FAST } [get_ports { r_n }];   # L3N_33  J1.35
+set_property -dict { PACKAGE_PIN Y20  IOSTANDARD LVCMOS25 DRIVE 4 SLEW FAST } [get_ports { g_p }];   # L9P_33  J1.31
+set_property -dict { PACKAGE_PIN Y21  IOSTANDARD LVCMOS25 DRIVE 4 SLEW FAST } [get_ports { g_n }];   # L9N_33  J1.32
+set_property -dict { PACKAGE_PIN AA22 IOSTANDARD LVCMOS25 DRIVE 4 SLEW FAST } [get_ports { b_p }];   # L7P_33  J1.28
+set_property -dict { PACKAGE_PIN AB22 IOSTANDARD LVCMOS25 DRIVE 4 SLEW FAST } [get_ports { b_n }];   # L7N_33  J1.29
 
 ## --- LVDS 时钟对: TTL 模式不用, 静态拉低 (等电位, R7 不流电流) ---------------
-set_property -dict { PACKAGE_PIN AA21 IOSTANDARD LVCMOS33 DRIVE 4 } [get_ports { clk_p }];           # L8P_33  J1.25
-set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS33 DRIVE 4 } [get_ports { clk_n }];           # L8N_33  J1.26
+set_property -dict { PACKAGE_PIN AA21 IOSTANDARD LVCMOS25 DRIVE 4 } [get_ports { clk_p }];           # L8P_33  J1.25
+set_property -dict { PACKAGE_PIN AB21 IOSTANDARD LVCMOS25 DRIVE 4 } [get_ports { clk_n }];           # L8N_33  J1.26
 
 ## --- 两路 DCDC 的 EN (各带 100k 下拉, 复位态电源是关的) ----------------------
-set_property -dict { PACKAGE_PIN V14 IOSTANDARD LVCMOS33 DRIVE 4 SLEW SLOW } [get_ports { en_3v8 }]; # L19P_33 -R2(1k)-  U1.EN (39k/10k -> 3.9V)
-set_property -dict { PACKAGE_PIN V15 IOSTANDARD LVCMOS33 DRIVE 4 SLEW SLOW } [get_ports { en_2v8 }]; # L19N_33 -R13(1k)- U2.EN (27k/10k -> 3.0V)
+set_property -dict { PACKAGE_PIN V14 IOSTANDARD LVCMOS25 DRIVE 4 SLEW SLOW } [get_ports { en_3v8 }]; # L19P_33 -R2(1k)-  U1.EN (39k/10k -> 3.9V)
+set_property -dict { PACKAGE_PIN V15 IOSTANDARD LVCMOS25 DRIVE 4 SLEW SLOW } [get_ports { en_2v8 }]; # L19N_33 -R13(1k)- U2.EN (27k/10k -> 3.0V)
 ## ⚠ V15 = IO_L19N_T3_VREF_33。本工程 BANK 33 全是 LVCMOS 不需要 VREF, 所以能当普通 IO 用;
 ##   将来若在 BANK 33 上用需要 VREF 的电平标准, 这根要挪走。
 

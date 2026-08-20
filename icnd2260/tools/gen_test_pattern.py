@@ -28,19 +28,19 @@ import argparse
 import os
 
 PIX = 40
-LINES = 48
+LINES = 45          # 供应商样板: 每颗 40 像素 x 45 扫描行 (可用 --lines 覆盖)
 
 
 def clamp16(v):
     return max(0, min(0xFFFF, int(v)))
 
 
-def gen(mode, scale, cascade):
+def gen(mode, scale, cascade, lines=LINES):
     """返回 [(r,g,b)] 列表, 长度 = PIX*LINES*cascade"""
     out = []
     full = 0xFFFF // scale
     for chip in range(cascade):
-        for ln in range(LINES):
+        for ln in range(lines):
             for px in range(PIX):
                 r = g = b = 0
                 if mode == "off":
@@ -49,13 +49,13 @@ def gen(mode, scale, cascade):
                     if ln == 0 and px == 0 and chip == 0:
                         r = full
                 elif mode == "cross":
-                    if ln == LINES // 2 or px == PIX // 2:
+                    if ln == lines // 2 or px == PIX // 2:
                         r = g = b = full
-                    if ln == 0 or ln == LINES - 1 or px == 0 or px == PIX - 1:
+                    if ln == 0 or ln == lines - 1 or px == 0 or px == PIX - 1:
                         b = full
                 elif mode == "gradient":
                     r = full * px // (PIX - 1)
-                    g = full * ln // (LINES - 1)
+                    g = full * ln // (lines - 1)
                     b = full if (ln == 0 or px == 0) else 0      # 原点标记, 用来定方向
                     if ln < 2 and px < 2:
                         r = g = b = full                          # 左上角白块
@@ -71,7 +71,8 @@ def main():
                     choices=["gradient", "single", "cross", "off"])
     ap.add_argument("--scale", type=int, default=16,
                     help="满量程的 1/scale, 首光别调小 (电流)")
-    ap.add_argument("--cascade", type=int, default=1)
+    ap.add_argument("--cascade", type=int, default=9, help="级联颗数 (样板是 9)")
+    ap.add_argument("--lines", type=int, default=LINES, help="扫描行数 (样板是 45)")
     ap.add_argument("--iface", dest="iface", default="ttl", choices=["ttl", "lvds"],
                     help="ttl: 低16位=R;  lvds: 低16位=B (见文件头说明)")
     ap.add_argument("--out", default=None)
@@ -80,7 +81,7 @@ def main():
     root = os.path.join(os.path.dirname(__file__), "..")
     dflt = "icnd2260_fb.mem" if a.iface == "ttl" else "icnd2260_fb_lvds.mem"
     out = a.out or os.path.join(root, "rtl", dflt)
-    px = gen(a.mode, a.scale, a.cascade)
+    px = gen(a.mode, a.scale, a.cascade, a.lines)
 
     with open(out, "w") as f:
         f.write(f"// 由 tools/gen_test_pattern.py 生成: mode={a.mode} scale=1/{a.scale} "
@@ -88,7 +89,7 @@ def main():
         lay = "{B,G,R} 低16位=R" if a.iface == "ttl" else "{R,G,B} 低16位=B (第一通道 D0=B)"
         f.write(f"// 每行 = {lay}, 地址 = line*40 + px\n")
         for i, (r, g, b) in enumerate(px):
-            ln, p = divmod(i % (PIX * LINES), PIX)
+            ln, p = divmod(i % (PIX * a.lines), PIX)
             w = f"{b:04x}{g:04x}{r:04x}" if a.iface == "ttl" else f"{r:04x}{g:04x}{b:04x}"
             f.write(f"{w}   // line {ln:2d} px {p:2d}\n")
 

@@ -289,7 +289,11 @@ module icnd2260_lxb_lvds_top #(
             ack_err_d     <= 1'b0;
         end else begin
             if (ack_crc_ok)      ack_ok_sticky <= 1'b1;
-            if (ack_frame_ok)    ack_frame_cnt <= ack_frame_cnt + 16'd1;
+            // 🔴 只数 **CRC 通过** 的帧。原来数的是"头部码合理"(ACK[3:0]==0b0010),
+            //    实测挡不住周期性噪声 —— TTL 模式下 DCLK(J1.21) 串到相邻的 ACK(J1.22),
+            //    解出来的垃圾帧能稳定凑出那 4 位, 每秒 5 万帧全部"合格"。
+            //    CRC 那道闸是可靠的: 同一批数据里 crc_ok 从未置位过。
+            if (ack_crc_ok)      ack_frame_cnt <= ack_frame_cnt + 16'd1;
             // ⚠ frame_err 是**电平**不是脉冲(它在解调器的 A_IDLE 才清),
             //   直接 if(level) 会在电平持续期间每拍加一次, 数出来的值没有意义。
             //   这里取上升沿, 一次错误只记一次。

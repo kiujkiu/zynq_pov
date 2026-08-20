@@ -16,7 +16,9 @@
 
 # -tclargs <CLK_DIV>   24=41.7MHz(默认)  48=20.8MHz  12=83.3MHz  6=166.7MHz
 set CLK_DIV 24
+set VARIANT lvds
 if {[llength $argv] > 0} { set CLK_DIV [lindex $argv 0] }
+if {[llength $argv] > 1} { set VARIANT [lindex $argv 1] }   ;# lvds | ttl (ttl 固定 25MHz, CLK_DIV 忽略)
 # XDC 里的时序窗口跟着位时钟走; 位时钟周期(ns) = CLK_DIV
 set BITCLK_NS [expr {double($CLK_DIV)}]
 set MARGIN    [expr {$CLK_DIV >= 12 ? 1.0 : 0.3}]
@@ -59,20 +61,23 @@ generate_target {synthesis instantiation_template} [get_ips vio_dbg]
 synth_ip [get_ips vio_dbg]
 
 # ---- 主设计 ---------------------------------------------------------------
-read_verilog [list \
-    $root/rtl/icnd2260_lvds_tx.v \
-    $root/rtl/icnd2260_ack_rx.v \
-    $root/rtl/icnd2260_seq.v \
-    $root/rtl/icnd2260_lxb_lvds_top.v ]
-read_xdc $root/xdc/lxb_icnd2260_lvds_pins.xdc
-
-synth_design -top icnd2260_lxb_lvds_top -part xc7z020clg484-1 \
-    -generic DEBUG=1 -generic CLK_DIV=$CLK_DIV
+if {$VARIANT eq "ttl"} {
+    read_verilog [list $root/rtl/icnd2260_tx.v $root/rtl/icnd2260_ack_rx.v \
+                       $root/rtl/icnd2260_seq.v $root/rtl/icnd2260_lxb_top.v]
+    read_xdc $root/xdc/lxb_icnd2260_pins.xdc
+    synth_design -top icnd2260_lxb_top -part xc7z020clg484-1 -generic DEBUG=1
+} else {
+    read_verilog [list $root/rtl/icnd2260_lvds_tx.v $root/rtl/icnd2260_ack_rx.v \
+                       $root/rtl/icnd2260_seq.v $root/rtl/icnd2260_lxb_lvds_top.v]
+    read_xdc $root/xdc/lxb_icnd2260_lvds_pins.xdc
+    synth_design -top icnd2260_lxb_lvds_top -part xc7z020clg484-1 \
+        -generic DEBUG=1 -generic CLK_DIV=$CLK_DIV
+}
 opt_design
 place_design
 route_design
 
-set name icnd2260_lvds_dbg_div$CLK_DIV
+set name [expr {$VARIANT eq "ttl" ? "icnd2260_ttl_dbg" : "icnd2260_lvds_dbg_div$CLK_DIV"}]
 report_utilization    -file $build/$name.util.rpt
 report_timing_summary -file $build/$name.timing.rpt
 report_drc            -file $build/$name.drc.rpt

@@ -91,6 +91,7 @@ module icnd2260_seq_tb;
         // 而 TB 又不检查读指令的 offset ⇒ 悄悄放过去。别留悬空输入。
         .dbg_reg_we (1'b0), .dbg_reg_addr (8'h00), .dbg_reg_data (16'h0000),
         .dbg_probe_en (1'b0), .dbg_probe_off (8'h00), .dbg_probe_dev (4'h0),
+        .dbg_minimal (1'b0), .quiet (),
         .dbg_ph (), .dbg_sub ()
     );
 

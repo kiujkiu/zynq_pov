@@ -40,6 +40,10 @@ module icnd2260_seq #(
     parameter integer RAIL_STAGGER    = 25_000,   // 两路 EN 之间的间隔 (clk 拍)
     parameter integer RAIL_SETTLE     = 500_000,  // 电源稳定等待 (clk 拍), 25MHz -> 20 ms
     parameter integer FB_AW           = 11,       // ceil(log2(PIX_PER_LINE*LINES*CASCADE))
+    // 读指令发完后静默多少拍。TTL 模式下 DCLK(J1.21) 会串到相邻的 ACK(J1.22),
+    // 实测 5 万次/秒误触发 ⇒ 回包窗口里必须让 DCLK 停下, 否则 ACK 没法用。
+    // 手册允许 I_SYNC 拉高期间暂停 DCLK。25MHz 下 8000 拍 = 320us, 够一帧 ACK 回完。
+    parameter integer QUIET_CYCLES    = 8000,
     // TTL 用 icnd2260_regs.mem; mini-LVDS 用 icnd2260_regs_lvds.mem
     // (差别是 0x06[9] / 0x1a[9] 两个使能位, 见 tools/gen_reg_defaults.py)
     parameter          REG_MEM        = "icnd2260_regs.mem"
@@ -79,9 +83,15 @@ module icnd2260_seq #(
     input  wire                    dbg_probe_en,   // 1 = 用 dbg_probe_off/dev 覆盖参数
     input  wire [7:0]              dbg_probe_off,
     input  wire [3:0]              dbg_probe_dev,  // 扫 0..15 可反推级联了几颗
+    // 1 = **最小配置模式**: 跳过整表写/空屏/显示, 只循环发「RSYNC + 读寄存器」。
+    //     用途: 把变量从十几个砍到两个(RSYNC 图案 + 4 倍过采样)。显示帧那一堆
+    //     推断(每颗一个 CRC / VHEAD 字段 / 级联顺序)任何一处错都可能让芯片接收
+    //     状态机失步, 连读指令都认不出来 —— 最小模式绕开全部这些。
+    input  wire                    dbg_minimal,
 
     // ---- 状态 -------------------------------------------------------------
     output wire                    running,      // 已进入正常显示
+    output reg                     quiet,        // 1 = 回包窗口, 外部应把 DCLK 停住
     output reg  [31:0]             frame_cnt,
     output wire [3:0]              dbg_ph,
     output wire [1:0]              dbg_sub
@@ -182,7 +192,8 @@ module icnd2260_seq #(
                      P_REG_2  = 4'd5,   // §12 步骤 1, 第二遍
                      P_BLANK  = 4'd6,   // §12 步骤 2
                      P_RUN    = 4'd7,
-                     P_WAIT   = 4'd8;
+                     P_WAIT   = 4'd8,
+                     P_QUIET  = 4'd9;   // 读指令后的静默窗口
 
     reg [3:0]  ph, ph_next;
     reg [1:0]  sub, sub_next;
@@ -192,6 +203,8 @@ module icnd2260_seq #(
     reg [31:0] blank_cnt;
     reg [31:0] refresh_cnt;
     reg [31:0] probe_cnt;
+    reg [31:0] quiet_cnt;
+    reg        was_read;        // 刚发完的是不是读指令
 
     assign running = (ph == P_RUN) || ((ph == P_WAIT) && (ph_next == P_RUN));
     assign dbg_ph  = ph;
@@ -201,6 +214,7 @@ module icnd2260_seq #(
                input [1:0] nsub, input adv, input clrm);
         begin
             cmd_kind  <= k;
+            was_read  <= (k == KIND_READ_DEV);
             src       <= s;
             cmd_valid <= 1'b1;
             ph        <= P_WAIT;
@@ -223,6 +237,9 @@ module icnd2260_seq #(
             blank_cnt    <= 32'd0;
             refresh_cnt  <= 32'd0;
             probe_cnt    <= 32'd0;
+            quiet_cnt    <= 32'd0;
+            was_read     <= 1'b0;
+            quiet        <= 1'b0;
             frame_cnt    <= 32'd0;
             en_3v8       <= 1'b0;
             en_2v8       <= 1'b0;
@@ -265,7 +282,11 @@ module icnd2260_seq #(
                 if (dly == 0) begin
                     cmd_offset <= 8'h00;
                     cmd_length <= REG_COUNT[7:0] - 8'd1;
-                    ph         <= P_REG_1;
+                    // 最小模式: 连 §12 的整表写和空屏都跳过, 直接开始循环读
+                    if (dbg_minimal) begin
+                        sub <= 2'd2;
+                        ph  <= P_RUN;
+                    end else ph <= P_REG_1;
                 end else dly <= dly - 32'd1;
             end
 
@@ -291,6 +312,12 @@ module icnd2260_seq #(
 
             // ---- 正常显示: VSYNC -> [整表] -> [读探针] -> 显示 ------------
             P_RUN: begin
+                if (dbg_minimal) begin
+                    // 只发「RSYNC + 读寄存器」, 循环。frame_adv 让 fps 计数仍有意义。
+                    cmd_offset <= dbg_probe_en ? dbg_probe_off : READ_PROBE_OFF[7:0];
+                    cmd_length <= 8'd0;
+                    issue(KIND_READ_DEV, SRC_ZERO, P_RUN, 2'd2, 1'b1, 1'b0);
+                end else
                 case (sub)
                 2'd0: begin
                     cmd_offset <= 8'h00;
@@ -320,7 +347,11 @@ module icnd2260_seq #(
                 if (cmd_valid && cmd_ready) begin
                     cmd_valid <= 1'b0;            // 已被 tx 接走
                 end else if (!cmd_valid && !tx_busy) begin
-                    ph  <= ph_next;
+                    if (was_read && QUIET_CYCLES != 0) begin
+                        quiet     <= 1'b1;
+                        quiet_cnt <= QUIET_CYCLES;
+                        ph        <= P_QUIET;
+                    end else ph <= ph_next;
                     sub <= sub_next;
                     if (clr_mask) poweron_mask <= 1'b0;
                     if (frame_adv) begin
@@ -332,6 +363,14 @@ module icnd2260_seq #(
                                          ? 32'd0 : (probe_cnt + 32'd1);
                     end
                 end
+            end
+
+            // ---- 回包窗口: 让外部把 DCLK 停住, ACK 才不会被串扰淹没 ----
+            P_QUIET: begin
+                if (quiet_cnt <= 1) begin
+                    quiet <= 1'b0;
+                    ph    <= ph_next;
+                end else quiet_cnt <= quiet_cnt - 32'd1;
             end
 
             default: ph <= P_RST;

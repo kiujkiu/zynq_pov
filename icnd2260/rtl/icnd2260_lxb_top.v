@@ -148,6 +148,8 @@ module icnd2260_lxb_top #(
     wire        dbg_probe_en;
     wire [7:0]  dbg_probe_off;
     wire [3:0]  dbg_probe_dev;
+    wire        dbg_minimal;
+    wire        seq_quiet;
     wire        dbg_soft_rst;
     wire [3:0]  dbg_ph;
     wire [1:0]  dbg_sub;
@@ -173,7 +175,8 @@ module icnd2260_lxb_top #(
         .dbg_reg_we (dbg_reg_we), .dbg_reg_addr (dbg_reg_addr),
         .dbg_reg_data (dbg_reg_data),
         .dbg_probe_en (dbg_probe_en), .dbg_probe_off (dbg_probe_off),
-        .dbg_probe_dev (dbg_probe_dev),
+        .dbg_probe_dev (dbg_probe_dev), .dbg_minimal (dbg_minimal),
+        .quiet (seq_quiet),
         .dbg_ph (dbg_ph), .dbg_sub (dbg_sub)
     );
 
@@ -224,7 +227,9 @@ module icnd2260_lxb_top #(
         .Q  (dclk), .C (dclk_src), .CE (1'b1),
         .D1 ((DCLK_INV != 0) ? 1'b0 : 1'b1),
         .D2 ((DCLK_INV != 0) ? 1'b1 : 1'b0),
-        .R  (~out_en), .S (1'b0)      // 电源没稳时 DCLK 压 0
+        // 电源没稳、或处在 ACK 回包窗口时, DCLK 压 0。
+        // 后者是为了让 ACK 不被相邻脚的 DCLK 串扰淹没(实测 25MHz 时 5 万次/秒误触发)。
+        .R  (~out_en | seq_quiet), .S (1'b0)
     );
 
     // lane0=R, lane1=G, lane2=B; N 侧镜像 P 侧 ⇒ 跨接的 100Ω 两端等电位
@@ -255,6 +260,7 @@ module icnd2260_lxb_top #(
     // ---- ACK 回传解调 (与 LVDS 版同一个模块) -----------------------------
     localparam integer BITCLK_HZ = 25_000_000;
     wire        ack_frame_valid, ack_frame_ok, ack_crc_ok, ack_frame_err;
+    wire        ack_crc_pulse, ack_crc_bad;
     wire [3:0]  ack_f_ack, ack_f_dev;
     wire [7:0]  ack_f_off, ack_f_len;
     wire [15:0] ack_f_data0, ack_f_crc_rx, ack_f_crc_calc;
@@ -263,7 +269,8 @@ module icnd2260_lxb_top #(
     icnd2260_ack_rx #(.CLK_HZ (BITCLK_HZ), .MAX_WORDS (4)) u_ack (
         .clk (clk25), .rst_n (rst_n_eff), .ack_pin (ack),
         .frame_valid (ack_frame_valid), .frame_ok (ack_frame_ok),
-        .crc_ok (ack_crc_ok), .frame_err (ack_frame_err),
+        .crc_ok (ack_crc_ok), .crc_ok_pulse (ack_crc_pulse),
+        .crc_bad_pulse (ack_crc_bad), .frame_err (ack_frame_err),
         .f_ack (ack_f_ack), .f_dev (ack_f_dev), .f_off (ack_f_off),
         .f_len (ack_f_len), .f_data0 (ack_f_data0),
         .f_crc_rx (ack_f_crc_rx), .f_crc_calc (ack_f_crc_calc),
@@ -289,9 +296,9 @@ module icnd2260_lxb_top #(
         end else begin
             if (ack_crc_ok)   ack_ok_sticky <= 1'b1;
             // 🔴 只数 CRC 通过的帧 (头部码那道闸挡不住周期性噪声, 见 LVDS 顶层注释)
-            if (ack_crc_ok)   ack_frame_cnt <= ack_frame_cnt + 16'd1;
+            if (ack_crc_pulse) ack_frame_cnt <= ack_frame_cnt + 16'd1;
             ack_err_d <= ack_frame_err;
-            if (ack_frame_err && !ack_err_d) ack_err_cnt <= ack_err_cnt + 16'd1;
+            if (ack_crc_bad || (ack_frame_err && !ack_err_d)) ack_err_cnt <= ack_err_cnt + 16'd1;
         end
     end
 
@@ -299,7 +306,7 @@ module icnd2260_lxb_top #(
     if (DEBUG != 0) begin : g_dbg
         wire [7:0]  o_addr, o_probe_off;
         wire [15:0] o_data;
-        wire [0:0]  o_we_tog, o_probe_en, o_soft_rst;
+        wire [0:0]  o_we_tog, o_probe_en, o_soft_rst, o_minimal;
         wire [3:0]  o_probe_dev;
         reg we_tog_d = 1'b0;
         always @(posedge clk25) we_tog_d <= o_we_tog[0];
@@ -310,6 +317,7 @@ module icnd2260_lxb_top #(
         assign dbg_probe_off = o_probe_off;
         assign dbg_probe_dev = o_probe_dev;
         assign dbg_soft_rst  = o_soft_rst[0];
+        assign dbg_minimal   = o_minimal[0];
         wire [15:0] status = {mmcm_locked, running, out_en, en_3v8,
                               en_2v8, ack_ok_sticky, ack_crc_ok, ack_frame_err,
                               dbg_ph, dbg_sub, 2'b00};
@@ -321,7 +329,8 @@ module icnd2260_lxb_top #(
             .probe_in6 (ack_f_nbits),  .probe_in7 (fps_latched),
             .probe_out0 (o_addr), .probe_out1 (o_data), .probe_out2 (o_we_tog),
             .probe_out3 (o_probe_off), .probe_out4 (o_probe_en),
-            .probe_out5 (o_soft_rst), .probe_out6 (o_probe_dev)
+            .probe_out5 (o_soft_rst), .probe_out6 (o_probe_dev),
+            .probe_out7 (o_minimal)
         );
     end else begin : g_nodbg
         assign dbg_reg_we    = 1'b0;
@@ -331,6 +340,7 @@ module icnd2260_lxb_top #(
         assign dbg_probe_off = 8'h00;
         assign dbg_probe_dev = 4'h0;
         assign dbg_soft_rst  = 1'b0;
+        assign dbg_minimal   = 1'b0;
     end
     endgenerate
 

@@ -27,7 +27,7 @@ module icnd2260_ack_rx_tb;
 
     reg ack_pin = 1'b1;                        // 空闲高
 
-    wire        frame_valid, frame_ok, crc_ok, frame_err, busy;
+    wire        frame_valid, frame_ok, crc_ok, crc_ok_pulse, crc_bad_pulse, frame_err, busy;
     wire [3:0]  f_ack, f_dev;
     wire [7:0]  f_off, f_len;
     wire [15:0] f_data0, f_crc_rx, f_crc_calc;
@@ -36,6 +36,7 @@ module icnd2260_ack_rx_tb;
     icnd2260_ack_rx #(.CLK_HZ (CLK_HZ), .MAX_WORDS (4), .REV_CRC (1)) dut (
         .clk (clk), .rst_n (rst_n), .ack_pin (ack_pin),
         .frame_valid (frame_valid), .frame_ok (frame_ok), .crc_ok (crc_ok),
+        .crc_ok_pulse (crc_ok_pulse), .crc_bad_pulse (crc_bad_pulse),
         .frame_err (frame_err),
         .f_ack (f_ack), .f_dev (f_dev), .f_off (f_off), .f_len (f_len),
         .f_data0 (f_data0), .f_crc_rx (f_crc_rx), .f_crc_calc (f_crc_calc),
@@ -66,6 +67,14 @@ module icnd2260_ack_rx_tb;
             // 总长 2us: 1 -> w1=1.4us/w2=0.6us; 0 -> w1=0.6us/w2=1.4us
             ack_pin = 1'b1;  #(b ? 1400 : 600);
             ack_pin = 1'b0;  #(b ? 600  : 1400);
+        end
+    endtask
+
+    // 快速噪声用的"位": 总长 200ns, 远低于手册下限 1us
+    task send_fast_bit(input b);
+        begin
+            ack_pin = 1'b1;  #(b ? 140 : 60);
+            ack_pin = 1'b0;  #(b ? 60  : 140);
         end
     endtask
 
@@ -142,9 +151,16 @@ module icnd2260_ack_rx_tb;
 
     reg frame_valid_seen = 1'b0;
     reg frame_ok_seen    = 1'b0;
+    // 🔴 数「脉冲拉高了多少个时钟」—— 一帧必须正好 1 个, 不能是电平那种一直高。
+    //    上板时把电平当脉冲数, counter 会按时钟累加, 表现为"每秒 4 万帧 CRC 通过",
+    //    看着像成功其实是噪声。这道断言就是防这个。
+    integer crc_ok_cycles  = 0;
+    integer crc_bad_cycles = 0;
     always @(posedge clk) begin
         if (frame_valid) frame_valid_seen <= 1'b1;
         if (frame_ok)    frame_ok_seen    <= 1'b1;
+        if (crc_ok_pulse)  crc_ok_cycles  = crc_ok_cycles + 1;
+        if (crc_bad_pulse) crc_bad_cycles = crc_bad_cycles + 1;
     end
 
     initial begin
@@ -160,8 +176,14 @@ module icnd2260_ack_rx_tb;
         repeat (40) @(posedge clk);
         expect_frame(4'b0010, 4'h0, 8'h00, 1, 16'h3F3C, 1'b1, "case1");
         if (!frame_ok_seen) fail("case1_frame_ok_should_be_1");
+        if (crc_ok_cycles !== 1) begin
+            $display("  crc_ok_pulse 高了 %0d 个时钟, 应该正好 1", crc_ok_cycles);
+            fail("case1_crc_ok_pulse_not_single_cycle");
+        end
+        if (crc_bad_cycles !== 0) fail("case1_crc_bad_should_be_0");
 
         // ---- 用例 2: 4 个寄存器 -------------------------------------------
+        crc_ok_cycles = 0;  crc_bad_cycles = 0;
         frame_valid_seen = 1'b0;
         build(4'b0010, 4'h3, 8'h20, 4, 16'h6020, 1'b0);
         send_frame;
@@ -169,11 +191,16 @@ module icnd2260_ack_rx_tb;
         expect_frame(4'b0010, 4'h3, 8'h20, 4, 16'h6020, 1'b1, "case2");
 
         // ---- 用例 3: CRC 被改坏 -> crc_ok 必须为 0 ------------------------
+        crc_ok_cycles = 0;  crc_bad_cycles = 0;
         frame_valid_seen = 1'b0;
         build(4'b0010, 4'h0, 8'h00, 1, 16'h1234, 1'b1);
         send_frame;
         repeat (40) @(posedge clk);
         expect_frame(4'b0010, 4'h0, 8'h00, 1, 16'h1234, 1'b0, "case3_corrupt");
+        if (crc_bad_cycles !== 1) begin
+            $display("  crc_bad_pulse 高了 %0d 个时钟, 应该正好 1", crc_bad_cycles);
+            fail("case3_crc_bad_pulse_not_single_cycle");
+        end
 
         // ---- 用例 3b: 头部码不对 -> frame_ok 必须为 0 ---------------------
         // 悬空脚放大噪声解出来的垃圾帧就是靠这道闸挡掉的 (上板实测过 18k 帧/秒)
@@ -183,6 +210,16 @@ module icnd2260_ack_rx_tb;
         repeat (40) @(posedge clk);
         if (!frame_valid_seen) fail("case3b_no_frame");
         if (frame_ok_seen)     fail("case3b_frame_ok_should_be_0");
+
+        // ---- 用例 3c: 位宽远小于 1us 的"快速噪声"必须被整帧丢弃 -------------
+        // 上板实测: 不丢弃的话噪声能凑出 41,281 帧/秒, 超过解调器理论上限(~17,800),
+        // 而且还能"CRC 通过", 看着像找到了一串芯片。
+        frame_valid_seen = 1'b0;
+        ack_pin = 1'b1;  #15000;
+        ack_pin = 1'b0;  #2000;                       // 合法的 start
+        for (j2 = 0; j2 < 80; j2 = j2 + 1) send_fast_bit(j2[0]);
+        ack_pin = 1'b1;  #20000;
+        if (frame_valid_seen) fail("case3c_fast_noise_should_be_discarded");
 
         // ---- 用例 4: 毛刺不能触发 ----------------------------------------
         frame_valid_seen = 1'b0;

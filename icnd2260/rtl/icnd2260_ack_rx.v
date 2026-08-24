@@ -43,7 +43,12 @@ module icnd2260_ack_rx #(
 
     output reg         frame_valid,      // 收完一帧, 打一拍脉冲
     output reg         frame_ok,         // 迟一拍的脉冲: 头部字段合理才拉高
-    output reg         crc_ok,
+    // 🔴 crc_ok 是**电平**(保持到下一帧), 只能点灯, **不能拿去计数** ——
+    //    `if (crc_ok) cnt<=cnt+1` 会按时钟周期累加。要计数请用 crc_ok_pulse。
+    //    这个坑今天踩了三次(err 计数 / 头部闸 / CRC 计数), 所以在这里把两者分开导出。
+    output reg         crc_ok,           // 电平, 给 LED / status 位用
+    output reg         crc_ok_pulse,     // **单周期脉冲**, 计数用
+    output reg         crc_bad_pulse,    // 单周期脉冲: 收到一帧但 CRC 不过
     output reg         frame_err,        // 位宽越界 / 溢出 / 帧太短
     output reg  [3:0]  f_ack,
     output reg  [3:0]  f_dev,
@@ -174,15 +179,23 @@ module icnd2260_ack_rx #(
                 tcnt <= tcnt + 16'd1;
                 if (rise) begin
                     w2 <= tcnt;
-                    if (nb < MAX_BITS[8:0]) begin
+                    // 🔴 位宽越界就**整帧丢弃**, 不能只打个错误标记继续收。
+                    //    手册的 1us < w1+w2 < 5us 本身就是最好的噪声过滤器:
+                    //    不丢弃的话, 几微秒的快速噪声也能凑满 56 位成"帧",
+                    //    实测产出 41,281 帧/秒 —— 而合法帧最短 56 位 x 1us = 56us,
+                    //    解调器理论上限只有 ~17,800 帧/秒。**超过自身上限就说明在数假货。**
+                    if ((w1 + tcnt) < T_1US[15:0] || (w1 + tcnt) > T_5US[15:0]) begin
+                        frame_err <= 1'b1;
+                        st        <= A_IDLE;       // 丢弃, 重新等 start
+                    end else if (nb < MAX_BITS[8:0]) begin
                         buf_[nb] <= (w1 > tcnt);   // w1 > w2 ⇒ 1
                         nb       <= nb + 9'd1;
-                    end else frame_err <= 1'b1;    // 超出缓冲
-                    // 合法性: 1us < w1+w2 < 5us
-                    if ((w1 + tcnt) < T_1US[15:0] || (w1 + tcnt) > T_5US[15:0])
-                        frame_err <= 1'b1;
-                    tcnt <= 16'd1;
-                    st   <= A_W1;
+                        tcnt     <= 16'd1;
+                        st       <= A_W1;
+                    end else begin
+                        frame_err <= 1'b1;         // 超出缓冲
+                        st        <= A_IDLE;
+                    end
                 end else if (tcnt > T_10US[15:0]) begin
                     frame_err <= 1'b1;             // 低电平卡住
                     st        <= A_IDLE;
@@ -229,12 +242,16 @@ module icnd2260_ack_rx #(
     reg valid_d;
     always @(posedge clk) begin
         if (!rst_n) begin
-            valid_d  <= 1'b0;
-            crc_ok   <= 1'b0;
-            frame_ok <= 1'b0;
+            valid_d       <= 1'b0;
+            crc_ok        <= 1'b0;
+            crc_ok_pulse  <= 1'b0;
+            crc_bad_pulse <= 1'b0;
+            frame_ok      <= 1'b0;
         end else begin
-            valid_d  <= frame_valid;
-            frame_ok <= valid_d && (f_ack == 4'b0010);
+            valid_d       <= frame_valid;
+            frame_ok      <= valid_d && (f_ack == 4'b0010);
+            crc_ok_pulse  <= valid_d && (f_crc_rx == f_crc_calc);
+            crc_bad_pulse <= valid_d && (f_crc_rx != f_crc_calc);
             if (valid_d) crc_ok <= (f_crc_rx == f_crc_calc);
         end
     end

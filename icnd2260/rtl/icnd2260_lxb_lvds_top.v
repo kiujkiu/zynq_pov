@@ -156,6 +156,8 @@ module icnd2260_lxb_lvds_top #(
     wire        dbg_probe_en;
     wire [7:0]  dbg_probe_off;
     wire [3:0]  dbg_probe_dev;
+    wire        dbg_minimal;
+    wire        seq_quiet;
     wire        dbg_soft_rst;
     wire [3:0]  dbg_ph;
     wire [1:0]  dbg_sub;
@@ -182,7 +184,8 @@ module icnd2260_lxb_lvds_top #(
         .dbg_reg_we (dbg_reg_we), .dbg_reg_addr (dbg_reg_addr),
         .dbg_reg_data (dbg_reg_data),
         .dbg_probe_en (dbg_probe_en), .dbg_probe_off (dbg_probe_off),
-        .dbg_probe_dev (dbg_probe_dev),
+        .dbg_probe_dev (dbg_probe_dev), .dbg_minimal (dbg_minimal),
+        .quiet (seq_quiet),
         .dbg_ph (dbg_ph), .dbg_sub (dbg_sub)
     );
 
@@ -241,6 +244,7 @@ module icnd2260_lxb_lvds_top #(
     // CRC 那套推断是对的。这是首光阶段最硬的判据 —— 比"屏亮没亮"硬得多,
     // 因为屏不亮还可能是电流、灰度、LED 板的问题。
     wire        ack_frame_valid, ack_frame_ok, ack_crc_ok, ack_frame_err;
+    wire        ack_crc_pulse, ack_crc_bad;
     wire [3:0]  ack_f_ack, ack_f_dev;
     wire [7:0]  ack_f_off, ack_f_len;
     wire [15:0] ack_f_data0, ack_f_crc_rx, ack_f_crc_calc;
@@ -248,7 +252,8 @@ module icnd2260_lxb_lvds_top #(
 
     icnd2260_ack_rx #(.CLK_HZ (BITCLK_HZ), .MAX_WORDS (4)) u_ack (
         .clk (clkbit), .rst_n (rst_n_eff), .ack_pin (ack),
-        .frame_valid (ack_frame_valid), .frame_ok (ack_frame_ok), .crc_ok (ack_crc_ok),
+        .frame_valid (ack_frame_valid), .frame_ok (ack_frame_ok), .crc_ok (ack_crc_ok), .crc_ok_pulse (ack_crc_pulse),
+        .crc_bad_pulse (ack_crc_bad),
         .frame_err (ack_frame_err),
         .f_ack (ack_f_ack), .f_dev (ack_f_dev), .f_off (ack_f_off),
         .f_len (ack_f_len), .f_data0 (ack_f_data0),
@@ -293,12 +298,12 @@ module icnd2260_lxb_lvds_top #(
             //    实测挡不住周期性噪声 —— TTL 模式下 DCLK(J1.21) 串到相邻的 ACK(J1.22),
             //    解出来的垃圾帧能稳定凑出那 4 位, 每秒 5 万帧全部"合格"。
             //    CRC 那道闸是可靠的: 同一批数据里 crc_ok 从未置位过。
-            if (ack_crc_ok)      ack_frame_cnt <= ack_frame_cnt + 16'd1;
+            if (ack_crc_pulse)   ack_frame_cnt <= ack_frame_cnt + 16'd1;
             // ⚠ frame_err 是**电平**不是脉冲(它在解调器的 A_IDLE 才清),
             //   直接 if(level) 会在电平持续期间每拍加一次, 数出来的值没有意义。
             //   这里取上升沿, 一次错误只记一次。
             ack_err_d <= ack_frame_err;
-            if (ack_frame_err && !ack_err_d) ack_err_cnt <= ack_err_cnt + 16'd1;
+            if (ack_crc_bad || (ack_frame_err && !ack_err_d)) ack_err_cnt <= ack_err_cnt + 16'd1;
         end
     end
 
@@ -320,7 +325,7 @@ module icnd2260_lxb_lvds_top #(
     if (DEBUG != 0) begin : g_dbg
         wire [7:0]  o_addr;
         wire [15:0] o_data;
-        wire [0:0]  o_we_tog, o_probe_en, o_soft_rst;
+        wire [0:0]  o_we_tog, o_probe_en, o_soft_rst, o_minimal;
         wire [7:0]  o_probe_off;
         wire [3:0]  o_probe_dev;
 
@@ -334,6 +339,7 @@ module icnd2260_lxb_lvds_top #(
         assign dbg_probe_off = o_probe_off;
         assign dbg_probe_dev = o_probe_dev;
         assign dbg_soft_rst  = o_soft_rst[0];
+        assign dbg_minimal   = o_minimal[0];
 
         wire [15:0] status = {mmcm_locked, running, out_en, en_3v8,
                               en_2v8, ack_ok_sticky, ack_crc_ok, ack_frame_err,
@@ -355,7 +361,8 @@ module icnd2260_lxb_lvds_top #(
             .probe_out3 (o_probe_off),               // 8
             .probe_out4 (o_probe_en),                // 1
             .probe_out5 (o_soft_rst),                // 1
-            .probe_out6 (o_probe_dev)                // 4  <-- 扫设备号找级联芯片
+            .probe_out6 (o_probe_dev),               // 4  <-- 扫设备号找级联芯片
+            .probe_out7 (o_minimal)                  // 1  <-- 最小配置模式
         );
     end else begin : g_nodbg
         assign dbg_reg_we    = 1'b0;
@@ -365,6 +372,7 @@ module icnd2260_lxb_lvds_top #(
         assign dbg_probe_off = 8'h00;
         assign dbg_probe_dev = 4'h0;
         assign dbg_soft_rst  = 1'b0;
+        assign dbg_minimal   = 1'b0;
     end
     endgenerate
 

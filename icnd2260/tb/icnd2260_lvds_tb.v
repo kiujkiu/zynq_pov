@@ -31,6 +31,7 @@ module icnd2260_lvds_tb;
     parameter integer LINES        = 4;       // 真板 45
     parameter integer CASCADE      = 2;       // 真板 9 —— 多颗才测得到「每颗一个 CRC」
     parameter integer BLANK_FRAMES = 2;       // 真板 64
+    parameter integer MINIMAL      = 0;       // 1 = 只发「RSYNC+读寄存器」
 
     function integer clog2(input integer v);
         integer i;
@@ -89,6 +90,7 @@ module icnd2260_lvds_tb;
         // 而 TB 又不检查读指令的 offset ⇒ 悄悄放过去。别留悬空输入。
         .dbg_reg_we (1'b0), .dbg_reg_addr (8'h00), .dbg_reg_data (16'h0000),
         .dbg_probe_en (1'b0), .dbg_probe_off (8'h00), .dbg_probe_dev (4'h0),
+        .dbg_minimal (MINIMAL[0]), .quiet (),
         .dbg_ph (), .dbg_sub ()
     );
 
@@ -416,6 +418,18 @@ module icnd2260_lvds_tb;
         rst_n = 1'b1;
 
         wait (running);
+        if (MINIMAL != 0) begin
+            // 最小模式: 只该有读指令, 不该有整表写和显示
+            wait (frame_cnt >= 4);
+            repeat (400) @(posedge clk);
+            if (n_read < 3) fail("minimal_too_few_reads");
+            if (n_cfg  > 0) fail("minimal_should_have_no_cfg_write");
+            if (n_disp > 0) fail("minimal_should_have_no_display");
+            $display("最小模式: READ=%0d CFG=%0d DISPLAY=%0d  (期望 READ>0, 其余 0)",
+                     n_read, n_cfg, n_disp);
+            if (errors == 0) $display("*** PASS ***"); else $fatal(1);
+            $finish;
+        end
         wait (frame_cnt >= BLANK_FRAMES + 2);
         repeat (400) @(posedge clk);
 

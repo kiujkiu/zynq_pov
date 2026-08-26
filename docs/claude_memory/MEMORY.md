@@ -149,3 +149,12 @@
 - [🔴 链路各级余量现状 (2026-08-05, 08-06 已修订)](project_pov3d_link_budget_status.md) — **先读这篇**: 900RPM/内容15fps 口径的实测余量表 + 口径推导; ⚠ 链路与翻页两行**已作废**(见下两条), 🔴 **面板那行 08-10 再修正: 不是 0.88× 是 0.44×**(每圈只显示 **160** 片, 因 bit29 降级), 翻 `B8→98` 可免费拿回 2.0×; '多切片提角分辨率收益为零'仍成立且更强
 - [🎯 15 fps 达成 — 收包元凶是 setsockopt(SO_RCVBUF) 自己](feedback_recv_setsockopt_rcvbuf_lock.md) — 设 SO_RCVBUF 会置 `SOCK_RCVBUF_LOCK` **关掉内核接收窗自动放大**, 窗口钉死 32844B ⇒ 2.83→**24.7 MB/s**, 上屏 **flip 中位 15.00/s**; 🔴 **`--fps` 要设成转速(15)不是越高越好**(40→12.99 / 15→15.00); 附"C 比 Python 慢 3 倍"的归因阶梯
 - [翻页相位锁定 — 立项前提是错的, 默认 off](feedback_phase_lock_premise_wrong.md) — drop=0/668 ⇒ 相位可回收量为 0, "wait 33ms"是 flip 线程空转不是错过机会; 随机相位本就自纠; 🔴 附**测量必须交错 A/B 报中位数**(单次窗口 8.0↔12.0 乱跳) + journalctl 按 unit 累积会污染对照组
+- [3-bit 色深上板跑通](project_pov3d_3bit_color.md) — 分支 feature/3bit-color; 行内 BCM + **MSB-first/权重184-92-46 是亮度几乎无损的关键**; aclk 实为 50MHz(我误判过25); half_scan 拿垂直分辨率换角分辨率(三件必须同时做); 圈级 BCM 因 3.7Hz 闪烁否决
+- [仿真通过 ≠ 语义正确](feedback_sim_verifies_timing_not_semantics.md) — 一天栽三次, 共同点是判据全在验时序没在验数据; frame_period/max_raddr/duty 三个判据同时假阳性; 能证伪的判据才有价值
+- [面板带宽哨兵 pair_miss 一直读错 + 饱和](feedback_pair_miss_sentinel_was_broken.md) — 16 位计数器被脚本当 1 位读(4000⇒打印0); 只有 PL 复位能清 ⇒ **只能冷启动后测增长率**; 「3-bit 下从没量过」的真正原因是量了也是 65535
+- [看门狗时钟起点设错会误杀健康硬件](feedback_watchdog_clock_started_too_early.md) — 起点在 launch ⇒ 流水线下被 recv 的 55-80ms 吃光 ⇒ 首次 poll 就判死引擎, 而引擎**无软复位**=不可逆; 计"我们真正阻塞多久"不是"墙钟"
+- [GBK 日志让 grep 返 exit 1 — **失败的构建会 grep 成干净的**](feedback_grep_treats_gbk_log_as_binary.md) — 非法UTF-8⇒判binary⇒**匹配到也 exit 1**; `grep -q ERROR:` 静默放行失败构建, WHS 门禁被吞; 修 `-notrace`(非ASCII 110→0), 旧日志 `grep -a`
+- [3-bit 亮度 41% 以下的面会被打成稀疏点阵](project_pov3d_3bit_dark_voxel_holes.md) — 洞率=1-7·v^gamma, gamma2.2 临界 41%/v=20% 时 80% 不亮; 解法是覆盖区重映射到[1,7]+**max通道定标保色相**(别按通道垫底); ⚠ 下限与抗锯齿会打架
+- [收发流水线破坏与翻页窗的同步](feedback_pipeline_breaks_flip_window_sync.md) — flip 4-8/s drop1600 vs 串行 flip 10-12/s **drop 9**; settle 延迟让帧就绪被 WiFi recv 抖动支配, 与 62ms 窗口拍频; 🔴 **收得快≠上屏多**, 判据看 flip 不看 rx; 仅在"解码比一圈快"时成立
+- [fold_a 的收益要靠 --stream-split even 兑现](feedback_fold_a_needs_even_stream_split.md) — 213 片跨面切 71/71/71 才均分; 按面切 71/142 被 142 封顶 ⇒ **收益归零且无报错**; pov_rxd 那句"FOLD_A 不省解码"说的是按面切的老前提
+

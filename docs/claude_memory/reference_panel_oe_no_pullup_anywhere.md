@@ -49,9 +49,21 @@ OE 是**直接进 ICND2049** 的。
   （不再依赖 HSWAPEN 跳线）。TD 5.9.1 接受输出脚带 PULLTYPE，`.area` 报告可见
   `panel_oe OUTPUT AB9 LVCMOS33 HRIO 4 PULLUP`。
   改动放在 `tools/xdc2adc.py` 的 `DR1_EXTRA` 表里而非手改 `.adc`（源 XDC 在只读的 `mlkpai_fs03/`）。
-- ⚪ **可选加固**：FS03 J12 焊 4.7 kΩ，pin1(VCC_CEP2=3.3V) ↔ pin14(OE)；屏2 是 pin1 ↔ pin34。
-  上拉到 VCCIO 同轨 ⇒ 连 PhaseRAMP 都覆盖。4mA 驱动器灌 0.7 mA、经 33Ω 只产生 23 mV 偏移。
-  ⚠ 50pin 排线的 pin1 本来就要求断开（接口板会把自产 5V 灌回），但 **FS03 侧 J12.1 的 VCC_CEP2 仍在**。
+- ⛔ ~~**可选加固**：FS03 J12 焊 4.7 kΩ，pin1(VCC_CEP2=3.3V) ↔ pin14(OE)；屏2 是 pin1 ↔ pin34~~
+  **2026-08-26 撤回，别照做。** 前提「VCC_CEP2 = 3.3V」已不成立：2026-07-07 做过 **5V 灌入改法**
+  （磁珠 L16/L17 贴上、L18/L19 移除，`mlkpai_fs03/docs/led_panel_chain.md:96`），
+  DR1 板要重做同一改法 ⇒ **J12.1 = VIN_5V0 = 5V**。
+  后果：pad 高阻时被 ESD 上钳位二极管钳在 ≈4.0V，4.7k 上持续 (5−4.0)/4.7k ≈ 0.21 mA 灌进 3.3V 轨。
+  电流不大，但 🔴 **它在 PhaseRAMP 期间是一条背供电通路** —— 而 PhaseRAMP 正是这条建议
+  想覆盖的那一段。FPGA 未上电而 5V 已在时（屏侧 3.8/2.8V 由转接板自产，与 FPGA POR 谁快谁慢
+  不受控），会把 VCC_3V3 抬起来但抬不到位 ⇒ POR 时序错乱。**等于在最需要它的时刻引入新故障。**
+  ⚠ 顺带纠正本文原来那句「50pin 排线的 pin1 本来就要求断开」：那是**改造前**的做法。
+  现役是把 VCC_CEP2 本身改成 5V、pin1 保留，接口板的 5V 从 pin1 灌进来给整板供电
+  （FS03 输入级是二极管 OR：VBUS_+5V-D15 / VIN_5V0-D16 → V_5V → AO3401 → VCC_5V0，
+  DR1 板 sheet 5 逐字同构，已核安全，反灌到不了 USB）。**两条做法互斥，别混用。**
+  若确实要覆盖 PhaseRAMP，唯一安全的取电点是一条确定的 3.3V 源（如跳帽 J1.1 = VCC_3V3）飞线，
+  但飞线在转子上的机械可靠性差、未实测，不推荐。
+  完整论证：`dr1v90/docs/PANEL_BRINGUP_CHECKLIST.md` §4.3。
 
 ## 5. 为什么**不**走 `DR1_LOGIC_IOTRIBUF`
 

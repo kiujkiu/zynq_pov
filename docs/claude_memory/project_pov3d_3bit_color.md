@@ -1,11 +1,11 @@
 ---
-name: 3-bit 色深上板跑通 (2026-08-20 ~ 08-24)
-description: ICND2047 行内 BCM 做每通道 3-bit; MSB-first + 权重 184/92/46 是亮度几乎无损的关键; half_scan 半屏换角分辨率; 分支 feature/3bit-color
+name: 3-bit 色深上板跑通 (2026-08-20 ~ 08-25)
+description: ICND2047 行内 BCM 做每通道 3-bit; MSB-first + 权重 184/92/46 是亮度几乎无损的关键; half_scan 半屏换角分辨率; **08-25 续: PL 三引擎解码 + fold_a ⇒ 969RPM 下 10-12 fps, 串行胜过流水线**
 type: project
 ---
 
 分支 **`feature/3bit-color`**（从 `feature/icnd2260-dualface` 切出），仓库 `mlkpai_fs03/`。
-起点 1-bit/7.2°/单色 → 现在 **3-bit / 双面偏心 / 2.54° / ~9.4fps**。
+起点 1-bit/7.2°/单色 → 08-24 **3-bit / 双面偏心 / 2.54° / ~9.4fps** → **08-25 加 PL 解码+fold_a 后 969RPM 下 10-12 fps**(见文末)。
 
 ## 架构：行内 BCM（不是屏级）
 
@@ -107,5 +107,58 @@ type: project
 叠加成"转起来的样子"。实测 `--no-dither` 与有抖动几乎无差 ⇒ 颗粒不是 3-bit
 量化也不是抖动, 而是 `--half-aspect` 把水平也压一半后的 2×2 放大。
 
+# 🎯 2026-08-25 续: PL 硬件解码 + fold_a, 帧率 5.5 → 10-12 fps
+
+本文原来收在 08-24 的"3-bit / 双面偏心 / 2.54° / ~9.4fps"。第二天两件事又把它推了一档。
+
+## PL 三引擎 lz4 解码 (commit `7efe755`)
+
+三个引擎挂 HP3/HP1/HP2, AXI-Lite `0x40020000/30000/40000`。
+**解码 74 ms/帧(0.95 B/clk), 828/828 帧全走 PL, fb=0, 超时 0 次。**
+改造前 `dec 158ms + cpy 80ms = 238ms/帧` ⇒ 5.5 fps。详见 [[project_lz4_pl_decoder]]。
+
+🎯 **顺带定了本文那桩 aclk 悬案**: 两条独立证据 —— `rev_period 4522362 ÷ 11.06 rev/s`,
+以及 `CYCLES 3.69M ÷ 74ms` —— 都指向 **aclk = 50 MHz**。本文上面那段推断被上板坐实。
+
+🎯 **`pair_miss` 基线 = 0 且三引擎全速打 DDR 后仍是 0.0/s**。
+风险评估的推断(面板在 HP0 独立 DDRC 口 + 纯读, DDRC 拥塞时读优先于写 ⇒ 面板是被偏袒的一方)实测站住。
+⚠ 但读这个计数器要小心: 16 位且只有 PL 复位能清, **只能冷启动后测增长率**
+([[feedback_pair_miss_sentinel_was_broken]])。
+
+## fold_a (commit `970edce`)
+
+**帧 10.47 → 7.85 MB**(213 片 = 面A 71 + 面B 142), 解码量 −25%, **74 → 55.5 ms**。
+🔴 **必须配 `--stream-split even --stream-workers 3`**: 213 片跨面切成 71/71/71 才均分;
+按面切会切成 71/142, makespan 被 142 那条封顶 ⇒ **收益全丢且无任何报错**
+([[feedback_fold_a_needs_even_stream_split]])。
+
+**3-bit 与 fold_a 天然正交**: plane 换算在镜像**之后**, 三个位平面各自被同一个 (lane,row) 置换。
+`half_slices = n_slices>>1` 不是硬编码 180 (142 ⇒ 71)。
+⚠ 镜像置换路径在现役配置(`mirror_a=0`)下**从未被激活过**, 这是唯一真正"新"的东西, 画面对不对只有眼睛能判。
+
+## 🔴 串行胜过流水线 (同 commit, A/B 实测)
+
+| | rx | flip | drop | 实际上屏 |
+|---|---|---|---|---|
+| 流水线 | 15-17/s | 4-8/s | 1600 | 4-8 fps |
+| **串行** | 10-12/s | **10-12/s** | **9** | **10-12 fps** |
+
+串行下 **flip == rx, 一帧不丢**。**收得更快, 上屏反而更少** ——
+流水线把 settle 推迟到"收到下一帧", 帧就绪节奏被 WiFi recv 拖着走, 与 62 ms 翻页窗失去同步。
+⚠ **只在"解码比一圈快"时成立**, 解码若再变慢要重新评估([[feedback_pipeline_breaks_flip_window_sync]])。
+默认已改为 `--no-pipeline`。
+
+## 现役工况 (969 RPM)
+
+**16.15 rev/s / 圈周期 62 ms / 10-12 fps / `flip == rx` / drop 9。**
+
+🔴 **一个没人算过的账**【推算, 未上板验证】: 3-bit 整屏 **1583 Hz**,
+16.15 rev/s 下每圈只画得出 `1583/16.15 ≈ 98` 个角度, **而配置是 142 槽/面**。
+(142 对应的是 `7efe755` 那次的 11.06 rev/s: `1583/11.06 ≈ 143`, 精确吻合。)
+⇒ **08-25 提速之后, 142 槽里可能有约 1/3 没机会上屏。**
+不影响帧率(面板不满足只掉角分辨率), 但影响"该渲多少片"。值得顺手量一次。
+
 相关：[[feedback_sim_verifies_timing_not_semantics]] [[project_pov3d_refresh_vs_rpm]]
 [[project_pov3d_nslices_match_panel]] [[reference_pov3d_brightness_control_limits]]
+[[project_lz4_pl_decoder]] [[feedback_fold_a_needs_even_stream_split]]
+[[feedback_pipeline_breaks_flip_window_sync]] [[project_dr1_parity_plan]]

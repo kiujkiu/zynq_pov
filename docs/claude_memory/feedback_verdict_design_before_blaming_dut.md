@@ -56,4 +56,21 @@ data == prev + 1 -> 继续, OK
 同类经验: [[feedback_changed_instrument_and_design_together]]
 (那次是改了量具又改了被测物, 这次是量具本身量不了要量的东西)。
 
-相关：[[project_dr1_parity_plan]]
+## 2026-08-26 又一次, 而且更狠: 三个 bug 全在模型/TB 里, DUT 一个都没有
+
+调 `axi_hp_arb` (N:1 AXI 仲裁器, [[project_dr1_hp_topology_decision]]) 时:
+
+| 症状(看起来是什么) | 真因 |
+|---|---|
+| "写通路整个不工作, AW 一笔都没握手" | 模型里 `WQD[3:0]`, 而 `WQD=16` ⇒ 截成 0 ⇒ 判据恒假 |
+| "仲裁器把 R 数据发给了错的主" | 模型拿**槽号**当年龄判"同 ID 谁更老", 而槽是回收复用的 ⇒ **模型自己违反了 AXI 同 ID 按序**, DUT 反而是按规范写的 |
+| 🔴 "SLV-ERR 明明打印出来了, 回归却报 PASS" | 模型 `err_count` **没初始化恒为 X** ⇒ 上层 `if (err != 0)` 对 X 求值为假 ⇒ **协议错误全部静默漏网** |
+
+第三条最该记: **判据自身失效, 且失效方向是"看起来一切正常"**。
+与 [[feedback_touch_success_is_not_writable]] / [[feedback_grep_treats_gbk_log_as_binary]] /
+[[feedback_pair_miss_sentinel_was_broken]] 是同一类 ——
+**Verilog 里没初始化的 reg 是 X, 而 `if (X != 0)` 为假**, 等于把闸门默认开着。
+⇒ 写回归时, **对判据本身也要有一次"注入必然失败、确认它会 FAIL"的自检**(变异测试就是干这个的)。
+
+相关：[[project_dr1_parity_plan]] [[project_dr1_hp_topology_decision]]
+[[feedback_always_ready_tb_hides_handshake_bugs]] [[feedback_sim_verifies_timing_not_semantics]]

@@ -13,7 +13,8 @@ metadata:
 |---|---|---|
 | DR1V90 | **26.7 / 28.4 Mbps** (CPU 仅 40-47%, 未饱和) | ⚠ **不作数** |
 | Zynq-7020 **同一测法** | 18 / 47 Mbps | ⚠ 同上 |
-| **Zynq 现役真实收包** | **24.7 MB/s ≈ 198 Mbps** | ✅ 板端 DIAG, 修完 `SO_RCVBUF` 之后 |
+| ~~Zynq 现役真实收包~~ | ~~24.7 MB/s ≈ 198 Mbps~~ | 🔴 **2026-08-27 更正: 那是突发窗口速率, 不是持续吞吐** |
+| **Zynq 持续吞吐(改用这个做预算)** | **110-125 Mbps** | 500/300 MB 单流实测; 1/2/4/8/16 并发聚合 128/121/86/101/107 ⇒ **多流不涨** |
 
 **为什么前两行不作数**: 那是 Windows 上单线程无 sendfile 的 Python `http.server`
 + **两端都在 WiFi 上共享空口**, 把两块板**同样**卡在 20-50 Mbps。
@@ -59,3 +60,15 @@ Zynq 上也撞过([[project_pov3d_nslices_match_panel]]: RX 收到就 ACK, 与�
 
 相关: [[project_dr1_wifi_modules]] [[project_dr1_parity_plan]] [[feedback_recv_setsockopt_rcvbuf_lock]]
 [[feedback_wifi_throughput_bottleneck_isolated]] [[feedback_office_ap_blocks_esp32c5_tcp]]
+
+---
+
+## 🔴 2026-08-27 更正: 198 Mbps 不能拿来做预算
+
+那个 24.7 MB/s 是**突发窗口速率**。**持续吞吐实测只有 110-125 Mbps**,
+用 198 做链路预算会**乐观 1.6×**。本文之前(以及依赖本文的多处推算)都用错了口径。
+
+🔴 **而且换更强的 PS 一分钱都买不到带宽**: 天花板在 **USB2.0 + mt76 驱动**, 不在 CPU ——
+124 Mbps 传输时两个核**各 50% idle**, 而板内回环能到 1123-1238 Mbps。
+XC7Z020 无 PCIe 无 GTP, 无线只剩 USB2.0(实用上限 280-320 Mbps)。
+⇒ 链路不够时, **该换的是链路架构(传什么), 不是 PS 档次**。

@@ -170,3 +170,4 @@
 - [Zynq↔DR1 两条线的实际漂移 (逐文件量)](reference_zynq_dr1_code_drift.md) — **RTL 只差 345 行且零新增 Xilinx 原语**(angle_tracker/row_drv 逐字节相同), **lz4 核逐字节相同**; 真正落差在板端软件 **+1421 行** ⇒ 建议从 Zynq 版**重新 fork** 而不是打补丁; ⚠ 但'改动行少≠移植容易'(fb_lane_ram 要重做 / HP 拓扑完全不同); ✅ **08-26 fork 已执行**(24 hunk/+339-68), 且新挖出上游没有的 **P27: comp 缓冲要 `frame_flush`** —— DR1 帧区带 cache 而 HP 不 snoop, 漏了症状是'旧帧/花屏'不是报错
 - [三台板子的身份识别与禁区](reference_pov3d_board_inventory.md) — pov/pov2/DR1 的 IP-MAC-特征对照; 🔴 第一台 pov 别人在用不要碰; board_ssh 默认解析 pov.local 会误连第一台
 - [pov2 台面全黑 — pov_boot.sh 取帧顺序 bug](project_pov2_bench_black_screen.md) — 无电机时 fb 只按 1-bit 写过一次 ⇒ 56% 读地址恒 0; 🔴 oeprobe 测不到引脚(ODDR 不可回采); pov6_hold/fake 会把 n_slices 砸成 360; 五条假设已证伪
+- [pov2 装机出厂配置 (2026-08-27)](project_pov2_shipping_config.md) — 上电即 3-bit+lz4x3+光电传感器; 🔴 装机必须去掉 --fake(台面伪造转速); 冷启动验 eng=3/3 且 overlay 为空; 每处都有备份与回滚

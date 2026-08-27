@@ -175,3 +175,4 @@
 - [三台板子的身份识别与禁区](reference_pov3d_board_inventory.md) — pov/pov2/DR1 的 IP-MAC-特征对照; 🔴 第一台 pov 别人在用不要碰; board_ssh 默认解析 pov.local 会误连第一台
 - [pov2 台面全黑 — pov_boot.sh 取帧顺序 bug](project_pov2_bench_black_screen.md) — 无电机时 fb 只按 1-bit 写过一次 ⇒ 56% 读地址恒 0; 🔴 oeprobe 测不到引脚(ODDR 不可回采); pov6_hold/fake 会把 n_slices 砸成 360; 五条假设已证伪
 - [pov2 装机出厂配置 (2026-08-27)](project_pov2_shipping_config.md) — 上电即 3-bit+lz4x3+光电传感器; 🔴 装机必须去掉 --fake(台面伪造转速); 冷启动验 eng=3/3 且 overlay 为空; 每处都有备份与回滚
+- [Windows 往 SD 卡复制会被 DLP 静默加密](feedback_windows_dlp_encrypts_removable_writes.md) — 文件头 #OCULAR3#ENCRYP, 大小+37280B 且每次 md5 不同, 换读卡器无效; 极像介质损坏, 判据是 dump 前 64 字节; 只有 Etcher 块级烧录能正确写卡

@@ -106,6 +106,69 @@ sudo dhclient wlx90de8047f0ff
   Win32_PnPEntity | Where-Object {$_.Name -like '*(COM*'} | Select-Object -ExpandProperty Name"`
   (`mode COMx` 的输出是 GBK, grep 会乱码)。
 
+## 🎯 真机制: bpp_mode=1 时 AXI fb 窗只写得进 plane0
+
+```verilog
+fbw_plane = pov_en ? df_fb_wplane : 2'd0     // pov_dual_top.v:548-551
+```
+
+**AXI fb 窗(`0x8000|lane<<11|i<<2`, 即 pov6_* 那套工具走的路)的 plane 号硬钉 0**,
+窗地址只有 9 bit `{row[5:0], word[2:0]}`。而 `bpp_mode=1` 时引擎按
+`pack_addr = row*18 + plane*6 + word` 读(`pov_dual_top.v:606-625`):
+
+- 脚本写 word=0..7 ⇒ **plane0 的 6 个 pair 全覆盖**
+- **plane1 只中 pair0/1**(= chip0..3 = 屏高 Y 0..59 = **顶上 1/3**, `icnd2047_panel_core.v:79-80`)
+- **plane2 一个字都写不进**
+
+而 **plane1+plane2 占总光通量 138/186 = 74%**(权重 92+46 vs plane0 的 oe_w0)。
+
+⇒ **在 3-bit 模式下用 pov6 工具灌 fb, 你只能控制 plane0, 而它权重最小;
+另外 74% 的光来自 plane1/2 里的陈旧残留, 脚本改不动。**
+2026-08-27 唯一一次"亮"(`pov6_hold WHITE 8`)看到的"好几个进程叠在一起的图像",
+就是 plane0 全白@1.37% + plane1 顶部 1/3 全白@15.7% + plane1/2 其余的开机残留三者叠加。
+**不需要真有第二个进程。**
+
+**How to apply:** 台面上用 pov6_* 工具调试前, **必须先把 bpp_mode 清成 0**
+(`pw(0x0C, 0x40000000)` —— [15:0]=0 表示 oe_w1/oe_w2 保持)。否则看到的东西没有意义。
+
+## 🔴 povrxd 是隐形的第二个 writer
+
+`pov_rxd` **每帧调 `bcm_apply()` 把 `0x0C sub01`(含 bpp_mode)写回去**;即使不变也会在
+`g_bcm_since >= BCM_REASSERT_EVERY(=256)` 时强制重申 ⇒ **11 fps 下最迟约 23 秒
+bpp_mode 必然被掀回 1**。回读发现不一致时它**只打日志、不重写**, 所以在串口上看不见。
+<< `pov_rxd.c:902-920` / `:378` / `:2512` / `:934-936`
+
+它**不碰 `0x10`**(没带 `--fake` 时), `fold_a_apply` 走 `0x24` 影子且只在不符时才写
+⇒ **它抢的只有 bpp_mode 这一个位**。<< `pov_rxd.c:3392-3394` / `:848-854`
+
+**How to apply:** 手动清 bpp_mode 之前必须 `systemctl stop povrxd`, 而且要确认它真停了
+(`Restart=always`, kill 掉会被 systemd 拉起来)。
+
+## ⚠ 两条被推翻的推理 (我自己的)
+
+1. **"第 5 次 oe 最低反而亮 ⇒ 亮度不是变量"** —— 前提算错了。两个脚本都只写
+   `sub10` 的 `oe_window`(= **plane0 权重**), **从不写 sub01**, 所以 oe_w1/oe_w2 恒为 92/46。
+   真实每 LED 占空: oe=8/bpp1 = (8+92+46)/585 = **24.96%**, oe=48/bpp1 = 31.79%,
+   oe=48/bpp0 = 24.62%。**第 5 次是中间水平, 不是最暗。**
+2. **"J1 上 RGB 线是平的 ⇒ 没数据"** —— 错。**纯色实心时 SDI 就是直流, 示波器上本来就该平**。
+   第 5 次有波形只说明那次 fb 里恰好是花图案。**"RGB 没波形"从来不是故障证据。**
+
+## ⚠ 卡镜像 fs03_card.img.gz 里是**未打补丁**的 pov_boot.sh
+
+镜像里那份是 13941 B / 2026-08-24, `grep 2026-08-27` 命中 0。
+**重烧卡就会丢掉 2026-08-27 的两个补丁** —— 补丁只部署在活的板子上(已核 md5)。
+活板子确实在跑打过补丁的版本, 证据: 开机日志出现了只有新版才有的 `NO_WLAN_YET -> 转后台守候`。
+重烧卡后要记得重新部署 `stream/board/pov_boot.sh`。
+
+## 🔴 USB WiFi 网卡会掉出总线, 且软件救不回来
+
+2026-08-27 dmesg 实录: `usb 1-1 new device #5` @108s → `USB disconnect #5` @114s →
+自己回来 `#6` @116s → `USB disconnect #6` @499s, **再没回来**。
+`lsusb` 只剩根集线器, `/sys/class/net` 只有 eth0/lo/sit0。
+
+**两级复位都救不回**: ① `ci_hdrc` unbind/bind ② `pov_boot.sh` 的 USB PHY 硬复位(SLCR+GPIO)。
+**只能物理拔插网卡。** 这是 USB 层的问题(VBUS/接触/网卡本身), 不是射频、也不是配置。
+
 ## 遗留
 
 - **蓝色不亮**（2026-08-26 起）仍未定案 —— 全黑问题压过去了，还没回头查。

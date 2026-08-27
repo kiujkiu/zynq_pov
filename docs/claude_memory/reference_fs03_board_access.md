@@ -202,3 +202,10 @@ NETOK=0; for t in $(seq 1 6); do ping -c1 -W2 -I $IF $GWIP >/dev/null 2>&1 && { 
   (可写层保留修改, 只有 `up --build` 重建才会丢)。
 - 看门狗 `stream/board/povwifi_watchdog.sh` + `povwifi.timer` 已装(15s 一次)。
   ⚠ 它的网关判定同样受 IP 变更影响 —— 固定 IP 后才真正可信。
+
+---
+
+🎯 **08-27 补**: 「WiFi 会掉且不自愈」的机制已查明 —— **不是射频问题**: `pov_boot.sh` 等 `^wl` 接口只等 30 秒,
+等不到就 `NO_WLAN_STATIC_ONLY; exit 0`, 之后再无任何补救。而 mt7921u 实测有过
+**403 秒**才枚举的情况。已修 (mlkpai_fs03 `7a8e478`, 后台守候 20 分钟)。
+详见 [[project_pov2_bench_black_screen]]。串口救援口令也在那条里。

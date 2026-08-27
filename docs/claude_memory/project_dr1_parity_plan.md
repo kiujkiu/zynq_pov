@@ -20,7 +20,7 @@ metadata:
 | 线 | 状态 | commit |
 |---|---|---|
 | **A** RTL 追平 | ✅ **离线完成**。TD syn→place→route→bitgen 全过: `#eram 36/280`(判据要的 18→36) / `SWNS +6.490ns` / `HWNS +0.024ns` / Fmax 74.0 MHz / `Constraint File` 非空且非 DeriveClock。⚠ **一次都没上板** | `9cff1c4` |
-| **B** HP 拓扑 | ✅ 设计定案 + RTL + 仿真完成, 见 [[project_dr1_hp_topology_decision]]。🔴 **`axi_hp_arb` 没过 TD 综合**; 🔴 **HP1 在当前 PS IP 里根本没生成**, 要用 TD 重新生成 PS IP(排期 +2~3 天) | `70c0dde` |
+| **B** HP 拓扑 | ✅ 设计定案 + RTL + 仿真, 见 [[project_dr1_hp_topology_decision]]。✅ **08-27: `axi_hp_arb` 过了 TD**(N=2 @100MHz 余量 43%, 0.35% slice) ✅ **HP1 与 p2f_clk1 已接出**(不用重新生成 PS IP, 排期 +2~3 天那条**取消**)。🔴 剩 PS 侧四个寄存器**一个都没在板上写过** —— 不写就是"综合全过、上板静默不应答" | `70c0dde` `451888f` `ba0cbbb` |
 | **C** 板端软件 | ✅ 按建议**重新 fork** 完成, 24 hunk / +339-68, 本机 12 项自检全过。⏸ `--pl-lz4` 整条路径本机一条都证不了 | `e5cfeb9` |
 | **D** 电气收口 | 📄 检查表写完: **OE 复位态已收口可以接屏**; ⛔ 撤回"焊 4.7kΩ 到 J12.1"那条旧建议(做过 5V 灌入改法后它是背供电通路), 见 [[reference_panel_oe_no_pullup_anywhere]]。⏸ **排线还没插**, 50 Mbps 全速 SI 仍未验 | `905ce46` |
 | **E/F** | ⏸ 未开始。F 的**材料**做完了(整卡流程 + `povboot.sh`), 且 §F 那个"静默换掉整个 userland"的雷**已修**(默认基底改对 + md5 硬断言 + `AUTOBOOT` 闸门), 但**一条判据都没上板验过** | `f0f1f47` |
@@ -28,6 +28,8 @@ metadata:
 
 🎯 **下一步就是 `measure/03_wifibw`** —— 15 分钟, 不需要任何新 bitstream, 现役系统就能跑,
 且结果可能改写 B 线的目标。前置只有一台**有线**服务端。
+板子一到位, `measure/01_hpbw` 的**阶段 2(双口并发)也已经能跑**了(`hpbw dual`),
+上板第一件事是 `hpbw portalive` —— HP1 全 0 而 HP0 非 0 就说明 PL 侧对了、PS 侧没使能。
 ⚠ 板子距上次通电已久, 别假设它是热的。
 
 ## 0. 一句话现状

@@ -42,7 +42,10 @@ type: project
 | 12.3× (最坏, `frames_3bit_dual50`) | 638 kB | 7.0 MB/s | **56 Mbps** |
 | 35.5× (`frames_bonsai_max`) | 221 kB | 2.4 MB/s | **19 Mbps** |
 
-Zynq 现役实测收包上限 **24.7 MB/s ≈ 198 Mbps** ⇒ Zynq 侧余量仍很足(3.5× 以上)。
+~~Zynq 现役实测收包上限 **24.7 MB/s ≈ 198 Mbps** ⇒ Zynq 侧余量仍很足(3.5× 以上)。~~
+🔴 **2026-08-27 更正: 198 Mbps 是突发窗口速率, 不是持续吞吐**(峰值当持续)。
+**持续只有 110-125 Mbps** ⇒ 对最坏 12.3× 压缩比的 **56 Mbps** 需求,
+Zynq 侧余量是 **约 2×**, 不是 3.5×。见 [[reference_dr1_wifi_ceiling_unestablished]]。
 🔴 **但 DR1 侧这一级可能是天花板** —— DR1 的 WiFi 吞吐从未确立,
 见 [[reference_dr1_wifi_ceiling_unestablished]]。
 

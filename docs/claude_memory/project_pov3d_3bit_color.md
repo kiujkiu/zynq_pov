@@ -122,6 +122,9 @@ type: project
 
 🎯 **`pair_miss` 基线 = 0 且三引擎全速打 DDR 后仍是 0.0/s**。
 风险评估的推断(面板在 HP0 独立 DDRC 口 + 纯读, DDRC 拥塞时读优先于写 ⇒ 面板是被偏袒的一方)实测站住。
+⚠ **但这条归因只对 Zynq 成立, 别搬到 DR1**: "拥塞时读优先于写"是 **AMD 明文**;
+而**安路对 DR1 确定否认**("不是简单固定读优先或写优先", 且没有最小带宽/最大延迟保证)
+⇒ **这个 `pair_miss=0` 不能当 DR1 的预期**, 见 [[reference_dr1_hp_backpressure_and_ot]]。
 ⚠ 但读这个计数器要小心: 16 位且只有 PL 复位能清, **只能冷启动后测增长率**
 ([[feedback_pair_miss_sentinel_was_broken]])。
 

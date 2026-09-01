@@ -135,11 +135,37 @@ module icnd2260_lxb_lvds_top #(
     // 帧缓存: 字序 {R,G,B}, 低 16 位 = B = lane0 = D0
     // ---------------------------------------------------------------------
     wire [FB_AW-1:0]     fb_addr;
-    reg  [16*NLANE-1:0]  fb_q;
+    reg  [16*NLANE-1:0]  fb_rom_q;
     (* ram_style = "block" *) reg [16*NLANE-1:0] fb [0:TOTAL_PIX-1];
 
     initial $readmemh("icnd2260_fb_lvds.mem", fb);
-    always @(posedge clkbit) fb_q <= fb[fb_addr];
+    always @(posedge clkbit) fb_rom_q <= fb[fb_addr];
+
+    // ---- 运行时图案发生器 (点屏流程用, 切图案不用重编) --------------------
+    //   dbg_pat_mode: 0=ROM(.mem 里的图)  1=三色循环  2=纯红 3=纯绿 4=纯蓝
+    //                 5=全白  6=全灭
+    //   dbg_pat_lvl : 亮度 (16 bit 线上灰度)。⚠ 首光阶段别拉满, 整屏全亮很费电也很烫。
+    //   字序 {R,G,B}, 低 16 位 = B = lane0 = D0。
+    reg [1:0]  pat_cix = 2'd0;      // 三色循环的当前颜色
+    reg        fdiv_d  = 1'b0;
+    always @(posedge clkbit) begin
+        fdiv_d <= frame_cnt[7];                       // 160fps 下约 0.8 s 换一次
+        if (frame_cnt[7] & ~fdiv_d)
+            pat_cix <= (pat_cix == 2'd2) ? 2'd0 : pat_cix + 2'd1;
+    end
+    wire [2:0]  cyc_rgb = (pat_cix == 2'd0) ? 3'b100 :   // R
+                          (pat_cix == 2'd1) ? 3'b010 :   // G
+                                              3'b001;    // B
+    wire [2:0] sel_rgb = (dbg_pat_mode == 3'd1) ? cyc_rgb :
+                         (dbg_pat_mode == 3'd2) ? 3'b100 :
+                         (dbg_pat_mode == 3'd3) ? 3'b010 :
+                         (dbg_pat_mode == 3'd4) ? 3'b001 :
+                         (dbg_pat_mode == 3'd5) ? 3'b111 : 3'b000;
+    // ⚠ 字序 {B,G,R}: 低 16 位 = R = lane0 (2026-09-01 首光实测, 不是引脚名推的 B)
+    wire [16*NLANE-1:0] pat_q = {sel_rgb[0] ? dbg_pat_lvl : 16'h0,   // B
+                                 sel_rgb[1] ? dbg_pat_lvl : 16'h0,   // G
+                                 sel_rgb[2] ? dbg_pat_lvl : 16'h0};  // R
+    wire [16*NLANE-1:0] fb_q = (dbg_pat_mode == 3'd0) ? fb_rom_q : pat_q;
 
     // ---------------------------------------------------------------------
     // 序列器 (与 TTL 版共用) + LVDS 发送器
@@ -168,6 +194,8 @@ module icnd2260_lxb_lvds_top #(
     wire        dbg_crc_refl;  // CHKSUM: 1=手册 LFSR(0x8408 反射)  0=旧的 CCITT-FALSE
     wire        dbg_crc_lsb;   // CHKSUM 域: 1=LSB 先发  0=MSB 先发
     wire        dbg_vhead_copy;// VHEAD[15:0]: 1=填 VHEAD[31:16] 拷贝(p.12)  0=填校验和(p.14)
+    wire [2:0]  dbg_pat_mode;  // 图案: 0=ROM 1=三色循环 2=R 3=G 4=B 5=白 6=灭
+    wire [15:0] dbg_pat_lvl;   // 图案亮度
     wire        dbg_ck_free;   // 1=转发时钟从电源使能就自由跑(手册 3.2「时钟不停」)
                                // 0=等 out_en(现状, 中间有 25.2ms 完全无时钟)
     wire        seq_quiet;
@@ -354,6 +382,8 @@ module icnd2260_lxb_lvds_top #(
         wire [0:0]  o_we_tog, o_probe_en, o_soft_rst, o_minimal, o_dclk_lvl;
         wire [3:0]  o_pn_inv;
         wire [3:0]  o_crc_mode;   // [0]refl [1]lsb_tx [2]vhead_copy [3]ck_free
+        wire [2:0]  o_pat_mode;
+        wire [15:0] o_pat_lvl;
         wire [7:0]  o_probe_off;
         wire [3:0]  o_probe_dev;
 
@@ -374,6 +404,8 @@ module icnd2260_lxb_lvds_top #(
         assign dbg_crc_lsb   = o_crc_mode[1];
         assign dbg_vhead_copy= o_crc_mode[2];
         assign dbg_ck_free   = o_crc_mode[3];
+        assign dbg_pat_mode  = o_pat_mode;
+        assign dbg_pat_lvl   = o_pat_lvl;
 
         wire [15:0] status = {mmcm_locked, running, out_en, en_3v8,
                               en_2v8, ack_ok_sticky, ack_crc_ok, ack_frame_err,
@@ -399,7 +431,9 @@ module icnd2260_lxb_lvds_top #(
             .probe_out7 (o_minimal),                 // 1  <-- 最小配置模式
             .probe_out8 (o_dclk_lvl),                // 1  <-- DCLK 电平 (0/1 实时切)
             .probe_out9 (o_pn_inv),                  // 4  <-- 差分极性 {ck,r,g,b}
-            .probe_out10(o_crc_mode)                 // 4  <-- {ck_free,vhead_copy,lsb_tx,refl}
+            .probe_out10(o_crc_mode),                // 4  <-- {ck_free,vhead_copy,lsb_tx,refl}
+            .probe_out11(o_pat_mode),                // 3  <-- 图案选择
+            .probe_out12(o_pat_lvl)                  // 16 <-- 图案亮度, INIT=0x0FFF
         );
     end else begin : g_nodbg
         assign dbg_reg_we    = 1'b0;
@@ -416,6 +450,8 @@ module icnd2260_lxb_lvds_top #(
         assign dbg_crc_lsb   = 1'b0;
         assign dbg_vhead_copy= 1'b0;
         assign dbg_ck_free   = 1'b0;
+        assign dbg_pat_mode  = 3'd0;
+        assign dbg_pat_lvl   = 16'h0FFF;
     end
     endgenerate
 

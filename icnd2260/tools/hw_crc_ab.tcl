@@ -28,7 +28,7 @@ set p_nb   [PX $v "ack_f_nbits"]
 set p_mode [PX $v "g_dbg.o_crc_mode"]
 set p_rst  [PX $v "g_dbg.o_soft_rst"]
 
-proc setp {p val} { set_property OUTPUT_VALUE $val $p ; commit_hw_vio $p }
+proc setp {p val} { set_property OUTPUT_VALUE $val $p ; commit_hw_vio $p ; after 120  }
 proc samp {v tag p_fps p_fc p_st p_cnt p_err p_nb} {
     set a [expr 0x[get_property INPUT_VALUE $p_err]]
     set c0 [expr 0x[get_property INPUT_VALUE $p_fc]]

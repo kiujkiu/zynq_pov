@@ -23,7 +23,7 @@ proc PX {v want} {
         if {[string match "*/$want" $n] || [string match "*.$want" $n]} { set best $p }
     }
     return $best }
-proc setp {p val} { set_property OUTPUT_VALUE $val $p ; commit_hw_vio $p }
+proc setp {p val} { set_property OUTPUT_VALUE $val $p ; commit_hw_vio $p ; after 120  }
 proc IV {v n} { return [expr 0x[get_property INPUT_VALUE [PX $v $n]]] }
 
 setp [PX $v "g_dbg.o_probe_en"] 1

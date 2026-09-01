@@ -32,6 +32,7 @@ module icnd2260_lvds_tb;
     parameter integer CASCADE      = 2;       // 真板 9 —— 多颗才测得到「每颗一个 CRC」
     parameter integer BLANK_FRAMES = 2;       // 真板 64
     parameter integer MINIMAL      = 0;       // 1 = 只发「RSYNC+读寄存器」
+    parameter integer DUMP_WAVE    = 0;       // 1 = 把 lane0(D0/B_P) 的位流导成文本, 供逻辑分析仪对拍
 
     function integer clog2(input integer v);
         integer i;
@@ -101,18 +102,22 @@ module icnd2260_lvds_tb;
         .cmd_device (cmd_device), .cmd_offset (cmd_offset),
         .cmd_length (cmd_length), .cmd_rows (cmd_rows), .cmd_cascade (cmd_cascade),
         .pl_next (pl_next), .pl_data (pl_data), .pl_last (pl_last),
+        .crc_refl (1'b1), .crc_lsb_tx (1'b0), .vhead_copy (1'b0),
         .bit_r (bit_r), .bit_f (bit_f), .isync (isync), .busy (tx_busy)
     );
 
     //-------------------------------------------------------------------------
-    // TB 侧独立实现的 CRC-16/CCITT
+    // TB 侧的 CHKSUM —— 跟着 DUT 换成手册 P13 那张 LFSR 图的形式
+    // (数据进 C15/向右移/回授取 C0/掩码 bit15|bit10|bit3 = 0x8408)。
+    // ⚠ 收发两侧同时改 ⇒ 这个 TB 从此**不再是 CRC 算法本身的独立证据**,
+    //   它只证明帧格 / 字段对齐 / CRC 覆盖范围。算法的唯一依据是手册那张图。
     //-------------------------------------------------------------------------
     function [15:0] crc_step(input [15:0] c, input b);
         reg fb_;
         begin
-            fb_      = c[15] ^ b;
-            crc_step = {c[14:0], 1'b0};
-            if (fb_) crc_step = crc_step ^ 16'h1021;
+            fb_      = b ^ c[0];
+            crc_step = {1'b0, c[15:1]};
+            if (fb_) crc_step = crc_step ^ 16'h8408;
         end
     endfunction
 
@@ -182,8 +187,8 @@ module icnd2260_lvds_tb;
             D_START: begin
                 if (b0) begin                       // 1,1 -> RSYNC (4 边/位)
                     dst   = D_RSYNC;
-                    os    = 4;  osc = 2;  osbit = 1'b1;
-                    acc   = 56'h1;  nb = 0;         // 第 1 位在组末才计入
+                    os    = 1;  osc = 0;  osbit = 1'b1;
+                    acc   = 56'h3;  nb = 2;         // 🔴 RSYNC 是 1 边/位, 已收 1,1
                 end else begin                      // 1,0 -> VHEAD (1 边/位)
                     dst   = D_VHEAD;
                     os    = 1;
@@ -194,20 +199,17 @@ module icnd2260_lvds_tb;
                 if (|e[NLANE-1:1]) fail("lane12_nonzero_in_header");
             end
 
-            //---- RSYNC: 56 位, 4 边/位 ---------------------------------
+            //---- RSYNC: 🔴 56 个**线上单元**, 1 边/位 -------------------
+            // 原来这里按 4 边/位 解 —— 那正是 DUT 里的同一个误解, 所以两周来
+            // 这个"独立解码器"一直给 PASS。2026-09-01 供应商逻辑分析仪抓包实测:
+            // RSYNC 恰好占 56 个时钟沿, 开头连续 1 是 16 个(不是 64 个)。
             D_RSYNC: begin
                 if (|e[NLANE-1:1]) fail("lane12_nonzero_in_rsync");
-                if (osc == 0) osbit = b0;
-                else if (b0 !== osbit) fail("oversample4_bits_differ");
-                osc = osc + 1;
-                if (osc == 4) begin
-                    osc = 0;
-                    acc = {acc[54:0], osbit};
-                    nb  = nb + 1;
-                    if (nb == 56) begin
-                        if (acc !== 56'hFFFF0F0F0F0F0F) fail("rsync_pattern_wrong");
-                        dst = D_CHDR;  acc = 56'h0;  nb = 0;  crc_calc = 16'hFFFF;
-                    end
+                acc = {acc[54:0], b0};
+                nb  = nb + 1;
+                if (nb == 56) begin
+                    if (acc !== 56'hFFFF0F0F0F0F0F) fail("rsync_pattern_wrong");
+                    dst = D_CHDR;  acc = 56'h0;  nb = 0;  osc = 0;  crc_calc = 16'hFFFF;
                 end
             end
 
@@ -383,6 +385,17 @@ module icnd2260_lvds_tb;
 
     // I_SYNC 每帧只翻一次
     always @(isync) if (rst_n) n_sync = n_sync + 1;
+
+    // ---- 导出 lane0 位流(每周期两个沿), 给逻辑分析仪对拍 ----
+    integer fh, dumped = 0;
+    initial if (DUMP_WAVE != 0) fh = $fopen("wave_d0.txt", "w");
+    always @(posedge clk) begin
+        if (DUMP_WAVE != 0 && rst_n && dumped < 4000) begin
+            $fwrite(fh, "%b%b", bit_r[0], bit_f[0]);
+            dumped = dumped + 1;
+            if (dumped % 40 == 0) $fwrite(fh, "\n");
+        end
+    end
 
 
     //-------------------------------------------------------------------------

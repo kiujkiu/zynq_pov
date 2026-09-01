@@ -39,7 +39,8 @@ module icnd2260_ack_rx #(
 ) (
     input  wire        clk,
     input  wire        rst_n,
-    input  wire        ack_pin,          // 直接接引脚, 内部做同步
+    input  wire        ack_pin,
+    input  wire        crc_refl,   // 1 = 手册 LFSR(反射 0x8408), 与发送侧同源          // 直接接引脚, 内部做同步
 
     output reg         frame_valid,      // 收完一帧, 打一拍脉冲
     output reg         frame_ok,         // 迟一拍的脉冲: 头部字段合理才拉高
@@ -97,12 +98,21 @@ module icnd2260_ack_rx #(
 
     assign busy = (st != A_IDLE);
 
-    function [15:0] crc_step(input [15:0] c, input b);
+    // 🔴 与 icnd2260_lvds_tx 用同一套定义, 见那边 crc_step 的注释。
+    //    refl=1 = 手册 P13 LFSR 图(右移/回授取 bit0/0x8408)。芯片算 CHKSUM 用的是
+    //    哪一种, 收发两侧必须一致, 所以这个开关由顶层同一根线驱动。
+    function [15:0] crc_step(input [15:0] c, input b, input refl);
         reg fb;
         begin
-            fb       = c[15] ^ b;
-            crc_step = {c[14:0], 1'b0};
-            if (fb) crc_step = crc_step ^ 16'h1021;
+            if (refl) begin
+                fb       = b ^ c[0];
+                crc_step = {1'b0, c[15:1]};
+                if (fb) crc_step = crc_step ^ 16'h8408;
+            end else begin
+                fb       = c[15] ^ b;
+                crc_step = {c[14:0], 1'b0};
+                if (fb) crc_step = crc_step ^ 16'h1021;
+            end
         end
     endfunction
 
@@ -205,7 +215,7 @@ module icnd2260_ack_rx #(
             // ---- 逐位重算 CRC (不含最后 16 位的 CHKSUM) ---------------
             A_CRC: begin
                 if (ci < (f_nbits - 9'd16)) begin
-                    crc <= crc_step(crc, buf_[ci]);
+                    crc <= crc_step(crc, buf_[ci], crc_refl);
                     ci  <= ci + 9'd1;
                 end else begin
                     st <= A_DONE;

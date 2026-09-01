@@ -61,6 +61,16 @@ module icnd2260_lvds_tx #(
     input  wire [16*NLANE-1:0]     pl_data,
     input  wire                    pl_last,
 
+    // ---- CHKSUM 的两个自由度, 运行时可切 (见 crc_step 注释) ---------------
+    input  wire                    crc_refl,     // 1 = 手册 LFSR(反射 0x8408)
+                                                 // 0 = 旧的 CCITT-FALSE(左移 0x1021)
+    input  wire                    crc_lsb_tx,   // 1 = CHKSUM 域 LSB 先发
+                                                 // 0 = MSB 先发 (现状)
+    // 🔴 手册自相矛盾: p.12(TTL) 说 VHEAD[15:0] **等于** VHEAD[31:16](纯拷贝),
+    //    p.14(mini-LVDS) 说它是 VHEAD[31:16] 的 **Checksum**。同一个域两章打架。
+    //    1 = 按 p.12 填拷贝   0 = 按 p.14 填校验和(现状)
+    input  wire                    vhead_copy,
+
     // ---- 位输出 -----------------------------------------------------------
     output reg  [NLANE-1:0]        bit_r,
     output reg  [NLANE-1:0]        bit_f,
@@ -81,22 +91,34 @@ module icnd2260_lvds_tx #(
     localparam [3:0] CMD_WRITE_DEV = 4'b0110;
     localparam [3:0] CMD_READ_DEV  = 4'b1010;
 
-    // ---- CRC-16/CCITT (x^16+x^12+x^5+1), 高位先入 ------------------------
-    function [15:0] crc_step(input [15:0] c, input b);
+    // ---- CHKSUM: 两种形式, 运行时可切 (crc_refl) -------------------------
+    // refl=1 (默认): **按手册 P13 的 LFSR 图**。图上数据从左边 XOR 进 C15(标 MSB/x^0),
+    //   逐级**向右**移到 C0(标 LSB/x^15), 回授取自 C0, 抽头 XOR 插在 C11->C10 与 C4->C3
+    //   ⇒ 新位进 bit15 / 右移 / 回授取 bit0 / 掩码 bit15|bit10|bit3 = 0x8408。
+    //   即 0x1021 的**反射型**(CRC-16/MCRF4XX 家族): LSB-first 喂 "123456789" = 0x6F91。
+    // refl=0: 我们 2026-08 从图反推错的那版 (左移/回授取 MSB/0x1021 = CCITT-FALSE,
+    //   同一串 MSB-first 喂 = 0x29B1)。两者算出来的值毫不相干。**保留只为二分排查。**
+    function [15:0] crc_step(input [15:0] c, input b, input refl);
         reg fb;
         begin
-            fb       = c[15] ^ b;
-            crc_step = {c[14:0], 1'b0};
-            if (fb) crc_step = crc_step ^ 16'h1021;
+            if (refl) begin
+                fb       = b ^ c[0];
+                crc_step = {1'b0, c[15:1]};
+                if (fb) crc_step = crc_step ^ 16'h8408;
+            end else begin
+                fb       = c[15] ^ b;
+                crc_step = {c[14:0], 1'b0};
+                if (fb) crc_step = crc_step ^ 16'h1021;
+            end
         end
     endfunction
 
-    function [15:0] crc_of16(input [15:0] d);
+    function [15:0] crc_of16(input [15:0] d, input refl);
         integer k;
         reg [15:0] c;
         begin
             c = 16'hFFFF;
-            for (k = 15; k >= 0; k = k - 1) c = crc_step(c, d[k]);
+            for (k = 15; k >= 0; k = k - 1) c = crc_step(c, d[k], refl);
             crc_of16 = c;
         end
     endfunction
@@ -191,7 +213,8 @@ module icnd2260_lvds_tx #(
                         st    <= S_POST;
                     end else if (cmd_kind == KIND_DISPLAY || cmd_kind == KIND_CORRECT) begin
                         // VHEAD 48 bit = 幻数 + [31:16] + 其 CRC, 左对齐进 sr
-                        sr    <= {vh_magic, vh_hi, crc_of16(vh_hi), 8'h0};
+                        sr    <= {vh_magic, vh_hi,
+                                  vhead_copy ? vh_hi : crc_of16(vh_hi, crc_refl), 8'h0};
                         nbits <= 7'd48;
                         st    <= S_PRE;
                     end else begin
@@ -210,19 +233,26 @@ module icnd2260_lvds_tx #(
                 end else gcnt <= gcnt - 9'd1;
             end
 
-            // ---- RSYNC: 4 沿/位, 不进 CRC ---------------------------
+            // ---- RSYNC: 🔴 **1 沿/位**(56 个线上单元), 不进 CRC -------
+            // `0xFFFF0F0F0F0F0F` 是**线上电平序列**: 56 个单元, 一个单元 = 一个时钟沿。
+            // 它不是"56 个逻辑位、每位再发 4 个沿"。手册那句「RSYNC 与 Configuration
+            // 阶段每 4 个时钟沿传输一位」里的"位"是**逻辑位**, 而 RSYNC 的逻辑值只有
+            // 14 位(0x3D55) —— 14 × 4 沿 = 56 个单元, 正好就是这一串。
+            //
+            // 🔴 2026-09-01 供应商逻辑分析仪抓包实测坐实: RSYNC 恰好占 **56 个时钟沿**,
+            //    开头连续 1 的个数是 **16**。我们原来按 56 位 × 4 沿 = 224 个沿发,
+            //    开头是 64 个 1 ⇒ 芯片的帧对齐器**永远匹配不上** ⇒ 配置一条都不认
+            //    ⇒ 屏全黑 + 零 ACK, 与物理层无关。这就是从 2026-08-19 起的根因。
             S_RSYNC: begin
                 bit_r[0] <= sr[55];
-                bit_f[0] <= sr[55];
-                if (os_phase) begin
+                bit_f[0] <= sr[54];
+                sr       <= {sr[53:0], 2'b00};
+                if (nbits <= 7'd2) begin
+                    sr       <= {cmd_code(kind_r), cmd_device, cmd_offset, cmd_length, 32'h0};
+                    nbits    <= 7'd24;
                     os_phase <= 1'b0;
-                    sr       <= {sr[54:0], 1'b0};
-                    if (nbits <= 7'd1) begin
-                        sr     <= {cmd_code(kind_r), cmd_device, cmd_offset, cmd_length, 32'h0};
-                        nbits  <= 7'd24;
-                        st     <= S_HDR4;
-                    end else nbits <= nbits - 7'd1;
-                end else os_phase <= 1'b1;
+                    st       <= S_HDR4;
+                end else nbits <= nbits - 7'd2;
             end
 
             // ---- 配置包头 CMD/DEVICE/OFFSET/LENGTH: 4 沿/位, 进 CRC --
@@ -231,11 +261,11 @@ module icnd2260_lvds_tx #(
                 bit_f[0] <= sr[55];
                 if (os_phase) begin
                     os_phase <= 1'b0;
-                    crc      <= crc_step(crc, sr[55]);
+                    crc      <= crc_step(crc, sr[55], crc_refl);
                     sr       <= {sr[54:0], 1'b0};
                     if (nbits <= 7'd1) begin
                         if (kind_r == KIND_READ_DEV) begin
-                            crc_sr <= crc_step(crc, sr[55]);   // 读指令没有数据域
+                            crc_sr <= crc_step(crc, sr[55], crc_refl);  // 读指令没有数据域
                             nbits  <= 7'd16;
                             st     <= S_CRC4;
                         end else begin
@@ -254,14 +284,14 @@ module icnd2260_lvds_tx #(
                 bit_f[0] <= pay_sr[15];
                 if (os_phase) begin
                     os_phase <= 1'b0;
-                    crc      <= crc_step(crc, pay_sr[15]);
+                    crc      <= crc_step(crc, pay_sr[15], crc_refl);
                     pay_sr[15:0] <= {pay_sr[14:0], 1'b0};
 
                     if (bitcnt == 4'd14 && pl_last) pay_last_r <= 1'b1;
 
                     if (bitcnt == 4'd15) begin
                         if (pay_last_r) begin
-                            crc_sr <= crc_step(crc, pay_sr[15]);
+                            crc_sr <= crc_step(crc, pay_sr[15], crc_refl);
                             nbits  <= 7'd16;
                             st     <= S_CRC4;
                         end else begin
@@ -274,11 +304,12 @@ module icnd2260_lvds_tx #(
 
             // ---- 配置包 CHKSUM: 4 沿/位 ------------------------------
             S_CRC4: begin
-                bit_r[0] <= crc_sr[15];
-                bit_f[0] <= crc_sr[15];
+                bit_r[0] <= crc_lsb_tx ? crc_sr[0] : crc_sr[15];
+                bit_f[0] <= crc_lsb_tx ? crc_sr[0] : crc_sr[15];
                 if (os_phase) begin
                     os_phase <= 1'b0;
-                    crc_sr   <= {crc_sr[14:0], 1'b0};
+                    crc_sr   <= crc_lsb_tx ? {1'b0, crc_sr[15:1]}
+                                           : {crc_sr[14:0], 1'b0};
                     if (nbits <= 7'd1) begin
                         gcnt <= IDLE_CLK[8:0];
                         st   <= S_POST;
@@ -305,8 +336,8 @@ module icnd2260_lvds_tx #(
                 for (i = 0; i < NLANE; i = i + 1) begin
                     bit_r[i] <= pay_sr[16*i + 15];
                     bit_f[i] <= pay_sr[16*i + 14];
-                    vcrc[i]  <= crc_step(crc_step(vcrc[i], pay_sr[16*i+15]),
-                                                          pay_sr[16*i+14]);
+                    vcrc[i]  <= crc_step(crc_step(vcrc[i], pay_sr[16*i+15], crc_refl),
+                                                          pay_sr[16*i+14], crc_refl);
                     pay_sr[16*i +: 16] <= {pay_sr[16*i +: 14], 2'b00};
                 end
 
@@ -336,9 +367,10 @@ module icnd2260_lvds_tx #(
             // ---- 每 lane 的图像 CHKSUM: 1 沿/位 ----------------------
             S_VCRC: begin
                 for (i = 0; i < NLANE; i = i + 1) begin
-                    bit_r[i] <= vcrc[i][15];
-                    bit_f[i] <= vcrc[i][14];
-                    vcrc[i]  <= {vcrc[i][13:0], 2'b00};
+                    bit_r[i] <= crc_lsb_tx ? vcrc[i][0] : vcrc[i][15];
+                    bit_f[i] <= crc_lsb_tx ? vcrc[i][1] : vcrc[i][14];
+                    vcrc[i]  <= crc_lsb_tx ? {2'b00, vcrc[i][15:2]}
+                                           : {vcrc[i][13:0], 2'b00};
                 end
                 if (nbits <= 7'd2) begin
                     if (last_chip) begin

@@ -21,7 +21,9 @@
 //     ⇒ 帧缓存字序换成 {R,G,B} (低 16 位 = B), 用 gen_test_pattern.py --iface lvds 生成。
 //     搞反了不报错, 只是红蓝对调。
 //
-//  4. 🔴 **寄存器表要用 LVDS 版** (0x06[9]=1, 0x1a[9]=1), 见 icnd2260_regs_lvds.mem。
+//  4. 🔴 **寄存器表用供应商那份** icnd2260_regs_vendor.mem (由 2260lvds.xlsx 导入,
+//     是他们实测点亮本样板的配置)。它证实了我们对 0x06[9]=1/0x1a[9]=1 的推断,
+//     但另有 46 处差异是我们从手册推不出来的。参数 REG_MEM 可切回自推的对照版。
 //
 // 转接板上四对差分在连接器处各跨接了 100Ω (R7~R10)。⚠ 若 LED 板在 BGA 附近**也**有
 // 100Ω 端接, 就是双重端接, Vod 减半 —— 上板前要确认, 见 docs/02_lvds_bringup.md。
@@ -45,6 +47,10 @@ module icnd2260_lxb_lvds_top #(
     parameter integer VID_CRC = 1,
     // 1 = 例化 VIO 调试核 (JTAG 直连, 不需要 PS/Linux)。DEBUG=0 时下面的 generate
     // 完全不展开 ⇒ 与不带调试的已验证版本逐门相同。用 synth_design -generic DEBUG=1 打开。
+    // 🔴 寄存器表。默认用**供应商实测能点亮本样板**的那份 (2260lvds.xlsx 导入)。
+    //    icnd2260_regs_lvds.mem 是我们从手册 §11(TTL 默认值) + §3 传输模式表反推的,
+    //    只对了 0x06[9]/0x1a[9] 两位, 另有 46 处电流/时序/扫描参数无从推断 —— 留作对照。
+    parameter          REG_MEM = "icnd2260_regs_vendor.mem",
     parameter integer DEBUG = 0
 ) (
     input  wire clk50,        // M19  PL_CLK_50M
@@ -157,6 +163,13 @@ module icnd2260_lxb_lvds_top #(
     wire [7:0]  dbg_probe_off;
     wire [3:0]  dbg_probe_dev;
     wire        dbg_minimal;
+    wire        dbg_dclk_lvl;
+    wire [3:0]  dbg_pn_inv;    // [2:0]=三条数据 lane, [3]=转发时钟
+    wire        dbg_crc_refl;  // CHKSUM: 1=手册 LFSR(0x8408 反射)  0=旧的 CCITT-FALSE
+    wire        dbg_crc_lsb;   // CHKSUM 域: 1=LSB 先发  0=MSB 先发
+    wire        dbg_vhead_copy;// VHEAD[15:0]: 1=填 VHEAD[31:16] 拷贝(p.12)  0=填校验和(p.14)
+    wire        dbg_ck_free;   // 1=转发时钟从电源使能就自由跑(手册 3.2「时钟不停」)
+                               // 0=等 out_en(现状, 中间有 25.2ms 完全无时钟)
     wire        seq_quiet;
     wire        dbg_soft_rst;
     wire [3:0]  dbg_ph;
@@ -171,7 +184,7 @@ module icnd2260_lxb_lvds_top #(
         .CASCADE      (CASCADE),
         .BLANK_FRAMES (BLANK_FRAMES),
         .FB_AW        (FB_AW),
-        .REG_MEM      ("icnd2260_regs_lvds.mem")
+        .REG_MEM      (REG_MEM)
     ) u_seq (
         .clk (clkbit), .rst_n (rst_n_eff),
         .en_3v8 (en_3v8), .en_2v8 (en_2v8), .out_en (out_en),
@@ -196,6 +209,7 @@ module icnd2260_lxb_lvds_top #(
         .cmd_device (cmd_device), .cmd_offset (cmd_offset),
         .cmd_length (cmd_length), .cmd_rows (cmd_rows), .cmd_cascade (cmd_cascade),
         .pl_next (pl_next), .pl_data (pl_data), .pl_last (pl_last),
+        .crc_refl (dbg_crc_refl), .crc_lsb_tx (dbg_crc_lsb), .vhead_copy (dbg_vhead_copy),
         .bit_r (bit_r), .bit_f (bit_f), .isync (isync), .busy (tx_busy)
     );
 
@@ -204,8 +218,12 @@ module icnd2260_lxb_lvds_top #(
     // (OBUFDS 本身就是差分缓冲, 一个 ODDR 驱动它是合法的 —— TTL 版那个
     //  "一个 ODDR 扇出两个 port" 的 OLOGIC 限制在这里不存在)
     // ---------------------------------------------------------------------
-    wire [NLANE-1:0] d_r = bit_r & {NLANE{out_en}};
-    wire [NLANE-1:0] d_f = bit_f & {NLANE{out_en}};
+    // 🔴 差分对 P/N 对调 == 数据取反: 接收端看的是 (P-N), 屏侧若把两根接反
+    //    就是 -(P-N)。所以极性能做成**运行时**开关(dbg_pn_inv), 不必每种组合编一次 bit。
+    //    取反放在 out_en 掩码**之后** —— 物理上接反的那一对, 连静默电平也是反的。
+    //    ⚠ 改极性后必须 soft_rst 重跑上电流程, 否则芯片没机会用新极性重收一遍配置。
+    wire [NLANE-1:0] d_r = (bit_r & {NLANE{out_en}}) ^ dbg_pn_inv[NLANE-1:0];
+    wire [NLANE-1:0] d_f = (bit_f & {NLANE{out_en}}) ^ dbg_pn_inv[NLANE-1:0];
     wire [NLANE-1:0] lane_q;
 
     genvar gi;
@@ -225,14 +243,22 @@ module icnd2260_lxb_lvds_top #(
     wire clkfwd;
     ODDR #(.DDR_CLK_EDGE ("SAME_EDGE"), .INIT (1'b0), .SRTYPE ("SYNC"))
     u_oddr_ck (.Q (clkfwd), .C (clkbit90), .CE (1'b1),
-               .D1 (1'b1), .D2 (1'b0), .R (~out_en), .S (1'b0));
+               // dbg_pn_inv[3]=1 ⇒ 时钟对 P/N 对调(= 180° 相移)。
+               // ⚠ xdc:68 的 create_generated_clock 没有 -invert ⇒ 这一位置 1 时
+               //    时序报告描述的不再是硅上的真实关系, 只作首光实验用。
+               .D1 (~dbg_pn_inv[3]), .D2 (dbg_pn_inv[3]),
+               .R (dbg_ck_free ? ~(en_2v8 | en_3v8) : ~out_en), .S (1'b0));
     OBUFDS u_obuf_ck (.I (clkfwd), .O (clk_p), .OB (clk_n));
 
     // 单端: I_SYNC 落 IOB 寄存器; DCLK 在 LVDS 模式不用, 恒 0
     (* IOB = "TRUE" *) reg sync_q;
     always @(posedge clkbit) sync_q <= out_en ? isync : 1'b0;
     assign sync = sync_q;
-    assign dclk = 1'b0;
+    // DCLK 在 mini-LVDS 模式下手册说用不到, 但**不能排除它是模式/使能 strap**:
+    // 这块供应商样板把它引到了连接器(而我们自己那块面板是直接接地的) ⇒ 接地并非唯一选择。
+    // ⇒ 电平做成 VIO 可调, 且**从电源刚使能那一刻就驱动到位** ——
+    //    若芯片是在自己上电时锁存这个脚, 等 out_en 才驱动就太晚了。
+    assign dclk = (en_2v8 | en_3v8) ? dbg_dclk_lvl : 1'b0;
 
     // ---------------------------------------------------------------------
     reg [26:0] hb = 27'd0;
@@ -251,7 +277,7 @@ module icnd2260_lxb_lvds_top #(
     wire [8:0]  ack_f_nbits;
 
     icnd2260_ack_rx #(.CLK_HZ (BITCLK_HZ), .MAX_WORDS (4)) u_ack (
-        .clk (clkbit), .rst_n (rst_n_eff), .ack_pin (ack),
+        .clk (clkbit), .rst_n (rst_n_eff), .ack_pin (ack), .crc_refl (dbg_crc_refl),
         .frame_valid (ack_frame_valid), .frame_ok (ack_frame_ok), .crc_ok (ack_crc_ok), .crc_ok_pulse (ack_crc_pulse),
         .crc_bad_pulse (ack_crc_bad),
         .frame_err (ack_frame_err),
@@ -325,7 +351,9 @@ module icnd2260_lxb_lvds_top #(
     if (DEBUG != 0) begin : g_dbg
         wire [7:0]  o_addr;
         wire [15:0] o_data;
-        wire [0:0]  o_we_tog, o_probe_en, o_soft_rst, o_minimal;
+        wire [0:0]  o_we_tog, o_probe_en, o_soft_rst, o_minimal, o_dclk_lvl;
+        wire [3:0]  o_pn_inv;
+        wire [3:0]  o_crc_mode;   // [0]refl [1]lsb_tx [2]vhead_copy [3]ck_free
         wire [7:0]  o_probe_off;
         wire [3:0]  o_probe_dev;
 
@@ -340,6 +368,12 @@ module icnd2260_lxb_lvds_top #(
         assign dbg_probe_dev = o_probe_dev;
         assign dbg_soft_rst  = o_soft_rst[0];
         assign dbg_minimal   = o_minimal[0];
+        assign dbg_dclk_lvl  = o_dclk_lvl[0];
+        assign dbg_pn_inv    = o_pn_inv;
+        assign dbg_crc_refl  = o_crc_mode[0];
+        assign dbg_crc_lsb   = o_crc_mode[1];
+        assign dbg_vhead_copy= o_crc_mode[2];
+        assign dbg_ck_free   = o_crc_mode[3];
 
         wire [15:0] status = {mmcm_locked, running, out_en, en_3v8,
                               en_2v8, ack_ok_sticky, ack_crc_ok, ack_frame_err,
@@ -362,7 +396,10 @@ module icnd2260_lxb_lvds_top #(
             .probe_out4 (o_probe_en),                // 1
             .probe_out5 (o_soft_rst),                // 1
             .probe_out6 (o_probe_dev),               // 4  <-- 扫设备号找级联芯片
-            .probe_out7 (o_minimal)                  // 1  <-- 最小配置模式
+            .probe_out7 (o_minimal),                 // 1  <-- 最小配置模式
+            .probe_out8 (o_dclk_lvl),                // 1  <-- DCLK 电平 (0/1 实时切)
+            .probe_out9 (o_pn_inv),                  // 4  <-- 差分极性 {ck,r,g,b}
+            .probe_out10(o_crc_mode)                 // 4  <-- {ck_free,vhead_copy,lsb_tx,refl}
         );
     end else begin : g_nodbg
         assign dbg_reg_we    = 1'b0;
@@ -373,10 +410,17 @@ module icnd2260_lxb_lvds_top #(
         assign dbg_probe_dev = 4'h0;
         assign dbg_soft_rst  = 1'b0;
         assign dbg_minimal   = 1'b0;
+        assign dbg_dclk_lvl  = 1'b0;
+        assign dbg_pn_inv    = 4'h0;
+        assign dbg_crc_refl  = 1'b1;
+        assign dbg_crc_lsb   = 1'b0;
+        assign dbg_vhead_copy= 1'b0;
+        assign dbg_ck_free   = 1'b0;
     end
     endgenerate
 
-    assign led[0] = running ? hb[24] : 1'b1;   // 没跑起来 = 常亮
+    assign led[0] = running ? frame_cnt[7] : 1'b1;  // 没跑起来=常亮; 🔴 原来接 hb
+                                                   // (自由计数器) ⇒ tx 挂死也照闪, 是假判据
     assign led[1] = ack_ok_sticky;             // 亮 = 收到过一条 CRC 正确的 ACK 回包
 
 endmodule

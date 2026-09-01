@@ -204,6 +204,7 @@ module icnd2260_lxb_lvds_top #(
     wire        dbg_vhead_copy;// VHEAD[15:0]: 1=填 VHEAD[31:16] 拷贝(p.12)  0=填校验和(p.14)
     wire [2:0]  dbg_pat_mode;  // 图案: 0=ROM 1=三色循环 2=R 3=G 4=B 5=白 6=灭
     wire [15:0] dbg_pat_lvl;   // 图案亮度
+    wire [23:0] dbg_frame_gap; // 帧间空闲(拍), 在线调帧率
     wire        dbg_ck_free;   // 1=转发时钟从电源使能就自由跑(手册 3.2「时钟不停」)
                                // 0=等 out_en(现状, 中间有 25.2ms 完全无时钟)
     wire        seq_quiet;
@@ -235,6 +236,7 @@ module icnd2260_lxb_lvds_top #(
         .dbg_reg_data (dbg_reg_data),
         .dbg_probe_en (dbg_probe_en), .dbg_probe_off (dbg_probe_off),
         .dbg_probe_dev (dbg_probe_dev), .dbg_minimal (dbg_minimal),
+        .dbg_frame_gap (dbg_frame_gap),
         .quiet (seq_quiet),
         .dbg_ph (dbg_ph), .dbg_sub (dbg_sub)
     );
@@ -278,13 +280,24 @@ module icnd2260_lxb_lvds_top #(
 
     // 转发时钟: 90° 相移 (见文件头第 2 条)
     wire clkfwd;
+    // 🔴 u_oddr_ck 用 clkbit90 打, 而 out_en / en_2v8 / en_3v8 / dbg_pn_inv 都是
+    //    clkbit 域(或 VIO 异步)。90° 相位差只给 T/4 的时间 —— 100MHz 下只剩 2.5ns,
+    //    2026-09-01 实测就是这条路径把 div10 卡在 WNS -0.598, **不是源同步接口的问题**。
+    //    这几个都是准静态信号(上电时变一次), 在 clkbit90 域再打一拍即可。
+    reg ck_rst_q  = 1'b1;
+    reg ck_inv_q  = 1'b0;
+    always @(posedge clkbit90) begin
+        ck_rst_q <= dbg_ck_free ? ~(en_2v8 | en_3v8) : ~out_en;
+        ck_inv_q <= dbg_pn_inv[3];
+    end
+
     ODDR #(.DDR_CLK_EDGE ("SAME_EDGE"), .INIT (1'b0), .SRTYPE ("SYNC"))
     u_oddr_ck (.Q (clkfwd), .C (clkbit90), .CE (1'b1),
                // dbg_pn_inv[3]=1 ⇒ 时钟对 P/N 对调(= 180° 相移)。
                // ⚠ xdc:68 的 create_generated_clock 没有 -invert ⇒ 这一位置 1 时
                //    时序报告描述的不再是硅上的真实关系, 只作首光实验用。
-               .D1 (~dbg_pn_inv[3]), .D2 (dbg_pn_inv[3]),
-               .R (dbg_ck_free ? ~(en_2v8 | en_3v8) : ~out_en), .S (1'b0));
+               .D1 (~ck_inv_q), .D2 (ck_inv_q),
+               .R (ck_rst_q), .S (1'b0));
     OBUFDS u_obuf_ck (.I (clkfwd), .O (clk_p), .OB (clk_n));
 
     // 单端: I_SYNC 落 IOB 寄存器; DCLK 在 LVDS 模式不用, 恒 0
@@ -393,6 +406,7 @@ module icnd2260_lxb_lvds_top #(
         wire [3:0]  o_crc_mode;   // [0]refl [1]lsb_tx [2]vhead_copy [3]ck_free
         wire [2:0]  o_pat_mode;
         wire [15:0] o_pat_lvl;
+        wire [23:0] o_frame_gap;
         wire [7:0]  o_probe_off;
         wire [3:0]  o_probe_dev;
 
@@ -415,6 +429,7 @@ module icnd2260_lxb_lvds_top #(
         assign dbg_ck_free   = o_crc_mode[3];
         assign dbg_pat_mode  = o_pat_mode;
         assign dbg_pat_lvl   = o_pat_lvl;
+        assign dbg_frame_gap = o_frame_gap;
 
         wire [15:0] status = {mmcm_locked, running, out_en, en_3v8,
                               en_2v8, ack_ok_sticky, ack_crc_ok, ack_frame_err,
@@ -442,7 +457,8 @@ module icnd2260_lxb_lvds_top #(
             .probe_out9 (o_pn_inv),                  // 4  <-- 差分极性 {ck,r,g,b}
             .probe_out10(o_crc_mode),                // 4  <-- {ck_free,vhead_copy,lsb_tx,refl}
             .probe_out11(o_pat_mode),                // 3  <-- 图案选择
-            .probe_out12(o_pat_lvl)                  // 16 <-- 图案亮度, INIT=0x0FFF
+            .probe_out12(o_pat_lvl),                 // 16 <-- 图案亮度, INIT=0x0FFF
+            .probe_out13(o_frame_gap)                // 24 <-- 帧间空闲(拍), 0=用参数
         );
     end else begin : g_nodbg
         assign dbg_reg_we    = 1'b0;
@@ -461,6 +477,7 @@ module icnd2260_lxb_lvds_top #(
         assign dbg_ck_free   = 1'b0;
         assign dbg_pat_mode  = 3'd0;
         assign dbg_pat_lvl   = 16'h0FFF;
+        assign dbg_frame_gap = 24'd0;
     end
     endgenerate
 

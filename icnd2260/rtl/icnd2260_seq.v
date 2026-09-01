@@ -92,6 +92,8 @@ module icnd2260_seq #(
     //     推断(每颗一个 CRC / VHEAD 字段 / 级联顺序)任何一处错都可能让芯片接收
     //     状态机失步, 连读指令都认不出来 —— 最小模式绕开全部这些。
     input  wire                    dbg_minimal,
+    // 帧间空闲(位时钟拍数), VIO 在线可调 -> 不重编就能扫帧率上限。0 = 用参数默认值。
+    input  wire [23:0]             dbg_frame_gap,
 
     // ---- 状态 -------------------------------------------------------------
     output wire                    running,      // 已进入正常显示
@@ -331,7 +333,8 @@ module icnd2260_seq #(
                     end else begin
                         cmd_offset <= 8'h00;
                         cmd_length <= REG_COUNT[7:0] - 8'd1;
-                        gap_cnt    <= FRAME_GAP[31:0];
+                        gap_cnt    <= (dbg_frame_gap != 24'd0)
+                                      ? {8'd0, dbg_frame_gap} : FRAME_GAP[31:0];
                         issue(KIND_VSYNC, SRC_ZERO, P_RUN, 2'd1, 1'b0, 1'b0);
                     end
                 end

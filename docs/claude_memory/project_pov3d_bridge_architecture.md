@@ -102,7 +102,8 @@ HP LVDS18 是 1500 ⇒ 28 対。
 
 | 墙 | 状态 |
 |---|---|
-| ① **屏侧至今全黑零回包** | 🔴 **仍是第一优先级** —— 桥架构再漂亮也得先让一颗 2260 亮, 见 [[project_lxb_icnd2260_bringup]] |
+| ① 屏侧点亮 | ✅ **2026-09-01 已解决**(commit `789070c` 首光, 根因 **RSYNC 发长了 4 倍**) ⇒ 本文写作时"仍是第一优先级"那句**作废** |
+| ①b **链路帧率天花板** | 🔴 **新的第一优先级**: [[project_icnd2260_link_ceiling_and_clock]] 实测/实算 —— 9 颗级联 40×45×16bit 下 mini-LVDS **最多 ~1310 fps**(170MHz 规格上限), 距 9000 fps **差 7 倍** |
 | ③ DDR 带宽 3.77/2.64 GB/s | ❌ 桥不碰它, 仍要"切片不落 DDR"或 32-bit DDR 自制板 |
 | ⑤ 无线链路 | ❌ 见 [[reference_wireless_link_alternatives]] |
 | ⑨ **VOCM 0.9/1.25/1.4 vs 屏要 1.1~1.3** | ❌ 只是从主控搬到桥片, **数还是安路家族数**, 没变 |
@@ -183,5 +184,17 @@ DR1(DS1200 V1.0 表 3-14) 与 PH1A(DS900 表 3-1-13) 的 **VOCM 输出 = VICM �
 而 [[project_lxb_icnd2260_bringup]] 已经踩过 "J1.21/22 紧邻无地 ⇒ DCLK 串扰把 ACK 拽出 5 万假帧"。
 ⇒ **转接板必须每対之间插地**; 若做不到, 就得降对数(上 10-bit 口径, 或提线速率)。
 
-相关: [[reference_icnd2260_spec]] [[reference_anlogic_lineup_pair_counts]]
+## ✅ 2026-09-01 交叉验证: 桥架构正是链路天花板那篇给出的出路 (c)
+
+[[project_icnd2260_link_ceiling_and_clock]] 独立算出同一个数: **170 MHz 规格上限 = 340 Mbps/lane**
+(与本文桥→屏用的 333-340 一致), 并列出突破 9000 fps 的三条出路:
+**(a) 降线上位宽(手册没定义, 必须问厂家) / (b) 减像素或扫描行 / (c) 拆成多条并行链路**。
+🎯 **本文的桥架构就是 (c)**, 而且它把 (c) 的代价(主控引脚爆炸)用串化解掉了 ——
+两篇是从两个方向撞到同一个结论上的。
+
+⚠ 顺带澄清一处容易混的: 本文"桥做 8→16 bit 扩展"**不依赖 (a)** ——
+屏侧拿到的仍是合法的 16-bit, 8-bit 只存在于 **SoC→桥** 那一段。
+⇒ **上行减半这个收益不用等厂家答复就能拿。**
+
+相关: [[project_icnd2260_link_ceiling_and_clock]] [[reference_icnd2260_spec]] [[reference_anlogic_lineup_pair_counts]]
 [[project_pov3d_final_target_chip_verdict]] [[reference_macha_mechanical_repo]]

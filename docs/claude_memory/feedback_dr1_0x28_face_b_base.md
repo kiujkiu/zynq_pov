@@ -60,6 +60,14 @@ pw(0x18, BANK_A)                     # 面 A 基址
    ⇒ **`n_slices ≤ drawable` 是设计前提**, 而 DR1 现在 142 > 95,
    `povboot.sh` 那句 `slices 96..142 never complete` 的 WARN 一直在喊
 
+## ✅ 2026-09-01 收尾: 3-bit 完整验证通过
+
+补上 `0x28` 之后 **flat 帧**(三平面逐字节相同)屏上正确 ⇒ 片距/寻址/传输无罪;
+再推 **ramp 帧**(第 N 列底色用码值 7-N, 白网格/数字恒为 7)也正确 ——
+**八级灰度阶梯清晰、数字始终可读** ⇒ **BCM 权重(4:2:1)与位平面顺序全部正确**。
+⚠ flat **看起来必然和 1-bit 一样**(三平面相同), 那是设计不是没生效;
+**只有 ramp 能验 plane 维度**。诊断帧生成器: `mlkpai_fs03/tools/gen_chess3b.py`。
+
 ## How to apply
 
 - 能工作的完整序列见 `dr1v90/board/cmds_3bit_working.txt`(2026-09-01 屏上验证过)

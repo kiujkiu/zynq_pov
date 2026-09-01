@@ -20,12 +20,46 @@ set VARIANT lvds
 if {[llength $argv] > 0} { set CLK_DIV [lindex $argv 0] }
 if {[llength $argv] > 1} { set VARIANT [lindex $argv 1] }   ;# lvds | ttl (ttl 固定 25MHz, CLK_DIV 忽略)
 # XDC 里的时序窗口跟着位时钟走; 位时钟周期(ns) = CLK_DIV
+# -tclargs <CLK_DIV> [variant] [extra generics]  e.g. "-generic VID_CRC=0"
+set EXTRA [list]
+# NOTE: cmd.exe treats BOTH spaces and '=' as -tclargs delimiters, so we cannot
+#       pass "-generic VID_CRC=0" directly. Pass a keyword instead and build it here.
+#       Keep this block ASCII-only: Vivado on Windows reads .tcl as GBK.
+foreach kw $argv {
+    switch -- $kw {
+        novidcrc { lappend EXTRA -generic VID_CRC=0 }
+        lines48  { lappend EXTRA -generic LINES=48 ; append sfx2 "_L48" }
+        gap8k    { lappend EXTRA -generic FRAME_GAP=8192   ; append sfx2 "_g8k"   }
+        gap32k   { lappend EXTRA -generic FRAME_GAP=32768  ; append sfx2 "_g32k"  }
+        gap100k  { lappend EXTRA -generic FRAME_GAP=100000 ; append sfx2 "_g100k" }
+        gap400k  { lappend EXTRA -generic FRAME_GAP=400000 ; append sfx2 "_g400k" }
+        casc3    { lappend EXTRA -generic CASCADE=3 }
+        casc1    { lappend EXTRA -generic CASCADE=1 }
+    }
+}
+if {[llength $EXTRA]} { puts "=== EXTRA GENERICS: $EXTRA ===" } else { puts "=== EXTRA GENERICS: (none) ===" }
+set CLK_PHASE_X8 720
+set sfx2 ""
+foreach kw $argv {
+    switch -- $kw {
+        ph0   { set CLK_PHASE_X8 0 }
+        ph22  { set CLK_PHASE_X8 180 }
+        ph28  { set CLK_PHASE_X8 225 }
+        ph45  { set CLK_PHASE_X8 360 }
+        ph135 { set CLK_PHASE_X8 1080 }
+        ph270 { set CLK_PHASE_X8 2160 }
+    }
+}
 set BITCLK_NS [expr {double($CLK_DIV)}]
 set MARGIN    [expr {$CLK_DIV >= 12 ? 1.0 : 0.3}]
 puts "=== 构建配置: CLK_DIV=$CLK_DIV -> 位时钟 [format %.2f [expr {1000.0/$CLK_DIV}]] MHz, BITCLK_NS=$BITCLK_NS, MARGIN=$MARGIN ==="
 
 set root  [file normalize [file dirname [info script]]/..]
-set build $root/build_dbg
+# 每个变体一个独立构建目录 -> 多个 Vivado 可以并行跑, 互不踩
+set sfx ""
+set CLK_PHASE_DEG [expr {$CLK_PHASE_X8/8.0}]
+if {$CLK_PHASE_X8 != 720} { set sfx "_ph[format %g $CLK_PHASE_DEG]" }
+set build $root/build_dbg$sfx$sfx2
 file mkdir $build
 cd $build
 foreach m [glob -nocomplain $root/rtl/*.mem] { file copy -force $m $build }
@@ -79,13 +113,16 @@ if {$VARIANT eq "ttl"} {
                        $root/rtl/icnd2260_seq.v $root/rtl/icnd2260_lxb_lvds_top.v]
     read_xdc $root/xdc/lxb_icnd2260_lvds_pins.xdc
     synth_design -top icnd2260_lxb_lvds_top -part xc7z020clg484-1 \
-        -generic DEBUG=1 -generic CLK_DIV=$CLK_DIV
+        -generic DEBUG=1 -generic CLK_DIV=$CLK_DIV \
+        -generic CLK_PHASE_X8=$CLK_PHASE_X8 {*}$EXTRA
 }
 opt_design
 place_design
 route_design
 
 set name [expr {$VARIANT eq "ttl" ? "icnd2260_ttl_dbg" : "icnd2260_lvds_dbg_div$CLK_DIV"}]
+append name $sfx$sfx2
+puts "=== PHASE: CLK_PHASE_DEG=$CLK_PHASE_DEG  TSU=$TSU  THD=$THD  -> $name ==="
 report_utilization    -file $build/$name.util.rpt
 report_timing_summary -file $build/$name.timing.rpt
 report_drc            -file $build/$name.drc.rpt

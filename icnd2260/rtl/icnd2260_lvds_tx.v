@@ -327,6 +327,11 @@ module icnd2260_lvds_tx #(
                     bitcnt     <= 4'd0;
                     pay_last_r <= 1'b0;
                     wcnt       <= 16'd0;
+                    // 🔴 每帧第一颗的图像 CRC 必须从 0xFFFF 起。
+                    //    原来只在 S_VCRC 的"还有下一颗"分支里复位, 而**最后一颗那条分支
+                    //    不复位** ⇒ 下一帧第 1 颗用的是上一帧残值。手册 §5(第16页)明写
+                    //    「每颗芯片接收的图像或校正数据最后需计算 CHECKSUM, 初始值为 0xFFFF」。
+                    for (i = 0; i < NLANE; i = i + 1) vcrc[i] <= 16'hFFFF;
                     st         <= S_VID;
                 end else nbits <= nbits - 7'd2;
             end

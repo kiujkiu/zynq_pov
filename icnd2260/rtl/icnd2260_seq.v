@@ -27,6 +27,10 @@ module icnd2260_seq #(
     parameter integer LINES           = 48,       // 扫描行数
     parameter integer CASCADE         = 1,        // 级联颗数
     parameter integer BLANK_FRAMES    = 64,       // §12 第 2 步
+    // 🔴 帧间空闲 (位时钟拍数)。供应商抓包实测: 他们一帧 208,326 格里只有 3.79% 有内容,
+    //    96.14% 是静默; 我们是 99.85% 都在发, 几乎不给级联链任何喘息。
+    //    空闲期间 tx 停在 S_IDLE = 数据恒 0 + 时钟照跑, 正是手册要的 IDLE。
+    parameter integer FRAME_GAP       = 0,
     parameter integer REG_REFRESH_FR  = 64,       // 每多少帧重发一次整表 (手册建议定期刷新)
     // 每多少帧插一条「读寄存器」指令 (0 = 关)。回包走 ACK 引脚, 由 icnd2260_ack_rx 解。
     // 这是判断「芯片到底活没活」最硬的判据, 也是验证 CRC 推断对不对的唯一手段。
@@ -198,6 +202,7 @@ module icnd2260_seq #(
     reg [3:0]  ph, ph_next;
     reg [1:0]  sub, sub_next;
     reg        frame_adv;              // 这条指令发完算走完一帧
+    reg [31:0] gap_cnt;                // 帧间空闲倒计时
     reg        clr_mask;               // 这条指令发完就恢复常规寄存器值
     reg [31:0] dly;
     reg [31:0] blank_cnt;
@@ -232,6 +237,7 @@ module icnd2260_seq #(
             sub          <= 2'd0;
             sub_next     <= 2'd0;
             frame_adv    <= 1'b0;
+            gap_cnt      <= 32'd0;
             clr_mask     <= 1'b0;
             dly          <= 32'd0;
             blank_cnt    <= 32'd0;
@@ -320,9 +326,14 @@ module icnd2260_seq #(
                 end else
                 case (sub)
                 2'd0: begin
-                    cmd_offset <= 8'h00;
-                    cmd_length <= REG_COUNT[7:0] - 8'd1;
-                    issue(KIND_VSYNC, SRC_ZERO, P_RUN, 2'd1, 1'b0, 1'b0);
+                    if (gap_cnt != 32'd0) begin
+                        gap_cnt <= gap_cnt - 32'd1;   // 帧间空闲, 什么都不发
+                    end else begin
+                        cmd_offset <= 8'h00;
+                        cmd_length <= REG_COUNT[7:0] - 8'd1;
+                        gap_cnt    <= FRAME_GAP[31:0];
+                        issue(KIND_VSYNC, SRC_ZERO, P_RUN, 2'd1, 1'b0, 1'b0);
+                    end
                 end
                 2'd1: begin
                     if (refresh_cnt == 0)

@@ -1,9 +1,12 @@
 # Read VIO telemetry from an already-programmed board. Does NOT reprogram.
 # ASCII-only on purpose (Vivado/Windows reads .tcl as GBK).
-set B "D:/claude_workspace/pov3d/zynq_pov/icnd2260/build_dbg"
+set BD "build_dbg"
+set B  ""
 set NAME "icnd2260_lvds_dbg_div48"
 if {[llength $argv] > 0} { set NAME [lindex $argv 0] }
 
+if {[llength $argv] > 1} { set BD [lindex $argv 1] }
+set B "D:/claude_workspace/pov3d/zynq_pov/icnd2260/$BD"
 open_hw_manager
 connect_hw_server -allow_non_jtag
 current_hw_target [lindex [get_hw_targets */Digilent/*] 0]

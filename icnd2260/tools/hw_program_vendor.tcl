@@ -3,10 +3,13 @@
 #       UTF-8 Chinese breaks Tcl quoting (bit us once, cost a run).
 # Safety: list every JTAG target first -- we nearly programmed the wrong
 #         board before (FS03 is also a Zynq).
-set B "D:/claude_workspace/pov3d/zynq_pov/icnd2260/build_dbg"
+set BD "build_dbg"
+set B  ""
 set NAME "icnd2260_lvds_dbg_div48"
 if {[llength $argv] > 0} { set NAME [lindex $argv 0] }
 
+if {[llength $argv] > 1} { set BD [lindex $argv 1] }
+set B "D:/claude_workspace/pov3d/zynq_pov/icnd2260/$BD"
 open_hw_manager
 connect_hw_server -allow_non_jtag
 puts "=== all JTAG targets ==="

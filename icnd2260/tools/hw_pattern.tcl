@@ -1,12 +1,16 @@
 # Select the runtime test pattern over VIO. ASCII-only (Vivado reads .tcl as GBK).
 #   -tclargs <mode> [level_hex]
 #   mode: 0=ROM(.mem)  1=RGB cycle  2=red  3=green  4=blue  5=white  6=off
-set B "D:/claude_workspace/pov3d/zynq_pov/icnd2260/build_dbg"
+set BD "build_dbg"
+set B  ""
 set NAME "icnd2260_lvds_dbg_div48"
 set MODE 1
 set LVL 0FFF
 if {[llength $argv] > 0} { set MODE [lindex $argv 0] }
 if {[llength $argv] > 1} { set LVL  [lindex $argv 1] }
+if {[llength $argv] > 2} { set NAME [lindex $argv 2] }
+if {[llength $argv] > 1} { set BD [lindex $argv 1] }
+set B "D:/claude_workspace/pov3d/zynq_pov/icnd2260/$BD"
 open_hw_manager
 connect_hw_server -allow_non_jtag
 current_hw_target [lindex [get_hw_targets */Digilent/*] 0]

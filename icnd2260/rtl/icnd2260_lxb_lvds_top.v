@@ -42,8 +42,15 @@ module icnd2260_lxb_lvds_top #(
     parameter integer CLK_DIV = 24,
     // 转发时钟相对数据的相移。90 = 时钟沿落在位中间 (mini-LVDS tSTU/tHLD=1/4 tLVCP 的要求)。
     // 打不出来时的第一个备选是 270 (等效反相), 见 docs/03_branches.md 的 phase270 变体。
-    parameter real    CLK_PHASE = 90.0,
+    // 🔴 转发时钟相对数据的相移(度)。90 = 位中间(我们从 tSTU/tHLD=1/4tLVCP 推的);
+    //    但 2026-09-01 从供应商抓包实测他们用的是 **~28°**(基本边沿对齐), 差 62°。
+    //    手册 DS P.09 注1 明写驱动端延时可设 1/8 / 1/4 / 3/8 tLVCP ⇒ 这是自由度不是唯一解。
+    //    用整数 generic 是因为 Vivado 的 -generic 对 real 不保证。
+    //    单位是 **1/8 度**: MMCM 的相位分辨率是 45/CLKOUT_DIVIDE 度,
+    //    DIVIDE=32 时 = 1.40625 度, 整数度数里只有 45 的倍数在格点上。
+    parameter integer CLK_PHASE_X8 = 720,   // 720/8 = 90 度
     parameter integer BLANK_FRAMES = 64,
+    parameter integer FRAME_GAP    = 0,   // 帧间空闲(位时钟拍数), 见 seq.v
     parameter integer VID_CRC = 1,
     // 1 = 例化 VIO 调试核 (JTAG 直连, 不需要 PS/Linux)。DEBUG=0 时下面的 generate
     // 完全不展开 ⇒ 与不带调试的已验证版本逐门相同。用 synth_design -generic DEBUG=1 打开。
@@ -86,6 +93,7 @@ module icnd2260_lxb_lvds_top #(
         end
     endfunction
     localparam integer FB_AW     = clog2(TOTAL_PIX);
+    localparam real    CLK_PHASE = CLK_PHASE_X8 / 8.0;
 
     // ---------------------------------------------------------------------
     // 时钟: 50 MHz -> VCO 1000 MHz -> 位时钟 (0° 给数据, 90° 给转发时钟)
@@ -211,6 +219,7 @@ module icnd2260_lxb_lvds_top #(
         .LINES        (LINES),
         .CASCADE      (CASCADE),
         .BLANK_FRAMES (BLANK_FRAMES),
+        .FRAME_GAP    (FRAME_GAP),
         .FB_AW        (FB_AW),
         .REG_MEM      (REG_MEM)
     ) u_seq (

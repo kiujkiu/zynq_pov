@@ -66,6 +66,26 @@ def build(mode, full, color):
                 img[y][x] = [(full, 0, 0), (0, full, 0), (0, 0, full)][x * 3 // W]
         return img
 
+    # ---- chipcolor: 每颗一个纯色, 一眼能读出链序 ----
+    #   1红 2绿 3蓝 4黄 5青 6品红 7白 8橙 9深紫
+    #   每颗左上角挖一个 3x3 黑洞做朝向标记(纯色底上挖黑最好认)
+    if mode == "chipcolor":
+        half = full // 3
+        PAL = [(full, 0, 0), (0, full, 0), (0, 0, full),
+               (full, full, 0), (0, full, full), (full, 0, full),
+               (full, full, full), (full, half, 0), (half, 0, full)]
+        for tr in range(TROW):
+            for tc in range(TCOL):
+                n = chip_of(tc, tr)
+                ox, oy = tc * PIX, tr * LINES
+                for ly in range(LINES):
+                    for lx in range(PIX):
+                        img[oy + ly][ox + lx] = PAL[n]
+                for ly in range(3):
+                    for lx in range(3):
+                        img[oy + ly][ox + lx] = (0, 0, 0)
+        return img
+
     # ---- chipnum: 棋盘底 + 每颗的编号 + 每颗左上角的红色朝向标记 ----
     for tr in range(TROW):
         for tc in range(TCOL):
@@ -98,9 +118,10 @@ def build(mode, full, color):
 
 
 def main():
+    global LINES, H
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", default="chipnum",
-                    choices=["chipnum", "solid", "rgbbars"])
+                    choices=["chipnum", "chipcolor", "solid", "rgbbars"])
     ap.add_argument("--color", default="w", choices=["r", "g", "b", "w"])
     ap.add_argument("--scale", type=int, default=16, help="满量程的 1/scale, 首光别拉满")
     ap.add_argument("--rot180", action="store_true", help="上下+左右都翻 (= --flipv --fliph)")
@@ -108,8 +129,12 @@ def main():
     ap.add_argument("--fliph", action="store_true", help="只翻左右")
     ap.add_argument("--flip-odd-row", action="store_true",
                     help="若实测发现 S 型隔行是镜像的, 打开这个")
+    ap.add_argument("--lines", type=int, default=LINES,
+                    help="每颗发多少行 (45 = 面板真实行数; 48 = 芯片满行数 40x48=1920 字)")
     ap.add_argument("-o", "--out", default="rtl/icnd2260_fb_lvds.mem")
     a = ap.parse_args()
+    LINES = a.lines            # 每颗发多少行 (45=面板真实行数, 48=芯片满行数)
+    H = LINES * TROW
 
     full = 0xFFFF // a.scale
     img = build(a.mode, full, a.color)
@@ -121,6 +146,27 @@ def main():
         img = img[::-1]
     if fh:
         img = [row[::-1] for row in img]
+
+    # 🔴 chipcolor 直接按**链序**写字, 完全绕开图像与翻转 ——
+    #    2026-09-01 踩过: 先翻图再映射会把"颜色↔链序"的对应打乱, 色标就是错的。
+    if a.mode == "chipcolor":
+        half = full // 3
+        PAL = [(full,0,0),(0,full,0),(0,0,full),(full,full,0),(0,full,full),
+               (full,0,full),(full,full,full),(full,half,0),(half,0,full)]
+        words = []
+        for ch in range(CASCADE):
+            r,g,b = PAL[ch % 9]
+            for ly in range(LINES):
+                for lx in range(PIX):
+                    v = 0 if (ly < 3 and lx < 3) else ((b<<32)|(g<<16)|r)
+                    words.append(v)
+        with open(a.out,"w") as f:
+            f.write(f"// gen_panel_pattern.py mode=chipcolor scale=1/{a.scale} "
+                    f"cascade={CASCADE}  **按链序上色, 与翻转无关**\n")
+            f.write("// 1红 2绿 3蓝 4黄 5青 6品红 7白 8橙 9紫; 每颗左上角 3x3 黑洞 = 该颗原点\n")
+            for w in words: f.write("%012x\n" % w)
+        print(f"写入 {a.out}: {len(words)} 条, {CASCADE} 颗, 色标 = 链序")
+        return
 
     words = [0] * (CASCADE * LINES * PIX)
     for y in range(H):

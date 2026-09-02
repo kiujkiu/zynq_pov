@@ -208,3 +208,7 @@
 - [0x28 是面B基址不只是 frame_period](feedback_dr1_0x28_face_b_base.md) — 🔴 第三个读写不同义的寄存器; 不写它 ⇒ dual_en 下面B读野地址 ⇒ 3-bit 满屏乱码闪烁; 🎯 教训: **对照组必须只差一个变量**(1-bit 那条走 povctl 直写 fb, 根本不经取片链)
 - [1-bit 正常 3-bit 异常](feedback_dr1_3bit_path_suspect.md) — 数字棋盘格 1-bit 屏上正确而 3-bit 推流是满屏噪点 ⇒ 排线/lane/几何/时序全部无罪, 嫌疑只剩三平面 fb 布局/BCM/bpp3; 顺带: povctl 的 FB_OFF 是写死的 1-bit 公式
 - [屏亮把板子拉重启](feedback_dr1_panel_current_brownout.md) — "闪一下就重启"是**电压跌落不是过热**; 实测同一张棋盘格 duty 0.041 稳 / 0.124 重启; 🔴 约束是**点亮率×duty 的乘积**(瞬时电流), 满屏噪点在 duty 0.024 也能拉垮
+- [🔴 修好 VDDR 反而从 9/9 掉到 2~6/10](feedback_fixing_the_defect_removed_the_margin.md) — 那个"缺陷"(1.9V 把红色限流)一直在当限流器、是 9/9 的必要条件; 修到 2.96V 后 700mA 峰值真流起来, 地弹把共模顶出只有 200mV 宽的 V_IC 窗(第1跳实测 1.294V 距上限仅 6mV); **可推广: "修好X后Y变差"先假设是因果的, 且对比两次结果前必须先列变量差异表** —— 这次 A/B 间同时差了 VDDR/刷新分组/帧率三个变量
+- [ICND2260 转发延时寄存器手册里不存在](reference_icnd2260_forward_delay_reg_absent.md) — 两份手册全文搜"延时/相位/skew"只命中 DS:452 那 1 行、无寄存器定义; 且我们 0xb0~0xbf 与供应商实跑抓包**逐位相同** ⇒ 🔴 "转发相位被我们配错"逻辑上排除, 从"我们的错"清单删掉; 另: tSTU/tHLD 最小值栏是空的 ⇒ **级联时序余量根本算不出来**
+- [🔴 "慢时钟顺带降噪声"是错的](feedback_slower_clock_does_not_reduce_per_bit_noise.md) — LED 峰值电流与 DCLK 无关, 每**位**承受的扰动一样而误码率按位算; 正确框架: 失效 = 扰动幅度(固定) ÷ 眼宽(∝tLVCP), **位周期和噪声是同一比值的分母和分子, 不是两个并列候选**; 可推广: 列出"改了什么"之后要逐个问"它真的变了吗、按哪个单位算"
+- [上电其实写了 66 遍整表, 不是 1 遍](reference_icnd2260_startup_writes_table_66_times.md) — P_REG×2 + P_BLANK 每帧×64 + P_RUN 首帧, **全在全黑期 LED≈0**; div16/div48 遍数相同只有时长不同 ⇒ 否掉"重发次数"解释; 🔴 **失效永远不在第1跳**(它吃的是我们最差的那只眼却从不坏)⇒ 纯 FPGA 侧时序解释不了失效位置; 相位扫描结构性瞎(TSU/THD 跟着相位走, WNS 恒 0.218); 🔴 **RAIL_SETTLE/REG_REFRESH_FR 等不是顶层参数, -generic 静默失效会给假阴性**

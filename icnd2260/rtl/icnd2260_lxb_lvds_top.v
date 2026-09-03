@@ -40,6 +40,12 @@ module icnd2260_lxb_lvds_top #(
     // 位时钟 = 1000 MHz / CLK_DIV。24→41.7MHz  12→83.3MHz  6→166.7MHz(手册上限)
     // 首光建议从 24 起步, 通了再往上推。每对速率 = 位时钟 × 2 (双沿)。
     parameter integer CLK_DIV = 24,
+    // VCO = 50MHz * VCO_MULT_X8/8。160 => 1000MHz(原行为)。用 1/8 步进是因为
+    // CLKFBOUT_MULT_F 的粒度就是 0.125, 而整数 generic 比实数好从命令行传。
+    // 位时钟 = VCO / CLK_DIV, 而 CLKOUT1_DIVIDE 必须是整数 => 靠调 VCO 取到任意频率。
+    // 例: VCO_MULT_X8=170 (VCO 1062.5MHz) + CLK_DIV=7 => 151.79 MHz
+    // ⚠ -1 器件 MMCM VCO 范围 600~1200 MHz, VCO_MULT_X8 合法区间约 96~192。
+    parameter integer VCO_MULT_X8 = 160,
     // 转发时钟相对数据的相移。90 = 时钟沿落在位中间 (mini-LVDS tSTU/tHLD=1/4 tLVCP 的要求)。
     // 打不出来时的第一个备选是 270 (等效反相), 见 docs/03_branches.md 的 phase270 变体。
     // 🔴 转发时钟相对数据的相移(度)。90 = 位中间(我们从 tSTU/tHLD=1/4tLVCP 推的);
@@ -48,10 +54,33 @@ module icnd2260_lxb_lvds_top #(
     //    用整数 generic 是因为 Vivado 的 -generic 对 real 不保证。
     //    单位是 **1/8 度**: MMCM 的相位分辨率是 45/CLKOUT_DIVIDE 度,
     //    DIVIDE=32 时 = 1.40625 度, 整数度数里只有 45 的倍数在格点上。
-    parameter integer CLK_PHASE_X8 = 720,   // 720/8 = 90 度
+    parameter integer CLK_PHASE_X8 = 720,
+    // 🔴 1 = 转发时钟和数据**共用同一个时钟网**(clkbit), 相位只能是 0°(边沿对齐),
+    //     但**两棵时钟树 1.65ns 的插入延迟差直接归零**。
+    //     2026-09-02 时序报告实测: Clock Path Skew 1.652ns 是最大项,
+    //     在 16ns 位周期下相当于 37° —— 也就是"设 28° 实际可能落在 0~56° 之间且随 PVT 漂",
+    //     这正是相位调到最优也只有 6/10 的原因。
+    //     手册 DS P.09 注1 说**芯片驱动端自己有可配延时(1/8 / 1/4 / 3/8 tLVCP)**,
+    //     供应商实测相位也只有 28°(近边沿对齐) ⇒ 相位本来就该由芯片补, 不该由我们补。
+    parameter integer CLK_SAME_TREE = 0,   // 720/8 = 90 度
     parameter integer BLANK_FRAMES = 64,
     parameter integer FRAME_GAP    = 0,   // 帧间空闲(位时钟拍数), 见 seq.v
+    // 🔴 下面三个原本只存在于 icnd2260_seq.v, 不是顶层参数 => -generic 会被 Vivado
+    //    **静默忽略**, 产出的 bit 与对照组逐位相同, 实验会拿到"改了没变化"的假阴性。
+    //    默认值与 seq.v 保持一致, 不传就是原行为。
+    parameter integer RAIL_STAGGER   = 25_000,   // 两路 EN 间隔 (clk 拍)
+    parameter integer RAIL_SETTLE    = 500_000,  // 电源稳定等待 (clk 拍) ⇒ 时间随 CLK_DIV 变
+    parameter integer REG_REFRESH_FR = 64,       // 每多少帧重发一次整表
+    // 🔴 读探针每 READ_PROBE_FR 帧插一条读指令, 之后静默 QUIET_CYCLES 拍(**停 DCLK**)。
+    //    【手册明确·docs/pg.txt:923】「如果 DCLK 作为内部 PLL 参考时钟, 则不能暂停」
+    //    mini-LVDS 下 PLL 参考就来自链路 ⇒ 停 DCLK = 失锁 = 画面乱, 下游芯片还会误同步到
+    //    噪声上偶尔闪一下。142.9MHz/4800fps 下每 3.3ms 停 56us, 每秒 300 次。
+    //    本样板 ACK 根本没接线(10/10 次 ack_cnt=0) ⇒ 探针零收益, 设 0 关掉,
+    //    顺带省 8000/16 = 500 拍/帧 = 3.3% 帧时间。
+    parameter integer READ_PROBE_FR  = 16,
+    parameter integer QUIET_CYCLES   = 8000,
     parameter integer VID_CRC = 1,
+    parameter integer PIX_BW8 = 0,   // 1 = 8 位像素实验(见 tx)
     // 1 = 例化 VIO 调试核 (JTAG 直连, 不需要 PS/Linux)。DEBUG=0 时下面的 generate
     // 完全不展开 ⇒ 与不带调试的已验证版本逐门相同。用 synth_design -generic DEBUG=1 打开。
     // 🔴 寄存器表。默认用**供应商实测能点亮本样板**的那份 (2260lvds.xlsx 导入)。
@@ -82,7 +111,7 @@ module icnd2260_lxb_lvds_top #(
 );
 
     localparam integer TOTAL_PIX = PIX * LINES * CASCADE;
-    localparam integer BITCLK_HZ = 1_000_000_000 / CLK_DIV;
+    localparam integer BITCLK_HZ = (50_000_000/8) * VCO_MULT_X8 / CLK_DIV;
     // ⚠ 旧版这里写死成 (TOTAL_PIX<=2048)?11:12, 只够 1 颗 40x48(1920 字);
     //   换成 9 颗 40x45(16200 字) 时 12 位根本不够 ⇒ 地址回绕、图像乱。用 clog2 算。
     function integer clog2(input integer v);
@@ -106,7 +135,7 @@ module icnd2260_lxb_lvds_top #(
     MMCME2_BASE #(
         .BANDWIDTH        ("OPTIMIZED"),
         .CLKIN1_PERIOD    (20.000),        // 50 MHz
-        .CLKFBOUT_MULT_F  (20.000),        // VCO = 1000 MHz
+        .CLKFBOUT_MULT_F  (VCO_MULT_X8/8.0), // VCO = 50MHz * VCO_MULT_X8/8
         .DIVCLK_DIVIDE    (1),
         .CLKOUT0_DIVIDE_F (CLK_DIV),       // 数据用, 0°
         .CLKOUT1_DIVIDE   (CLK_DIV),       // 转发时钟用, 90°
@@ -151,6 +180,7 @@ module icnd2260_lxb_lvds_top #(
 
     // ---- 运行时图案发生器 (点屏流程用, 切图案不用重编) --------------------
     //   dbg_pat_mode: 0=ROM(.mem 里的图)  1=三色循环  2=纯红 3=纯绿 4=纯蓝
+    //                 5=白 6=灭 **7=帧相位条纹(测芯片真实显示帧率)**
     //                 5=全白  6=全灭
     //   dbg_pat_lvl : 亮度 (16 bit 线上灰度)。⚠ 首光阶段别拉满, 整屏全亮很费电也很烫。
     //   字序 {R,G,B}, 低 16 位 = B = lane0 = D0。
@@ -173,7 +203,77 @@ module icnd2260_lxb_lvds_top #(
     wire [16*NLANE-1:0] pat_q = {sel_rgb[0] ? dbg_pat_lvl : 16'h0,   // B
                                  sel_rgb[1] ? dbg_pat_lvl : 16'h0,   // G
                                  sel_rgb[2] ? dbg_pat_lvl : 16'h0};  // R
-    wire [16*NLANE-1:0] fb_q = (dbg_pat_mode == 3'd0) ? fb_rom_q : pat_q;
+    // ---- 帧相位条纹 (mode 7): 唯一能量到**芯片实际显示帧率**的判据 --------
+    // 把 40 列切成 8 条竖带(每条 5 像素), 第 k 帧只点亮第 (k mod 8) 条。
+    //   芯片每帧都显示  => 8 条以 1/8 占空**全部均匀亮起**(人眼看到时间平均)
+    //   芯片每 2 帧显示 => 只有 4 条亮, 另外 4 条全黑
+    //   **亮着的条数 / 8 = 芯片显示帧率 / 我们的发送帧率**
+    // 🔴 为什么不用"移动条纹 + 秒表": 条纹位置是我们算好烧进帧数据的, 芯片丢帧只是
+    //    跳过某些位置, **视觉周期不变** => 量到的是发送速率, 不是显示速率。
+    //    本方案把时间维度折叠进空间维度, 因此与绝对帧率无关, 任何速度下都成立。
+    // 🔴 4 条 x 10 列(不是 8 x 5): 8 条时每条只有 ~51 px, 在手机照片里数不准
+    //    (实测把 8 条数成了 11 条)。加宽一倍后每条 ~108 px, 不可能误读。
+    //    代价是相位数 8->4, 饱和更早, 但 1/4000 快门下 9300fps 只占 2.3 相位, 正好够用。
+    // 🔴 8 个相位(每条 5 列): 已上板验证 —— 4 fps 下一圈正好 2.0 秒、每次亮 5 列, 两个数精确命中。
+    //    相位数要够多才不饱和: 9,310 fps + 1/2000 快门(500µs) = 4.65 帧,
+    //    4 相位会全亮饱和读不出, 8 相位则亮 58%, 正好落在好读的区间。
+    localparam integer NSTRIPE  = 8;
+    localparam integer STRIPE_W = PIX / NSTRIPE;      // 40/8 = 5
+    reg [FB_AW-1:0] fb_addr_d  = {FB_AW{1'b0}};
+    reg [6:0]       mot_col    = 7'd0;                // 0..PIX-1
+    reg [2:0]       mot_stripe = 3'd0;                // mot_col / STRIPE_W
+    reg [6:0]       mot_sub    = 7'd0;                // mot_col % STRIPE_W
+    reg [2:0]       mot_ph     = 3'd0;                // 帧相位, 每帧 +1
+    // 🔴 这两个 12 位比较原本直接喂计数器的同步复位, 形成 4 条进位链 + 11 级逻辑,
+    //    在 148MHz(6.747ns) 下放不下。今天已因此三次把 WNS 从基线 -0.471 推到
+    //    -0.740 / -0.972 / -0.801。**各寄存一级打断进位链。**
+    //    代价: 计数器晚一拍复位 => 图案整体平移 1 像素(40 列里的 1 列), 无影响。
+    reg mot_frame0 = 1'b0, mot_adv = 1'b0;
+    always @(posedge clkbit) begin
+        mot_frame0 <= (fb_addr == {FB_AW{1'b0}});
+        mot_adv    <= (fb_addr != fb_addr_d);
+    end
+    always @(posedge clkbit) begin
+        fb_addr_d <= fb_addr;
+        // fb_rom_q 是 fb_addr 的一拍寄存输出; 这里的计数器同样在同一沿更新,
+        // 所以 mot_stripe 与 fb_rom_q 天然对齐, 不需要额外补一级流水。
+        if (mot_frame0) begin
+            mot_col <= 7'd0; mot_stripe <= 3'd0; mot_sub <= 7'd0;
+            if (mot_adv) mot_ph <= (mot_ph == NSTRIPE-1) ? 3'd0 : mot_ph + 3'd1;  // 帧边界, 按 5 回绕
+        end else if (mot_adv) begin
+            if (mot_col == PIX-1) begin
+                mot_col <= 7'd0; mot_stripe <= 3'd0; mot_sub <= 7'd0;
+            end else begin
+                mot_col <= mot_col + 7'd1;
+                if (mot_sub == STRIPE_W-1) begin
+                    mot_sub <= 7'd0; mot_stripe <= mot_stripe + 3'd1;
+                end else mot_sub <= mot_sub + 7'd1;
+            end
+        end
+    end
+    // 🔴 只在第一颗的地址范围内出条纹, 其余颗全黑。
+    //    否则 mode 7 会覆盖整个 fb_q, 下游每一颗都跟着显示条纹, 屏上一片乱。
+    //    配 CASCADE=2 使用: 第二颗收到合法的全黑数据 => 整屏只剩第一块。
+    // ⚠ 必须寄存: 直接用组合的 (fb_addr < PIX*LINES) 有两个问题 —— ① 12 位比较器挂在
+    //    fb_addr 上再进 fb_q 送发送器, 142.9MHz 下路径太长(实测 WNS 从 -0.471 掉到 -0.740,
+    //    超出 MARGIN 魔数值 0.26ns = 真实退化, 板上直接黑屏);
+    //    ② mot_stripe 是寄存过的(与 fb_rom_q 对齐)而它是组合的, 两者差一拍。
+    // ⚠ 这里曾加过"只在第一颗出条纹"的门控(fb_addr<1800 / 行计数器), **两次都把时序推坏**:
+    //    WNS 从基线 -0.471 掉到 -0.740 / -0.934 / -0.972, 报告指出失败路径是
+    //    u_seq/pix_addr 经 12 位比较进这些计数器的**同步复位脚**。142.9MHz(7ns)下放不下。
+    //    那是纯视觉需求, 不值得为它牺牲时序 —— 两颗显示同一相位的同一图案, 等于两份
+    //    一样的读数, 不干扰判读。**已回退。**
+
+    // ⚠ 这里曾实现过"横条纹"(相位按行分组), 目的是与芯片的**列扫描**正交、可分离。
+    //    方向判断是对的(1/8000 快门拍到贯穿全高的竖线 = 芯片按列扫), 但两次实现都把
+    //    时序推坏: 行计数器压在与 mot_col 同一条关键路径上, WNS -0.471 -> -1.105。
+    //    **需要换个不碰这条路径的实现方式再来**, 例如把相位判断整体后移一级流水,
+    //    或让行号直接由 seq 提供(它本来就有 row 计数)而不是我们再数一遍。
+    wire mot_on = (mot_stripe == mot_ph);
+    wire [16*NLANE-1:0] mot_q = mot_on ? {3{dbg_pat_lvl}} : {(16*NLANE){1'b0}};
+
+    wire [16*NLANE-1:0] fb_q = (dbg_pat_mode == 3'd0) ? fb_rom_q :
+                               (dbg_pat_mode == 3'd7) ? mot_q    : pat_q;
 
     // ---------------------------------------------------------------------
     // 序列器 (与 TTL 版共用) + LVDS 发送器
@@ -202,7 +302,7 @@ module icnd2260_lxb_lvds_top #(
     wire        dbg_crc_refl;  // CHKSUM: 1=手册 LFSR(0x8408 反射)  0=旧的 CCITT-FALSE
     wire        dbg_crc_lsb;   // CHKSUM 域: 1=LSB 先发  0=MSB 先发
     wire        dbg_vhead_copy;// VHEAD[15:0]: 1=填 VHEAD[31:16] 拷贝(p.12)  0=填校验和(p.14)
-    wire [2:0]  dbg_pat_mode;  // 图案: 0=ROM 1=三色循环 2=R 3=G 4=B 5=白 6=灭
+    wire [2:0]  dbg_pat_mode;  // 图案: 0=ROM 1=三色循环 2=R 3=G 4=B 5=白 6=灭 7=帧相位条纹
     wire [15:0] dbg_pat_lvl;   // 图案亮度
     wire [23:0] dbg_frame_gap; // 帧间空闲(拍), 在线调帧率
     wire        dbg_ck_free;   // 1=转发时钟从电源使能就自由跑(手册 3.2「时钟不停」)
@@ -221,6 +321,11 @@ module icnd2260_lxb_lvds_top #(
         .CASCADE      (CASCADE),
         .BLANK_FRAMES (BLANK_FRAMES),
         .FRAME_GAP    (FRAME_GAP),
+        .RAIL_STAGGER   (RAIL_STAGGER),
+        .RAIL_SETTLE    (RAIL_SETTLE),
+        .REG_REFRESH_FR (REG_REFRESH_FR),
+        .READ_PROBE_FR  (READ_PROBE_FR),
+        .QUIET_CYCLES   (QUIET_CYCLES),
         .FB_AW        (FB_AW),
         .REG_MEM      (REG_MEM)
     ) u_seq (
@@ -241,7 +346,8 @@ module icnd2260_lxb_lvds_top #(
         .dbg_ph (dbg_ph), .dbg_sub (dbg_sub)
     );
 
-    icnd2260_lvds_tx #(.NLANE (NLANE), .VID_CRC (VID_CRC),
+    icnd2260_lvds_tx #(
+        .PIX_BW8 (PIX_BW8),.NLANE (NLANE), .VID_CRC (VID_CRC),
                       .WORDS_PER_CHIP (PIX * LINES)) u_tx (
         .clk (clkbit), .rst_n (rst_n_eff),
         .cmd_valid (cmd_valid), .cmd_ready (cmd_ready), .cmd_kind (cmd_kind),
@@ -286,13 +392,15 @@ module icnd2260_lxb_lvds_top #(
     //    这几个都是准静态信号(上电时变一次), 在 clkbit90 域再打一拍即可。
     reg ck_rst_q  = 1'b1;
     reg ck_inv_q  = 1'b0;
-    always @(posedge clkbit90) begin
+    always @(posedge ck_oddr_c) begin
         ck_rst_q <= dbg_ck_free ? ~(en_2v8 | en_3v8) : ~out_en;
         ck_inv_q <= dbg_pn_inv[3];
     end
 
+    // CLK_SAME_TREE=1 时用 clkbit(与数据同一棵树), =0 时用 clkbit90(可任意相位)
+    wire ck_oddr_c = (CLK_SAME_TREE != 0) ? clkbit : clkbit90;
     ODDR #(.DDR_CLK_EDGE ("SAME_EDGE"), .INIT (1'b0), .SRTYPE ("SYNC"))
-    u_oddr_ck (.Q (clkfwd), .C (clkbit90), .CE (1'b1),
+    u_oddr_ck (.Q (clkfwd), .C (ck_oddr_c), .CE (1'b1),
                // dbg_pn_inv[3]=1 ⇒ 时钟对 P/N 对调(= 180° 相移)。
                // ⚠ xdc:68 的 create_generated_clock 没有 -invert ⇒ 这一位置 1 时
                //    时序报告描述的不再是硅上的真实关系, 只作首光实验用。

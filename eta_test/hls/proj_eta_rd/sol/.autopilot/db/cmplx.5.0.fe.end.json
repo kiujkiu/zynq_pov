@@ -1,0 +1,33 @@
+{
+    "1": {
+        "name": "pov_eta_rd_Pipeline_FLAT",
+        "file": "pov_eta_rd.cpp",
+        "fileloc": "62",
+        "instructions": "124",
+        "total_instructions": "124",
+        "calls": "",
+        "basicblocks": "8",
+        "loads": {
+            "G": "2",
+            "L": "5"
+        },
+        "stores": {
+            "L": "8"
+        },
+        "loops": {
+            "L": "1"
+        }
+    },
+    "0": {
+        "name": "pov_eta_rd",
+        "file": "pov_eta_rd.cpp",
+        "fileloc": "29",
+        "instructions": "61",
+        "total_instructions": "185",
+        "calls": "1",
+        "basicblocks": "1",
+        "loads": {
+            "L": "1"
+        }
+    }
+}

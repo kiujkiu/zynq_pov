@@ -1,0 +1,216 @@
+
+
+================================================================
+== Synthesis Summary Report of 'pov_eta_rd'
+================================================================
++ General Information: 
+    * Date:           Thu Sep  3 17:03:40 2026
+    * Version:        2024.2 (Build 5238294 on Nov  8 2024)
+    * Project:        proj_eta_rd
+    * Solution:       sol (Vivado IP Flow Target)
+    * Product family: zynq
+    * Target device:  xc7z020-clg484-2
+    
+
++ Performance & Resource Estimates: 
+    
+    PS: '+' for module; 'o' for loop; '*' for dataflow
+    +-----------------------------+------+------+---------+-----------+----------+---------+---------+----------+---------+--------+-----------+-----------+-----+
+    |           Modules           | Issue|      | Latency |  Latency  | Iteration|         |   Trip  |          |         |        |           |           |     |
+    |           & Loops           | Type | Slack| (cycles)|    (ns)   |  Latency | Interval|  Count  | Pipelined|  BRAM   |   DSP  |     FF    |    LUT    | URAM|
+    +-----------------------------+------+------+---------+-----------+----------+---------+---------+----------+---------+--------+-----------+-----------+-----+
+    |+ pov_eta_rd                 |     -|  0.00|  6252292|  4.170e+07|         -|  6252293|        -|        no|   6 (2%)|  9 (4%)|  3493 (3%)|  3305 (6%)|    -|
+    | + pov_eta_rd_Pipeline_FLAT  |     -|  0.00|  6252254|  4.170e+07|         -|  6252254|        -|        no|  2 (~0%)|  8 (3%)|  1584 (1%)|  1163 (2%)|    -|
+    |  o FLAT                     |     -|  4.87|  6252252|  4.170e+07|        26|        1|  6252228|       yes|        -|       -|          -|          -|    -|
+    +-----------------------------+------+------+---------+-----------+----------+---------+---------+----------+---------+--------+-----------+-----------+-----+
+
+
+================================================================
+== HW Interfaces
+================================================================
+* M_AXI
++-----------+------------+------------+---------------+---------+--------+----------+-----------+--------------+--------------+-------------+-------------+-------------------+
+| Interface | Read/Write | Data Width | Address Width | Latency | Offset | Register | Max Widen | Max Read     | Max Write    | Num Read    | Num Write   | Resource Estimate |
+|           |            | (SW->HW)   |               |         |        |          | Bitwidth  | Burst Length | Burst Length | Outstanding | Outstanding |                   |
++-----------+------------+------------+---------------+---------+--------+----------+-----------+--------------+--------------+-------------+-------------+-------------------+
+| m_axi_vox | READ_ONLY  | 64 -> 64   | 64            | 0       | slave  | 0        | 64        | 64           | 16           | 8           | 16          | BRAM=4            |
++-----------+------------+------------+---------------+---------+--------+----------+-----------+--------------+--------------+-------------+-------------+-------------------+
+
+* S_AXILITE Interfaces
++---------------+------------+---------------+--------+----------+
+| Interface     | Data Width | Address Width | Offset | Register |
++---------------+------------+---------------+--------+----------+
+| s_axi_control | 32         | 7             | 16     | 0        |
++---------------+------------+---------------+--------+----------+
+
+* S_AXILITE Registers
++---------------+--------------+--------+-------+--------+----------------------------+------------------+
+| Interface     | Register     | Offset | Width | Access | Description                | Bit Fields       |
++---------------+--------------+--------+-------+--------+----------------------------+------------------+
+| s_axi_control | voxel_1      | 0x10   | 32    | W      | Data signal of voxel       |                  |
+| s_axi_control | voxel_2      | 0x14   | 32    | W      | Data signal of voxel       |                  |
+| s_axi_control | phase        | 0x1c   | 32    | W      | Data signal of phase       |                  |
+| s_axi_control | n_slots      | 0x24   | 32    | W      | Data signal of n_slots     |                  |
+| s_axi_control | axis_off_q8  | 0x2c   | 32    | W      | Data signal of axis_off_q8 |                  |
+| s_axi_control | mirror_u     | 0x34   | 32    | W      | Data signal of mirror_u    |                  |
+| s_axi_control | pf_cols      | 0x3c   | 32    | W      | Data signal of pf_cols     |                  |
+| s_axi_control | xor_out_1    | 0x44   | 32    | R      | Data signal of xor_out     |                  |
+| s_axi_control | xor_out_2    | 0x48   | 32    | R      | Data signal of xor_out     |                  |
+| s_axi_control | xor_out_ctrl | 0x4c   | 32    | R      | Control signal of xor_out  | 0=xor_out_ap_vld |
++---------------+--------------+--------+-------+--------+----------------------------+------------------+
+
+* TOP LEVEL CONTROL
++-----------+------------+-----------------------------------+
+| Interface | Type       | Ports                             |
++-----------+------------+-----------------------------------+
+| ap_clk    | clock      | ap_clk                            |
+| ap_rst_n  | reset      | ap_rst_n                          |
+| ap_ctrl   | ap_ctrl_hs | ap_done ap_idle ap_ready ap_start |
++-----------+------------+-----------------------------------+
+
+
+================================================================
+== SW I/O Information
+================================================================
+* Top Function Arguments
++-------------+-----------+--------------------------------+
+| Argument    | Direction | Datatype                       |
++-------------+-----------+--------------------------------+
+| voxel       | in        | burst_maxi<unsigned long long> |
+| phase       | in        | int                            |
+| n_slots     | in        | int                            |
+| axis_off_q8 | in        | int                            |
+| mirror_u    | in        | int                            |
+| pf_cols     | in        | int                            |
+| xor_out     | out       | long long unsigned int*        |
++-------------+-----------+--------------------------------+
+
+* SW-to-HW Mapping
++-------------+---------------+-----------+----------+----------------------------------------+
+| Argument    | HW Interface  | HW Type   | HW Usage | HW Info                                |
++-------------+---------------+-----------+----------+----------------------------------------+
+| voxel       | m_axi_vox     | interface |          | channel=0                              |
+| voxel       | s_axi_control | register  | offset   | name=voxel_1 offset=0x10 range=32      |
+| voxel       | s_axi_control | register  | offset   | name=voxel_2 offset=0x14 range=32      |
+| phase       | s_axi_control | register  |          | name=phase offset=0x1c range=32        |
+| n_slots     | s_axi_control | register  |          | name=n_slots offset=0x24 range=32      |
+| axis_off_q8 | s_axi_control | register  |          | name=axis_off_q8 offset=0x2c range=32  |
+| mirror_u    | s_axi_control | register  |          | name=mirror_u offset=0x34 range=32     |
+| pf_cols     | s_axi_control | register  |          | name=pf_cols offset=0x3c range=32      |
+| xor_out     | s_axi_control | register  |          | name=xor_out_1 offset=0x44 range=32    |
+| xor_out     | s_axi_control | register  |          | name=xor_out_2 offset=0x48 range=32    |
+| xor_out     | s_axi_control | register  |          | name=xor_out_ctrl offset=0x4c range=32 |
++-------------+---------------+-----------+----------+----------------------------------------+
+
+
+================================================================
+== M_AXI Burst Information
+================================================================
+ Note: All burst requests might be further partitioned into multiple requests during RTL generation based on max_read_burst_length or max_write_burst_length settings.
+
+* Manual Burst (burst_maxi)
++--------------+-----------+--------+-------+----------------------+
+| HW Interface | Direction | Length | Width | Location             |
++--------------+-----------+--------+-------+----------------------+
+| m_axi_vox    | read      | 54     | 64    | pov_eta_rd.cpp:92:19 |
++--------------+-----------+--------+-------+----------------------+
+
+
+================================================================
+== Bind Op Report
+================================================================
++-------------------------------------+-----+--------+-------------+--------+-----------+---------+
+| Name                                | DSP | Pragma | Variable    | Op     | Impl      | Latency |
++-------------------------------------+-----+--------+-------------+--------+-----------+---------+
+| + pov_eta_rd                        | 9   |        |             |        |           |         |
+|   ns_fu_207_p3                      |     |        | ns          | select | auto_sel  | 0       |
+|   icmp_ln51_fu_225_p2               |     |        | icmp_ln51   | setne  | auto      | 0       |
+|   pf_fu_239_p3                      |     |        | pf          | select | auto_sel  | 0       |
+|   icmp_ln54_fu_251_p2               |     |        | icmp_ln54   | setgt  | auto      | 0       |
+|   pf_1_fu_257_p3                    |     |        | pf_1        | select | auto_sel  | 0       |
+|   srem_32ns_11ns_32_36_seq_1_U23    |     |        | ang0        | srem   | auto_seq  | 35      |
+|   add_ln57_fu_346_p2                |     |        | add_ln57    | add    | fabric    | 0       |
+|   ang0_1_fu_352_p3                  |     |        | ang0_1      | select | auto_sel  | 0       |
+|   sub_ln59_fu_295_p2                |     |        | sub_ln59    | sub    | fabric    | 0       |
+|   total_cols_fu_301_p3              |     |        | total_cols  | select | auto_sel  | 0       |
+|   mul_20ns_7ns_26_4_1_U24           | 1   |        | mul_ln65    | mul    | auto      | 3       |
+|  + pov_eta_rd_Pipeline_FLAT         | 8   |        |             |        |           |         |
+|    tobool_fu_286_p2                 |     |        | tobool      | setne  | auto      | 0       |
+|    icmp_ln65_fu_315_p2              |     |        | icmp_ln65   | seteq  | auto      | 0       |
+|    i_1_fu_321_p2                    |     |        | i_1         | add    | fabric    | 0       |
+|    add_ln69_fu_335_p2               |     |        | add_ln69    | add    | fabric    | 0       |
+|    mul_20ns_7ns_26_4_1_U3           | 1   |        | mul_ln72    | mul    | auto      | 3       |
+|    icmp_ln72_fu_372_p2              |     |        | icmp_ln72   | seteq  | auto      | 0       |
+|    icmp_ln72_1_fu_376_p2            |     |        | icmp_ln72_1 | setlt  | auto      | 0       |
+|    and_ln72_fu_380_p2               |     |        | and_ln72    | and    | auto      | 0       |
+|    add_ln72_fu_386_p2               |     |        | add_ln72    | add    | fabric    | 0       |
+|    angle_fu_434_p2                  |     |        | angle       | add    | fabric    | 0       |
+|    icmp_ln76_fu_443_p2              |     |        | icmp_ln76   | setgt  | auto      | 0       |
+|    add_ln76_fu_449_p2               |     |        | add_ln76    | add    | fabric    | 0       |
+|    angle_1_fu_455_p3                |     |        | angle_1     | select | auto_sel  | 0       |
+|    mul_10s_32s_32_3_1_U1            | 2   |        | mul_ln80    | mul    | auto      | 2       |
+|    mul_10s_32s_32_3_1_U2            | 2   |        | mul_ln81    | mul    | auto      | 2       |
+|    u_fu_478_p2                      |     |        | u           | add    | fabric    | 0       |
+|    u_1_fu_483_p2                    |     |        | u_1         | sub    | fabric    | 0       |
+|    u_2_fu_488_p3                    |     |        | u_2         | select | auto_sel  | 0       |
+|    mac_muladd_21s_10s_8ns_29_4_1_U5 | 1   |        | mul_ln85    | mul    | dsp_slice | 3       |
+|    mac_muladd_21s_10s_8ns_29_4_1_U5 | 1   |        | add_ln85    | add    | dsp_slice | 3       |
+|    sub_ln85_fu_538_p2               |     |        | sub_ln85    | sub    | fabric    | 0       |
+|    rx_fu_566_p2                     |     |        | rx          | add    | fabric    | 0       |
+|    mac_muladd_21s_10s_25s_29_4_1_U6 | 1   |        | mul_ln86    | mul    | dsp_slice | 3       |
+|    add_ln86_fu_553_p2               |     |        | add_ln86    | add    | fabric    | 0       |
+|    mac_muladd_21s_10s_25s_29_4_1_U6 | 1   |        | add_ln86_1  | add    | dsp_slice | 3       |
+|    rz_fu_585_p2                     |     |        | rz          | add    | fabric    | 0       |
+|    icmp_ln87_fu_605_p2              |     |        | icmp_ln87   | setlt  | auto      | 0       |
+|    xor_ln88_fu_618_p2               |     |        | xor_ln88    | xor    | auto      | 0       |
+|    icmp_ln88_fu_624_p2              |     |        | icmp_ln88   | setlt  | auto      | 0       |
+|    and_ln87_fu_629_p2               |     |        | and_ln87    | and    | auto      | 0       |
+|    inside_fu_635_p2                 |     |        | inside      | and    | auto      | 0       |
+|    vx_fu_641_p3                     |     |        | vx          | select | auto_sel  | 0       |
+|    sub_ln91_fu_667_p2               |     |        | sub_ln91    | sub    | fabric    | 0       |
+|    select_ln91_fu_673_p3            |     |        | select_ln91 | select | auto_sel  | 0       |
+|    add_ln91_fu_681_p2               |     |        | add_ln91    | add    | fabric    | 0       |
+|    mul_16ns_7ns_21_1_1_U4           | 1   |        | mul_ln92    | mul    | auto      | 0       |
+|    add_ln92_fu_707_p2               |     |        | add_ln92    | add    | fabric    | 0       |
+|    icmp_ln96_fu_463_p2              |     |        | icmp_ln96   | setlt  | auto      | 0       |
+|    acc_1_fu_735_p2                  |     |        | acc_1       | xor    | auto      | 0       |
++-------------------------------------+-----+--------+-------------+--------+-----------+---------+
+
+
+================================================================
+== Storage Report
+================================================================
++-----------------------------+-----------+-----------+------+------+--------+----------+------+---------+------------------+
+| Name                        | Usage     | Type      | BRAM | URAM | Pragma | Variable | Impl | Latency | Bitwidth, Depth, |
+|                             |           |           |      |      |        |          |      |         | Banks            |
++-----------------------------+-----------+-----------+------+------+--------+----------+------+---------+------------------+
+| + pov_eta_rd                |           |           | 6    | 0    |        |          |      |         |                  |
+|   control_s_axi_U           | interface | s_axilite |      |      |        |          |      |         |                  |
+|   vox_m_axi_U               | interface | m_axi     | 4    |      |        |          |      |         |                  |
+|  + pov_eta_rd_Pipeline_FLAT |           |           | 2    | 0    |        |          |      |         |                  |
+|    PV2_COS8_U               | rom_1p    |           | 1    |      |        | PV2_COS8 | auto | 1       | 10, 603, 1       |
+|    PV2_SIN8_U               | rom_1p    |           | 1    |      |        | PV2_SIN8 | auto | 1       | 10, 603, 1       |
++-----------------------------+-----------+-----------+------+------+--------+----------+------+---------+------------------+
+
+
+================================================================
+== Pragma Report
+================================================================
+* Valid Pragma Syntax
++----------------+--------------------------------------------------------------------------------------------------------+----------------------------------------------+
+| Type           | Options                                                                                                | Location                                     |
++----------------+--------------------------------------------------------------------------------------------------------+----------------------------------------------+
+| interface      | m_axi port=voxel offset=slave bundle=vox depth=1990656 max_read_burst_length=64 num_read_outstanding=8 | pov_eta_rd.cpp:38 in pov_eta_rd, voxel       |
+| interface      | s_axilite port=voxel bundle=control                                                                    | pov_eta_rd.cpp:40 in pov_eta_rd, voxel       |
+| interface      | s_axilite port=phase bundle=control                                                                    | pov_eta_rd.cpp:41 in pov_eta_rd, phase       |
+| interface      | s_axilite port=n_slots bundle=control                                                                  | pov_eta_rd.cpp:42 in pov_eta_rd, n_slots     |
+| interface      | s_axilite port=axis_off_q8 bundle=control                                                              | pov_eta_rd.cpp:43 in pov_eta_rd, axis_off_q8 |
+| interface      | s_axilite port=mirror_u bundle=control                                                                 | pov_eta_rd.cpp:44 in pov_eta_rd, mirror_u    |
+| interface      | s_axilite port=pf_cols bundle=control                                                                  | pov_eta_rd.cpp:45 in pov_eta_rd, pf_cols     |
+| interface      | s_axilite port=xor_out bundle=control                                                                  | pov_eta_rd.cpp:46 in pov_eta_rd, xor_out     |
+| interface      | ap_ctrl_hs port=return                                                                                 | pov_eta_rd.cpp:47 in pov_eta_rd, return      |
+| pipeline       | II=1                                                                                                   | pov_eta_rd.cpp:66 in pov_eta_rd              |
+| loop_tripcount | min=10476 max=6252228                                                                                  | pov_eta_rd.cpp:67 in pov_eta_rd              |
++----------------+--------------------------------------------------------------------------------------------------------+----------------------------------------------+
+
+

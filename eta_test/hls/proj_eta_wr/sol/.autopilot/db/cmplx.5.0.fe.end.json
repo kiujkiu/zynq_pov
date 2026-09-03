@@ -1,0 +1,30 @@
+{
+    "1": {
+        "name": "pov_eta_wr_Pipeline_SLICES_COLUMNS_COPY_COLUMN",
+        "file": "pov_eta_wr.cpp",
+        "fileloc": "46",
+        "instructions": "132",
+        "total_instructions": "132",
+        "calls": "",
+        "basicblocks": "6",
+        "loads": {
+            "G": "2",
+            "L": "5"
+        },
+        "stores": {
+            "L": "10"
+        },
+        "loops": {
+            "L": "1"
+        }
+    },
+    "0": {
+        "name": "pov_eta_wr",
+        "file": "pov_eta_wr.cpp",
+        "fileloc": "14",
+        "instructions": "76",
+        "total_instructions": "208",
+        "calls": "1",
+        "basicblocks": "1"
+    }
+}

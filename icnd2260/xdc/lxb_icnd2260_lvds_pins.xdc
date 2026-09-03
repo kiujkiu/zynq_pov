@@ -58,17 +58,11 @@ set_property -dict { PACKAGE_PIN P21 IOSTANDARD LVCMOS33 } [get_ports { led[1] }
 ##   CLK_DIV 12 -> 83.333MHz -> 12.0 ns
 ##   CLK_DIV  6 ->166.667MHz ->  6.0 ns      (手册上限)
 ## ============================================================================
-# BITCLK_NS 必须等于顶层的 CLK_DIV (位时钟周期正好是 CLK_DIV 纳秒)。
-# 构建脚本可以在 read_xdc 之前先 set 好这两个变量来覆盖; 没设就用默认值。
-if {![info exists BITCLK_NS]}     { set BITCLK_NS 24.0 }
-if {![info exists MARGIN]}        { set MARGIN     1.0 }
-if {![info exists CLK_PHASE_DEG]} { set CLK_PHASE_DEG 90 }
-# 🔴 旧版把「1/4 周期」写死进公式, 只对 90° 成立; 相位 0° 时会假报 WNS 约 -12ns。
-#    正确写法: 转发时钟沿滞后数据跳变 PH_NS, 沿之前可用 PH_NS, 沿之后可用 (半周期 - PH_NS)。
-#    自检: PH=90 / BITCLK_NS=48 / MARGIN=1 => TSU=11, THD=24-12-1=11, 与旧式逐值相同。
-set PH_NS [expr {$BITCLK_NS * $CLK_PHASE_DEG / 360.0}]
-set TSU   [expr {$PH_NS - $MARGIN}]
-set THD   [expr {$BITCLK_NS/2.0 - $PH_NS - $MARGIN}]
+# 🔴 XDC 文件**不支持 `if`**(Vivado 会报 Designutils 20-1307 并跳过整块)。
+#    所以 TSU / THD 一律由 tools/build_bit_dbg.tcl 在 read_xdc **之前**算好并 set,
+#    这里只负责用。单独在 GUI 里 read 这个 xdc 会因变量未定义而报错 —— 那是预期的。
+#      普通模式:   TSU = PH_NS - MARGIN,  THD = 半周期 - PH_NS - MARGIN
+#      同树模式:   TSU = THD = 0.5 (边沿对齐, 只约束四个引脚之间的到达差)
 
 create_generated_clock -name lvds_ck -source [get_pins u_oddr_ck/C] -divide_by 1 [get_ports clk_p]
 
@@ -77,6 +71,13 @@ set_output_delay -clock lvds_ck -max  $TSU              $LVDS_DATA
 set_output_delay -clock lvds_ck -min [expr {-$THD}]     $LVDS_DATA
 set_output_delay -clock lvds_ck -max  $TSU          -clock_fall -add_delay $LVDS_DATA
 set_output_delay -clock lvds_ck -min [expr {-$THD}] -clock_fall -add_delay $LVDS_DATA
+
+## 🔴 clkbit -> clkbit90 的跨域: ck_rst_q / ck_inv_q 就是为跨域打的那一拍。
+##    这条路径的时序窗口**等于相位差本身** —— 90° 时 T/4, 22.5° 时只剩 T/16,
+##    相位越小窗口越窄, 会假报 setup 失败(2026-09-02 实测 ph22.5 WNS -0.737)。
+##    源信号 out_en / en_2v8 / en_3v8 / dbg_pn_inv[3] 全是**准静态**(上电时变一次),
+##    打拍正是为此 ⇒ 这条路径不需要满足时序, 声明为 false path。
+set_false_path -to [get_pins -quiet {ck_rst_q_reg/D ck_inv_q_reg/D}]
 
 ## I_SYNC 在 LVDS 模式下每帧才翻一次, 不是逐位信号 —— 不做源同步分析
 set_false_path -to   [get_ports {sync dclk en_3v8 en_2v8 led[*]}]

@@ -1,0 +1,250 @@
+--- !Missed
+Pass:            inline
+Name:            NeverInline
+Function:        apatb_pov_eta_wr_ir
+Args:            
+  - Callee:          'pov_eta_wr(unsigned long long const*, unsigned long long*, int, int, int, int, int)'
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 22, Column: 0 }
+  - String:          ' not inlined into '
+  - Caller:          apatb_pov_eta_wr_ir
+  - String:          ' because it should never be inlined (cost=never)'
+...
+--- !Passed
+Pass:            reflow-burst-inference
+Name:            BurstInferred
+DebugLoc:        { File: pov_eta_wr.cpp, Line: 95, Column: 13 }
+Function:        _Z10pov_eta_wrPKyPyiiiii
+Args:            
+  - String:          'Sequential '
+  - Direction:       read
+  - String:          ' of length '
+  - Length:          '54'
+  - String:          ' has been inferred'
+  - String:          ' _XLX_SEP_ '
+  - AccessID:        scevgepseq
+  - ArrayName:       voxel
+  - String:          ' '
+  - BundleName:      vox
+  - String:          ' '
+  - LoopName:        COPY_COLUMN
+  - String:          ' '
+  - LoopLoc:         'pov_eta_wr.cpp:95:13'
+  - String:          ' '
+  - Function:        'pov_eta_wr(unsigned long long const*, unsigned long long*, int, int, int, int, int)'
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 22, Column: 0 }
+  - String:          ' '
+  - String:          ' _XLX_SEP_ '
+  - OrigAccess:      load
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 98, Column: 21 }
+  - OrigDirection:   read
+  - OrigID:          for.body54.load.5
+...
+--- !Passed
+Pass:            reflow-burst-inference
+Name:            BurstInferred
+DebugLoc:        { File: pov_eta_wr.cpp, Line: 46, Column: 5 }
+Function:        _Z10pov_eta_wrPKyPyiiiii
+Args:            
+  - String:          'Sequential '
+  - Direction:       write
+  - String:          ' of '
+  - Length:          variable
+  - String:          ' length'
+  - String:          ' has been inferred'
+  - String:          ' _XLX_SEP_ '
+  - AccessID:        scevgep3seq
+  - ArrayName:       slot_base
+  - String:          ' '
+  - BundleName:      out
+  - String:          ' '
+  - LoopName:        SLICES
+  - String:          ' '
+  - LoopLoc:         'pov_eta_wr.cpp:46:5'
+  - String:          ' '
+  - Function:        'pov_eta_wr(unsigned long long const*, unsigned long long*, int, int, int, int, int)'
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 22, Column: 0 }
+  - String:          ' '
+  - String:          ' _XLX_SEP_ '
+  - OrigAccess:      store
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 99, Column: 31 }
+  - OrigDirection:   write
+  - OrigID:          for.body54.store.13
+...
+--- !Missed
+Pass:            reflow-burst-inference
+Name:            CouldNotAnalyzePattern
+DebugLoc:        { File: pov_eta_wr.cpp, Line: 95, Column: 13 }
+Function:        _Z10pov_eta_wrPKyPyiiiii
+Args:            
+  - String:          Could not analyze pattern
+  - String:          ' _XLX_SEP_ '
+  - OrigAccess:      call
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 95, Column: 13 }
+  - OrigDirection:   read
+  - OrigID:          scevgepseq
+  - ArrayName:       voxel
+  - String:          ' '
+  - BundleName:      vox
+  - String:          ' '
+  - LoopName:        COLUMNS
+  - String:          ' '
+  - LoopLoc:         'pov_eta_wr.cpp:71:9'
+  - String:          ' '
+  - Function:        'pov_eta_wr(unsigned long long const*, unsigned long long*, int, int, int, int, int)'
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 22, Column: 0 }
+  - String:          ' '
+...
+--- !Missed
+Pass:            reflow-burst-widen
+Name:            GreaterOrEqualThreshold
+DebugLoc:        { File: pov_eta_wr.cpp, Line: 95, Column: 13 }
+Function:        _Z10pov_eta_wrPKyPyiiiii
+Args:            
+  - String:          'Could not widen since type '
+  - Type:            i64
+  - String:          ' size is greater than or equal to the max_widen_bitwidth threshold of '
+  - Threshold:       '0'
+  - String:          ' _XLX_SEP_ '
+  - OrigAccess:      call
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 95, Column: 13 }
+  - OrigDirection:   read
+  - OrigID:          scevgepseq
+  - ArrayName:       voxel
+  - String:          ' '
+  - BundleName:      vox
+  - String:          ' '
+  - LoopName:        COPY_COLUMN
+  - String:          ' '
+  - LoopLoc:         'pov_eta_wr.cpp:95:13'
+  - String:          ' '
+  - Function:        'pov_eta_wr(unsigned long long const*, unsigned long long*, int, int, int, int, int)'
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 22, Column: 0 }
+  - String:          ' '
+...
+--- !Missed
+Pass:            reflow-burst-widen
+Name:            GreaterOrEqualThreshold
+DebugLoc:        { File: pov_eta_wr.cpp, Line: 46, Column: 5 }
+Function:        _Z10pov_eta_wrPKyPyiiiii
+Args:            
+  - String:          'Could not widen since type '
+  - Type:            i64
+  - String:          ' size is greater than or equal to the max_widen_bitwidth threshold of '
+  - Threshold:       '0'
+  - String:          ' _XLX_SEP_ '
+  - OrigAccess:      call
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 46, Column: 5 }
+  - OrigDirection:   write
+  - OrigID:          scevgep3seq
+  - ArrayName:       slot_base
+  - String:          ' '
+  - BundleName:      out
+  - String:          ' '
+  - LoopName:        COPY_COLUMN
+  - String:          ' '
+  - LoopLoc:         'pov_eta_wr.cpp:95:13'
+  - String:          ' '
+  - Function:        'pov_eta_wr(unsigned long long const*, unsigned long long*, int, int, int, int, int)'
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 22, Column: 0 }
+  - String:          ' '
+...
+--- !Passed
+Pass:            reflow-burst-summary
+Name:            BurstInferredVerboseSummary
+DebugLoc:        { File: pov_eta_wr.cpp, Line: 46, Column: 5 }
+Function:        _Z10pov_eta_wrPKyPyiiiii
+Args:            
+  - String:          'Multiple burst '
+  - Direction:       writes
+  - String:          ' of '
+  - Length:          variable
+  - String:          ' length and bit width '
+  - Width:           '64'
+  - String:          ' has been inferred.'
+  - String:          ' These burst requests might be further partitioned into multiple requests during RTL generation, based on max_read_burst_length or max_write_burst_length settings.'
+  - String:          ' _XLX_SEP_ '
+  - AccessID:        seq
+  - ArrayName:       ''
+  - String:          ' '
+  - BundleName:      out_r
+  - String:          ' '
+  - LoopName:        SLICES
+  - String:          ' '
+  - LoopLoc:         'pov_eta_wr.cpp:46:5'
+  - String:          ' '
+  - Function:        'pov_eta_wr(unsigned long long const*, unsigned long long*, int, int, int, int, int)'
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 22, Column: 0 }
+  - String:          ' '
+...
+--- !Passed
+Pass:            reflow-burst-summary
+Name:            BurstInferredSummary
+DebugLoc:        { File: pov_eta_wr.cpp, Line: 46, Column: 5 }
+Function:        _Z10pov_eta_wrPKyPyiiiii
+Args:            
+  - String:          'Multiple burst '
+  - Direction:       writes
+  - String:          ' of '
+  - Length:          variable
+  - String:          ' length and bit width '
+  - Width:           '64'
+  - String:          ' in loop '''
+  - LoopName:        SLICES
+  - String:          '''('
+  - LoopLoc:         'pov_eta_wr.cpp:46:5'
+  - String:          ')'
+  - String:          ' has been inferred on bundle '''
+  - BundleName:      out_r
+  - String:          '''.'
+  - String:          ' These burst requests might be further partitioned into multiple requests during RTL generation, based on max_read_burst_length or max_write_burst_length settings.'
+...
+--- !Passed
+Pass:            reflow-burst-summary
+Name:            BurstInferredVerboseSummary
+DebugLoc:        { File: pov_eta_wr.cpp, Line: 95, Column: 13 }
+Function:        _Z10pov_eta_wrPKyPyiiiii
+Args:            
+  - String:          'Multiple burst '
+  - Direction:       reads
+  - String:          ' of length '
+  - Length:          '54'
+  - String:          ' and bit width '
+  - Width:           '64'
+  - String:          ' has been inferred.'
+  - String:          ' These burst requests might be further partitioned into multiple requests during RTL generation, based on max_read_burst_length or max_write_burst_length settings.'
+  - String:          ' _XLX_SEP_ '
+  - AccessID:        seq1
+  - ArrayName:       ''
+  - String:          ' '
+  - BundleName:      vox
+  - String:          ' '
+  - LoopName:        COPY_COLUMN
+  - String:          ' '
+  - LoopLoc:         'pov_eta_wr.cpp:95:13'
+  - String:          ' '
+  - Function:        'pov_eta_wr(unsigned long long const*, unsigned long long*, int, int, int, int, int)'
+    DebugLoc:        { File: pov_eta_wr.cpp, Line: 22, Column: 0 }
+  - String:          ' '
+...
+--- !Passed
+Pass:            reflow-burst-summary
+Name:            BurstInferredSummary
+DebugLoc:        { File: pov_eta_wr.cpp, Line: 95, Column: 13 }
+Function:        _Z10pov_eta_wrPKyPyiiiii
+Args:            
+  - String:          'Multiple burst '
+  - Direction:       reads
+  - String:          ' of length '
+  - Length:          '54'
+  - String:          ' and bit width '
+  - Width:           '64'
+  - String:          ' in loop '''
+  - LoopName:        COPY_COLUMN
+  - String:          '''('
+  - LoopLoc:         'pov_eta_wr.cpp:95:13'
+  - String:          ')'
+  - String:          ' has been inferred on bundle '''
+  - BundleName:      vox
+  - String:          '''.'
+  - String:          ' These burst requests might be further partitioned into multiple requests during RTL generation, based on max_read_burst_length or max_write_burst_length settings.'
+...

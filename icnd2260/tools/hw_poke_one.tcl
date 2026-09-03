@@ -34,7 +34,7 @@ setp $v dbg_frame_gap $G
 setp $v dbg_reg_addr $A
 setp $v dbg_reg_data $D
 setp $v g_dbg.o_we_tog 1
-setp $v g_dbg.o_soft_rst 1 ; after 300
+setp $v g_dbg.o_soft_rst 1 ; after 2000
 setp $v g_dbg.o_soft_rst 0 ; after 2500
 refresh_hw_vio $v
 puts [format "===  reg\[0x%s\]=0x%s  gap=0x%s  ->  fps=%d  status=0x%s" $A $D $G \

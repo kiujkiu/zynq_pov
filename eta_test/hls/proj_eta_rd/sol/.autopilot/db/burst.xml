@@ -1,0 +1,4 @@
+<VitisHLS:BurstInfo>
+    <burst group="BURST_MANUAL" fe_name="ManualBurstInstancePassed" src_info="pov_eta_rd.cpp:92:19" msg_id="214-306" msg_severity="INFO" msg_body="Performing burst_maxi read of length 54 and bit width 64 on bundle 'vox'. These burst requests might be further partitioned into multiple requests during RTL generation, based on max_read_burst_length or max_write_burst_length settings." BundleName="vox" ParentFunc="pov_eta_rd(hls::burst_maxi&lt;unsigned long long&gt;, int, int, int, int, int, unsigned long long*)" Length="54" Width="64" Direction="read" AccessID="if.then20.store.62"/>
+</VitisHLS:BurstInfo>
+

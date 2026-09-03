@@ -1,0 +1,48 @@
+<xilinx:hls_fe_msgs>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="D:/claude_workspace/pov3d/zynq_pov/eta_test/hls/run_eta_hls.tcl:35:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaContext="directive" ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="name=pov_eta_wr" ARG_PragmaType="top" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:29:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="m_axi port=voxel offset=slave bundle=vox depth=1990656 max_read_burst_length=64 num_read_outstanding=16" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:31:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="m_axi port=slot_base offset=slave bundle=out depth=6251904 max_write_burst_length=64 num_write_outstanding=16" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:33:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=voxel bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:34:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=slot_base bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:35:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=phase bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:36:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=slot_start bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:37:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=n_slots bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:38:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=axis_off_q8 bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:39:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="s_axilite port=mirror_u bundle=control" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:40:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="ap_ctrl_hs port=return" ARG_PragmaType="interface" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:47:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="min=151 max=603" ARG_PragmaType="loop_tripcount" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:72:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="min=192 max=192" ARG_PragmaType="loop_tripcount" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:96:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="min=54 max=54" ARG_PragmaType="loop_tripcount" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+    <msg msg_groups="PRAGMA_VERBOSE_DUMP" msg_id="207-5471" msg_severity="WARNING" msg_loc="pov_eta_wr.cpp:97:9" msg_body="HLS pragma dump">
+        <args ARG_PragmaFunction="pov_eta_wr" ARG_PragmaIsValid="1" ARG_PragmaOptions="II=1" ARG_PragmaType="pipeline" ClangWarningOption="dump-hls-pragmas"/>
+    </msg>
+</xilinx:hls_fe_msgs>
+

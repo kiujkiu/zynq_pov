@@ -1,0 +1,222 @@
+
+
+================================================================
+== Vitis HLS Report for 'pov_eta_rd'
+================================================================
+* Date:           Thu Sep  3 17:03:40 2026
+
+* Version:        2024.2 (Build 5238294 on Nov  8 2024)
+* Project:        proj_eta_rd
+* Solution:       sol (Vivado IP Flow Target)
+* Product family: zynq
+* Target device:  xc7z020-clg484-2
+
+
+================================================================
+== Performance Estimates
+================================================================
++ Timing: 
+    * Summary: 
+    +--------+---------+----------+------------+
+    |  Clock |  Target | Estimated| Uncertainty|
+    +--------+---------+----------+------------+
+    |ap_clk  |  6.67 ns|  4.869 ns|     1.80 ns|
+    +--------+---------+----------+------------+
+
++ Latency: 
+    * Summary: 
+    +---------+---------+-----------+-----------+-------+---------+---------+
+    |  Latency (cycles) |   Latency (absolute)  |     Interval    | Pipeline|
+    |   min   |   max   |    min    |    max    |  min  |   max   |   Type  |
+    +---------+---------+-----------+-----------+-------+---------+---------+
+    |    10540|  6252292|  70.302 us|  41.703 ms|  10541|  6252293|       no|
+    +---------+---------+-----------+-----------+-------+---------+---------+
+
+    + Detail: 
+        * Instance: 
+        +-------------------------------------+--------------------------+---------+---------+-----------+-----------+-------+---------+------------------------------------------------+
+        |                                     |                          |  Latency (cycles) |   Latency (absolute)  |     Interval    |                    Pipeline                    |
+        |               Instance              |          Module          |   min   |   max   |    min    |    max    |  min  |   max   |                      Type                      |
+        +-------------------------------------+--------------------------+---------+---------+-----------+-----------+-------+---------+------------------------------------------------+
+        |grp_pov_eta_rd_Pipeline_FLAT_fu_173  |pov_eta_rd_Pipeline_FLAT  |    10502|  6252254|  70.048 us|  41.703 ms|  10477|  6252229|  loop auto-rewind stp (delay=0 clock cycles(s))|
+        +-------------------------------------+--------------------------+---------+---------+-----------+-----------+-------+---------+------------------------------------------------+
+
+        * Loop: 
+        N/A
+
+
+
+================================================================
+== Utilization Estimates
+================================================================
+* Summary: 
++-----------------+---------+-----+--------+-------+-----+
+|       Name      | BRAM_18K| DSP |   FF   |  LUT  | URAM|
++-----------------+---------+-----+--------+-------+-----+
+|DSP              |        -|    -|       -|      -|    -|
+|Expression       |        -|    -|       0|    175|    -|
+|FIFO             |        -|    -|       -|      -|    -|
+|Instance         |        6|    9|    3236|   2934|    -|
+|Memory           |        -|    -|       -|      -|    -|
+|Multiplexer      |        -|    -|       0|    195|    -|
+|Register         |        -|    -|     257|      -|    -|
++-----------------+---------+-----+--------+-------+-----+
+|Total            |        6|    9|    3493|   3304|    0|
++-----------------+---------+-----+--------+-------+-----+
+|Available        |      280|  220|  106400|  53200|    0|
++-----------------+---------+-----+--------+-------+-----+
+|Utilization (%)  |        2|    4|       3|      6|    0|
++-----------------+---------+-----+--------+-------+-----+
+
++ Detail: 
+    * Instance: 
+    +-------------------------------------+----------------------------+---------+----+------+------+-----+
+    |               Instance              |           Module           | BRAM_18K| DSP|  FF  |  LUT | URAM|
+    +-------------------------------------+----------------------------+---------+----+------+------+-----+
+    |control_s_axi_U                      |control_s_axi               |        0|   0|   360|   616|    0|
+    |mul_20ns_7ns_26_4_1_U24              |mul_20ns_7ns_26_4_1         |        0|   1|   171|    74|    0|
+    |grp_pov_eta_rd_Pipeline_FLAT_fu_173  |pov_eta_rd_Pipeline_FLAT    |        2|   8|  1584|  1162|    0|
+    |srem_32ns_11ns_32_36_seq_1_U23       |srem_32ns_11ns_32_36_seq_1  |        0|   0|   394|   238|    0|
+    |vox_m_axi_U                          |vox_m_axi                   |        4|   0|   727|   844|    0|
+    +-------------------------------------+----------------------------+---------+----+------+------+-----+
+    |Total                                |                            |        6|   9|  3236|  2934|    0|
+    +-------------------------------------+----------------------------+---------+----+------+------+-----+
+
+    * DSP: 
+    N/A
+
+    * Memory: 
+    N/A
+
+    * FIFO: 
+    N/A
+
+    * Expression: 
+    +----------------------+----------+----+---+----+------------+------------+
+    |     Variable Name    | Operation| DSP| FF| LUT| Bitwidth P0| Bitwidth P1|
+    +----------------------+----------+----+---+----+------------+------------+
+    |add_ln57_fu_346_p2    |         +|   0|  0|  10|          10|          10|
+    |sub_ln59_fu_295_p2    |         -|   0|  0|  20|          20|          20|
+    |icmp_ln51_fu_225_p2   |      icmp|   0|  0|  19|          19|           1|
+    |icmp_ln54_fu_251_p2   |      icmp|   0|  0|  31|          31|           3|
+    |ang0_1_fu_352_p3      |    select|   0|  0|  10|           1|          10|
+    |ns_fu_207_p3          |    select|   0|  0|  31|           1|           1|
+    |pf_1_fu_257_p3        |    select|   0|  0|   3|           1|           3|
+    |pf_fu_239_p3          |    select|   0|  0|  31|           1|           1|
+    |total_cols_fu_301_p3  |    select|   0|  0|  20|           1|          20|
+    +----------------------+----------+----+---+----+------------+------------+
+    |Total                 |          |   0|  0| 175|          85|          69|
+    +----------------------+----------+----+---+----+------------+------------+
+
+    * Multiplexer: 
+    +---------------+-----+-----------+-----+-----------+
+    |      Name     | LUT | Input Size| Bits| Total Bits|
+    +---------------+-----+-----------+-----+-----------+
+    |ap_NS_fsm      |  177|         40|    1|         40|
+    |vox_0_ARVALID  |    9|          2|    1|          2|
+    |vox_0_RREADY   |    9|          2|    1|          2|
+    +---------------+-----+-----------+-----+-----------+
+    |Total          |  195|         44|    3|         44|
+    +---------------+-----+-----------+-----+-----------+
+
+    * Register: 
+    +--------------------------------------------------+----+----+-----+-----------+
+    |                       Name                       | FF | LUT| Bits| Const Bits|
+    +--------------------------------------------------+----+----+-----+-----------+
+    |add_ln57_reg_424                                  |  10|   0|   10|          0|
+    |ang0_1_reg_434                                    |  10|   0|   10|          0|
+    |ap_CS_fsm                                         |  39|   0|   39|          0|
+    |axis_off_q8_read_reg_367                          |  32|   0|   32|          0|
+    |grp_pov_eta_rd_Pipeline_FLAT_fu_173_ap_start_reg  |   1|   0|    1|          0|
+    |icmp_ln51_reg_388                                 |   1|   0|    1|          0|
+    |mirror_u_read_reg_362                             |  32|   0|   32|          0|
+    |mul_ln65_reg_429                                  |  26|   0|   26|          0|
+    |pf_1_reg_393                                      |   3|   0|    3|          0|
+    |sub_ln59_reg_399                                  |  14|   0|   20|          6|
+    |tmp_5_reg_419                                     |   1|   0|    1|          0|
+    |total_cols_reg_404                                |  14|   0|   20|          6|
+    |trunc_ln56_reg_414                                |  10|   0|   10|          0|
+    |voxel_read_reg_377                                |  64|   0|   64|          0|
+    +--------------------------------------------------+----+----+-----+-----------+
+    |Total                                             | 257|   0|  269|         12|
+    +--------------------------------------------------+----+----+-----+-----------+
+
+
+
+================================================================
+== Interface
+================================================================
+* Summary: 
++-----------------------+-----+-----+------------+--------------+--------------+
+|       RTL Ports       | Dir | Bits|  Protocol  | Source Object|    C Type    |
++-----------------------+-----+-----+------------+--------------+--------------+
+|s_axi_control_AWVALID  |   in|    1|       s_axi|       control|       pointer|
+|s_axi_control_AWREADY  |  out|    1|       s_axi|       control|       pointer|
+|s_axi_control_AWADDR   |   in|    7|       s_axi|       control|       pointer|
+|s_axi_control_WVALID   |   in|    1|       s_axi|       control|       pointer|
+|s_axi_control_WREADY   |  out|    1|       s_axi|       control|       pointer|
+|s_axi_control_WDATA    |   in|   32|       s_axi|       control|       pointer|
+|s_axi_control_WSTRB    |   in|    4|       s_axi|       control|       pointer|
+|s_axi_control_ARVALID  |   in|    1|       s_axi|       control|       pointer|
+|s_axi_control_ARREADY  |  out|    1|       s_axi|       control|       pointer|
+|s_axi_control_ARADDR   |   in|    7|       s_axi|       control|       pointer|
+|s_axi_control_RVALID   |  out|    1|       s_axi|       control|       pointer|
+|s_axi_control_RREADY   |   in|    1|       s_axi|       control|       pointer|
+|s_axi_control_RDATA    |  out|   32|       s_axi|       control|       pointer|
+|s_axi_control_RRESP    |  out|    2|       s_axi|       control|       pointer|
+|s_axi_control_BVALID   |  out|    1|       s_axi|       control|       pointer|
+|s_axi_control_BREADY   |   in|    1|       s_axi|       control|       pointer|
+|s_axi_control_BRESP    |  out|    2|       s_axi|       control|       pointer|
+|ap_clk                 |   in|    1|  ap_ctrl_hs|    pov_eta_rd|  return value|
+|ap_rst_n               |   in|    1|  ap_ctrl_hs|    pov_eta_rd|  return value|
+|ap_start               |   in|    1|  ap_ctrl_hs|    pov_eta_rd|  return value|
+|ap_done                |  out|    1|  ap_ctrl_hs|    pov_eta_rd|  return value|
+|ap_idle                |  out|    1|  ap_ctrl_hs|    pov_eta_rd|  return value|
+|ap_ready               |  out|    1|  ap_ctrl_hs|    pov_eta_rd|  return value|
+|m_axi_vox_AWVALID      |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_AWREADY      |   in|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_AWADDR       |  out|   64|       m_axi|           vox|       pointer|
+|m_axi_vox_AWID         |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_AWLEN        |  out|    8|       m_axi|           vox|       pointer|
+|m_axi_vox_AWSIZE       |  out|    3|       m_axi|           vox|       pointer|
+|m_axi_vox_AWBURST      |  out|    2|       m_axi|           vox|       pointer|
+|m_axi_vox_AWLOCK       |  out|    2|       m_axi|           vox|       pointer|
+|m_axi_vox_AWCACHE      |  out|    4|       m_axi|           vox|       pointer|
+|m_axi_vox_AWPROT       |  out|    3|       m_axi|           vox|       pointer|
+|m_axi_vox_AWQOS        |  out|    4|       m_axi|           vox|       pointer|
+|m_axi_vox_AWREGION     |  out|    4|       m_axi|           vox|       pointer|
+|m_axi_vox_AWUSER       |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_WVALID       |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_WREADY       |   in|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_WDATA        |  out|   64|       m_axi|           vox|       pointer|
+|m_axi_vox_WSTRB        |  out|    8|       m_axi|           vox|       pointer|
+|m_axi_vox_WLAST        |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_WID          |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_WUSER        |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_ARVALID      |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_ARREADY      |   in|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_ARADDR       |  out|   64|       m_axi|           vox|       pointer|
+|m_axi_vox_ARID         |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_ARLEN        |  out|    8|       m_axi|           vox|       pointer|
+|m_axi_vox_ARSIZE       |  out|    3|       m_axi|           vox|       pointer|
+|m_axi_vox_ARBURST      |  out|    2|       m_axi|           vox|       pointer|
+|m_axi_vox_ARLOCK       |  out|    2|       m_axi|           vox|       pointer|
+|m_axi_vox_ARCACHE      |  out|    4|       m_axi|           vox|       pointer|
+|m_axi_vox_ARPROT       |  out|    3|       m_axi|           vox|       pointer|
+|m_axi_vox_ARQOS        |  out|    4|       m_axi|           vox|       pointer|
+|m_axi_vox_ARREGION     |  out|    4|       m_axi|           vox|       pointer|
+|m_axi_vox_ARUSER       |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_RVALID       |   in|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_RREADY       |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_RDATA        |   in|   64|       m_axi|           vox|       pointer|
+|m_axi_vox_RLAST        |   in|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_RID          |   in|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_RUSER        |   in|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_RRESP        |   in|    2|       m_axi|           vox|       pointer|
+|m_axi_vox_BVALID       |   in|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_BREADY       |  out|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_BRESP        |   in|    2|       m_axi|           vox|       pointer|
+|m_axi_vox_BID          |   in|    1|       m_axi|           vox|       pointer|
+|m_axi_vox_BUSER        |   in|    1|       m_axi|           vox|       pointer|
++-----------------------+-----+-----+------------+--------------+--------------+
+

@@ -36,6 +36,7 @@
 `default_nettype none
 
 module icnd2260_lvds_tx #(
+    parameter integer PIX_BW8 = 0,   // 1 = 每像素只发高 8 位(4 拍/字), VHEAD[23:20]=0x1
     parameter integer NLANE    = 3,     // mini-LVDS 数据对数: 1 / 2 / 3
     parameter integer IDLE_CLK = 64,    // 段间 IDLE 长度 (手册标注 64 mLVDS_CLOCK)
     parameter integer VID_CRC  = 1,     // 1 = 每颗芯片图像数据后追加 CHKSUM
@@ -69,6 +70,10 @@ module icnd2260_lvds_tx #(
     // 🔴 手册自相矛盾: p.12(TTL) 说 VHEAD[15:0] **等于** VHEAD[31:16](纯拷贝),
     //    p.14(mini-LVDS) 说它是 VHEAD[31:16] 的 **Checksum**。同一个域两章打架。
     //    1 = 按 p.12 填拷贝   0 = 按 p.14 填校验和(现状)
+    // 🔴 8 位像素模式(实验): 【手册明确·pg.txt:1096,1207】VHEAD[23:20]=0x3 是"像素位宽 16 位",
+    //    但那是个 4 位字段而手册只定义了这一个值。若编码为 (n+1)x4, 则 0x1 = 8 位。
+    //    成立的话每帧数据从 14,400 拍减半到 7,200 拍, 单颗上限从 11,133 翻到约 23,600 fps。
+    //    ⚠ 纯【推断】, 手册无支持 —— 拿板子问。
     input  wire                    vhead_copy,
 
     // ---- 位输出 -----------------------------------------------------------
@@ -159,7 +164,9 @@ module icnd2260_lvds_tx #(
 
     // 载荷推进: 组合输出, 提前一拍 (与 icnd2260_tx 同约定)
     assign pl_next = (!pl_last) &&
-                     (((st == S_VID)  && (bitcnt == 4'd6)) ||
+                     // 🔴 8 位模式下一个字在 bitcnt==3 结束, 写死 6 会让预取永不触发
+                     //    ⇒ 取不到下一个像素 ⇒ 发送器卡死 ⇒ frame_cnt 恒 0(实测踩过)
+                     (((st == S_VID)  && (bitcnt == (PIX_BW8 ? 4'd1 : 4'd6))) ||
                       ((st == S_PAY4) && (bitcnt == 4'd14) && os_phase));
 
     function [3:0] cmd_code(input [2:0] k);
@@ -167,7 +174,7 @@ module icnd2260_lvds_tx #(
                    (k == KIND_WRITE_DEV) ? CMD_WRITE_DEV : CMD_READ_DEV;
     endfunction
 
-    wire [15:0] vh_hi  = {cmd_rows, 4'h3, cmd_cascade};
+    wire [15:0] vh_hi  = {cmd_rows, (PIX_BW8 != 0) ? 4'h1 : 4'h3, cmd_cascade};
     wire [15:0] vh_magic = (cmd_kind == KIND_CORRECT) ? 16'hC3C3 : 16'hA5A5;
 
     integer i;
@@ -346,8 +353,8 @@ module icnd2260_lvds_tx #(
                     pay_sr[16*i +: 16] <= {pay_sr[16*i +: 14], 2'b00};
                 end
 
-                if (bitcnt == 4'd6 && pl_last) pay_last_r <= 1'b1;
-                if (bitcnt == 4'd7) begin
+                if (bitcnt == (PIX_BW8 ? 4'd2 : 4'd6) && pl_last) pay_last_r <= 1'b1;
+                if (bitcnt == (PIX_BW8 ? 4'd3 : 4'd7)) begin
                     // 一颗芯片的数据发完 -> 插这颗的 CHKSUM; 是最后一颗就顺势收尾
                     if (wcnt == WORDS_PER_CHIP[15:0] - 16'd1) begin
                         last_chip <= pay_last_r;
@@ -366,7 +373,7 @@ module icnd2260_lvds_tx #(
                         pay_sr <= pl_data;
                     end
                 end
-                bitcnt <= (bitcnt == 4'd7) ? 4'd0 : (bitcnt + 4'd1);
+                bitcnt <= (bitcnt == (PIX_BW8 ? 4'd3 : 4'd7)) ? 4'd0 : (bitcnt + 4'd1);
             end
 
             // ---- 每 lane 的图像 CHKSUM: 1 沿/位 ----------------------

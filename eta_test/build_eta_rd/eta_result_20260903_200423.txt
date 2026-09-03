@@ -1,0 +1,53 @@
+=== targets ===
+  1  APU
+     2  ARM Cortex-A9 MPCore #0 (Suspended)
+     3  ARM Cortex-A9 MPCore #1 (Running)
+  4  xc7z020
+=== fpga -file D:/claude_workspace/pov3d/zynq_pov/eta_test/build_eta_rd/eta_rd.bit ===
+=== PS7 init done, ARM#0 halted; PL running on FCLK0=150000000 Hz ===
+=== gauge ok: MAGIC ok, echo ok, live cyc moving, status=0x0C (idle0=1 idle1=1) ===
+=== f_clk measured 150.288 MHz vs configured 150.000 MHz (0.19 %) ===
+=== DDR write/readback ok; downloading voxel grid (15925248 B) to 0x10000000 (~20-40 s over JTAG) ===
+=== dow done in 47 s ===
+   voxel head ok at 0x10000000: 0x30DD150E 0x4179F9DC 0x0A9C510F 0x555915D1
+   voxel slice-0 start ok at 0x10798000: 0x09016F51 0x6C1633B0 0x2BAF7CA1 0x0E49C17D
+
+=== eta test matrix: variant=rd f=150.0 MHz window=6 s  (82,944 B read per slice, DDR peak 2.133 GB/s) ===
+   CAL_SEQ     ip0: runs=85729 periods=85729  10539.0 cyc/slice = 70.26 us/slice (exact)   wall 70.26 us  busy 100.0 %   1180.5 MB/s = 98 % of one HP port
+   CAL_SEQ     window 6.02 s, snapshots=2, DDR read 1180.5 MB/s => eta = 0.553  (overlap both-busy 0.0 %, idle after 0 polls)
+   CAL_SEQ: XOR 0x93EBCAC7DA6A730E matches host expectation (data path proven)
+   CAL_STRIDE  ip0: runs=85767 periods=85767  10539.0 cyc/slice = 70.26 us/slice (exact)   wall 70.26 us  busy 100.0 %   1180.5 MB/s = 98 % of one HP port
+   CAL_STRIDE  window 6.03 s, snapshots=4, DDR read 1180.5 MB/s => eta = 0.553  (overlap both-busy 0.0 %, idle after 0 polls)
+   CAL_STRIDE: XOR 0x73CCD5C508E31D5F matches host expectation (data path proven)
+   CAL_PF0     ip0: runs=54877 periods=54877  16477.5 cyc/slice = 109.85 us/slice (exact)   wall 109.85 us  busy 100.0 %   755.1 MB/s = 63 % of one HP port
+   CAL_PF0     window 6.03 s, snapshots=6, DDR read 755.1 MB/s => eta = 0.354  (overlap both-busy 0.0 %, idle after 0 polls)
+   >>> single IP, one slice: sequential 70.26 us, strided 70.26 us, no-prefetch(as-is IP behaviour) 109.85 us; csynth floor 69.1 us
+   SINGLE      ip0: runs=145   periods=145    10368.3 cyc/slice = 69.12 us/slice (exact)   wall 68.97 us  busy 100.0 %   1200.0 MB/s = 100 % of one HP port
+   SINGLE      window 6.03 s, snapshots=8, DDR read 1200.0 MB/s => eta = 0.562  (overlap both-busy 0.0 %, idle after 1 polls)
+   SINGLE: XOR 0x6E667C2B2E34A860 matches host expectation (data path proven)
+   DUAL        ip0: runs=122   periods=122    12274.9 cyc/slice = 81.83 us/slice (exact)   wall 81.90 us  busy 100.0 %   1013.6 MB/s = 84 % of one HP port
+   DUAL        ip1: runs=122   periods=122    12289.1 cyc/slice = 81.93 us/slice (exact)   wall 81.90 us  busy 100.0 %   1012.4 MB/s = 84 % of one HP port
+   DUAL        window 6.03 s, snapshots=10, DDR read 2026.0 MB/s => eta = 0.950  (overlap both-busy 100.0 %, idle after 1 polls)
+   DUAL/ip0: XOR 0x6E667C2B2E34A860 matches host expectation (data path proven)
+   DUAL/ip1: XOR 0x6E667C2B2E34A860 matches host expectation (data path proven)
+   DUAL_SAMEPH ip0: runs=120   periods=120    12438.0 cyc/slice = 82.92 us/slice (exact)   wall 83.28 us  busy 100.0 %   1000.3 MB/s = 83 % of one HP port
+   DUAL_SAMEPH ip1: runs=120   periods=120    12438.0 cyc/slice = 82.92 us/slice (exact)   wall 83.28 us  busy 100.0 %   1000.3 MB/s = 83 % of one HP port
+   DUAL_SAMEPH window 6.03 s, snapshots=12, DDR read 2000.6 MB/s => eta = 0.938  (overlap both-busy 100.0 %, idle after 2 polls)
+   DUAL_PF0    ip0: runs=87    periods=87     17282.2 cyc/slice = 115.21 us/slice (exact)   wall 114.85 us  busy 100.0 %   719.9 MB/s = 60 % of one HP port
+   DUAL_PF0    ip1: runs=87    periods=87     17281.9 cyc/slice = 115.21 us/slice (exact)   wall 114.85 us  busy 100.0 %   719.9 MB/s = 60 % of one HP port
+   DUAL_PF0    window 6.03 s, snapshots=14, DDR read 1439.8 MB/s => eta = 0.675  (overlap both-busy 100.0 %, idle after 1 polls)
+   DUAL_PF4    ip0: runs=122   periods=122    12273.1 cyc/slice = 81.82 us/slice (exact)   wall 82.00 us  busy 100.0 %   1013.7 MB/s = 84 % of one HP port
+   DUAL_PF4    ip1: runs=122   periods=122    12287.2 cyc/slice = 81.91 us/slice (exact)   wall 82.00 us  busy 100.0 %   1012.6 MB/s = 84 % of one HP port
+   DUAL_PF4    window 6.03 s, snapshots=16, DDR read 2026.3 MB/s => eta = 0.950  (overlap both-busy 100.0 %, idle after 2 polls)
+   DUAL_PF6    ip0: runs=122   periods=122    12273.5 cyc/slice = 81.82 us/slice (exact)   wall 81.94 us  busy 100.0 %   1013.7 MB/s = 84 % of one HP port
+   DUAL_PF6    ip1: runs=122   periods=122    12287.8 cyc/slice = 81.92 us/slice (exact)   wall 81.94 us  busy 100.0 %   1012.5 MB/s = 84 % of one HP port
+   DUAL_PF6    window 6.03 s, snapshots=18, DDR read 2026.2 MB/s => eta = 0.950  (overlap both-busy 100.0 %, idle after 3 polls)
+   DUAL_FACEB  ip0: runs=122   periods=122    12288.3 cyc/slice = 81.92 us/slice (exact)   wall 82.01 us  busy 100.0 %   1012.5 MB/s = 84 % of one HP port
+   DUAL_FACEB  ip1: runs=122   periods=122    12272.8 cyc/slice = 81.82 us/slice (exact)   wall 82.01 us  busy 100.0 %   1013.8 MB/s = 84 % of one HP port
+   DUAL_FACEB  window 6.03 s, snapshots=20, DDR read 2026.2 MB/s => eta = 0.950  (overlap both-busy 100.0 %, idle after 3 polls)
+
+=== VERDICT (rd, DUAL: ip0 phase 0 + ip1 phase 151, 603 slices, pf=2) ===
+   ip0 81.83 us/slice   ip1 81.93 us/slice   worst 81.93 us   overlap 100.0 %   eta = 0.950 (need >= 0.70 bare / >= 0.84 with 20 % margin)
+   single-IP full sweep 69.12 us/slice; dual/single ratio 1.19 (1.00 = DDR not the bottleneck at this load)
+   RESULT: GO with >=20 % margin (worst 81.9 us <= 92.2 us)
+=== log: D:/claude_workspace/pov3d/zynq_pov/eta_test/build_eta_rd/eta_result_*.txt ===

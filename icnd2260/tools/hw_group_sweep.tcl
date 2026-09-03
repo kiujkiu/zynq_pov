@@ -36,15 +36,15 @@ setp $v dbg_frame_gap $GAP
 after 2000
 puts "=== refresh-group sweep, fps fixed, ONLY reg 0x00 changes. WATCH THE PANEL. ==="
 set step 0
-foreach {val grp cap} {493C 74 180  3F3C 64 208  2F3C 48 278  273C 40 333  1F3C 32 417  173C 24 556  0F3C 16 835} {
+foreach {val grp cap} {3F3C 64 208  3B3C 60 222  373C 56 238  333C 52 256  2F3C 48 278} {
     incr step
     setp $v dbg_reg_addr 00 ; setp $v dbg_reg_data $val
     set WE [expr {1-$WE}] ; setp $v g_dbg.o_we_tog $WE
-    setp $v g_dbg.o_soft_rst 1 ; after 300
+    setp $v g_dbg.o_soft_rst 1 ; after 2000
     setp $v g_dbg.o_soft_rst 0 ; after 2500
     after 9000
     refresh_hw_vio $v
-    puts [format "===   STEP %d/7  groups=%-3s  chip cap=%s fps   measured fps=%d  status=0x%s" \
+    puts [format "===   STEP %d/5  groups=%-3s  chip cap=%s fps   measured fps=%d  status=0x%s" \
         $step $grp $cap [expr 0x[get_property INPUT_VALUE [PX $v fps_latched]]] \
         [get_property INPUT_VALUE [PX $v g_dbg.status]]]
 }

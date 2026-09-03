@@ -1,0 +1,23 @@
+[
+  {
+    "functionLabel": "",
+    "functionName": "pov_eta_wr",
+    "id": 0,
+    "ifcond": "",
+    "insert_position": "",
+    "label": "",
+    "pragma": {
+      "name": "TOP",
+      "option": [
+        {
+          "name": "name",
+          "value": "pov_eta_wr"
+        }
+      ]
+    },
+    "slx": false,
+    "sourceFile": "D:/claude_workspace/pov3d/zynq_pov/eta_test/hls/run_eta_hls.tcl",
+    "sourceLine": 35,
+    "success": true
+  }
+]

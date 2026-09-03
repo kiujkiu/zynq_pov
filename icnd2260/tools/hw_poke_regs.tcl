@@ -40,7 +40,7 @@ proc poke {v addr data} {
     puts "===   poke reg\[0x$addr\] = 0x$data"
 }
 proc cycle {v tag} {
-    setp $v g_dbg.o_soft_rst 1 ; after 300
+    setp $v g_dbg.o_soft_rst 1 ; after 2000
     setp $v g_dbg.o_soft_rst 0 ; after 2000
     refresh_hw_vio $v
     set c0 [IV $v frame_cnt] ; set e0 [IV $v ack_err_cnt] ; set a0 [IV $v ack_frame_cnt]

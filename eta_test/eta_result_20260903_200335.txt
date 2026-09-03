@@ -1,0 +1,8 @@
+=== targets ===
+  1  APU
+     2  ARM Cortex-A9 MPCore #0 (Running)
+     3  ARM Cortex-A9 MPCore #1 (Running)
+  4  xc7z020
+     5  Legacy Debug Hub
+=== fpga -file D:/claude_workspace/pov3d/zynq_pov/eta_test/build_eta_rd/eta_rd.bit ===
+=== PS7 init done, ARM#0 halted; PL running on FCLK0=150000000 Hz ===

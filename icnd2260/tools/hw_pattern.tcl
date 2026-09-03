@@ -9,7 +9,7 @@ set LVL 0FFF
 if {[llength $argv] > 0} { set MODE [lindex $argv 0] }
 if {[llength $argv] > 1} { set LVL  [lindex $argv 1] }
 if {[llength $argv] > 2} { set NAME [lindex $argv 2] }
-if {[llength $argv] > 1} { set BD [lindex $argv 1] }
+if {[llength $argv] > 3} { set BD [lindex $argv 3] }
 set B "D:/claude_workspace/pov3d/zynq_pov/icnd2260/$BD"
 open_hw_manager
 connect_hw_server -allow_non_jtag

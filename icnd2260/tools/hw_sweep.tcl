@@ -88,7 +88,7 @@ foreach pn $PNLIST {
 }
 setp $v g_dbg.o_crc_mode 0
 setp $v dbg_pn_inv 0
-setp $v g_dbg.o_soft_rst 1 ; after 300
+setp $v g_dbg.o_soft_rst 1 ; after 2000
 setp $v g_dbg.o_soft_rst 0
 puts "=== restored crc_mode=0 (vendor-capture-confirmed) pn_inv=0 ==="
 close_hw_target

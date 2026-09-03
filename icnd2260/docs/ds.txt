@@ -1,0 +1,883 @@
+          ICND2260
+
+(PWM 恒流行列合一共阴 LED 显示屏驱动芯片)
+                                           ICND2260       PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+
+
+产品概述                                                 封装
+  ICND2260 是专门为小间距和微间距 LED 显示屏
+设计的共阴驱动 IC，  它具有创新的行列合一整合架构，                                 Ball Grid Array
+采用多种数据传输方式，    让 LED 模组电路设计更简洁，
+显示效果更优，彻底解决困扰业界的高对比耦合，跨
+板耦合等问题。
+
+特性
+   供电电压
+    VDDR: 2.8~5V
+    VDDGB: 3.5~5V
+    VDDD: 2.8~3.8V
+   输出电流设定范围
+    G: 0.1mA~6.4mAx40 @VDDGB=3.8V
+    B: 0.1mA~6.4mAx40 @VDDGB=3.8V                                 BGA
+    R: 0.15mA~9.6mAx40 @VDDR=2.8V
+   电流精度
+    通道间: < ±1%
+    芯片间: < ±1.5%
+   支持 TTL 或 mini-LVDS 传输模式
+    TTL 支持 1，2，3，6 通道传输
+    mini-LVDS 支持 1，2，3 通道传输
+   PWM 灰度位宽 16-bit
+   10-bit 电流增益
+   恒流通道数: 120
+   行管数: 48 NMOS
+   最大支持 16 颗级联
+   最大支持 96 扫
+   可编程扫描顺序
+   LED 开短路侦测并回传
+   温度侦测并回传
+   FGCLK Max: 600MHz
+   FDCLK Max: 25MHz (TTL-DDR), 170MHz(mini-
+    LVDS)
+   工作温度范围: –40°C to +85°C
+   封装: BGA225
+
+
+
+
+www.chiponeic.com                                                         V1.7   Jul   2023
+
+                                               -2-
+                                                             ICND2260                     PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+
+
+引脚说明
+
+
+
+          1        2        3       4       5         6       7          8        9        10       11       12       13       14       15
+
+
+        VLED     VLED     VLED     VLED    VLED     VLED     VLED       VLED     VLED     VLED     VLED     VLED     VLED     VLED     VLED
+    A    [2]      [3]      [4]      [5]     [6]      [7]      [8]        [9]      [10]     [11]     [12]     [13]     [14]     [15]     [16]
+                                                                                                                                                 A
+
+
+        VLED     GND_                                                            GND_                                         GND_     VLED
+    B    [1]     ROWL
+                          AGND     ACK_O   SEL_I    VDDGB    G [12]     G [16]
+                                                                                 ROWL
+                                                                                          VCAP0    G [27]   VDDGB    AGND
+                                                                                                                              ROWL      [17]
+                                                                                                                                                 B
+
+
+        VLED     VDD_L    GND_L                                                                                                        VLED
+    C    [0]     VDSRX    VDSRX
+                                   G [0]   G [4]    G [8]    G [13]     G [17]   G [20]   G [23]   G [28]   G[32]    G [36]   DGND
+                                                                                                                                        [18]
+                                                                                                                                                 C
+
+
+        SDI_R1   SDI_R2                                                                                                                VLED
+    D   L_D2IP   L_D2IN
+                          DCLK     G [1]   G [5]    G [9]    G [14]     G [18]   G [21]   G [24]   G [29]   G [33]   G [37]    VPP
+                                                                                                                                        [19]
+                                                                                                                                                 D
+
+
+        SDI_G1   SDI_G2                                                                                                                VLED
+    E   L_D1IP   L_D1IN
+                           SCL     G [2]   G [6]    G [10]   G [15]     G [19]   G [22]   G [25]   G [30]   G [34]   G [38]   VCORE
+                                                                                                                                        [20]
+                                                                                                                                                 E
+
+
+        SDI_B1   SDI_B2                                                                                                                VLED
+    F   L_D01P   L_D0IN
+                           SDA     G [3]   G [7]    G [11]   R [13]     R [18]   R [23]   G [26]   G [31]   G [35]   G [39]   VDDD
+                                                                                                                                        [21]
+                                                                                                                                                 F
+
+
+                          LVDS_                                                                                                        VLED
+    G   L_CKIP   L_CKIN
+                           EN
+                                   R [2]   R [5]     R [9]   R [14]     R [19]   R [24]   R [28]   R [32]   R [36]   RSTN      NC
+                                                                                                                                        [22]
+                                                                                                                                                 G
+
+
+        VLED                                                                                                                           VLED
+    H    [24]
+                 ATEST     R [0]   R [3]   R [6]    R [10]   R [15]     R [20]   R [25]   R [29]   R [33]   R [37]   DFT_EN   AGND
+                                                                                                                                        [23]
+                                                                                                                                                 H
+
+
+                                                                                                                               SDO_     SDO_
+        VLED
+    I    [25]
+                 VDDR      R [1]   R [4]   R [7]    R [11]   R [16]     R [21]   R [26]   R [30]   R [34]   R [38]   B [36]   R2L_D2   R1L_D2    I
+                                                                                                                                ON       OP
+
+                                                                                                                               SDO_     SDO_
+        VLED
+    J    [26]
+                 AGND      B [0]   B [4]   R [8]    R [12]   R [17]     R [22]   R[27]    R [31]   R [35]   R [39]   B [37]   G2L_D1   G1L_D1    J
+                                                                                                                                ON       OP
+
+
+                                                                                                                               SDO_     SDO_
+        VLED
+    K    [27]
+                 GPIO0     B [1]   B [5]   B [9]    B [13]   B [17]     B [20]   B [23]   B [27]   B [30]   B [33]   B [38]   B2L_D0   B1L_D0    K
+                                                                                                                                ON       OP
+
+
+        VLED                                                                                                                  L_CK     L_CK
+    L    [28]
+                 GPIO1     B [2]   B [6]   B [10]   B [14]   B [18]     B [21]   B [24]   B [28]   B [31]   B [34]   B [39]
+                                                                                                                               ON       OP
+                                                                                                                                                 L
+
+
+        VLED                                                                                                         GND_L    VDD_L    VLED
+    M    [29]
+                 I_SYNC    B [3]   B [7]   B [11]   B [15]   B [19]     B [22]   B [25]   B [29]   B [32]   B [35]
+                                                                                                                     VDSTX    VDSTX     [45]
+                                                                                                                                                 M
+
+
+        VLED     GND_                                                  GND_                                                   GND_     VLED
+    N    [30]    ROWH
+                          VDDGB    B [8]   B [12]   B [16]   VCAP1
+                                                                       ROWH
+                                                                                 B [26]   VDDGB    SEL_O    ACK_I    AGND
+                                                                                                                              ROWH      [46]
+                                                                                                                                                 N
+
+
+        VLED     VLED     VLED     VLED    VLED     VLED     VLED       VLED     VLED     VLED     VLED     VLED     VLED     VLED     VLED
+    O    [31]     [32]     [33]     [34]    [35]     [36]     [37]       [38]     [39]     [40]     [41]     [42]     [43]     [44]     [47]
+                                                                                                                                                 O
+
+
+          1        2        3       4        5        6       7          8        9        10       11       12       13       14       15
+
+
+
+
+www.chiponeic.com                                                                                                              V1.7     Jul     2023
+
+                                                                      -3-
+                                             ICND2260     PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+                                                                                   Typical
+             BGA Pin No.              Name              Description    I/O/PWR
+                                                                                   Voltage
+           D1                    SDI_R1/L_D2IP                             I       0~VDDD
+           D2                    SDI_R2/L_D2IN                             I       0~VDDD
+                                                    TTL: 串行数据输入端
+           E1                    SDI_G1/L_D1IP                             I       0~VDDD
+                                                    mini-LVDS: 数据输入
+           E2                    SDI_G2/L_D1IN                             I       0~VDDD
+                                                    端，通过 LVDS_EN 启用
+           F1                    SDI_B1/L_D0IP                             I       0~VDDD
+           F2                    SDI_B2/L_D0IN                             I       0~VDDD
+           G1                    L_CKIP                                    I       0~VDDD
+                                                    mini-LVDS 时钟输入端
+           G2                    L_CKIN                                    I       0~VDDD
+  Data     D3                    DCLK               TTL 时钟输入端              I       0~VDDD
+           I15                   SDO_R1/L_D2OP                             I       0~VDDD
+           I14                   SDO_R2/L_D2ON                             I       0~VDDD
+                                                    TTL: 串行数据输出端
+           J15                   SDO_G1/L_D1OP                             I       0~VDDD
+                                                    mini-LVDS: 数据输出
+           J14                   SDO_G2/L_D1ON                             I       0~VDDD
+                                                    端，通过 LVDS_EN 启用
+           K15                   SDO_B1/L_D0OP                             I       0~VDDD
+           K14                   SDO_B2/L_D0ON                             I       0~VDDD
+           L15                   L_CKOP                                    I       0~VDDD
+                                                    mini-LVDS 时钟输出端
+           L14                   L_CKON                                    I       0~VDDD
+           H2                    ATEST              测试用                  I/O      VDDR/GND
+  Test
+           G13                   RSTN               复位信号，低电平有效             I      VDDR/GND
+                                                    mini-LVDS 使能端，高电
+           G3                    LVDS_EN                                  I       VDDD/GND
+                                                    平表示启用
+           B5                    SEL_I              测试用                  I/O      VDDD/GND
+           N12                   ACK_I              数据回传输入                 I      VDDD/GND
+           E3                    SCL                IIC 时钟端              I/O      VDDD/GND
+           F3                    SDA                IIC 数据端              I/O      VDDD/GND
+ Digital
+           K2                    GPIO0              测试用                  I/O      VDDD/GND
+           L2                    GPIO1              测试用                  I/O      VDDD/GND
+           M2                    I_SYNC             同步信号输入                 I      VDDD/GND
+           N11                   SEL_O              测试用                  I/O      VDDD/GND
+           B4                    ACK_O              数据回传输出                O       VDDD/GND
+           H13                   DFT_EN             测试用                    I      VDDD/GND
+           H3, I3, G4, H4,
+           I4, G5, H5, I5, J5,
+           G6, H6, I6, J6,
+           F7, G7, H7, I7,
+           J7, F8, G8, H8,
+ Analog    I8, J8, F9, G9,       R[0:39]            红色恒流输出端              O            0~VDDR
+           H9, I9, J9, G10,
+           H10, I10, J10,
+           G11, H11, I11,
+           J11, G12, H12,
+           I12, J12
+www.chiponeic.com                                                              V1.7   Jul   2023
+
+                                              -4-
+                                          ICND2260    PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+          C4, D4, E4, F4,
+          C5, D5, E5, F5,
+          C6, D6, E6, F6,
+          B7, C7, D7, E7,
+          B8, C8, D8, E8,
+          C9, D9, E9, C10,
+                             G[0:39]             绿色恒流输出端           O            0~VDDGB
+          D10, E10, F10,
+          B11, C11, D11,
+          E11, F11, C12,
+          D12, E12, F12,
+          C13, D13, E13,
+          F13
+          J3, K3, L3, M3,
+          J4, K4, L4, M4,
+          N4, K5, L5, M5,
+          N5, K6, L6, M6,
+          N6, K7, L7, M7,
+          K8, L8, M8, K9,    B[0:39]             蓝色恒流输出端           O            0~VDDGB
+          L9, M9, N9, K10,
+          L10, M10, K11,
+          L11, M11, K12,
+          L12, M12, I13,
+          J13, K13, L13
+          B10, N7            VCAP0/1             内部电源，需外接电容        I/O          0~VDDR
+          C1, B1, A1~15,
+          B15, C15, D15,
+          E15, F15, G15,
+          H15, H1, I1, J1,   VLED[0:47]          行管输入端             P            0~VDDGB
+          K1, L1, M1, N1,
+          O1~14, M15,
+          N15, O15
+          B6, B12, N3, N10   VDDGB               蓝绿色电源             P             3.5~5V
+          I2                 VDDR                红色电源              P             2.8~5V
+          F14                VDDD                电源                P            2.8~3.8V
+          E14                VCORE               电源                P              1.5V
+                                                 烧录电源输入，应用时接
+          D14                VPP                                   P             7V/0V
+                                                 地即可
+ Power    C2                 VDD_LVDSRX          mini-LVDS 接收端电源   P            2.8V~5V
+          M14                VDD_LVDSTX          mini-LVDS 发送端电源   P            2.8V~5V
+          C3                 GND_LVDSRX          mini-LVDS 接收接地端   P               0V
+          M13                GND_LVDSTX          mini-LVDS 发送接地端   P               0V
+          C14                DGND                数字信号接地端           P               0V
+          B2, B9, B14        GND_ROWL            上方行管信号接地端         P               0V
+          N2, N8, N14        GND_ROWH            下方行管信号接地端         P               0V
+
+
+www.chiponeic.com                                                        V1.7    Jul   2023
+
+                                           -5-
+                                     ICND2260     PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+          B3, B13, H14, J2,
+                              AGND          模拟信号接地端           P            0V
+          N13
+   Not
+          G14                 NC            未连接               -                -
+Connected
+
+
+
+
+www.chiponeic.com                                                 V1.7   Jul       2023
+
+                                      -6-
+                                              ICND2260           PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+
+
+I/O 等效电路
+                1. CLKI, SDI                                   2. CLKO, SDO
+
+
+
+
+绝对最大额定值 (Ta=25°C)
+                 特性                               符号                          额定值                     单位
+                                                  VDDR                         0~5.0                   V
+                电源电压                             VDDGB                         0~5.0                   V
+                                                  VDDD                         0~3.8                   V
+                                                  IoutR                       0.15~9.6                mA
+                输出电流
+                                                  IoutGB                      0.1~6.4                 mA
+                输入电压                               VIN                      -0.4~VDD+0.4               V
+             输出耐受电压                               VOUT                           6                     V
+                 功耗
+                                                   PD                           5.95                   W
+         (4 层印刷电路板上, 25°C)
+                热阻抗                              Rth(j-a)                       21                   °C/W
+                 结温                               Tj,max                        150                    °C
+                工作温度                              Topr                        -40~85                   °C
+                存储温度                              Tstg                        -55~150                  °C
+
+电气特性 (如果不另外说明，Ta=25°C)
+           特性                    符号               测试条件               最小值             典型值      最大值      单位
+                                 VDDR                    -             2.8             2.8    4.2          V
+                                VDDGB                    -             3.5             3.8    4.2          V
+         电源电压
+                                 VDDD                    -             2.8             2.8    3.8          V
+                                VCORE                    -              -              1.5     -           V
+                                 VDSR          OUT_R0-R39               -               -     2.8          V
+         开启电压                    VDSG          OUT_G0-G39               -               -     3.8          V
+                                 VDSB           OUT_B0-B39              -               -     3.8          V
+                                              IOH=-1mA, SDO,
+     高电平逻辑输出电压                    VOH                                VDD-0.4            -     VDD          V
+                                                   CLKO
+                                              IOH=+1mA, SDO,
+     低电平逻辑输出电压                    VOL                                   -               -     0.4          V
+                                                   CLKO
+     高电平逻辑输入电流                     IIH       VIN=VDD, SDI, CLKI         -               -      1           μA
+     低电平逻辑输入电流                     IIL       VIN=GND, SDI, CLKI         -               -      -1          μA
+                                ΔIO-chip        IOutR=1.5mA,            -              ±1.0   ±1.5         %
+         恒流源误差
+                               ΔIO-channel       IOutGB=1mA             -              ±0.7   ±1.0         %
+
+
+www.chiponeic.com                                                                             V1.7   Jul    2023
+
+                                                 -7-
+                                                    ICND2260         PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+
+                                 IDDR               DCLK=12.5MHz,        -      3.0         -         mA
+                                                    GCLK=100MHz,
+                                IDDGB                                    -      9.5         -         mA
+                                                      VDDR=2.8V,
+                                 IDD                  VDDGB=3.8V         -      12.0        -         mA
+         电源电流
+                                 IDDR               DCLK=12.5MHz,        -      4.0         -         mA
+                                                    GCLK=200MHz,
+                                IDDGB                                    -      9.5         -         mA
+                                                      VDDR=2.8V,
+                                 IDD                  VDDGB=3.8V         -      15.0        -         mA
+
+开关特性 (如果不另外说明，Ta=25°C)
+              特性                         符号              测试条件           最小值    典型值     最大值       单位
+                    SDI-DCLK↑             tSU0                           -      3       -
+      建立时间
+                    SDI-DCLK↓             tSU1                           -      3       -
+                    DCLK↑-SDI             tH0                            -      4       -
+      保持时间                                              VDD=3.8V
+                    DCLK↓-SDI             tH1                            -      4       -
+                                                         CL=10pF                                  ns
+                    DCLK↑-SDO↑           tpHH                            -     10       -
+                                                       FCLK=10MHz
+                    DCLK↑-SDO↓            tpHL                           -     10       -
+    传输延迟时间
+                    DCLK↓-SDO↑            tpLH                           -     14       -
+                    DCLK↓-SDO↓            tpLL                           -     14       -
+                                                        VDD=3.8V,
+            时钟频率                         FCLK                            -      -       25       MHz
+                                                         CL=10pF
+           通道开启时间                             tor     10~90% 波形          -     35       -         ns
+           通道关闭时间                             tof     90~10% 波形          -     35       -         ns
+
+mini-LVDS 电气特性 (如果不另外说明，Ta=25°C, VDD=3.8V)
+             特性                    符号                   测试条件            最小值    典型值     最大值       单位
+      差分输入高电平阈值电压                   VTH                                   -      -     100       mV
+                                                        VIC=1.2V
+      差分输入低电平阈值电压                      VTL                              -100     -      -        mV
+          共模输入电压                       VIC                  -            1.1     -     1.3        V
+          差分输入电压                       VID                  -           ±100     -     ±600      mV
+            输入电流                        IIN           VIN=+2.4V/0V        -      -      10       μA
+     Module chain 差分匹配电阻            RBD                     -            80    100     120        Ω
+      Data chain 差分匹配电阻             RDC                     -            160   200     240        Ω
+
+
+
+
+www.chiponeic.com                                                                       V1.7    Jul    2023
+
+                                                      -8-
+                                                             ICND2260                        PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+
+                [Single-end Signals]
+                                 RXP - RXN = -|VID| < VTL = LOW
+                RXN
+                                                                                                                            Differential
+                                                                                                                           input voltage
+                                                                                                                                |VID|
+
+                                                                                                         VIC
+                RXP
+                                                                      RXP - RXN = |VID| > VTH = HIGH
+
+
+
+                GND
+
+
+
+
+                [Differential Signals]
+
+                  RXP - RXN
+
+                                                                                              VTH
+                                                                                                                   |VID|
+
+
+                   0V
+
+
+                                                          VTL                        |VID|
+
+
+
+
+                                     mini-LVDS VID and VIC and VTH and VTL definition
+
+
+mini-LVDS 开关特性 (如果不另外说明，Ta =25°C, VDD=3.8V)
+
+           特性                            符号                       测试条件                        最小值       典型值                  最大值             单位
+时钟周期                                     tLVCP                        -                       6.00         T                  50.00              ns
+时钟频率                                 1/tLVCP                          -                       20.00            -             170.00         MHz
+           1
+传输建立时间                                   tSTU                         -                         -      1/4tLVCP                   -              ns
+           1
+传输保持时间                                   tHLD                         -                         -      1/4tLVCP                   -              ns
+注释 1: 对于 mini-LVDS 驱动端, 传输延时可设置为 1/8tLVCP, 1/4tLVCP 或 3/8tLVCP
+
+
+                                                                      tLVCP
+
+                                                                              tHLD
+
+                                                     1      2     3
+
+
+                           mLVDS CLOCK
+
+
+
+                              mLVDS DATA
+
+
+                                                      mLVDS data to clock
+
+
+
+
+ www.chiponeic.com                                                                                                                V1.7     Jul    2023
+
+                                                                  -9-
+                                                    ICND2260       PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+
+测试波形
+
+                                tSU0                  tSU1
+
+                                           tH0                   tH1
+  DCLK
+
+
+
+
+SDI_R/G/B
+
+
+
+
+  DCLK
+
+
+
+
+SDO_R/G/B
+
+                                        tPHL/tPHH              tPLL/tPLH
+
+
+
+                    10%           90%                                  90%         10%
+
+
+OUT_R/G/B
+
+                          tor                                                tof
+
+
+
+
+www.chiponeic.com                                                                        V1.7   Jul   2023
+
+                                                     - 10 -
+                                    ICND2260                     PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+
+
+测试电路
+测试电路 1：高电平逻辑输入电压/低电平逻辑输入电压
+                                             VDD        VDDR      VDDGB
+
+
+
+                                             VDD          VDDR    VDDGB
+                                   DCLK
+
+                       FPGA        SDI_R1&R2                         OUT_R0
+                                   SDI_G1&G2
+                                   SDI_B1&B2
+                                   SDI_CLK                           OUT_R39
+                                                                     OUT_G0
+
+
+                                                                     OUT_G39
+                                                                     OUT_B0
+
+                    VIH=VDD
+                    VIL=0V                                           OUT_B39
+                    tr= tf =10ns
+                    (10%-90%)
+                                                                     SCAN0
+
+
+                                                                     SCAN47
+
+
+                                    GND            SDO_R/G/B/CLK
+
+
+
+
+                                                   IO=-1mA~1mA
+                                                                   CL=10pF    V
+
+
+
+
+www.chiponeic.com                                                                 V1.7   Jul   2023
+
+                                          - 11 -
+                                              ICND2260             PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+测试电路 2：高电平逻辑输入电流
+                    VIN=VDD                              VDD    VDDR       VDDGB
+
+
+
+                                                         VDD    VDDR       VDDGB
+                                          A    DCLK
+
+                                                                            OUT_R0
+                                          A    SDI_R1&R2
+
+                                      A        SDI_G1&G2                    OUT_R39
+                                                                            OUT_G0
+                                  A            SDI_B1&B2
+
+                              A                SDI_CLK                      OUT_G39
+                                                                            OUT_B0
+
+
+                                                                            OUT_B39
+
+
+                                                                            SCAN0
+
+
+                                                                            SCAN47
+
+
+                                                GND            SDO_R/G/B/CLK
+
+
+
+                                                                 CL=10pF
+
+
+
+测试电路 3：低电平逻辑输入电流
+                                                         VDD   VDDR        VDDGB
+
+
+
+                                                         VDD   VDDR        VDDGB
+                                          A   DCLK
+
+                                                                            OUT_R0
+                                          A   SDI_R1&R2
+
+                                      A       SDI_G1&G2                     OUT_R39
+                                                                            OUT_G0
+                                  A           SDI_B1&B2
+
+                          A                   SDI_CLK                       OUT_G39
+                                                                            OUT_B0
+                      VIN=GND
+
+
+                                                                            OUT_B39
+
+
+                                                                            SCAN0
+
+
+                                                                            SCAN47
+
+
+                                               GND             SDO_R/G/B/CLK
+
+
+
+                                                                CL=10pF
+
+
+
+
+www.chiponeic.com                                                                     V1.7   Jul   2023
+
+                                                - 12 -
+                                                         ICND2260                            PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+测试电路 4：电源电流
+                                                                         VDD     VDDR         VDDGB
+
+
+
+                                                                         A            A         A
+
+                                                                         VDD     VDDR         VDDGB
+                                                        DCLK
+
+                               FPGA                     SDI_R1&R2                              OUT_R0
+                                                        SDI_G1&G2
+                                                        SDI_B1&B2
+                                                        SDI_CLK                                OUT_R39
+                                                                                               OUT_G0
+
+                             VIH=VDD
+                             VIL=0V                                                            OUT_G39
+                             tr= tf =10ns                                                      OUT_B0
+                             (10%-90%)
+
+
+                                                                                               OUT_B39
+
+
+                                                                                               SCAN0
+
+
+                                                                                               SCAN47
+
+
+                                                         GND                     SDO_R/G/B/CLK
+
+
+
+                                                                                   CL=10pF
+
+
+测试电路 5：恒流输出/恒流误差
+                                                   VDD     VDDR                VDDGB
+
+
+
+                                                   VDD      VDDR               VDDGB
+                                            DCLK
+
+                FPGA                        SDI_R1&R2                           OUT_R0                 A
+                                            SDI_G1&G2
+                                            SDI_B1&B2
+                                            SDI_CLK                             OUT_R39
+                                                                                OUT_G0                 A
+              VIH=VDD
+              VIL=0V                                                            OUT_G39
+              tr= tf =10ns                                                      OUT_B0                 A
+              (10%-90%)
+
+
+                                                                                OUT_B39                A
+
+
+                                                                                                           VO=1V，6V
+                                                                                SCAN0
+
+
+                                                                                SCAN47
+
+
+                                             GND           SDO_R/G/B/CLK
+
+
+
+                                                               CL=10pF
+
+
+
+
+www.chiponeic.com                                                                                                     V1.7   Jul   2023
+
+                                                               - 13 -
+                                          ICND2260                 PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+测试电路 6：开关特性
+                                          VDD      VDDR           VDDGB
+
+
+
+                                          VDD       VDDR          VDDGB
+                                   DCLK
+
+                                   SDI_R1&R2                       OUT_R0    CL=10pF
+                      FPGA
+                                   SDI_G1&R2                                 RL=1KΩ
+                                   SDI_B1&B2
+                                   SDI_CLK                         OUT_R39   CL=10pF
+                                                                   OUT_G0
+                                                                             RL=1KΩ
+
+                    VIH=VDD                                                  CL=10pF
+                    VIL=0V                                         OUT_G39
+                    tr= tf =10ns                                   OUT_B0    RL=1KΩ
+                    (10%-90%)
+
+                                                                             CL=10pF
+                                                                   OUT_B39
+                                                                             RL=1KΩ
+
+
+
+
+                                                                                           VLED=VDDR/VDDGB
+                                                                   SCAN0
+
+
+                                                                   SCAN47        VO=0.3V
+
+
+
+                                    GND            SDO_R/G/B/CLK
+
+
+
+                                                        CL=10pF
+
+
+
+
+www.chiponeic.com                                                                                      V1.7   Jul   2023
+
+                                               - 14 -
+                                             ICND2260        PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+
+
+恒流特性
+ICND2260采用了精确电流驱动控制技术，同一芯片的不同通道间，不同芯片之间的电流差异极小。
+1) 通道间电流差异< ±1.0%，芯片间电流差异< ±1.5%。
+2) 具有不受负载端电压影响的电流输出特性，如下图所示。输出电流将不随LED顺向电压VF 的变化而变化。
+
+             Iout(mA)
+
+                10
+
+                                                                                       1mA
+                 8                                                                     3mA
+                                                                                       8mA
+                6
+
+                 4
+
+                 2
+
+                 0
+                     0    0.5       1      1.5        2    2.5       3
+                                             VDS(V)
+
+
+
+
+调节输出电流
+ICND2260无需外接电阻，可直接通过寄存器配置分别调节RGB输出电流。
+
+红色电流输出 IOUT=IREF*(igain+1)*1.5* color_adj
+IREF= reg0x2d[5:4] 00: 0.1mA, 01: 0.2mA, 10: 0.3mA, 11: 0.4mA 默认值 reg0x2d[5:4]=1
+Igain= reg0x2d[3:0] 0000:0     1111:15        默认值 reg0x 2d[3:0]=8
+color_adj= reg0x29[6:0] 0000000:50%       1111111: 150%      默认值 reg0x29[6:0]=85
+
+绿色电流输出 IOUT=IREF*(igain+1)* color_adj
+IREF= reg0x3d[5:4] 00: 0.1mA, 01: 0.2mA, 10: 0.3mA, 11: 0.4mA 默认值 reg0x3d[5:4]=1
+Igain= reg0x3d[3:0] 0000:0     1111:15          默认值 reg0x3d[3:0]=f
+color_adj= reg0x39[6:0] 0000000:50%       1111111: 150%      默认值 reg0x39[6:0]=85
+
+蓝色电流输出 IOUT=IREF*(igain+1)* color_adj
+IREF= reg0x4d[5:4]     00: 0.1mA, 01: 0.2mA, 10: 0.3mA, 11: 0.4mA 默认值 reg0x4d[5:4]=1
+Igain= reg0x4d[3:0]    0000:0      1111:15     默认值 reg0x4d[3:0]=9
+color_adj= reg0x49[6:0] 0000000:50%        1111111: 150%      默认值 reg0x49[6:0]=85
+
+
+
+
+ www.chiponeic.com                                                                     V1.7   Jul   2023
+
+                                                 - 15 -
+                    ICND2260   PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+
+
+封装尺寸
+BGA
+
+
+
+
+www.chiponeic.com                            V1.7   Jul   2023
+
+                     - 16 -
+                                      ICND2260     PWM 恒流行列合一共阴 LED 显示屏驱动芯片
+
+
+产品订购信息
+
+
+
+
+                         产品编号                   封装（无铅环保）
+                      ICND2260AG-F1               BGA
+
+
+
+
+版本说明
+
+
+
+版本     发布日期                            说明
+ 0.1   2022/08      初次发布
+ 0.5   2022/08      修改Pin定义
+ 0.6   2022/09      添加m-LVDS特性
+ 0.7   2022/10      修改Pin定义
+ 0.8   2022/11      更新产品概述
+ 1.0   2023/01      添加Pin定义描述部分
+ 1.1   2023/01      修改m-LVDS为mini-LVDS
+ 1.2   2023/02      更新IDD,IDDR,IDDGB参数
+ 1.3   2023/02      添加最大级联数量
+ 1.4   2023/03      修改pin定义表格行管输出端
+ 1.5   2023/06      添加最大扫描数
+ 1.6   2023/06      添加输出电流计算公式
+ 1.7   2023/07      修改VDDD电压范围,添加热阻抗、功耗参数
+
+
+
+
+声明：
+
+北京集创北方科技股份有限公司保留说明书的更改权，恕不另行通知!
+任何半导体产品在特定条件下都有一定的失效或发生故障的可能，用户有责任在使用Chipone产品进行系统设计和整机制造时遵守安
+全标准并采取安全措施，以避免潜在失败风险及可能造成人身伤害或财产损失情况的发生！
+
+
+                      集智创芯，我公司将竭诚为客户提供更优秀的产品！
+
+www.chiponeic.com                                                V1.7   Jul   2023
+
+                                       - 17 -
+

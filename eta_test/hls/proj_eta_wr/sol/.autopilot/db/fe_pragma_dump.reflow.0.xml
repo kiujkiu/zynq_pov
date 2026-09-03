@@ -1,0 +1,16 @@
+<pragmas>
+<pragma file="pov_eta_wr.cpp" line="47" pragmaType="loop_tripcount" parentfunction="pov_eta_wr" min="151" max="603" avg="377"/>
+<pragma file="pov_eta_wr.cpp" line="72" pragmaType="loop_tripcount" parentfunction="pov_eta_wr" min="192" max="192" avg="192"/>
+<pragma file="pov_eta_wr.cpp" line="97" pragmaType="pipeline" parentfunction="pov_eta_wr" off="0" ii="1" rewind="0" style=""/>
+<pragma file="pov_eta_wr.cpp" line="96" pragmaType="loop_tripcount" parentfunction="pov_eta_wr" min="54" max="54" avg="54"/>
+<pragma file="pov_eta_wr.cpp" line="29" pragmaType="interface" parentfunction="pov_eta_wr" mode="m_axi" port="voxel" bundle="vox" offset="slave" name="" depth="1990656" num_read_outstanding="16" num_write_outstanding="-1" max_burst_read_length="64" max_burst_write_length="-1" latency="-1" max_widen_bitwidth="-1" channel=""/>
+<pragma file="pov_eta_wr.cpp" line="31" pragmaType="interface" parentfunction="pov_eta_wr" mode="m_axi" port="slot_base" bundle="out" offset="slave" name="" depth="6251904" num_read_outstanding="-1" num_write_outstanding="16" max_burst_read_length="-1" max_burst_write_length="64" latency="-1" max_widen_bitwidth="-1" channel=""/>
+<pragma file="pov_eta_wr.cpp" line="33" pragmaType="interface" parentfunction="pov_eta_wr" mode="s_axilite" port="voxel" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="pov_eta_wr.cpp" line="34" pragmaType="interface" parentfunction="pov_eta_wr" mode="s_axilite" port="slot_base" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="pov_eta_wr.cpp" line="35" pragmaType="interface" parentfunction="pov_eta_wr" mode="s_axilite" port="phase" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="pov_eta_wr.cpp" line="36" pragmaType="interface" parentfunction="pov_eta_wr" mode="s_axilite" port="slot_start" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="pov_eta_wr.cpp" line="37" pragmaType="interface" parentfunction="pov_eta_wr" mode="s_axilite" port="n_slots" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="pov_eta_wr.cpp" line="38" pragmaType="interface" parentfunction="pov_eta_wr" mode="s_axilite" port="axis_off_q8" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="pov_eta_wr.cpp" line="39" pragmaType="interface" parentfunction="pov_eta_wr" mode="s_axilite" port="mirror_u" bundle="control" offset="-1" name="" clock="" impl="" register="0"/>
+<pragma file="pov_eta_wr.cpp" line="40" pragmaType="interface" parentfunction="pov_eta_wr" mode="ap_ctrl_hs" port="return" name=""/>
+</pragmas>

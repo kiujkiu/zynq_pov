@@ -38,7 +38,7 @@ proc poke {v addr data} {
 # 0x00 = 0x493C -> 0x0F3C : refresh groups 74 -> 16 (manual minimum)
 puts "=== poke reg[0x00] = 0x0F3C  (refresh groups 74 -> 16) ==="
 poke $v 00 0F3C
-setp $v g_dbg.o_soft_rst 1 ; after 300
+setp $v g_dbg.o_soft_rst 1 ; after 2000
 setp $v g_dbg.o_soft_rst 0 ; after 2000
 
 puts "=== walking FRAME_GAP down.  WATCH THE PANEL - say when it breaks. ==="

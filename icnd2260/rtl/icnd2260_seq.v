@@ -199,7 +199,15 @@ module icnd2260_seq #(
                      P_BLANK  = 4'd6,   // §12 步骤 2
                      P_RUN    = 4'd7,
                      P_WAIT   = 4'd8,
-                     P_QUIET  = 4'd9;   // 读指令后的静默窗口
+                     P_QUIET  = 4'd9,   // 读指令后的静默窗口
+                     // 🔴 §12 步骤 1「发送两次完整寄存器」—— 原来是两个整表**背靠背**发,
+                     //    中间没有 VSYNC, 之前也没有过任何 VSYNC。而 §9 讲检测流程时的措辞是
+                     //    「第一帧: 配置…; 第二帧: 配置…」⇒ **芯片按帧(VSYNC 划分)采样寄存器**,
+                     //    两遍落在同一帧里很可能只算一遍。供应商抓包也印证: 他们每帧只写 16 个
+                     //    寄存器、一帧一个 VSYNC, 从来没有两个整表背靠背。
+                     //    ⇒ 拆成 VSYNC → 整表 → VSYNC → 整表, 两遍落在两个不同的帧里。
+                     P_VS_1   = 4'd10,
+                     P_VS_2   = 4'd11;
 
     reg [3:0]  ph, ph_next;
     reg [1:0]  sub, sub_next;
@@ -294,13 +302,15 @@ module icnd2260_seq #(
                     if (dbg_minimal) begin
                         sub <= 2'd2;
                         ph  <= P_RUN;
-                    end else ph <= P_REG_1;
+                    end else ph <= P_VS_1;   // 先发一个 VSYNC 再进第一遍整表
                 end else dly <= dly - 32'd1;
             end
 
             // ---- §12 步骤 1: 屏蔽位的整表 ×2 -----------------------------
-            P_REG_1: issue(KIND_WRITE_ALL, SRC_REG, P_REG_2, 2'd0, 1'b0, 1'b0);
-            P_REG_2: issue(KIND_WRITE_ALL, SRC_REG, P_BLANK, 2'd0, 1'b0, 1'b1);
+            P_VS_1:  issue(KIND_VSYNC,     SRC_ZERO, P_REG_1, 2'd0, 1'b0, 1'b0);
+            P_REG_1: issue(KIND_WRITE_ALL, SRC_REG,  P_VS_2,  2'd0, 1'b0, 1'b0);
+            P_VS_2:  issue(KIND_VSYNC,     SRC_ZERO, P_REG_2, 2'd0, 1'b0, 1'b0);
+            P_REG_2: issue(KIND_WRITE_ALL, SRC_REG,  P_BLANK, 2'd0, 1'b0, 1'b1);
 
             // ---- §12 步骤 2: BLANK_FRAMES 帧全 0 -------------------------
             P_BLANK: begin

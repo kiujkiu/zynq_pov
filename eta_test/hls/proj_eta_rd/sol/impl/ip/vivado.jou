@@ -1,0 +1,24 @@
+#-----------------------------------------------------------
+# Vivado v2024.2 (64-bit)
+# SW Build 5239630 on Fri Nov 08 22:35:27 MST 2024
+# IP Build 5239520 on Sun Nov 10 16:12:51 MST 2024
+# SharedData Build 5239561 on Fri Nov 08 14:39:27 MST 2024
+# Start of session at: Thu Sep  3 17:03:43 2026
+# Process ID         : 66860
+# Current directory  : D:/claude_workspace/pov3d/zynq_pov/eta_test/hls/proj_eta_rd/sol/impl/ip
+# Command line       : vivado.exe -notrace -mode batch -source run_ippack.tcl
+# Log file           : D:/claude_workspace/pov3d/zynq_pov/eta_test/hls/proj_eta_rd/sol/impl/ip/vivado.log
+# Journal file       : D:/claude_workspace/pov3d/zynq_pov/eta_test/hls/proj_eta_rd/sol/impl/ip\vivado.jou
+# Running On         : PC-W003SS3G0143
+# Platform           : Windows Server 2016 or Windows 10
+# Operating System   : 26200
+# Processor Detail   : Intel(R) Core(TM) Ultra 7 255HX
+# CPU Frequency      : 2880 MHz
+# CPU Physical cores : 20
+# CPU Logical cores  : 20
+# Host memory        : 33960 MB
+# Swap memory        : 47244 MB
+# Total Virtual      : 81205 MB
+# Available Virtual  : 16619 MB
+#-----------------------------------------------------------
+source run_ippack.tcl -notrace

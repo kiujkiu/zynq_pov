@@ -1,0 +1,14 @@
+{
+  "0": {
+    "basicblocks": 10,
+    "calls": "",
+    "file": "pov_eta_wr.cpp",
+    "fileloc": 14,
+    "instructions": 123,
+    "loads": {
+      "G": 2
+    },
+    "name": "pov_eta_wr",
+    "total_instructions": 123
+  }
+}

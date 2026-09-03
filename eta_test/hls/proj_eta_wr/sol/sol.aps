@@ -1,0 +1,22 @@
+<AutoPilot:solution xmlns:AutoPilot="com.autoesl.autopilot.solution">
+    <name>
+        <value string="sol"/>
+    </name>
+    <project>
+        <value string="proj_eta_wr"/>
+    </project>
+    <flowTarget value="vivado"/>
+    <targetInfo>
+        <TargetInfo value="xc7z020:-clg484:-2"/>
+    </targetInfo>
+    <libraryList>
+        <library value="xilinx/zynq/zynq" name="DefaultPlatform"/>
+    </libraryList>
+    <clockList>
+        <clock name="default" period="6.67" default="false"/>
+    </clockList>
+    <config>
+        <config_export description="DDR read-efficiency gauge (wr)" display_name="POV eta gauge (wr)" format="ip_catalog" library="eta" output="D:/claude_workspace/pov3d/zynq_pov/eta_test/hls/pov_eta_wr_ip.zip" vendor="povlab" version="1.0"/>
+    </config>
+</AutoPilot:solution>
+

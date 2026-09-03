@@ -1,0 +1,37 @@
+--- !Missed
+Pass:            inline
+Name:            NeverInline
+Function:        apatb_pov_eta_rd_ir
+Args:            
+  - Callee:          'pov_eta_rd(hls::burst_maxi<unsigned long long>, int, int, int, int, int, unsigned long long*)'
+    DebugLoc:        { File: pov_eta_rd.cpp, Line: 37, Column: 0 }
+  - String:          ' not inlined into '
+  - Caller:          apatb_pov_eta_rd_ir
+  - String:          ' because it should never be inlined (cost=never)'
+...
+--- !Passed
+Pass:            reflow-burst-summary
+Name:            ManualBurstInstance
+DebugLoc:        { File: pov_eta_rd.cpp, Line: 92, Column: 19 }
+Function:        _Z10pov_eta_rdN3hls10burst_maxiIyEEiiiiiPy
+Args:            
+  - String:          'Performing burst_maxi '
+  - Direction:       read
+  - String:          ' of length '
+  - Length:          '54'
+  - String:          ' and bit width '
+  - Width:           '64'
+  - String:          ' on bundle '''
+  - String:          vox
+  - String:          '''.'
+  - String:          ' These burst requests might be further partitioned into multiple requests during RTL generation, based on max_read_burst_length or max_write_burst_length settings.'
+  - String:          ' _XLX_SEP_ '
+  - AccessID:        if.then20.store.62
+  - ArrayName:       ''
+  - String:          ' '
+  - BundleName:      vox
+  - String:          ' '
+  - Function:        'pov_eta_rd(hls::burst_maxi<unsigned long long>, int, int, int, int, int, unsigned long long*)'
+    DebugLoc:        { File: pov_eta_rd.cpp, Line: 37, Column: 0 }
+  - String:          ' '
+...

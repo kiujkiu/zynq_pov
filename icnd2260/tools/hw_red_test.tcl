@@ -42,7 +42,7 @@ puts "===  A0  vendor table, 74 refresh groups, NO pokes    [rd $v]   <-- BASELI
 after 8000
 # poke ONLY 0x00: refresh groups 74 -> 16 (0x493C -> 0x0F3C, low byte untouched)
 setp $v dbg_reg_addr 00 ; setp $v dbg_reg_data 0F3C ; setp $v g_dbg.o_we_tog 1
-setp $v g_dbg.o_soft_rst 1 ; after 300
+setp $v g_dbg.o_soft_rst 1 ; after 2000
 setp $v g_dbg.o_soft_rst 0 ; after 3000
 puts "===  A1  ONLY reg\[0x00\] 74 -> 16 groups             [rd $v]   <-- 8s"
 after 8000

@@ -35,7 +35,7 @@ proc setp {v n val} { set p [PX $v $n] ; set_property OUTPUT_VALUE $val $p ; com
 setp $v dbg_frame_gap $GAP
 setp $v dbg_reg_addr 00 ; setp $v dbg_reg_data $REG
 setp $v g_dbg.o_we_tog 1
-setp $v g_dbg.o_soft_rst 1 ; after 300
+setp $v g_dbg.o_soft_rst 1 ; after 2000
 setp $v g_dbg.o_soft_rst 0 ; after 3000
 puts "=== HOLD: reg\[0x00\]=0x$REG, gap=0x$GAP.  60 s.  WATCH FOR FLICKER / CHANGE. ==="
 for {set i 1} {$i <= 12} {incr i} {

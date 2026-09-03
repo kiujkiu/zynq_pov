@@ -2,11 +2,15 @@
 #   量化台阶 Q ⇒ 码值 0..Q-1 全部量化成 0 ⇒ 开头 Q 颗全黑。
 #   74 分组(14.2位) Q=3.5 -> 开头 3~4 颗黑;  16 分组(12.0位) Q=16 -> 开头 16 颗黑。
 # "亮/不亮"是二值判断, 不怕饱和/曝光/透视/裁剪 —— 这是手机唯一能胜任的读法。
-# args: <name> <build_dir> <hold_s>
+# args: <name> <build_dir> <hold_s> [reg00:reg01 ...]   (default 493C:0020 0F3C:0020 0F3C:0010)
+#   pg.txt:1616  G = (reg00[14:8]+1) x (reg01[12:0] x N), N = 2^reg00[5:4];  reg00[14:8] >= 15 (min 16 groups)
+#   quantum Q = 65536 / G  ->  the first ceil(Q) LEDs of the ramp stay dark.
 # ASCII-only (Vivado on Windows reads .tcl as GBK).
 set NAME [lindex $argv 0]
 set BD   [lindex $argv 1]
 set HOLD [lindex $argv 2]
+set PTS  [lrange $argv 3 end]
+if {[llength $PTS] == 0} { set PTS {493C:0020 0F3C:0020 0F3C:0010} }
 set B "D:/claude_workspace/pov3d/zynq_pov/icnd2260/$BD"
 open_hw_manager
 connect_hw_server -allow_non_jtag
@@ -42,18 +46,26 @@ set WE 0
 setp $v dbg_reg_addr 2d ; setp $v dbg_reg_data 223F
 set WE [expr {1-$WE}] ; setp $v g_dbg.o_we_tog $WE
 puts "=== DEPTH A/B: count how many LEDs at the ramp origin are COMPLETELY DARK."
-puts {===   74 groups (14.2 bit): quantum 3.5 codes -> about 3~4 dark}
-puts {===   16 groups (12.0 bit): quantum  16 codes -> about 16 dark}
-foreach pt {493C 0F3C} {
-    setp $v dbg_reg_addr 00 ; setp $v dbg_reg_data $pt
+set k 0
+foreach pt $PTS {
+    incr k
+    lassign [split $pt :] r00 r01
+    setp $v dbg_reg_addr 00 ; setp $v dbg_reg_data $r00
+    set WE [expr {1-$WE}] ; setp $v g_dbg.o_we_tog $WE
+    setp $v dbg_reg_addr 01 ; setp $v dbg_reg_data $r01
     set WE [expr {1-$WE}] ; setp $v g_dbg.o_we_tog $WE
     setp $v g_dbg.o_soft_rst 1 ; after 2000
     setp $v g_dbg.o_soft_rst 0 ; after 3000
-    # 🔴 别在 expr 里拼 "0x$pt", Tcl 解析不了; 先 scan 成整数再算(同类坑见记忆库)
-    set gv 0 ; scan $pt %x gv
-    set grp [expr {($gv >> 8) + 1}]
-    puts [format "=== %s  reg00=0x%s  %d groups   COUNT DARK LEDs NOW (%d s)" \
-        [clock format [clock seconds] -format %T] $pt $grp $HOLD]
+    # scan first, never "0x$pt" inside expr
+    set g0 0 ; scan $r00 %x g0 ; set g1 0 ; scan $r01 %x g1
+    set grp [expr {(($g0 >> 8) & 0x7F) + 1}]
+    set nn  [expr {1 << (($g0 >> 4) & 3)}]
+    set F   [expr {$g1 & 0x1FFF}]
+    set G   [expr {$grp * $F * $nn}]
+    set Q   [expr {65536.0 / $G}]
+    set dark [expr {int(ceil($Q))}]
+    puts [format "=== %s  point %d/%d  reg00=%s reg01=%s : %d groups x F=%d x N=%d = %d levels (%.1f bit)  Q=%.2f  -> EXPECT %d DARK.   COUNT NOW (%d s)" \
+        [clock format [clock seconds] -format %T] $k [llength $PTS] $r00 $r01 $grp $F $nn $G [expr {log($G)/log(2)}] $Q $dark $HOLD]
     after [expr {$HOLD*1000}]
 }
 puts "=== done ==="

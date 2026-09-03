@@ -163,3 +163,25 @@ EG4 是 LE 架构(19600 LUT / 19600 reg / `#le` 1:1, `.area` 分 `#lut4/#lut5/#l
 - **DR1 与 EG4 现役目录并存**: `TD_5.9.1_DR1_2025.1_151.508`(DR1 线所有 build.sh 写死) / `TD_Release_2026.1_SP2.200.067`(EG4)
 
 相关: [[project_pov3d_bridge_architecture]] [[project_dr1_uplink_tx_probe]] [[reference_anlogic_td_toolchain_setup]]
+
+## EG4A20BG256 vs EG4S20CG324 —— "换一种零余量" (2026-09-03 晚)
+
+把当天全部实测套到 EG4A20BG256 上:
+
+| 项 | EG4A20BG256 | EG4S20CG324 |
+|---|---|---|
+| ③a LUT / ③b 200 MHz / ⑤ IOL 相位 | **全同**(同 19,600 LUT、同 55nm、同 IOL) | 同 |
+| ④ Bank1/3 电压 | ✅ **无内嵌 SDRAM, 可配 2.5V** | 🔴 锁 3.3V |
+| 上行 RX 放哪 | ✅ Bank1/3 真対(VICM 0.05–2.35 @2.5V) | 被迫 Bank0/2 |
+| 真対驱屏(共模无保证) | **22 対**(51 仿真全给屏) | 33 対 |
+| 总対 (8-bit 需 87) | 90, **余 3** | 104, 余 17 |
+| 10-bit(需 90) / 12-bit(需 93) | 零余量 / ❌ | 余 14 / 余 11 |
+| 降速退路 | ❌ 锁死 800 Mbps | ✅ 能退 600/500 |
+
+⇒ **EG4A20 用引脚余量(余 3 対, 锁死 8-bit 与 800 Mbps)换回电气余量(RX 能放真対, 共模无保证的対 33→22)。**
+但**逃不掉 EG4 家族共有的三条**(LUT / 200 MHz 2% / IOL 相位靠上板), 且在 8-bit 就锁死 ——
+而 09-02 验证的帧率模型说屏侧 **12-bit 大概率可行**, EG4A20 等于把这个收益直接放弃。
+⇒ **两颗 EG4 都是零余量方案, 只是零在不同的轴上。PH1A60GEG324 三条都有余量。**
+
+⚠ LUT 优化 workflow 第一次因 session 额度全军覆没(4 agent 全报 "session limit resets 8pm"),
+20:02 重发为 `wf_8c7caf51-886`。它的结果只影响 ③a 那一格, 改不了 ④⑤。

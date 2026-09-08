@@ -1,6 +1,6 @@
 ---
 name: 安路 TD/FD 工具链安装实测 + 无头批处理流程
-description: TD 5.9.1_DR1_2025.1 装在 C:\Anlogic, license 已过期是硬卡点; .al 工程是纯 XML, td_commands_prompt.exe 跑全流程
+description: TD 5.9.1_DR1_2025.1 装在 C:\Anlogic, license 已过期是硬卡点; .al 工程是纯 XML, td_commands_prompt.exe 跑全流程; 命令行下载 download -mode jtag; AL-Link Mini 会被 Windows 绑错驱动; 🔴 TD 是确定性的, 比对设计看 .bit 头里的 Bitstream CRC 不是 md5(头里有构建时间戳)
 type: reference
 ---
 
@@ -142,3 +142,135 @@ Clock-Id:  C-Freq   Fanout   Clock-Name
 
 顺带: `p2f_clk0` 这种内部网用 `[get_nets p2f_clk0]`;
 `[get_pins u_ps/p2f_clk0]` 在 TD 里找不到 (报 `USR-8134`)。
+
+---
+
+# 🔴 下载器: AL-Link Mini 被 Windows 绑错驱动 (2026-09-08 实测解决)
+
+**症状**: TD 报 `PRG-9505 : USB device open error`, GUI 与命令行都下不进去。
+**根因**: 板上下载器是 `VID_336C&PID_1002` = **AL-Link Mini**, 但 Windows 把它绑到了
+**通用 WinUSB** —— 来自一个 "Windows Phone" 的 `oem76.inf`, 而安路自己的 `ANLOCYUSB`
+驱动**从来没装过**。设备管理器里看着"工作正常"、没有黄色感叹号, 所以极难认出来。
+
+**修法**: 装 `driver\al-link\win10\x64\anlocyusb.inf`(装完成为 `oem88.inf`), 重启设备。
+**判据**(三条都要):
+```
+设备描述  = Anlogic AL-Link Mini      (不是 "WinUSB Device")
+Service   = ANLOCYUSB                 (不是 WinUSB)
+ProblemCode = 0
+```
+然后 `read_device_id` 应当回读出器件名(本例 `EG4X20`) —— **这一步过了才说明 JTAG 链通**。
+
+⚠ 老板子/老下载器用的是 Cypress/EZ-USB FX2, 驱动在 `driver\dl-cable\win10`;
+**先看 VID/PID 再决定装哪个**, 装错了症状一模一样。
+
+📌 与 [[project_lz4_pl_decoder]] 里"卡在安路下载器那条阻塞挂了三周、是伪命题"呼应:
+那次的结论是"绕开它"(Zynq 走 JTAG / DR1 走 fpga_manager), **这次是把它真正修好了**。
+
+## TD 有命令行下载, 不用开 GUI
+
+```
+download -bit "<path>.bit" -mode jtag         # SRAM, 掉电丢失 —— 调试用这个
+download -bit "<path>.bit" -mode jtag_burst   # 烧 flash
+download -bit "<path>.bit" -mode program_spi  # 烧 SPI
+```
+内部展开成 `bit_to_vec -freq 3.0` + `program -cable 0 -mode svf -spd 8 -p`。
+成功判据: **`PRG-2014 : Chip validation success: <器件名>`**(本例 5.4 秒完成)。
+
+⇒ 配合 `td_commands_prompt.exe`(tcl 末尾补 `exit` + 调用时 `< nul`, 见本文前面),
+**从综合到下板全程可以无头脚本化**, 不必开 GUI。
+
+## 上板换 bit 的一条纪律
+
+**建构建到新目录, 不要覆盖板上正在跑的那份 `.bit`。** 两版必须能用 md5 区分,
+否则"板上跑的是哪一版"这个疑问会吃掉比缺陷本身多得多的时间。
+**同一块板上换 bit 而不换判读基准, 是最容易得出假结论的做法。**
+
+🔴 **但"用 md5 区分"这句要打个补丁 —— md5 会被构建时间戳污染。** 见下一节。
+
+# 🔴 TD 是确定性的; 比对设计要看 `Bitstream CRC`, 不是 md5 (2026-09-08 实测)
+
+## 现象
+
+同一个工程、同一份输入、连跑两次, **`.bit` 的 md5 不同**:
+```
+v2 第一次  ee4484eb69f4edd718e652b075b05dab
+v2 第二次  6414139f28d2290611ee72dae444cffa
+```
+差点据此下"TD 构建不可复现"的结论 —— **错的**。
+
+## 判决性实验 (几秒钟, 不用重建)
+
+```bash
+cmp -l run1.bit run2.bit | wc -l     # → 1
+cmp -l run1.bit run2.bit             # → 160  70  71   (八进制: '8' → '9')
+```
+**整个 629,644 字节的文件只差 1 个字节**, 在偏移 160。dump 文件头就明白了:
+
+```
+# Anlogic ASCII Bitstream
+# Version: Release_2026.1_SP2
+# Design name: pll400_probe_led
+# Architecture: eagle_20
+# Package: EG4X20BG256
+# Date: 2026/ 9/ 8 15:28        ← ★ 唯一的差别: 15:28 vs 15:29
+# Bitstream CRC: 10110100011100111111101111100100    ← **两次逐位相同**
+# USER CODE:     00000000100100100011011110010010    ← 两次逐位相同
+```
+
+⇒ **`.bit` 是带 ASCII 文件头的文本格式, 头里有构建时间(精确到分)。**
+⇒ **TD 的布局布线是确定性的**; md5 变只是因为跨了一分钟。
+
+## ⇒ 三条用法
+
+1. **比对两个设计是否相同, 看文件头的 `Bitstream CRC`**, 不要看 md5。
+   ```bash
+   head -c 400 x.bit | grep -a 'Bitstream CRC'
+   ```
+2. **md5 仍然能回答"我下的是哪个文件"** —— 对着要下载的那份算就行。
+   但它**不能**用来判断"两个工程是不是同一个设计", 也**不能靠重建复现**。
+   ⚠ 重建会让已经记下来的 md5 表失效, 而设计一个比特都没变。
+3. 想让 md5 也可复现, 就别重建; 或者比对时先剥掉文件头
+   (`tail -c +N`, 头长度以 `Bitstream CRC` 行之后为界)。
+
+## 这条印证了另一条已有结论
+
+工作包 D 当初解释 `−2.032` vs `−2.404` 时写过「经 md5 核对是 RTL 版本差异,
+**不是布局随机(同输入 TD 是确定性的)**」—— ✅ **这句成立**, 本次实测支持它。
+"同一份 RTL 在某频点落点随种子漂移"要另找证据, 不能拿 md5 差异当证据。
+
+## 附: 它顺手替一个 A/B 实验判了"空"
+
+实验 ⑤ 曾怀疑「`pllin_p` 声明 `LVDS25`、而 bank 物理供电是 3.3V」会导致 PLL 不锁,
+于是建了只差这一个变量的 v3(`LVDS33`)。结果:
+
+| | Bitstream CRC |
+|---|---|
+| v2 (`pllin_p = LVDS25`) | `10110100011100111111101111100100` |
+| v3 (`pllin_p = LVDS33`) | `10110100011100111111101111100100` ← **逐位相同** |
+| v1 (探针版, 不同设计) | `10000000001111000000101101100110` ← 不同, 佐证 CRC 确实会随设计变 |
+
+另有 `PHY-3001 : BANK 3 DIFFRESISTOR:100 VOD:350M VCM:1.2` 两版逐字相同。
+⇒ **差分*输入*脚上, `LVDS25` 与 `LVDS33` 产生完全相同的硬件配置**
+(合理: `VOD`/`VCM` 是*输出*参数, 输入只有片内 100Ω 端接这一项, 两版都开着)。
+⇒ 该嫌疑从"没锁"的排查表里**划掉**。查了才知道不成立, 不查就只能一直挂着。
+
+## 🔴 与 X20 那条静默陷阱是同一个机制的两面
+
+`reference_eg4x20_vs_eg4a20_portability` 记着:
+「TD 内部按 8 bank 做 DRC, 封装只有 4 条 VCCIO(1:2 映射), 同一条 VCCIO 上混电平不报错直接出 bit」。
+本次撞到的是另一面: **TD 只查 bank 内 IOSTANDARD 是否一致, 不查板上真实 VCCIO** ——
+声明与实际供电不符, 它不报任何错。
+⇒ **TD 的 bank 概念是工具内部的, 不等于板上的电源域。** 两处都要靠人自己对着原理图核。
+
+## 附带: 同 bank IOSTANDARD 冲突会直接挡住"加个按键"这种小事
+
+E104 上想把板载 `F10` 按键接成"手动重测", 结果:
+```
+USR-8001 ERROR: Design contains multiple IOSTANDARD setups on bank 3.
+RUN-1001 :    pllin_p   |    LVDS25
+RUN-1001 :     key_i    |   LVCMOS33
+```
+TD 把 `F10` 与 `B14`(被测的 PLL 输入脚)划进**同一个 bank 3**。
+⇒ 要留按键就得改被测对象的 IOSTANDARD ⇒ 放弃按键。
+**在实验板上加一个"便利功能"之前, 先查它和被测对象是不是同一个 TD-bank。**

@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>:root{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>POV-3D 硬件需求与实现路径</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F6F7F9; --surface:#FFFFFF; --surface-2:#EFF1F4; --surface-3:#E7EAEF;
+  --ink:#12171F; --ink-2:#454E5C; --ink-3:#6B7480;
+  --rule:#DDE1E7; --rule-2:#C9CFD8;
+  --accent:#A8631C; --accent-soft:#F6EBDC; --accent-line:#E0C49E;
+  --ok:#1B6B52; --ok-soft:#E1F0E9;
+  --warn:#8A6100; --warn-soft:#F8EFD4;
+  --crit:#A32B22; --crit-soft:#FAE5E2;
+  --shadow:0 1px 2px rgba(18,23,31,.05), 0 1px 8px rgba(18,23,31,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1218; --surface:#161B23; --surface-2:#1C222B; --surface-3:#232B36;
+    --ink:#E8ECF1; --ink-2:#AAB4C0; --ink-3:#7A8593;
+    --rule:#28303B; --rule-2:#39434F;
+    --accent:#E09A4E; --accent-soft:#2E2418; --accent-line:#5A4227;
+    --ok:#4FBF95; --ok-soft:#122E26;
+    --warn:#E0B44E; --warn-soft:#2C2513;
+    --crit:#E8776C; --crit-soft:#31191A;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 1px 10px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1218; --surface:#161B23; --surface-2:#1C222B; --surface-3:#232B36;
+  --ink:#E8ECF1; --ink-2:#AAB4C0; --ink-3:#7A8593;
+  --rule:#28303B; --rule-2:#39434F;
+  --accent:#E09A4E; --accent-soft:#2E2418; --accent-line:#5A4227;
+  --ok:#4FBF95; --ok-soft:#122E26;
+  --warn:#E0B44E; --warn-soft:#2C2513;
+  --crit:#E8776C; --crit-soft:#31191A;
+  --shadow:0 1px 2px rgba(0,0,0,.35), 0 1px 10px rgba(0,0,0,.25);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans SC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.62; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px; margin:0 auto; padding:0 28px 96px}
+.prose{max-width:74ch}
+
+/* ---------- header ---------- */
+header.doc{
+  border-bottom:1px solid var(--rule);
+  padding:56px 0 30px; margin-bottom:40px;
+}
+.eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--accent); font-weight:600; margin:0 0 14px;
+}
+h1{
+  font-family:Archivo,"Noto Sans SC",sans-serif; font-weight:700;
+  font-size:clamp(30px,4.4vw,44px); line-height:1.1; letter-spacing:-.02em;
+  margin:0 0 16px; text-wrap:balance;
+}
+.lede{font-size:17px; color:var(--ink-2); margin:0; max-width:66ch}
+.metabar{
+  display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:24px;
+  font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-3);
+}
+.metabar b{color:var(--ink-2); font-weight:500}
+
+/* ---------- sections ---------- */
+section{margin:52px 0 0; scroll-margin-top:20px}
+h2{
+  font-family:Archivo,"Noto Sans SC",sans-serif; font-weight:700;
+  font-size:23px; letter-spacing:-.01em; margin:0 0 6px;
+  display:flex; align-items:baseline; gap:12px; text-wrap:balance;
+}
+h2 .tag{
+  font-family:"IBM Plex Mono",monospace; font-size:12px; font-weight:600;
+  color:var(--accent); background:var(--accent-soft);
+  border:1px solid var(--accent-line); border-radius:3px;
+  padding:2px 7px; letter-spacing:.04em; flex:none;
+}
+h3{
+  font-family:Archivo,"Noto Sans SC",sans-serif; font-weight:600;
+  font-size:16.5px; margin:34px 0 10px; letter-spacing:-.005em;
+}
+.sub{color:var(--ink-3); font-size:14px; margin:0 0 20px; max-width:70ch}
+p{margin:0 0 14px}
+code,.m{font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.9em}
+code{background:var(--surface-2); padding:1.5px 5px; border-radius:3px; color:var(--ink)}
+
+/* ---------- spec block ---------- */
+.spec{
+  background:var(--surface); border:1px solid var(--rule);
+  border-left:3px solid var(--accent); border-radius:4px;
+  padding:20px 22px; margin:0 0 8px; box-shadow:var(--shadow);
+  font-family:"IBM Plex Mono",monospace; font-size:13.5px; line-height:1.85;
+  overflow-x:auto; font-variant-numeric:tabular-nums;
+}
+.spec .k{color:var(--ink-3)}
+.spec .v{color:var(--ink); font-weight:500}
+.spec .hl{color:var(--accent); font-weight:600}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto; margin:0 0 10px; border:1px solid var(--rule); border-radius:5px; background:var(--surface); box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:560px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  background:var(--surface-2); color:var(--ink-2);
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  letter-spacing:.09em; text-transform:uppercase; white-space:nowrap;
+  border-bottom:1px solid var(--rule-2);
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+td.num,th.num{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; white-space:nowrap}
+td strong{font-weight:600}
+.tnote{font-size:12.5px; color:var(--ink-3); margin:0 0 22px; max-width:74ch}
+
+/* ---------- status chips ---------- */
+.c{
+  display:inline-block; font-family:"IBM Plex Mono",monospace;
+  font-size:11px; font-weight:600; letter-spacing:.03em;
+  padding:2px 7px; border-radius:3px; white-space:nowrap; border:1px solid transparent;
+}
+.c-ok{color:var(--ok); background:var(--ok-soft); border-color:color-mix(in srgb,var(--ok) 28%,transparent)}
+.c-warn{color:var(--warn); background:var(--warn-soft); border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.c-crit{color:var(--crit); background:var(--crit-soft); border-color:color-mix(in srgb,var(--crit) 30%,transparent)}
+.c-neut{color:var(--ink-3); background:var(--surface-2); border-color:var(--rule-2)}
+
+/* ---------- callouts ---------- */
+.call{
+  border:1px solid var(--rule); border-left:3px solid var(--ink-3);
+  background:var(--surface); border-radius:4px; padding:16px 20px;
+  margin:0 0 18px; box-shadow:var(--shadow);
+}
+.call.crit{border-left-color:var(--crit)}
+.call.warn{border-left-color:var(--warn)}
+.call.ok{border-left-color:var(--ok)}
+.call .ct{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; margin:0 0 8px;
+}
+.call.crit .ct{color:var(--crit)} .call.warn .ct{color:var(--warn)}
+.call.ok .ct{color:var(--ok)} .call .ct{color:var(--ink-3)}
+.call p:last-child{margin-bottom:0}
+
+/* ---------- decision cards ---------- */
+.decks{display:grid; gap:14px; margin:0 0 8px}
+.deck{
+  background:var(--surface); border:1px solid var(--rule); border-radius:5px;
+  padding:18px 20px; box-shadow:var(--shadow);
+  border-top:2px solid var(--crit);
+}
+.deck h4{
+  font-family:Archivo,sans-serif; font-size:15.5px; font-weight:600;
+  margin:0 0 8px; display:flex; gap:10px; align-items:baseline;
+}
+.deck h4 .n{
+  font-family:"IBM Plex Mono",monospace; color:var(--crit);
+  font-size:12px; font-weight:600; flex:none;
+}
+.deck p{font-size:13.5px; color:var(--ink-2); margin:0 0 8px}
+.deck p:last-child{margin:0}
+.deck.done{border-top-color:var(--ok)}
+.deck.done h4 .n{color:var(--ok)}
+
+/* ---------- paths ---------- */
+.paths{display:grid; gap:20px; margin:8px 0 0}
+@media(min-width:900px){.paths{grid-template-columns:1fr 1fr}}
+.path{
+  background:var(--surface); border:1px solid var(--rule);
+  border-radius:6px; overflow:hidden; box-shadow:var(--shadow);
+  display:flex; flex-direction:column;
+}
+.path-h{padding:18px 20px 16px; border-bottom:1px solid var(--rule)}
+.path-h .kind{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  letter-spacing:.12em; text-transform:uppercase; margin:0 0 6px;
+}
+.path.aggr .kind{color:var(--crit)}
+.path.cons .kind{color:var(--ok)}
+.path-h h3{margin:0 0 4px; font-size:19px}
+.path-h .dur{
+  font-family:"IBM Plex Mono",monospace; font-size:13px;
+  color:var(--ink-2); font-variant-numeric:tabular-nums;
+}
+.path-h .bet{font-size:13px; color:var(--ink-3); margin:10px 0 0}
+.tl{list-style:none; margin:0; padding:6px 0; flex:1}
+.tl li{display:flex; gap:14px; padding:8px 20px; align-items:baseline}
+.tl li + li{border-top:1px solid var(--rule)}
+.tl .wk{
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-weight:600;
+  color:var(--ink-3); flex:none; width:56px; font-variant-numeric:tabular-nums;
+  padding-top:1px;
+}
+.tl .wht{font-size:13.5px; color:var(--ink-2)}
+.tl li.key{background:var(--accent-soft)}
+.tl li.key .wk{color:var(--accent)}
+.tl li.key .wht{color:var(--ink); font-weight:500}
+.path-f{
+  padding:14px 20px 18px; border-top:1px solid var(--rule);
+  background:var(--surface-2); font-size:13px;
+}
+.path-f dt{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3);
+  margin:0 0 3px;
+}
+.path-f dd{margin:0 0 12px; color:var(--ink-2)}
+.path-f dd:last-child{margin:0}
+
+/* ---------- rec ---------- */
+.rec{
+  background:var(--surface); border:1px solid var(--accent-line);
+  border-top:3px solid var(--accent); border-radius:6px;
+  padding:24px 26px; margin:8px 0 0; box-shadow:var(--shadow);
+}
+.rec h3{margin:0 0 12px; font-size:18px}
+.rec ul{margin:0; padding-left:20px}
+.rec li{margin-bottom:8px; color:var(--ink-2)}
+.rec li:last-child{margin-bottom:0}
+.rec strong{color:var(--ink)}
+hr.soft{border:none; border-top:1px solid var(--rule); margin:44px 0}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="doc">
+  <p class="eyebrow">硬件规格 · 内部工作文档</p>
+  <h1>POV-3D 硬件需求与实现路径</h1>
+  <p class="lede">从 603 片/圈 · 30 Hz 体帧率这个目标反推出的全套板级需求，以及激进与保守两条落地路径的取舍。</p>
+  <div class="metabar">
+    <span><b>版本</b> 2026-09-04</span>
+    <span><b>适用</b> 屏板 ×2 · 主控板 · 互连 · 电源</span>
+    <span><b>状态</b> 选型未定，需求已收口</span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="tag">§0</span>目标口径</h2>
+  <p class="sub">下面每一条硬件需求都由这组数推出来。改动其中任何一个，整份需求要重算。</p>
+  <div class="spec">
+<span class="k">分辨率</span>   <span class="v">192 × 216 px / 面</span>，<span class="v">双面</span>，像素间距 <span class="hl">0.78125 mm</span> ⇒ LED 面 <span class="v">150 × 168.75 mm</span><br>
+<span class="k">角分辨率</span> <span class="hl">603 片/圈</span>（由最外圈像素间距定：N = 2πR/p = 2π × 96 = 603.19）<br>
+<span class="k">转速</span>     <span class="hl">900 RPM</span> = 15 rev/s ⇒ 体帧率 <span class="v">30 Hz</span>（体帧率 = 2 × 转速）<br>
+<span class="k">切片率</span>   <span class="hl">9,045 slice/s</span> / 面（603 × 15）<br>
+<span class="k">色深</span>     <span class="v">12-bit</span> <span class="c c-warn">公式未验</span>　<span class="k">内容帧率</span> ≤ <span class="v">15 fps</span>（一圈只能翻一次页）
+  </div>
+  <p class="tnote">出处：记忆 <code>project_pov3d_final_target</code>（2026-08-04 定案）。<strong>库里另有「605 片」的写法</strong>，出现在桥架构的带宽账里；603 是 2π×96 的正取值，且 9,045 slice/s 与 21.6% 余量都是按 603 算的 —— <strong>以 603 为现行口径</strong>，605 那套账偏保守 0.3%，结论不受影响。</p>
+  <p class="tnote">屏侧能力已实测背书：单颗 ICND2260（<strong>40 px × 45 扫</strong>、CASCADE=1、关读探针）在 DCLK 166.67 MHz / GCLK 500 MHz / 16 分组下实测 <strong>11,000 fps</strong>，高于 9,045 的需求，余量 21.6%（记忆: <code>project_icnd2260_working_config_2026_09_02</code>）。🔴 <strong>这个余量绑在 45 扫上</strong>：帧内容 14,755 拍 ⇒ 链路上限 11,296 fps。扫数一改就要重算。<strong>定案的 48 扫</strong>：帧内容 320×48+355 = 15,715 拍 ⇒ 链路上限 <strong>10,606 fps，余量 17.3%</strong>（54 扫则掉到 9,451 fps / 4.5%，已否，见决策 1）。</p>
+</section>
+
+<hr class="soft">
+
+<section>
+  <h2><span class="tag">A</span>屏板 ×2</h2>
+  <p class="sub">整个项目里最大最难的一块。现役屏板是无源的（只有 2260 + LED），新板要变成含 FPGA、三路电源、配置通路的有源板。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>项目</th><th>要求</th><th>出处 / 推导</th></tr></thead>
+    <tbody>
+      <tr><td>LED 面</td><td class="num">150 × 168.75 mm，192×216 px</td><td>机械 v3.1 模组 13.4×150×168.75</td></tr>
+      <tr><td>驱动 IC</td><td><strong>ICND2260</strong> — BGA225，<span class="m">8×8 mm</span>，15×15 阵列，<strong class="m">0.5 mm pitch</strong>，高 0.80±0.1 mm</td><td>DS V1.7 §封装尺寸（p.16 图纸）</td></tr>
+      <tr><td>每颗覆盖</td><td class="num">40 px 宽（120 通道 ÷ 3，<strong>固定</strong>）× <strong>48 扫</strong></td><td>DS V1.7 p.2：恒流通道 120 / <strong>行管数 48 NMOS</strong>（VLED[0:47]）/ 最大支持 96 扫。同页两个数怎么共存手册没写，但<strong>定案的 48 扫恰好用满 48 个内置行管</strong> ⇒ 这条疑点对本方案不成立，也不需要外部行扩展。只有 &gt;48 扫的排布才要问供应商</td></tr>
+      <tr><td>每颗链路</td><td>40×3×16bit×扫数×603×15 bps，<strong>每链只能挂 1 颗</strong></td><td>每链 3 数据对。996 Mbps = 3×332（EG4 仿真对 @166 MHz 的输出上限）；屏侧手册上限是 3×340 = 1,020（DS V1.7 tLVCP 6~50 ns ⇒ 20~170 MHz）。48 扫占用 <strong>83.7%</strong>，计入 355 拍/帧协议开销后 <strong>85.6%</strong>。「挂 1 颗」的依据：45 扫下一颗就要 14,755 拍/帧，挂 2 颗 ⇒ 5,648 fps &lt; 9,045（三种排布都成立）</td></tr>
+      <tr><td>桥片 FPGA</td><td><strong>93 真差分对</strong> · 器件容量 <strong>≥10k LUT6 当量</strong>（≈23k LUT4）· ≥200 Kb BRAM · 8:1 gearing <span class="c c-neut">加分项</span></td><td>对数 = 73 出（3×24+1）+ 20 入（12-bit），<strong>决策 1 已定 24 颗 ⇒ 这个数不再浮动</strong>。设计本体约 <strong>5.0–5.6k LUT4</strong> <span class="c c-warn">测+估之和</span> —— 三模块实测 + 分发块 ~1k 估算，<strong>从未一次综合过</strong>（记忆: <code>OPT_SUMMARY.md</code>）；门槛按器件容量留余量（记忆: <code>reference_bridge_fpga_alternatives</code>）。BRAM 门槛 200 Kb，但按 24 链 bram9k 账约 37 块 ≈ 333 Kb ⇒ <strong>选型按 ≥350 Kb 留</strong>。4:1 gearing 能用但 EG4 实测只余 2%</td></tr>
+      <tr><td>差分走线</td><td class="num">73 对 @≈333 Mbps + 20 对 @800 Mbps，100 Ω 受控</td><td>333 = DCLK 166.67 MHz 双沿；上行 800 是 EG4 真差分收发上限（PH1A / DR1 为 1250）。记忆: <code>project_pov3d_bridge_architecture</code></td></tr>
+      <tr><td>层数 / 工艺</td><td>估 <strong>8 层 + HDI / 微孔</strong></td><td><strong>由 2260 的 0.5mm BGA 定死，不是 FPGA</strong>；内圈必须 via-in-pad</td></tr>
+      <tr><td>无源件</td><td>96 只终端（必需）<span class="c c-neut">+ 选 EG4 另加 162 只 3R + ~40 只共模偏置</span></td><td>96 = 24 链 ×（3 数据 + 1 时钟）对，DS 匹配电阻 RBD 80/100/120 Ω；162 = 54 仿真对 ×3；~40 = 19 对真 LVDS 直驱屏的偏置。<strong>现役灯板板上无端接</strong>，这 96 只是新增</td></tr>
+      <tr><td>电源</td><td><span class="m">VDDR 2.8~5V</span> / <span class="m">VDDGB 3.5~5V</span> / <span class="m">VDDD 2.8~3.8V</span> + FPGA <span class="m">VCCINT 0.95V</span> / <span class="m">VCCAUX 1.8V</span> / <span class="m">VCCIO 2.5V</span></td><td>ICND2260 DS V1.7 p.1；PH1A DS900 V1.6.1 表 3-1-4。<strong>换桥片型号要按其手册重核</strong>（下一行同）</td></tr>
+      <tr><td>上电时序</td><td><strong>VCCINT → VCCAUX → VCCIO</strong>，下电反序<br><span class="c c-warn">HR 为推荐</span> <span class="c c-crit">HP BANK 强制</span></td><td>PH1A DS900 V1.6.1 §3.1.4 原文是「<strong>推荐</strong>上电顺序：VCCINT（VCCDPHY）→VCCAUX→VCCIO」。<strong>只有 HP BANK 是强制的</strong>（HP I/O 不支持热插拔，且 HP VCCIO 不得早于 VCCAUX 上电 / 不得晚于其掉电）；HR 不按序只是下电时 I/O 出脉冲，不影响器件寿命。各轨上电时间 0.2~100 ms</td></tr>
+      <tr><td>配置</td><td>从动串行，由主控加载；<strong>留 Flash 焊盘 DNP</strong></td><td>省 2 颗 Flash；改 bit 不用碰转子</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="tag">B</span>主控板</h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th>项目</th><th>要求</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>SoC</td><td>DR1V90 或 XC7Z020</td><td><strong>必须有 WiFi + Linux</strong> — 这条决定了不能用纯 FPGA</td></tr>
+      <tr><td>差分引出</td><td class="num">≥40 对（12-bit 双面）+ <strong>每对 ≥1 根地</strong></td><td>鹿小班踩过「紧邻无地 ⇒ DCLK 串扰拽出 5 万假帧」</td></tr>
+      <tr><td>DDR</td><td>32-bit 优先 <span class="c c-ok">已非门槛</span></td><td>16-bit 峰值 2.13 GB/s（16 bit × 1066 Mbps）。<strong>墙③ 已于 2026-09-03 实测通过：η = 0.950</strong>，双路并发 2,026 MB/s，真实负载 1.50 GB/s = 峰值 70%，余 633 MB/s（记忆: <code>project_pov3d_ddr_eta_measured_0950</code>）⇒ 32-bit 是放大余量，不是过墙条件。⚠ 实测在鹿小班 XC7Z020 上做，DR1 侧只有 2 个 HP 口，未复测 <span class="c c-warn">待核</span></td></tr>
+      <tr><td>无线</td><td>USB2</td><td>实测天花板 110–125 Mbps。WiFi 6E/7 dongle 全是 USB3 器件，插上退回 HS ⇒ <strong>换 dongle 买不到带宽</strong>。但载荷实测最重（bonsai）只有 26.4 Mbps @15 fps ⇒ <strong>余量 4.2×，现在不缺带宽</strong>（记忆: <code>project_pov3d_voxel_table_payload_measured</code>）。日后真要突破：板上千兆以太网（RGMII）是唯一绕开 USB 的现成通路</td></tr>
+      <tr><td>存储</td><td>SD / eMMC</td><td></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="tag">C</span>互连</h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th>段</th><th>规格</th><th>形态</th></tr></thead>
+    <tbody>
+      <tr><td>主控 → 每面桥片</td><td class="num">20 对差分（12-bit）/ 14 对（8-bit）+ 5–6 根单端配置</td><td>排线，上转子</td></tr>
+      <tr><td>桥片 → 每面 2260</td><td class="num">73 对（24 链×3 + 1 时钟）<span class="c c-ok">已定</span></td><td><span class="c c-ok">板内走线，零连接器</span> — 桥架构最大的价值。对数 = 3n+1；决策 1 定为 <strong>4×6 = 24 颗</strong> ⇒ 73 对。（若改 30 颗则 91 对，桥片选型会被清空，见决策 1）</td></tr>
+      <tr><td>地线比例</td><td><strong>≥1 根地 / 对</strong></td><td>SI 硬要求，有实测教训背书</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="tag">D</span>电源</h2>
+  <p class="sub">目前最空白的一块 —— 转子怎么供电，记忆库里没有任何记录。</p>
+  <div class="spec">
+<span class="k">2260 满白最大电流</span> <span class="c c-warn">规格上限·估算</span>　<span class="k">DS V1.7 p.1：R 0.15~9.6mA×40 @VDDR 2.8V ／ G,B 0.1~6.4mA×40 @VDDGB 3.8V</span><br>
+  每颗瞬时 = 40×9.6mA<span class="k">(R)</span> + 40×6.4mA<span class="k">(G)</span> + 40×6.4mA<span class="k">(B)</span> = <span class="hl">0.896 A</span><br>
+  <span class="k">前提</span>　芯片只有 <span class="v">120 个恒流源</span>，任一时刻导通的通道数就是 120 的上限<br>
+  <span class="k">　　</span>⇒ 该值 <span class="v">不随扫数变，只随颗数线性变</span>（扫描按列，见 记忆: reference_icnd2260_scans_by_column）<br>
+  <span class="v">24 颗/面</span>（决策 1 定案）× 2 面 = <span class="hl">43.0 A</span>　⇒　R 轨 18.4A@2.8V + G/B 轨 24.6A@3.8V ≈ <span class="hl">145 W</span>　<span class="k">（全按 3.8V 粗算是 163 W）</span><br>
+  <span class="k">灵敏度</span>　若改 30 颗/面 → 53.8 A / 181 W
+  </div>
+  <div class="call warn">
+    <p class="ct">前置依赖</p>
+    <p>这是<strong>规格上限</strong>，实际取决于电流设定和画面占空比。🔴 <strong>ICND2260 无需外接电阻</strong> —— DS V1.7 原文「可直接通过寄存器配置分别调节 RGB 输出电流」，由 <code>0x2d</code>/<code>0x3d</code>/<code>0x4d</code> 的 IREF（0.1~0.4 mA）× (igain+1) 决定 ⇒ <strong>别给 2260 留 REXT 焊盘</strong>。要实测的那个 REXT 在<strong>现役 ICND1069</strong> 板上，用来定亮度基线。</p>
+    <p><strong>滑环规格直接由这个电流定</strong>，所以墙⑨（亮度，至今未动 —— 2260 的 G/B 电流只有 1069 的 <strong>0.356×</strong>）是电源设计无法绕过的前置。</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="tag">E</span>机械 / 环境</h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th>约束</th><th>数值</th><th>影响</th></tr></thead>
+    <tbody>
+      <tr><td>离心加速度</td><td class="num"><strong>68 – 136 g</strong> @900 RPM</td><td>所有元件固定方式要按此校核。ω²r 反推：68 g ↔ R=75 mm（LED 面外缘）、136 g ↔ R=150 mm。<span class="c c-warn">待核</span> macha v3.1 记的整机最大半径是 115 mm（≈104 g），136 那一端的半径基准要回查（记忆: <code>project_pov3d_final_target_chip_verdict</code>）</td></tr>
+      <tr><td>动平衡</td><td><span class="c c-warn">现状限速 ≤850 RPM</span>，目标要 900</td><td>一阶固有频率 20–27 Hz ⇒ 临界转速 1200–1600 RPM，850 = f₁×0.7 的临时限速；根因是 v3.1 <strong>偏心 13.4 mm</strong>，配重放不下（记忆: macha <code>project_pov3d</code>）。两面各一颗桥片只是不再恶化，解不掉偏心</td></tr>
+      <tr><td>散热</td><td>转子自带风；FPGA 约 1–2 W <span class="c c-warn">估算</span></td><td>无实测。参考量级：PH1A60 静态 IVCCINT 典型 300 mA @0.95V ≈ 0.29 W（DS900 表 3-1-5），动态未估。⚠ 静态点屏无风冷会过热重启，别拿静态台架当散热结论</td></tr>
+      <tr><td>模组厚度</td><td class="num">13.4 mm</td><td>限制板厚 + 元件高度</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<hr class="soft">
+
+<section>
+  <h2><span class="tag">!</span>三个设计决策：一个已定，两个未决</h2>
+  <p class="sub">它们决定颗数、成本、链路余量和引脚需求。决策 1 已由几何反推定死，剩下两条还卡着。</p>
+
+  <div class="decks">
+    <div class="deck done">
+      <h4><span class="n">决策 1 ✓</span>颗数 × 扫数的排布 —— <strong>4 × 6 = 24 颗</strong>，已定</h4>
+      <p><strong>关键自由度是「40 px 通道轴朝哪个方向摆」</strong> —— 这是布局选择，不是芯片约束：实测块是 <span class="m">40×45</span> 而寄存器写的是「扫描行数 45」，说明芯片逻辑轴到面板物理轴的映射由布线决定（记忆: <code>reference_icnd2260_scans_by_column</code>）。两个方向的结果差很多：</p>
+      <p><strong>通道轴沿 216</strong>：<span class="m">6×40 = 240</span> 覆盖 216（浪费 24 px），扫描轴 <span class="m">192 ÷ 4 = 48</span> <strong>整除</strong> ⇒ <strong>4×6 = 24 颗，每颗 48 扫</strong>。<br>
+      <strong>通道轴沿 192</strong>：<span class="m">5×40 = 200</span> 覆盖 192（浪费 8 px），但扫描轴 <span class="m">216 = 2³×3³</span> 要整除且 ≤48 只剩 36 扫 / 27 扫 ⇒ <strong>最少 30 颗</strong>。</p>
+      <div class="tw" style="margin-top:12px">
+      <table>
+        <thead><tr><th>通道轴</th><th>排布</th><th class="num">颗/面</th><th class="num">扫数</th><th class="num">每颗带宽</th><th>链路占用</th><th class="num">桥片对数</th><th class="num">色深</th></tr></thead>
+        <tbody>
+          <tr><td class="num">↔216</td><td><strong>6 × 4</strong></td><td class="num"><strong>24</strong></td><td class="num">48</td><td class="num">833.6 Mbps</td><td><span class="c c-warn">83.7% / 85.6%</span></td><td class="num"><strong>93</strong></td><td class="num">22 组 ≈ 12.46 位</td></tr>
+          <tr><td class="num">↔192</td><td>5 × 6</td><td class="num">30</td><td class="num">36</td><td class="num">625.2 Mbps</td><td><span class="c c-ok">62.8% / 64.7%</span></td><td class="num">111</td><td class="num">29 组 ≈ 12.86 位</td></tr>
+          <tr><td class="num">↔216</td><td>6 × 6</td><td class="num">36</td><td class="num">32</td><td class="num">555.7 Mbps</td><td><span class="c c-ok">55.8% / 57.7%</span></td><td class="num">129</td><td class="num">33 组 ≈ 13.04 位</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="tnote" style="margin-top:10px">穷举了全部「所有芯片同扫数、扫数 ≤48 内置行管」的排布，<strong>24 颗是全局最少</strong>（其余均 ≥30）。带宽 = 40×3×16bit×扫数×603×15；链路占用前者是纯载荷 ÷ 996 Mbps，后者计入 355 拍/帧协议开销。色深 = GCLK 500 MHz 下 9,045 fps 能分到的刷新分组数，灰度级 = 分组×32×8 <span class="c c-warn">公式未验</span>。三行都仍然是「每链只能挂 1 颗」。</p>
+      <p><strong>24 颗胜出的三条理由</strong>：① 颗数最少 ⇒ 成本、对数、LUT 全线最低；② <strong>48 扫恰好用满 48 个内置 NMOS 行管</strong>，不需要外部行扩展，也绕开了「&gt;48 扫怎么实现」那条手册没写的疑点；③ 对数 <span class="m">3×24+1+20 = 93</span>，<strong>正好落在 §A 的门槛上</strong> —— PH1A60GEG324(100) / XC7S50(100) / EG4S20CG324(104) / GW5A-LV60UG324S(110) <strong>全部可选</strong>。</p>
+      <p>代价是<strong>通道轴浪费 24 px（10% 的驱动硅片）</strong>：6 颗覆盖 240 而只用 216。换成 30 颗虽然只浪费 8 px，但多 6 颗芯片、对数涨到 111 ⇒ <strong>把上面四个候选全部清空</strong>，只剩 PGL22G-6IMBG324（120 对，扣 flash 后 113~117，余量个位数）。<strong>省这 10% 硅片要多付一颗更贵的桥片加六颗 2260，不划算。</strong></p>
+      <p class="tnote">两个被否掉的非均匀解，留档备查：<strong>5×4 = 20 颗 @54 扫</strong> —— 颗数更少，但 54 &gt; 48 行管（手册没写怎么实现），且链路占用 95.7%、色深掉到 12.25 位，两头都紧。<strong>5×5 = 25 颗</strong> —— 216÷5 不整除，末排只能用 24 扫 ⇒ 芯片配置不一致、屏板不对称，比 24 颗还多一颗。</p>
+    </div>
+
+    <div class="deck">
+      <h4><span class="n">决策 2</span>色深口径：8-bit 还是 12-bit</h4>
+      <p><strong>12-bit</strong> 需 20 对/面 ⇒ 96 根引出里<strong>只剩 10 根做地</strong>（每对 0.25 根）<span class="c c-crit">SI 很难看</span></p>
+      <p><strong>8-bit</strong> 需 14 对/面 ⇒ 剩 34 根地（每对 1.2 根）<span class="c c-ok">舒服</span></p>
+      <p>而且色深公式那半<strong>还没验</strong> —— 验法已设计好（数斜坡起点全黑 LED 颗数，12 位 → 16 颗），用现成的鹿小班板几分钟就能做。<strong>先验再定，比为 12-bit 多留 6 根线扎实得多。</strong></p>
+    </div>
+
+    <div class="deck">
+      <h4><span class="n">决策 3</span>转子供电方式</h4>
+      <p>滑环还是电池 —— 记忆库里<strong>完全空白</strong>。这条不定，电源设计无从下手，且它与决策 1 耦合（颗数直接决定电流）。</p>
+    </div>
+  </div>
+</section>
+
+<hr class="soft">
+
+<section>
+  <h2><span class="tag">§2</span>两条实现路径</h2>
+  <p class="sub">同一份需求，两种落地节奏。差别不在做什么，而在<strong>三条硬轴（IOL 相位 / 驱屏共模 / 800 Mbps SI）什么时候暴露</strong>。</p>
+
+  <div class="paths">
+    <div class="path aggr">
+      <div class="path-h">
+        <p class="kind">激进</p>
+        <h3>一次成型</h3>
+        <p class="dur">约 14 周到首光</p>
+        <p class="bet">赌选型一次对、电气一次对，不做验证板。</p>
+      </div>
+      <ul class="tl">
+        <li><span class="wk">W1–2</span><span class="wht">需求收口：颗数/扫数定案、色深实测、GND 脚清点、REXT 实测、供电调查</span></li>
+        <li><span class="wk">W3</span><span class="wht">选型定案（询价 + FAE），同时叠层与 PCB 厂工艺确认</span></li>
+        <li><span class="wk">W4–6</span><span class="wht">屏板原理图 + 主控板原理图<strong>并行</strong></span></li>
+        <li><span class="wk">W7–9</span><span class="wht">屏板 PCB（24 颗 BGA 扇出 + 73 对差分）+ 主控板 PCB</span></li>
+        <li><span class="wk">W10</span><span class="wht">两块板同时打样</span></li>
+        <li><span class="wk">W11–12</span><span class="wht">贴片 + 回板上电</span></li>
+        <li class="key"><span class="wk">W13–14</span><span class="wht">单链点亮 → 全屏点亮</span></li>
+      </ul>
+      <dl class="path-f">
+        <dt>失败代价</dt>
+        <dd>任何一条硬轴在 <strong>W11 才暴露</strong>，改一版 = <strong>+6 周 + 一整套打样费</strong>（HDI 8 层大板不便宜）。</dd>
+        <dt>适用条件</dt>
+        <dd>选型已定、有 FAE 兜底、能承受一次全板重投。</dd>
+      </dl>
+    </div>
+
+    <div class="path cons">
+      <div class="path-h">
+        <p class="kind">保守 · 推荐</p>
+        <h3>小板先证硬轴</h3>
+        <p class="dur">约 18 周（可压到 16 周）</p>
+        <p class="bet">先用一块小板（桥片 + 2~3 颗 2260）把三条硬轴证掉。</p>
+      </div>
+      <ul class="tl">
+        <li><span class="wk">W1–2</span><span class="wht">需求收口（同左）</span></li>
+        <li><span class="wk">W3</span><span class="wht">选型定案</span></li>
+        <li><span class="wk">W4–5</span><span class="wht"><strong>小验证板</strong>原理图 + PCB（同样 8 层 HDI，但只 3 颗 2260，面积小、便宜）</span></li>
+        <li><span class="wk">W6–7</span><span class="wht">小板打样 + 回板</span></li>
+        <li class="key"><span class="wk">W8</span><span class="wht"><strong>三条硬轴实测</strong>：IOL pclk↔sclk 相位 / LVDS 驱屏共模 + 眼图 / 800 Mbps 上行环回</span></li>
+        <li><span class="wk">W9–11</span><span class="wht">屏板设计 —— <strong>带着小板的实测结论画</strong></span></li>
+        <li><span class="wk">W12–13</span><span class="wht">主控板设计（此期间屏板在打样）<span class="c c-ok">可省</span></span></li>
+        <li><span class="wk">W14–15</span><span class="wht">屏板打样 + 贴片</span></li>
+        <li class="key"><span class="wk">W16–18</span><span class="wht">回板调试 → 首光</span></li>
+      </ul>
+      <dl class="path-f">
+        <dt>代价</dt>
+        <dd>多 4 周、多一次小板打样费（但小板便宜得多）。</dd>
+        <dt>收益</dt>
+        <dd>三条硬轴 <strong>W8 就有答案</strong>；屏板是带着实测数据画的；小板还能长期当桥片 RTL 的开发平台。</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="tag">→</span>建议</h2>
+  <div class="rec">
+    <h3>走保守路径，但主控板这一处可以激进</h3>
+    <ul>
+      <li><strong>主控板不必自制，先用 FS03。</strong> 8-bit 口径下双面只要 <span class="m">28 对 + 6 根单端 = 62 根</span>，FS03 的 96 根<strong>够用且还剩 34 根做地</strong>（每对 1.2 根，SI 舒服）—— <span class="c c-warn">前提待核</span>：这 34 根是从 96 根信号里匀的，CEP1/CEP2 有没有<strong>专用</strong> GND 脚还没数过（正是下面 W1 那件手上活）。等屏板跑通、要上 12-bit 时再自制。</li>
+      <li>⇒ 省掉整块主控板的设计和打样（W12–13），<strong>保守路径压回 16 周</strong>，和激进路径只差 2 周，却把三条硬轴的风险从 W11 提前到 <strong>W8（早 3 周）</strong>暴露。</li>
+      <li><strong>W1 先做两件手上活</strong>：CEP1/CEP2 的 GND 脚清点、ICND1069 的 REXT 实测。两条都卡着后面的决策，交付快、判据硬。</li>
+    </ul>
+  </div>
+
+  <div class="call crit" style="margin-top:22px">
+    <p class="ct">独立于路径的风险</p>
+    <p><strong>墙⑨（亮度）至今未动</strong>，它是这份需求里唯一还能推翻电源与滑环规格的一条：2260 的 G/B 电流只有现役 ICND1069 的 <strong>0.356×</strong>；红色靠 <code>0x2d</code> 拉满能到 5.3 倍，G/B 从没试过。判法两步：量 1069 的 REXT 定基线，再在 2260 上扫 IREF+igain 看够不够。</p>
+    <p><strong>墙⑦（色深公式）同样未验</strong>，它决定 8-bit 还是 12-bit，也就是决策 2 和上行对数。</p>
+    <p><span class="c c-ok">已解除</span> 墙③（DDR 有效带宽）不再是风险 —— 2026-09-03 实测 <strong>η = 0.950</strong>，远超 0.70 门槛，16-bit 板就够（记忆: <code>project_pov3d_ddr_eta_measured_0950</code>）。软件侧只剩一条必改：渲染 IP 要提前 2 列预取，不预取双路 115.2 µs 会超 110.6 µs 的线。</p>
+  </div>
+
+  <div class="call" style="margin-top:14px">
+    <p class="ct">给新同事的第一周</p>
+    <p>这个项目有很强的「先证明量具、判据不能包含答案、别拿失败当结论前先排除自己造成的干扰」的文化。建议第一周读 <code>zynq_pov/docs/claude_memory/</code> 下的 <code>feedback_*</code> 那批 —— 那是 30 多条踩过的坑，比任何入职文档都值钱。</p>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

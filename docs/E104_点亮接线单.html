@@ -1,0 +1,863 @@
+<title>E104 点亮接线单</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --bg:#EDF0F3;
+  --surface:#FFFFFF;
+  --surface-2:#F5F7F9;
+  --ink:#141E28;
+  --ink-2:#5A6773;
+  --ink-3:#8A97A3;
+  --rule:#D2D9E0;
+  --rule-strong:#B4BEC8;
+  --accent:#AB5520;
+  --accent-ink:#8C4416;
+  --accent-soft:#F7E7DB;
+  --danger:#9E211D;
+  --danger-soft:#FAE4E2;
+  --caution:#7E5800;
+  --caution-soft:#FBF0D6;
+  --pass:#0B6659;
+  --pass-soft:#DCEFEB;
+  --shadow:0 1px 2px rgba(20,30,40,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E141A;
+    --surface:#161F27;
+    --surface-2:#1B252F;
+    --ink:#E3E9EF;
+    --ink-2:#96A4B1;
+    --ink-3:#6B7A88;
+    --rule:#28343F;
+    --rule-strong:#3A4854;
+    --accent:#DC8A50;
+    --accent-ink:#EFA771;
+    --accent-soft:#2E1F15;
+    --danger:#EF7C73;
+    --danger-soft:#341C1B;
+    --caution:#D6A63A;
+    --caution-soft:#2E2611;
+    --pass:#4FC0AE;
+    --pass-soft:#122A28;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E141A;
+  --surface:#161F27;
+  --surface-2:#1B252F;
+  --ink:#E3E9EF;
+  --ink-2:#96A4B1;
+  --ink-3:#6B7A88;
+  --rule:#28343F;
+  --rule-strong:#3A4854;
+  --accent:#DC8A50;
+  --accent-ink:#EFA771;
+  --accent-soft:#2E1F15;
+  --danger:#EF7C73;
+  --danger-soft:#341C1B;
+  --caution:#D6A63A;
+  --caution-soft:#2E2611;
+  --pass:#4FC0AE;
+  --pass-soft:#122A28;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Public Sans","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",system-ui,sans-serif;
+  font-size:15.5px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:900px;margin:0 auto;padding:28px 22px 96px}
+code,.mono,th,td{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+.mono{font-variant-numeric:tabular-nums}
+
+/* ---------- masthead ---------- */
+.masthead{
+  display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;justify-content:space-between;
+  padding-bottom:16px;border-bottom:2px solid var(--ink);
+}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;
+}
+h1{
+  font-family:Archivo,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-weight:800;font-size:clamp(28px,4.4vw,40px);line-height:1.08;margin:0;
+  letter-spacing:-.015em;text-wrap:balance;
+}
+.sub{color:var(--ink-2);margin:8px 0 0;max-width:60ch;font-size:14.5px}
+.meter{text-align:right;flex-shrink:0}
+.meter .big{
+  font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+  font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1;
+}
+.meter .cap{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-top:5px;font-family:"IBM Plex Mono",monospace}
+.bar{height:4px;background:var(--rule);border-radius:2px;overflow:hidden;margin-top:9px;width:150px}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s ease}
+button.reset{
+  margin-top:9px;font:inherit;font-size:11px;font-family:"IBM Plex Mono",monospace;
+  background:none;border:1px solid var(--rule-strong);color:var(--ink-3);
+  padding:3px 9px;border-radius:3px;cursor:pointer;
+}
+button.reset:hover{color:var(--ink);border-color:var(--ink-2)}
+button.reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- steps ---------- */
+.step{margin-top:44px}
+.step-head{display:flex;gap:14px;align-items:baseline;border-bottom:1px solid var(--rule-strong);padding-bottom:9px}
+.step-num{
+  font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;
+  color:var(--accent);flex-shrink:0;letter-spacing:.06em;
+}
+h2{
+  font-family:Archivo,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-weight:700;font-size:20px;margin:0;letter-spacing:-.01em;flex:1;
+}
+.tag{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px;flex-shrink:0;
+}
+.tag.no-mod{background:var(--pass-soft);color:var(--pass)}
+.tag.mod{background:var(--caution-soft);color:var(--caution)}
+.tag.gate{background:var(--danger-soft);color:var(--danger)}
+.step-note{color:var(--ink-2);font-size:14px;margin:12px 0 0;max-width:64ch}
+
+h3{
+  font-family:Archivo,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-weight:600;font-size:13px;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink-2);margin:28px 0 10px;
+}
+
+/* ---------- checklist ---------- */
+ul.list{list-style:none;margin:14px 0 0;padding:0;border-top:1px solid var(--rule)}
+ul.list li{border-bottom:1px solid var(--rule)}
+label.row{
+  display:grid;grid-template-columns:26px 1fr;gap:12px;
+  padding:11px 4px 11px 2px;cursor:pointer;align-items:start;
+}
+label.row:hover{background:var(--surface-2)}
+label.row input{
+  appearance:none;-webkit-appearance:none;margin:2px 0 0;
+  width:18px;height:18px;border:1.5px solid var(--rule-strong);border-radius:3px;
+  background:var(--surface);cursor:pointer;flex-shrink:0;position:relative;
+}
+label.row input:checked{background:var(--accent);border-color:var(--accent)}
+label.row input:checked::after{
+  content:"";position:absolute;left:5.5px;top:1.5px;width:4px;height:9px;
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(42deg);
+}
+label.row input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+label.row .txt{transition:color .15s,opacity .15s}
+label.row input:checked ~ .txt{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--rule-strong)}
+.txt b{font-weight:600}
+.txt .why{display:block;color:var(--ink-2);font-size:13.5px;margin-top:3px}
+label.row input:checked ~ .txt .why{color:var(--ink-3)}
+
+/* ---------- callouts ---------- */
+.note{
+  border-left:3px solid var(--rule-strong);padding:12px 0 12px 15px;margin:18px 0;
+  font-size:14px;color:var(--ink-2);
+}
+.note.danger{border-left-color:var(--danger);background:var(--danger-soft);padding-right:14px;color:var(--ink)}
+.note.caution{border-left-color:var(--caution);background:var(--caution-soft);padding-right:14px;color:var(--ink)}
+.note strong{color:var(--ink);font-weight:600}
+.note .hd{
+  display:block;font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
+  letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px;
+}
+.note.danger .hd{color:var(--danger)}
+.note.caution .hd{color:var(--caution)}
+
+/* ---------- tables ---------- */
+.scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--rule);border-radius:4px;background:var(--surface);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:520px}
+th{
+  text-align:left;font-weight:600;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-2);padding:9px 12px;border-bottom:1px solid var(--rule-strong);
+  background:var(--surface-2);white-space:nowrap;
+}
+td{padding:8px 12px;border-bottom:1px solid var(--rule);vertical-align:top;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:none}
+td.pin{font-weight:600;color:var(--accent-ink);white-space:nowrap}
+td.sig{font-weight:600;white-space:nowrap}
+.sm{color:var(--ink-2);font-size:12px}
+
+/* ---------- diagram ---------- */
+figure{margin:22px 0;background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:20px 16px 14px;box-shadow:var(--shadow)}
+figure svg{display:block;width:100%;height:auto}
+figcaption{font-size:12.5px;color:var(--ink-2);margin-top:12px;text-align:center;font-family:"IBM Plex Mono",monospace}
+
+/* ---------- key/value strip ---------- */
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:4px;overflow:hidden;margin:16px 0}
+.kv div{background:var(--surface);padding:11px 13px}
+.kv dt{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);font-family:"IBM Plex Mono",monospace}
+.kv dd{margin:4px 0 0;font-family:"IBM Plex Mono",monospace;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.kv dd small{font-size:11px;font-weight:400;color:var(--ink-2);display:block;margin-top:2px;letter-spacing:0}
+.kv .ok dd{color:var(--pass)}
+
+pre{
+  background:var(--surface);border:1px solid var(--rule);border-radius:4px;
+  padding:14px;overflow-x:auto;font-size:12.5px;line-height:1.6;margin:16px 0;box-shadow:var(--shadow);
+}
+pre .c{color:var(--ink-3)}
+pre .k{color:var(--accent-ink);font-weight:500}
+
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--rule);font-size:12.5px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
+
+@media (max-width:600px){
+  .wrap{padding:20px 15px 80px}
+  .masthead{align-items:flex-start}
+  .meter{text-align:left}
+  .bar{width:120px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <div>
+    <div class="eyebrow">EG4X20BG256 · 台架工单 · 2026-09-07</div>
+    <h1>E104 点亮接线单</h1>
+    <p class="sub">用现成的 E104 开发板 + 现役 9 颗级联灯板，验掉最终屏板上<b>零纸面背书</b>的那一环：仿真差分対经电阻网络能不能驱动 ICND2260。</p>
+  </div>
+  <div class="meter">
+    <div class="big"><span id="done">0</span><span style="color:var(--ink-3)">/</span><span id="total">0</span></div>
+    <div class="bar"><i id="fill"></i></div>
+    <div class="cap">已完成</div>
+    <button class="reset" id="reset" type="button">清空勾选</button>
+  </div>
+</header>
+
+<div class="note caution" style="margin-top:22px">
+  <span class="hd">为什么先做这个</span>
+  最终屏板下行 <b>73 対里有 51 対是仿真対</b>。「电阻网络驱出来的波形 2260 认不认」在手册上<strong>一个字都没有</strong>——DS300 表 3-2-5 的输出频率表只列了 <code>LVDS25E</code>，<code>LVDS33_E</code> 工具收但无频率背书。这块板能在动手画屏板之前把它测掉。<br><br>
+  ⚠ 但要把判据写窄：这里同时压着<b>两个</b>没背书的东西——「<code>LVDS33_E</code> 能不能跑 150 MHz」与「2260 认不认电阻网络驱动」。
+  <b>只能写成后者</b>；跑通了也<u>不能</u>当成 <code>LVDS25_E</code> 的背书。
+</div>
+
+<!-- ============ STEP 0 ============ -->
+<section class="step">
+  <div class="step-head">
+    <span class="step-num">00</span>
+    <h2>开工前</h2>
+    <span class="tag gate">有阻断项</span>
+  </div>
+  <p class="step-note">第 2 条没答之前不要焊——焊错対要拆 20 只电阻。</p>
+
+  <ul class="list">
+    <li><label class="row"><input type="checkbox" data-k="p0a"><span class="txt">
+      <b>核对芯片丝印是 <code>EG4X20BG256</code></b>
+      <span class="why">整套引脚分析都建立在这颗上。它与最终板的 EG4A20BG256I7 <b>真/仿真対配比是反的</b>（X20 = 53 真 + 36 仿；A20 = 39 真 + 51 仿）。</span>
+    </span></label></li>
+
+    <li><label class="row"><input type="checkbox" data-k="p0b"><span class="txt">
+      <b>🔴 阻断项：确认 <code>GPLL0</code> 有没有被占</b>
+      <span class="why">我们要一颗 PLL 从板载晶振做 150 MHz；而 <code>BE19</code>/<code>BE20</code> 复用 <code>GPLL0_CLKIN</code>/<code>GPLL0_OUT</code>。<b>先综合一版空设计看 PLL 资源。</b>被占 ⇒ 这两対不能当 IO，改用 bank2 的 <code>TE8</code>(J4.3/4) 与 <code>TE13</code>(J3.13/14)，飞线更长。</span>
+    </span></label></li>
+
+    <li><label class="row"><input type="checkbox" data-k="p0c"><span class="txt">
+      <b>从 <code>11_PCB分组约束表</code> 核对四対的 P/N 极性</b>
+      <span class="why">排针奇偶与 P/N <b>不保证</b>对应——时钟対 J4.15/16 上是「偶数脚 = P」，别默认其它対也一样。逐対查表。</span>
+    </span></label></li>
+
+    <li><label class="row"><input type="checkbox" data-k="p0d"><span class="txt">
+      <b>万用表量灯板两路电源，<u>接线之前</u></b>
+      <span class="why"><code>J1.1~5 = 2.8 V</code>（VDDR）、<code>J1.16~20 = 3.8 V</code>（VDDGB）。<b>这两路曾经接反过</b>；VDDGB 低于 3.5 V 会导致绿蓝不亮。E104 的 J4 <b>不供</b>灯板的电，要外接电源并与 E104 共地。</span>
+    </span></label></li>
+  </ul>
+</section>
+
+<!-- ============ STEP 1 ============ -->
+<section class="step">
+  <div class="step-head">
+    <span class="step-num">01</span>
+    <h2>第一步：不动焊台改板</h2>
+    <span class="tag no-mod">零板改</span>
+  </div>
+  <p class="step-note">bank0 在 J4 上有 4 対连续仿真対（J4.51~58），一颗 2260 正好要 4 対。<b>全走仿真対 ⇒ 完全不碰 bank1，不用拆焊任何板载元件。</b></p>
+
+  <h3>接线表</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>灯板 J1</th><th>信号</th><th>E104 J4</th><th>FPGA 球</th><th>対名</th><th>中间元件</th></tr></thead>
+    <tbody>
+      <tr><td class="pin">J1.25 / 26</td><td class="sig">L_CKIP / N</td><td class="pin">J4.52 / 51</td><td>D12 / D11</td><td>BE20 <span class="sm">⚠ GPLL0_OUT</span></td><td>5R 网络</td></tr>
+      <tr><td class="pin">J1.28 / 29</td><td class="sig">D0 · SDI_B1</td><td class="pin">J4.58 / 57</td><td>B12 / A12</td><td>BE16</td><td>5R 网络</td></tr>
+      <tr><td class="pin">J1.31 / 32</td><td class="sig">D1 · SDI_G1</td><td class="pin">J4.56 / 55</td><td>C13 / A13</td><td>BE17</td><td>5R 网络</td></tr>
+      <tr><td class="pin">J1.34 / 35</td><td class="sig">D2 · SDI_R1</td><td class="pin">J4.54 / 53</td><td>B14 / A14</td><td>BE19 <span class="sm">⚠ GPLL0_CLKIN</span></td><td>5R 网络</td></tr>
+      <tr><td class="pin">J1.23</td><td class="sig">I_SYNC</td><td class="pin">J4.50</td><td>B15</td><td>L2P_1 <span class="sm">单端</span></td><td>直连</td></tr>
+      <tr><td class="pin">J1.22</td><td class="sig">ACK_O</td><td class="pin">J4.49</td><td>B16</td><td>L2N_1 <span class="sm">单端</span></td><td>直连 · FPGA 侧上拉</td></tr>
+      <tr><td class="pin">J1.21</td><td class="sig">TTL DCLK</td><td class="pin">J4.48</td><td>C15</td><td>L6P_1 <span class="sm">单端</span></td><td>直连 · <b>恒 0</b></td></tr>
+      <tr><td class="pin">J1 的 GND</td><td class="sig">GND</td><td class="pin">J4.59/60 · 41/42</td><td>—</td><td>—</td><td><b>每対各带一根地</b></td></tr>
+      <tr><td class="pin">J1.1~5</td><td class="sig">VDDR</td><td class="pin">外接电源</td><td>—</td><td>—</td><td><b>2.8 V</b> · 先量</td></tr>
+      <tr><td class="pin">J1.16~20</td><td class="sig">VDDGB</td><td class="pin">外接电源</td><td>—</td><td>—</td><td><b>3.8 V</b> · 先量</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note danger">
+    <span class="hd">第一通道是 D0 = B 対，不是 R</span>
+    手册传输模式表：TTL 走 <code>SDI_R1</code>，<b>mini-LVDS 一律走 D0IP/N</b>。而 D0 同时兼发配置包与 VHEAD——接错这一対，屏不会亮而且没有任何提示。这条踩过。
+  </div>
+
+  <h3>5R 电阻网络 · 每対 5 只</h3>
+
+  <figure>
+  <svg viewBox="0 0 620 250" role="img" aria-label="5R 电阻网络原理图：每条腿串 150 欧姆，对地 430 欧姆，两腿之间跨接 140 欧姆">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/>
+      </marker>
+    </defs>
+    <g font-family="IBM Plex Mono, monospace" font-size="12" fill="var(--ink-2)">
+
+      <!-- P leg -->
+      <text x="4" y="59" fill="var(--ink)" font-weight="600">FPGA P</text>
+      <line x1="62" y1="55" x2="118" y2="55" stroke="var(--ink-2)" stroke-width="1.6"/>
+      <rect x="118" y="43" width="52" height="24" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+      <text x="144" y="59" text-anchor="middle" fill="var(--accent-ink)" font-weight="600">150Ω</text>
+      <line x1="170" y1="55" x2="470" y2="55" stroke="var(--ink-2)" stroke-width="1.6"/>
+      <circle cx="250" cy="55" r="3.4" fill="var(--ink-2)"/>
+      <circle cx="380" cy="55" r="3.4" fill="var(--ink-2)"/>
+      <text x="484" y="59" fill="var(--ink)" font-weight="600">2260 RXP</text>
+
+      <!-- N leg -->
+      <text x="4" y="189" fill="var(--ink)" font-weight="600">FPGA N</text>
+      <line x1="62" y1="185" x2="118" y2="185" stroke="var(--ink-2)" stroke-width="1.6"/>
+      <rect x="118" y="173" width="52" height="24" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.4"/>
+      <text x="144" y="189" text-anchor="middle" fill="var(--accent-ink)" font-weight="600">150Ω</text>
+      <line x1="170" y1="185" x2="470" y2="185" stroke="var(--ink-2)" stroke-width="1.6"/>
+      <circle cx="250" cy="185" r="3.4" fill="var(--ink-2)"/>
+      <circle cx="380" cy="185" r="3.4" fill="var(--ink-2)"/>
+      <text x="484" y="189" fill="var(--ink)" font-weight="600">2260 RXN</text>
+
+      <!-- Rpd P -->
+      <line x1="250" y1="55" x2="250" y2="82" stroke="var(--ink-2)" stroke-width="1.6"/>
+      <rect x="224" y="82" width="52" height="24" rx="2" fill="var(--pass-soft)" stroke="var(--pass)" stroke-width="1.4"/>
+      <text x="250" y="98" text-anchor="middle" fill="var(--pass)" font-weight="600">430Ω</text>
+      <line x1="250" y1="106" x2="250" y2="122" stroke="var(--ink-2)" stroke-width="1.6"/>
+      <line x1="236" y1="122" x2="264" y2="122" stroke="var(--ink-2)" stroke-width="2"/>
+      <line x1="241" y1="127" x2="259" y2="127" stroke="var(--ink-2)" stroke-width="2"/>
+      <line x1="246" y1="132" x2="254" y2="132" stroke="var(--ink-2)" stroke-width="2"/>
+
+      <!-- Rpd N -->
+      <line x1="250" y1="185" x2="250" y2="164" stroke="var(--ink-2)" stroke-width="1.6"/>
+      <rect x="224" y="140" width="52" height="24" rx="2" fill="var(--pass-soft)" stroke="var(--pass)" stroke-width="1.4"/>
+      <text x="250" y="156" text-anchor="middle" fill="var(--pass)" font-weight="600">430Ω</text>
+      <line x1="250" y1="140" x2="250" y2="132" stroke="var(--ink-2)" stroke-width="1.6"/>
+
+      <!-- RP across -->
+      <line x1="380" y1="55" x2="380" y2="108" stroke="var(--ink-2)" stroke-width="1.6"/>
+      <rect x="354" y="108" width="52" height="24" rx="2" fill="var(--caution-soft)" stroke="var(--caution)" stroke-width="1.4"/>
+      <text x="380" y="124" text-anchor="middle" fill="var(--caution)" font-weight="600">140Ω</text>
+      <line x1="380" y1="132" x2="380" y2="185" stroke="var(--ink-2)" stroke-width="1.6"/>
+
+      <!-- labels -->
+      <text x="144" y="34" text-anchor="middle" font-size="10.5" letter-spacing="1" fill="var(--ink-3)">RS</text>
+      <text x="316" y="124" text-anchor="middle" font-size="10.5" letter-spacing="1" fill="var(--ink-3)">RP</text>
+      <text x="196" y="98" text-anchor="end" font-size="10.5" letter-spacing="1" fill="var(--ink-3)">Rpd</text>
+
+      <!-- result -->
+      <line x1="470" y1="55" x2="470" y2="185" stroke="var(--rule-strong)" stroke-width="1" stroke-dasharray="3 3"/>
+      <text x="530" y="112" text-anchor="middle" font-size="11" fill="var(--ink-3)">共模</text>
+      <text x="530" y="130" text-anchor="middle" font-size="15" font-weight="600" fill="var(--pass)">1.203 V</text>
+      <text x="530" y="147" text-anchor="middle" font-size="10.5" fill="var(--ink-3)">幅值 ≈457 mV</text>
+    </g>
+  </svg>
+  <figcaption>VCM = (VCCIO/2) × Rpd / (Rpd + Rout + RS)　　Rout = 10 Ω（TN309 注 1）</figcaption>
+  </figure>
+
+  <dl class="kv">
+    <div><dt>VCCIO0</dt><dd>3.3 V<small>焊死，绕不开</small></dd></div>
+    <div><dt>不加 Rpd</dt><dd style="color:var(--danger)">1.65 V<small>出窗</small></dd></div>
+    <div class="ok"><dt>加 Rpd 后</dt><dd>1.203 V<small>VIC 1.1~1.3 正中</small></dd></div>
+    <div class="ok"><dt>差分幅值</dt><dd>≈457 mV<small>旧文档写 432，偏低 5%</small></dd></div>
+  </dl>
+
+  <div class="note danger">
+    <span class="hd">RS 与 Rpd 必须配对，别混档</span>
+    同样是 430 Ω，配 <code>RS=210</code> 共模就掉到 <b>1.092 V ⇒ 出窗</b>。手册那几档只能整组用：<code>300/118→Rpd 827</code>、<code>210/127→587</code>、<b><code>150/140→430</code></b>、<code>115/160→333</code>（最后一档幅值 530 mV &gt; 500 mV，要改用片外端接）。
+  </div>
+
+  <h3>器材</h3>
+  <ul class="list">
+    <li><label class="row"><input type="checkbox" data-k="p1a"><span class="txt"><b>电阻 20 只，1% 精度</b><span class="why"><code>150 Ω × 8</code>（RS）　<code>140 Ω × 4</code>（RP）　<code>430 Ω × 8</code>（Rpd，E24 值）——四対 × 每対 5 只。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="p1b"><span class="txt"><b>100 Ω 差分端接 × 4，焊在<u>灯板侧</u></b><span class="why">灯板<b>板上无端接</b>。尽量靠近 2260。（片内端接只在 LVDS <b>输入</b>方向自动开，输出方向没有。）</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="p1c"><span class="txt"><b>飞线：短、等长、每対自带一根地</b><span class="why">别指望排针上那几个地脚——时钟対离最近的地隔 3 脚。踩过「J1.21/22 紧邻无地 ⇒ DCLK 串扰拽出 5 万个假帧」。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="p1d"><span class="txt"><b>外接电源两路（2.8 V / 3.8 V）+ 万用表 + 示波器 ≥1 GHz</b><span class="why">300 Mbps 眼图要带宽。</span></span></label></li>
+  </ul>
+
+  <h3>焊接与接线</h3>
+  <ul class="list">
+    <li><label class="row"><input type="checkbox" data-k="p1e"><span class="txt"><b>在小洞洞板上焊 4 组 5R 网络</b><span class="why">别直接飞在排针上——20 只电阻悬空会扯断脚，而且没法复用。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="p1f"><span class="txt"><b>按接线表接 8 根差分 + 3 根单端 + 地</b></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="p1g"><span class="txt"><b>上电前用万用表量通断与对地阻值</b><span class="why">每条腿对地应当读到约 <code>430 + 150 = 580 Ω</code>（未接灯板时）。读到 0 就是短了。</span></span></label></li>
+  </ul>
+</section>
+
+<!-- ============ STEP 2 ============ -->
+<section class="step">
+  <div class="step-head">
+    <span class="step-num">02</span>
+    <h2>第二步：改板（只有做真差分对照才需要）</h2>
+    <span class="tag mod">要动焊台</span>
+  </div>
+  <p class="step-note">第一步已经能回答最值钱的问题。只有当你要<b>量 VCM 三档实际共模</b>、或<b>用真差分建立"能亮"的基准</b>时，才需要动板子。</p>
+
+  <ul class="list">
+    <li><label class="row"><input type="checkbox" data-k="p2a"><span class="txt">
+      <b>拆 <code>R23</code>，焊 <code>R22</code> ⇒ VCCIO1 = 2.5 V</b>
+      <span class="why">两只 0 Ω 二选一：<code>+2.5V ─[R22 NC]─┬─ VCCIO1</code>、<code>+3.3V ─[R23 0R]─┘</code>。板上 +2.5 V 来自 AMS1117(2.5V/1A)，本就是给 FPGA IO 准备的。位置见 <code>03_PCB丝印图装配图</code>。</span>
+    </span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="p2b"><span class="txt">
+      <b>改完后 bank1 才能用 <code>LVDS25</code> + <code>VCM=1.2</code></b>
+      <span class="why">时钟対走 <code>J4.16/15</code>（球 J13/K14，<code>GCLKIOL5/4</code> 专用时钟脚，対内失配 0.7 mil）。<b>J4.16 = L14<u>P</u> = clk_p</b>。</span>
+    </span></label></li>
+  </ul>
+
+  <div class="note danger">
+    <span class="hd">🔴 改之前先确认：这一改可能让 JTAG 下不进去</span>
+    <b>X20 的 JTAG 四脚跨两个 bank</b>：<code>TCK(C14)</code>/<code>TDI(C12)</code> 在 <b>bank0</b>，<code>TDO(E14)</code>/<code>TMS(A15)</code> 在 <b>bank1</b>。
+    而 DS300 表 3-1-5 对 EG4X20BG256 的 <b>VCCIO0 与 VCCIO1 都</b>写着「≥ 下载器供电电压，如果使用 JTAG 下载，需要和下载器供电电压保持一致」。
+    E104 只能改 VCCIO1 ⇒ <b>改完两个 JTAG bank 电压不一致</b>。<br>
+    ⇒ 动烙铁前先查两件事：① E104 实际用什么下载（用户手册写默认 MSPI，另有 Slave Serial）；② 下载器 <code>J2.4</code> 的 VREF 是取板上电压还是固定 3.3 V。
+    <b>准备好退路</b>：改完立刻验一次能否识别/下载，不行就焊回 R23。<b>这条是 A20 上不存在的，只有 X20 有。</b>
+  </div>
+
+  <div class="note danger">
+    <span class="hd">bank0 / bank2 绝对不要动</span>
+    它们的 VCCIO 是 <b>BGA 球下打孔直连内层平面，割不到</b>；而且 bank0 挂着 SDRAM 与 <code>HSWAPEN</code>，bank2 挂着 <code>CCLK</code>/<code>MSEL0</code> 配置脚。动了这块板就废了。
+  </div>
+</section>
+
+<!-- ============ STEP 3 ============ -->
+<section class="step">
+  <div class="step-head">
+    <span class="step-num">03</span>
+    <h2>上电与点亮</h2>
+    <span class="tag no-mod">判据</span>
+  </div>
+
+  <ul class="list">
+    <li><label class="row"><input type="checkbox" data-k="p3a"><span class="txt"><b>先量电源再插灯板</b><span class="why"><code>J1.1~5 = 2.8 V</code>、<code>J1.16~20 = 3.8 V</code>。曾经接反过。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="p3b"><span class="txt"><b>先跑 <code>dclk = 150 MHz</code>（线速率 300 Mbps）</b><span class="why">今天定的主工作点。比原方案的 166.67 更容易过。过了之后再往上试 166.67——那是备选工作点，能过就多一档余量。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="p3c"><span class="txt"><b>判据一：<code>ACK</code> 有回包</b><span class="why">「芯片活没活」最硬的判据，别省。首光那次就是靠它定的。注意 ACK 脚悬空会放大噪声出假帧——<b>回包比提问还多就先怀疑量具</b>。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="p3d"><span class="txt"><b>判据二：屏亮，且图案正确</b></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="p3e"><span class="txt"><b>示波器量实际共模，与算出的 1.203 V 对</b><span class="why">上一块板上实测过 1.294 V 能收，但那是<b>单颗样品值不是规格保证</b>。这次要的是"电阻网络定出来的共模准不准"。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="p3f"><span class="txt"><b>看 300 Mbps 眼图与上升沿</b><span class="why">电阻网络的 SI 是这次真正要测的东西之一。</span></span></label></li>
+  </ul>
+</section>
+
+<!-- ============ STEP 4 ============ -->
+<section class="step">
+  <div class="step-head">
+    <span class="step-num">04</span>
+    <h2>写代码前先改掉这两条</h2>
+    <span class="tag gate">文档有错</span>
+  </div>
+  <p class="step-note">仓库里 <code>zynq_pov/docs/E104_2260_接线方案.md</code> 是 09-04 写的，有两处今天已经被推翻。</p>
+
+  <div class="note danger">
+    <span class="hd">FPHASE = 4 得 90° —— 错的</span>
+    <b>22.5°/步只对 <code>DIV=2</code> 的 PLL 输出成立。</b>dclk 由 <code>VCO/6</code> 出时一步只有 <b>7.5°</b>，<code>FPHASE=4</code> 只有 30°。正解是 <code>CLKC2_CPHASE = 6 (= DIV)</code> <b>+</b> <code>FPHASE = 4</code>，TD 里实证为 <code>-phase 90</code>、<code>Rise 1.666 / 周期 6.666 = 90.0°</code>。<br>
+    照原文做出来的转发时钟<b>差 60°</b>——mini-LVDS 的 <code>tSTU/tHLD = ¼ tLVCP</code>，芯片在位中间采样，相位错了屏就是不亮而且查不出原因。
+  </div>
+
+  <div class="note caution">
+    <span class="hd">频率 166.67 → 150</span>
+    主工作点已改。屏侧线速率 <b>300 Mbps</b> 不是 333。<code>bridge_defs.vh</code> 的 <code>BR_DCLK_MHZ</code> 已经改成 <code>150.0</code>，<code>bridge_clk</code> 用 <code>DCLK_FB_DIV=9 / DCLK_CD_DIV=6</code>（VCO 900）。
+  </div>
+
+  <h3>TD 约束片段</h3>
+<pre><span class="c">## 四対全仿真, bank0 @3.3V, 外接 5R —— 绝对不要给仿真対写 VCM</span>
+<span class="c">## (实测不报错, 但会真写进 bank 配置, 与手册矛盾)</span>
+set_pin_assignment { <span class="k">clk_p</span> } { LOCATION = D12; IOSTANDARD = LVDS33_E; }
+set_pin_assignment { <span class="k">clk_n</span> } { LOCATION = D11; IOSTANDARD = LVDS33_E; }
+set_pin_assignment { <span class="k">b_p</span>   } { LOCATION = B12; IOSTANDARD = LVDS33_E; }
+set_pin_assignment { <span class="k">b_n</span>   } { LOCATION = A12; IOSTANDARD = LVDS33_E; }
+set_pin_assignment { <span class="k">g_p</span>   } { LOCATION = C13; IOSTANDARD = LVDS33_E; }
+set_pin_assignment { <span class="k">g_n</span>   } { LOCATION = A13; IOSTANDARD = LVDS33_E; }
+set_pin_assignment { <span class="k">r_p</span>   } { LOCATION = B14; IOSTANDARD = LVDS33_E; }
+set_pin_assignment { <span class="k">r_n</span>   } { LOCATION = A14; IOSTANDARD = LVDS33_E; }
+
+<span class="c">## 单端控制: bank1 (未改板时是 3.3V, 用 LVCMOS33)</span>
+set_pin_assignment { <span class="k">sync</span> } { LOCATION = B15; IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 8; SLEWRATE = FAST; }
+set_pin_assignment { <span class="k">ack</span>  } { LOCATION = B16; IOSTANDARD = LVCMOS33; PULLTYPE = PULLUP; }
+set_pin_assignment { <span class="k">dclk</span> } { LOCATION = C15; IOSTANDARD = LVCMOS33; DRIVESTRENGTH = 8; }</pre>
+
+  <div class="note">
+    <code>VCM</code>/<code>VOD</code> 是 <b>per-bank 不是 per-pin</b>，同 bank 两个值报 <code>USR-8001</code>。<code>PREEMPHASIS</code> EG4A20 <b>不支持</b>（<code>USR-8409</code>）。
+  </div>
+</section>
+
+<!-- ============ STEP 5 ============ -->
+<section class="step">
+  <div class="step-head">
+    <span class="step-num">05</span>
+    <h2>实验 ⑤：PLL refclk 能不能吃 400 MHz（🔴 唯一还能推翻引脚定案的未知数）</h2>
+    <p class="why"><b>为什么必须验</b>：上行转发时钟 2026-09-07 定案走 <b>PLL（方案 A）</b>——
+    DR1 发 400 MHz 半速时钟 → <code>REFCLK_DIV=4</code> → PFD 100 → VCO 800 → sclk 400 / pclk 200。
+    但 <b><code>EG_PHY_PLL</code> 的 <code>refclk</code> 输入脚能不能吃 400 MHz，手册与原语里都查不到出处</b>
+    （只有 VCO 300~1200、fOUT ≤ 400，<b>没有输入脚范围</b>；<code>FIN</code> 在 <code>eagle_macro.v</code> 里
+    只是个没被模型用到的注解字符串）。这条不结，PCB 上转发时钟対怎么走就是悬的。</p>
+
+    <p class="why"><b>✅ 结论：E104 做得了，而且不用改板 —— 只在 J4 排针上飞一根短线。</b></p>
+
+    <h3>为什么不用改板</h3>
+    <ul>
+      <li><b>PLL 的专用时钟脚在 E104 上引出来了</b>：<code>BE19</code>(A14/B14) = <code>GPLL0_CLKIN</code>、
+          <code>BE20</code>(D11/D12) = <code>GPLL0_OUT</code>，<b>都在 J4、都在 bank0</b>。
+          这是<b>专用 PLL 时钟输入脚</b>，比 <code>GCLKIOL</code> 更直接（后者是否能进 PLL refclk 无需再问）。</li>
+      <li><b>SDRAM 占的是 bank0 的 <code>GCLKIOB</code>（BE9~BE12），不是 BE19/BE20</b> —— 这两対没被占。</li>
+      <li><b>全程不动 VCCIO1</b>：实验只用 bank0（焊死 3.3V）。⇒ 绕开
+          「改 VCCIO1 到 2.5V 可能让 JTAG 下不进去」那条 X20 独有的风险。</li>
+      <li>管脚分配图确认 <code>B14/A14</code> 与 <code>D11/D12</code> <b>在 J4 上相邻</b> ⇒ 飞线只有几毫米，
+          400 MHz 的信号完整性压力很小。</li>
+    </ul>
+
+    <h3>怎么接（一対飞线，不是一根）</h3>
+    <p class="why">板载晶振 = <b>50 MHz，在球 H3</b>（原理图网名 <code>H3_50MHz_CLK</code>）。50 恰好在
+    <code>FIN</code> 查找表 {25,50,100} 内，不用放宽任何断言。</p>
+
+    <p class="why">🔴 <b>发送侧必须走 bank1 的真差分対、用 <code>LVDS33</code>，不能单端也不能用仿真対</b>：</p>
+    <ul>
+      <li><b>仿真対（<code>BE*</code>）输出上限只有 166 MHz</b>（DS300 表 3-2-5 只给了 <code>LVDS25E</code> 一行，
+          166 MHz），单端 <code>LVCMOS33</code> 更低 ⇒ <b>400 MHz 出不来</b>。</li>
+      <li><b><code>LVDS33</code> 真差分输入输出都是 400 MHz / 800 Mbps</b>（DS300 表 3-2-5）⇒ 够用。</li>
+      <li><b>接收侧反而没问题</b>：<code>BE19</code> 虽是仿真対，但 DS300 明写
+          「真/仿真対<b>均可</b>作 LVDS25 标准输入，最大 400 MHz」——<b>"仿真"只在发送侧有意义</b>。</li>
+    </ul>
+
+    <pre>H3 (50 MHz 板载晶振)
+  └─> PLL_A:  FIN=50  REFCLK_DIV=1  FBCLK_DIV=8  CLKC0_DIV=2  => VCO 800, C0 = 400 MHz
+        └─> ODDR (d1=1,d0=0) ─> <b>bank1 一対真差分, IOSTANDARD = LVDS33</b>
+              例: B15/B16 = L2P_1 / L2N_1   (⚠ 是**一対差分**, 不是两个单端脚)
+              └── 飞线一対 (短、等长、<b>带一根地回来</b>) ──> A14/B14 = BE19N/BE19P = GPLL0_CLKIN
+                    └─> PLL0:  refclk = 400 MHz, REFCLK_DIV=4 => PFD 100
+                               FBCLK_DIV=4, CLKC0_DIV=2 => VCO 800 => C0 400 / C1 200</pre>
+
+    <p class="why">⚠ <b>别用 D11/D12 当发送脚</b>：<code>BE20 = GPLL0_OUT</code> 是 PLL0 的专用输出，
+    而本实验正用 PLL0 当接收端，可能冲突。</p>
+
+    <p class="why">🔴 <b>实验 ⑤ 与「四対全仿真驱 2260」不能同时接。</b>
+    <code>BE19</code>/<code>BE20</code> 在接线方案第 3 节里是<b>候选数据対 D2</b>；实验 ⑤ 把
+    <code>BE19</code> 占去当 PLL 输入 ⇒ <b>两个实验要分开做</b>，别以为能一次接完。
+    要同时做的话，D2 退回用 bank2 的 <code>TE8</code>(J4.3/4)。</p>
+
+    <h3>判据</h3>
+    <ol>
+      <li><b><code>PLL0.extlock</code> 拉高</b> —— 这就是「400 MHz 进得了 refclk」的直接答案。</li>
+      <li><b>PLL0 的输出频率对得上</b>：C0 应为 400 MHz、C1 应为 200 MHz。
+          <b>只看 extlock 不够 —— 锁在错误的分频比上 extlock 照样会高</b>，必须独立测频。两种做法：
+          <ul>
+            <li><b>示波器法</b>：把 C1(200 MHz) 用一个 <code>÷N</code> 计数器降到 1~10 MHz，
+                从 bank1 一対 <code>LVDS33</code> 出去量。<b>别直接量 400 MHz</b>，探头和飞线会骗你。</li>
+            <li><b>数秒法（不用示波器，更硬）</b>：用 H3 的 50 MHz 做基准数 1 秒（50,000,000 拍），
+                同一秒内数 C1 的边沿数，读数应为 <b>200,000,000 ± 少量</b>。
+                结果用 LED 二进制点出来或走 UART。<b>这个法子不依赖任何量具的带宽</b>。</li>
+          </ul></li>
+      <li>失败的话记下<b>失败方式</b>：完全不锁 / 锁了但频率不对 / 锁了但抖动大。
+          三种对应的退路不同。</li>
+    </ol>
+
+    <h3>2026-09-08 补 · bit 已出，J4 脚号已查全</h3>
+
+    <div class="kv">
+      <div class="ok"><dt>bitstream</dt><dd>629,640 B<small>eg4_pll400/soc_prj/fpga_prj_Runs/phy_1/fpga_prj.bit</small></dd></div>
+      <div class="ok"><dt>Clock Summary</dt><dd>5 / 5 对<small>50 · 400 · 400 · 400 · 200 MHz</small></dd></div>
+      <div><dt>下载模式</dt><dd>JTAG<small>下 SRAM，掉电丢失，不碰 flash</small></dd></div>
+      <div><dt>要改板吗</dt><dd>不用<small>只在 J4 上飞一対线</small></dd></div>
+    </div>
+
+    <h3>① 探针表 · J4 脚号</h3>
+
+    <p class="why"><b>脚号出处（三份互不相干的资料，结论一致）</b>：
+    ⓐ 原理图 <code>ANLOGIC EAGLE FPGA E104 V2.0 schematics.pdf</code> 第 9 页 <code>J4</code> 网表；
+    ⓑ <code>04_管脚分配图/E104_V20_管脚分配图.png</code> 的排针丝印；
+    ⓒ 厂家参考程序 <code>05_参考程序/E104_EG4X20-20221128.rar</code> 里 <code>UCF/top.adc</code> 中 <code>o_sig[]</code> 的排列顺序。
+    三份都把<b>已知的 5 条</b>（<code>B15</code>=50、<code>B16</code>=49、<code>C15</code>=48、<code>B14</code>=54、<code>A14</code>=53）原样复现 ⇒ 新查到的 5 条同样可信。</p>
+
+    <div class="scroll">
+    <table>
+      <thead><tr><th>信号</th><th>球</th><th>J4 脚</th><th>対名</th><th>期望值</th><th>量法</th></tr></thead>
+      <tbody>
+        <tr><td class="sig">fwd_p</td><td>B15</td><td class="pin">J4.50</td><td>L2P_1 · bank1</td><td>400 MHz 差分 P</td><td>飞线<b>源</b>。别用单端探头去量 400 MHz</td></tr>
+        <tr><td class="sig">fwd_p(n)</td><td>B16</td><td class="pin">J4.49</td><td>L2N_1 · bank1</td><td>400 MHz 差分 N</td><td>TD 自动配对，已在 IO 报告里确认</td></tr>
+        <tr><td class="sig">pllin_p</td><td>B14</td><td class="pin">J4.54</td><td>BE19P = GPLL0_CLKIN0 · bank0</td><td>飞线<b>宿</b></td><td>片内已开 100 Ω 差分端接 ⇒ <b>不用外挂电阻</b></td></tr>
+        <tr><td class="sig">pllin_p(n)</td><td>A14</td><td class="pin">J4.53</td><td>BE19N = GPLL0_CLKIN1 · bank0</td><td>飞线<b>宿</b></td><td>同上</td></tr>
+        <tr><td class="sig">probe_lock</td><td>C15</td><td class="pin">J4.48</td><td>L6P_1</td><td>直流高 ≈ 3.3 V</td><td>万用表 DCV。<b>只看它不够</b></td></tr>
+        <tr><td class="sig">probe_c0_div</td><td>C16</td><td class="pin">J4.47</td><td>L6N_1</td><td>390.6 kHz</td><td>⚠ <b>这一版读数无效</b>，见「构建复核」</td></tr>
+        <tr><td class="sig">probe_c1_div</td><td>E15</td><td class="pin">J4.46</td><td>L7P_1</td><td>195.3 kHz</td><td>示波器 / 频率计。<b>主判据</b></td></tr>
+        <tr><td class="sig">probe_ref_div</td><td>E16</td><td class="pin">J4.45</td><td>L7N_1</td><td>48.83 kHz</td><td><b>先量它</b>——同一量具下的基准对照</td></tr>
+        <tr><td class="sig">probe_ok</td><td>F15</td><td class="pin">J4.44</td><td>L8P_1</td><td>直流高 = 数秒法通过</td><td>万用表 DCV</td></tr>
+        <tr><td class="sig">rstn_i</td><td>F16</td><td class="pin">J4.43</td><td>L8N_1</td><td>内部 PULLUP，不接也行</td><td><b>短一下到 J4.41/42 = 重跑一次数秒法</b></td></tr>
+        <tr><td class="sig">GND</td><td>—</td><td class="pin">J4.41/42 · 59/60 · 19/20 · 1/2</td><td>—</td><td>0 V</td><td><b>41/42 就挨着 F15/F16</b>，所有探针的地夹都夹这里</td></tr>
+        <tr><td class="sig">clk50</td><td>H3</td><td class="pin">不上排针</td><td>板载 50 MHz 晶振</td><td>—</td><td>只能通过 <code>probe_ref_div</code> 间接看</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="note">
+      <span class="hd">怎么分清 J4 的两排</span>
+      <b>J4 的偶数脚全是差分対的 P 端，奇数脚全是 N 端</b>（除四対 GND 外，原理图 60 个脚逐个核过，无例外）。
+      你飞线焊 <code>B15</code> 的那一排就是偶数排，焊 <code>B16</code> 的那一排就是奇数排——不用再去找方形焊盘。
+      另外<b>板背面丝印直接印了球号</b>（<code>F15 F16</code> / <code>E15 E16</code> / <code>C15 C16</code> / <code>B15 B16</code> 连成一片，紧挨着一対 <code>G G</code>），照着读就行，不必数脚。
+    </div>
+
+    <div class="note caution">
+      <span class="hd">从 GND 41/42 往 59/60 方向数，脚序是这样</span>
+      <code>41/42=GND</code> → <code>43/44=F16/F15</code> → <code>45/46=E16/E15</code> → <code>47/48=C16/C15</code> →
+      <code>49/50=B16/B15</code> → <code>51/52=D12/D11</code> → <code>53/54=A14/B14</code> →
+      <code>55/56=A13/C13</code> → <code>57/58=A12/B12</code> → <code>59/60=GND</code>。
+      每组里<b>奇数在前、偶数在后</b>。
+      <br><span class="sm">（唯一一处三份资料不一致的是 J4.11/12：原理图与丝印都写 <code>L13/L12</code>，厂家 demo 的 <code>top.adc</code> 却写 <code>M14/M13</code>。<b>与本实验无关</b>，记一笔备查。）</span>
+    </div>
+
+    <h3>② 下载步骤（下 SRAM，掉电丢失）</h3>
+
+    <p class="why"><b>板上的硬件事实</b>（用户手册 rev1.0 §4.7 + 原理图第 6 页）：JTAG 口位号 <code>J2</code>，
+    10 针 2.54 mm DC3 带防呆缺口公座，板面丝印写着 <code>JTAG</code>，在 SDRAM 右边、<code>KEY</code> 按键上方。
+    脚位：<b>1=TCK · 2=GND · 3=TDO · 4=VCC(3.3 V) · 5=TMS · 6/7/8=NC · 9=TDI · 10=GND</b>（四根信号各串 33 Ω）。
+    FPGA 侧 <code>TCK=C14 · TDO=E14 · TMS=A15 · TDI=C12</code>，是专用脚，<b>不占 J3/J4 任何资源</b>。</p>
+
+    <p class="why"><b>没有跳线、没有拨码。</b> 配置模式由 <code>MSEL0/MSEL1</code>(球 T11 / N11) 上的 0402 电阻决定，
+    出厂默认 <b>MSPI</b>；手册原话「如需改 Slave Serial 下载需要改变启动模式，在 pcb 上替换一颗 0402 电阻即可」。
+    <b>本实验用 JTAG 下 SRAM，与 MSEL 无关，一个电阻都不用动。</b></p>
+
+    <ul class="list">
+      <li><label class="row"><input type="checkbox" data-k="p5a"><span class="txt">
+        <b>装下载器驱动</b>
+        <span class="why">下载器是<b>安路 USB Cable</b>。TD 的 <code>driver/</code> 下有两套，按设备管理器里认到什么选：
+        插上后显示 <code>EZ-USB FX2</code> / 未知 Cypress 设备 ⇒ 用 <code>driver\dl-cable\win10</code>（装完显示 <b>Anlogic usb cable v0.1</b>，VID_0547&amp;PID_1002）；
+        如果是新款 <b>AL-Link / AL-Link Mini / Pro / Net</b> ⇒ 用 <code>driver\al-link\win10\x64</code>（VID_336C）。
+        路径：<code>C:\Anlogic\TD_Release_2026.1_SP2.200.067\driver\</code>。装完重启一次。</span>
+      </span></label></li>
+
+      <li><label class="row"><input type="checkbox" data-k="p5b"><span class="txt">
+        <b>接线上电</b>
+        <span class="why">下载器 10 针排线插 <code>J2</code>（有防呆缺口，插不反）。板子供电：Mini USB（<code>J1</code>，兼 USB-UART）或从 J3/J4 的 5 V 脚给 <b>5 V/2 A</b>。
+        上电后 <b>POWER 灯（D2）常亮</b>——不亮就别往下走。</span>
+      </span></label></li>
+
+      <li><label class="row"><input type="checkbox" data-k="p5c"><span class="txt">
+        <b>飞线：J4.50/49 → J4.54/53</b>
+        <span class="why"><code>B15(50) → B14(54)</code> 是 P 対 P，<code>B16(49) → A14(53)</code> 是 N 対 N。
+        <b>短、等长，再从 J4.41/42 或 59/60 拉一根地跟着走。</b>
+        接收端片内已开 100 Ω 差分端接，<b>不要再外挂端接电阻</b>。</span>
+      </span></label></li>
+
+      <li><label class="row"><input type="checkbox" data-k="p5d"><span class="txt">
+        <b>开 TD，用 JTAG 模式下 bit</b>
+        <span class="why">跑 <code>C:\Anlogic\TD_Release_2026.1_SP2.200.067\bin\td.exe</code>。
+        下载入口在 <b>FPGA Flow 面板 → 双击 <code>Download</code></b>（TD_User_Guide V5.0.3 §7.1；新版 TD 也可从 <code>Tools</code> 菜单进同一个窗口）。
+        在窗口里 <b>Add</b> 加文件，选
+        <code>D:\claude_workspace\pov3d\dr1v90\eg4_pll400\soc_prj\fpga_prj_Runs\phy_1\fpga_prj.bit</code>，
+        模式选 <b><code>JTAG</code></b>（手册 §7.3：「下载的 bit 文件不会被保存到 flash 中…电路板断电后配置位信息就完全丢失」——正是我们要的），
+        速度保持默认 1 Mbps，点 <b>Run</b>。</span>
+      </span></label></li>
+
+      <li><label class="row"><input type="checkbox" data-k="p5e"><span class="txt">
+        <b>确认真下进去了</b>
+        <span class="why">TD 弹「下载成功」；<b>更硬的证据是量 <code>probe_ref_div</code>(J4.45) 有没有 48.83 kHz</b>——
+        它只依赖 H3 晶振 + 片内计数器，与飞线和 PLL_0 完全无关，是「bit 进去了 + 量具是好的」的双重证明。
+        报 <code>No hardware</code> ⇒ 驱动没装好；报 <code>USB Cable is connected</code> ⇒ 板子没上电或没认到芯片，先查电源再点 Refresh。</span>
+      </span></label></li>
+
+      <li><label class="row"><input type="checkbox" data-k="p5f"><span class="txt">
+        <b>🔴 每次动过飞线，都要重跑一次数秒法</b>
+        <span class="why"><code>probe_ok</code> 的 1 秒窗口是<b>一次性</b>的：复位释放后只测一次，之后永远不再更新。
+        飞线是上电后才接上的话，窗口早就跑完了，<code>probe_ok</code> 会一直是 0 <b>而这不代表实验失败</b>。
+        重测办法：把 <code>rstn_i</code>(J4.43) 短一下到旁边的 GND(J4.41/42) 再松开，或者直接断电重上。</span>
+      </span></label></li>
+    </ul>
+
+    <h3>③ 构建复核（2026-09-08 实跑，不是估）</h3>
+
+    <p class="why">读的是 <code>eg4_pll400/results/build.txt</code> 与
+    <code>soc_prj/fpga_prj_Runs/phy_1/final_timing.rpt</code> 的 Clock Summary。<b>五条时钟全部对上：</b></p>
+
+    <div class="scroll">
+    <table>
+      <thead><tr><th>时钟</th><th>TD 实测</th><th>期望</th><th></th><th>TD 自己推出来的分频关系</th></tr></thead>
+      <tbody>
+        <tr><td class="sig">clk50</td><td class="pin">50.000 MHz</td><td>50</td><td>✅</td><td>板载晶振，主时钟</td></tr>
+        <tr><td class="sig">pllin</td><td class="pin">400.000 MHz</td><td>400</td><td>✅</td><td>飞线回来的，主时钟</td></tr>
+        <tr><td class="sig">u_pll_a.clkc[0]</td><td class="pin">400.000 MHz</td><td>400</td><td>✅</td><td><code>clk50 ×8</code> ⇒ 印证 <code>FEEDBK_PATH=CLKC0_EXT</code> 下 VCO = 50×8×2 = 800，C0 = 400</td></tr>
+        <tr><td class="sig">u_pll_b.clkc[0]</td><td class="pin">400.000 MHz</td><td>400</td><td>✅</td><td><code>pllin ×1</code></td></tr>
+        <tr><td class="sig">u_pll_b.clkc[1]</td><td class="pin">200.000 MHz</td><td>200</td><td>✅</td><td><code>pllin ÷2</code>，相位 90°</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p class="why"><b>IO 也逐条核过</b>（<code>fpga_prj_phy.area</code> 的 Detailed IO Report）：
+    <code>clk50=H3 LVCMOS33</code>、<code>pllin_p=B14 / (n)=A14 LVDS25 DiffResistor=100</code>、
+    <code>fwd_p=B15 / (n)=B16 LVDS33 PackReg=DDRX1</code>、五个探针 <code>LVCMOS33 DRIVESTRENGTH=8</code>，
+    <b>与 <code>adc/pll400.adc</code> 写的完全一致，TD 没有偷偷改过任何一条</b>。综合阶段 0 个 latch、0 个 error。</p>
+
+    <div class="note danger">
+      <span class="hd">🔴 唯一一处不干净：probe_c0_div 的读数这一版不算数</span>
+      <code>u_pll_b.clkc[0] → u_pll_b.clkc[0]</code> 这个路径组 <b>setup 差 0.635 ns，11 个端点里 8 个违例，Fmax 只有 318.98 MHz &lt; 400 MHz</b>。
+      违例路径全部落在 <code>d_c0_reg[3] → d_c0_reg[7]</code> 与 <code>d_c0_reg[3] → probe_c0_div</code> 的进位链上——
+      也就是<b>那个直接挂在 400 MHz 上的 10 位二进制计数器跑不动 400 MHz</b>。
+      <strong>后果：<code>probe_c0_div</code>(J4.47) 量出来的频率可能偏低或不稳，但这是计数器的问题，不是 PLL 的问题。</strong>
+      好在它是<b>孤立</b>的——<code>d_c0</code> 只驱动这一个脚，不影响任何其它判据：
+      <code>probe_c1_div</code>（200 MHz 域，0 违例，Fmax 225 MHz）、<code>probe_ref_div</code>（50 MHz 域，0 违例）、
+      <code>probe_ok</code> 的数秒逻辑（同在 200 MHz 域，0 违例）、<code>probe_lock</code>（PLL 直出，无时序）<b>全部干净</b>。
+      ⇒ <b>照常上板，只是把 <code>probe_c0_div</code> 从判据里划掉</b>，以 <code>probe_c1_div</code> + <code>probe_ok</code> 为准。
+      要修的话把 <code>d_c0</code> 拆成「400 MHz 上一级单比特翻转 + 200 MHz 上 9 位计数」即可，但那要重跑一次 TD。
+    </div>
+
+    <div class="note caution">
+      <span class="hd">另外两条违例是假的，不用管</span>
+      <code>clk50 → u_pll_a.clkc[0]</code>（−2.193 ns，1 个端点）是 ODDR 的<b>异步复位</b>跨域；
+      <code>clk50 → u_pll_b.clkc[1]</code>（−2.006 ns，1 个端点）是数秒法里<b>本来就写了两级同步器</b>的那条 <code>win</code>。
+      两条都是设计上有意的 CDC，功能无风险——只是 <code>timing.sdc</code> 里的
+      <code>set_clock_groups</code> 只声明了 <code>clk50</code> 与 <code>pllin</code> 异步，没有传播到 PLL 派生出来的时钟。
+      <b>要清报告的话该补 <code>set_false_path</code>，不是改设计。</b>
+    </div>
+
+    <h3>④ 判读决策表 · 量到什么 ⇒ 结论 ⇒ 下一步</h3>
+
+    <div class="scroll">
+    <table>
+      <thead><tr><th>量到什么</th><th>结论</th><th>下一步做什么</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>ref_div</code>=48.83 k · <code>c1_div</code>=195.3 k · <code>lock</code> 高 · <code>ok</code> 高</td>
+          <td><b>✅ PLL 的 refclk 脚吃得下 400 MHz</b></td>
+          <td><b>转发时钟方案 A 定案，PCB 可以开工。</b>把结论与本页脚号一起写回 <code>bridge_clk.v</code> 的注释，
+              并把「refclk 上限查不到出处」这条未知数从风险表里划掉。</td>
+        </tr>
+        <tr>
+          <td><code>ref_div</code> 就不是 48.83 kHz（或压根没波形）</td>
+          <td><b>量具 / 供电 / 下载这一层就断了，后面全部读数无效</b></td>
+          <td>这是基准对照，它不对说明问题在 PLL 之前。逐条排：POWER 灯 D2 亮否 → TD 是否真报下载成功 →
+              探头/万用表档位与地夹（地夹夹 J4.41/42）→ <b>量的是不是 J4.45</b>（数错脚最常见）。
+              <b>这一条与飞线、与 PLL_0 完全无关</b>，别去动飞线。</td>
+        </tr>
+        <tr>
+          <td><code>ref_div</code> 对，但 <code>lock</code> 一直低</td>
+          <td>PLL_0 没锁上 —— <b>但先别下「吃不了 400」的结论</b></td>
+          <td>按顺序排三层：<b>(a)</b> 发送侧有没有信号——量 <code>B15/B16</code>(J4.50/49) 対间有没有约 350 mV 的摆幅（差分探头，或两根单端相减）。
+              没有 ⇒ 是 PLL_A / ODDR / LVDS33 输出侧的问题，<b>不是本实验要回答的那个问题</b>。
+              <b>(b)</b> 飞线 P/N 有没有接反（50→54、49→53）、有没有跟一根地。
+              <b>(c)</b> a、b 都正常还是不锁 ⇒ <b>这就是答案：refclk 输入脚吃不了 400 MHz</b> ⇒ 走下面的退路。</td>
+        </tr>
+        <tr>
+          <td><code>lock</code> 高，但 <code>c1_div</code> ≠ 195.3 kHz</td>
+          <td><b>锁在错误的分频比上</b>（extlock 高不代表频率对）</td>
+          <td>先查 <code>FEEDBK_PATH</code>：<code>CLKC0_EXT</code> ⇒ <b>VCO = PFD × FBCLK_DIV × CLKC0_DIV</b>（反馈取自 C0 分频<b>之后</b>）。
+              把实测频率 ÷ 195.3 kHz 得到的倍数反推是哪一级配错——比如读到 390.6 kHz（2×）就是把反馈点看成了 C0 分频<b>之前</b>。
+              这条 09-07 看错过一次。</td>
+        </tr>
+        <tr>
+          <td><code>lock</code> 高、<code>c1_div</code>=195.3 kHz，但 <code>ok</code> 低</td>
+          <td>频率落在 ±0.1% 外，或者<b>窗口在 PLL 锁上之前就跑完了</b></td>
+          <td><b>先重测</b>：把 J4.43 短一下 GND 再松开（数秒法是一次性的，飞线后接会必然导致 ok=0）。
+              重测仍低 ⇒ 是精度/抖动问题，<b>不是「能不能吃 400」的问题</b>——
+              用 TD IP Generator 按 <code>FIN=100 / VCO=800</code> 重生成环路参数
+              （<code>GMC_GAIN / ICP_CURRENT / KVCO / LPF_CAPACITOR / LPF_RESISTOR</code> 现在是照抄厂家实例的）。</td>
+        </tr>
+        <tr>
+          <td><code>c0_div</code> 不对，但 <code>c1_div</code> 对</td>
+          <td><b>不是 PLL 的问题</b> —— 是这一版 bit 的已知缺陷</td>
+          <td>见上面的构建复核：<code>d_c0</code> 那个 400 MHz 计数器 setup 差 0.635 ns。<b>忽略 <code>c0_div</code>，按 <code>c1_div</code> + <code>ok</code> 判。</b></td>
+        </tr>
+        <tr>
+          <td>五个探针脚全都不动，一点输出都没有</td>
+          <td>多半根本没配置成功</td>
+          <td>按怀疑度排：<b>①</b> bit 没下进去（TD 有没有真弹成功？重下一次）；
+              <b>②</b> 板子没上电 / POWER 灯不亮；
+              <b>③</b> 量错排——J4 的偶数排是 P、奇数排是 N，探针 <code>lock/ok</code> 在偶数排，<code>c0_div/ref_div</code> 在奇数排；
+              <b>④</b> 地没共（万用表的黑表笔必须在 J4.41/42 这类 GND 脚上，不是浮空）。
+              <b>注意：飞线接反或没接，只会让 <code>lock/c0_div/c1_div/ok</code> 死，<code>ref_div</code> 照样有 48.83 kHz</b>——
+              所以「全都不动」一定不是飞线的锅。</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3>失败了怎么办（退路已经准备好）</h3>
+    <p class="why">让 DR1 改发 <b>200 MHz</b>（<code>uplink_tx_frame.v</code> 的
+    <code>fwd_clk</code> 由 <code>4'b0101</code> 改 <code>4'b0011</code>），桥片侧只需把
+    <code>UL_FWD_MHZ</code> 改 200 ⇒ <code>REFCLK_DIV</code> 自动变 2，<b>其余参数一个字不动</b>。
+    这条退路只改一行，代价是转发时钟対上的边沿率减半（对 SI 反而更好），
+    但转发时钟不再是标准半速时钟，需要 C 同步改注释。</p>
+
+    <h2>这块板验得到什么 / 验不到什么</h2>
+  </div>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>✅ 验得到</th><th>🔴 验不到</th></tr></thead>
+    <tbody>
+      <tr><td>CMOS 驱动 + 电阻网络能否在 150 MHz 驱动 2260</td><td><code>LVDS25E</code> 在 VCCIO = 2.5 V 下的<b>原生</b>行为</td></tr>
+      <tr><td>电阻网络的 SI、上升沿、抖动</td><td>3R（而非 5R）的实际衰减</td></tr>
+      <tr><td>2260 认不认这种非标准 LVDS</td><td>24 链规模下的串扰与地弹</td></tr>
+      <tr><td>转发时钟 90° 相位在硅上对不对</td><td>EG4A20 的球位与 bank 划分——<b>256 个球没有一个信号名相同</b>，晶粒在封装里方向都翻转了</td></tr>
+      <tr><td>PLL / IOL / ODDR 原语与时序模型（同一颗 die、同一个 <code>eagle_20.db</code>）</td><td><b>整机规模</b>：E104 只引出 <b>47 対 LVDS / 97 个独立 IO</b>，而设计要 87 対 + 17 单端 = 191 根</td></tr>
+      <tr><td>协议逻辑、lane 对齐、PLL 锁定</td><td><b>800 Mbps 的 SI</b>：出了排针就是 2.54 mm 双排针飞线，平均 7 根信号才配 1 根地——眼图量的是治具不是芯片</td></tr>
+      <tr><td>「释放 JTAG」流程的下半段（烧 flash → 拔 JTAG → PROGRAM_B 重配）</td><td>「<b>释放 JTAG 换 2 対</b>」本身：X20 的 TCK/TDI/TMS/TDO 是纯单端 dedicate 脚，<b>不成対</b>，而且不上排针</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="step-note">最终板换成 <code>LVDS25E</code> + 3R 只是<b>把 Rpd 拿掉、共模由 VCCIO/2 天然给定 1.25 V</b>——是更简单的配置，不是更难的。所以这块板过了，最终板那一段基本就稳了。</p>
+</section>
+
+<footer>
+  <span>E104 · EG4X20BG256 → 最终板 EG4A20BG256I7</span>
+  <span>勾选状态存在本机浏览器，换设备不同步</span>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var KEY = "e104-bench-v1";
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[data-k]'));
+  var done = document.getElementById('done');
+  var total = document.getElementById('total');
+  var fill = document.getElementById('fill');
+
+  function load(){
+    try { return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; }
+    catch(e){ return {}; }
+  }
+  function save(state){
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+  }
+  function paint(){
+    var n = boxes.filter(function(b){ return b.checked; }).length;
+    done.textContent = n;
+    fill.style.width = boxes.length ? (100 * n / boxes.length) + "%" : "0%";
+  }
+
+  total.textContent = boxes.length;
+  var state = load();
+  boxes.forEach(function(b){
+    if (state[b.dataset.k]) b.checked = true;
+    b.addEventListener('change', function(){
+      var s = load();
+      if (b.checked) s[b.dataset.k] = 1; else delete s[b.dataset.k];
+      save(s);
+      paint();
+    });
+  });
+  paint();
+
+  document.getElementById('reset').addEventListener('click', function(){
+    boxes.forEach(function(b){ b.checked = false; });
+    save({});
+    paint();
+  });
+})();
+</script>

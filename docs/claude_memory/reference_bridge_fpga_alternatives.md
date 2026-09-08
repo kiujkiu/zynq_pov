@@ -163,3 +163,74 @@ Efinix Trion T20/T35/T120 (LVDS 硬核方向固定, 全家族 TX 最多 52 対) 
 | 18 | LFCPNX-100 | LUT4 数 | 候选与复核都写 80,000 是 "96k LC ÷ 1.2" 反算 | Lattice 产品页同样只给 96K LC | 两边一致地没有独立出处 |
 
 **关联**: [[project_pov3d_bridge_architecture]] (桥架构与対数账) · [[project_eg4_bridge_verification]] (EG4 三条零余量实测, 2% 出处) · [[reference_anlogic_lineup_pair_counts]] (安路家族対数与 VOCM 通病) · [[reference_vivado_batch_tcl]] (Windows Vivado 无头用法)
+
+
+---
+
+# 🔴 2026-09-04 更正: PH1A60GEG324 的 gearing 是 4:1, 不是"未知"
+
+【DS900 V1.6.1 第 261–264 行】
+> HR I/O 支持 DDRx1 和 DDRx2
+> HP I/O 支持 SERDESx1、SERDESx2、SERDESx3.5、SERDESx4、SERDESx5
+
+8:1(x4) 与 10:1(x5) **只在 HP bank 有**。而【表 1-1 / 1-2】:
+
+| 器件 | 封装 | HR | **HP** |
+|---|---|---|---|
+| **PH1A60** | GEG324 | 211 (100 対) | **0** |
+| PH1A90 | SEG324 | 98 (47) | 50 (24) |
+
+**PH1A60 的 HP I/O 是零, 全部 100 対在 HR ⇒ 只有 DDRx2 = 4:1, 与 EG4 同构。**
+要 HP 得上 PH1A90, 但 SEG324 只有 47+24 = 71 対 < 93, 不够。
+
+⇒ 之前"PH1A60 三条轴都有余量"要**收回时序那一条**: 対数与 LUT 确实宽裕,
+但 800M 时 fabric 同样要 200 MHz。**真正靠架构抹掉这条轴的只有 GW5A 与 XC7S50。**
+
+## 但 PH1A60 的 4:1 可能不疼(推断, 待综合)
+
+【DS900 表 3-2-1, -2 档】PH1A60 **GCLK 628 MHz / IOCLK 680 / LCLK 375**。
+EG4 那条 5 级路径实测只到 204 MHz(55nm fabric 天花板); PH1A 时钟网络能跑 3×,
+同一条路径大概率轻松过 200。**但这是推断** —— 本地有 `ph1_60.db`, 直接综合 uplink_rx 就有实数。
+
+## 顺带: TD 2026.1 全部安路族的 DDR 原语最高档都是 x2
+
+grep 工具串: EG / DR1 / PH1 / PH2 / EF2~5 / AL / SF1 带前缀的原语全部只到 `*DDRx2` / `x2l`。
+无前缀的 `LOGIC_ODDRx4` / `x3P` 存在但归属不明(器件库是压缩的读不出)。
+**EG4 4:1 有手册背书**: DS300 §2.6 "PAD 与 FPGA 内部逻辑速率比为 4:1", UG301 只到 ODDRx2。
+
+相关: [[project_pov3d_uplink_rate_pin_budget]] [[reference_eg4s20_bank_voltage_and_lvds33]]
+
+
+---
+
+# ✅ 2026-09-04 晚: PH1A60 的 4:1 实测**不疼** —— 上面"收回时序那条"再收回来
+
+【实测·uplink_rx v2 同一份 RTL, PH1A60GEG324, TD 2026.1 speed 3, 带完整 IO 层 (PLL→sclk, LCLK_V2÷2→pclk, IDDRx2×13)】
+
+| pclk | SWNS | Fmax | 违例 | 级数 |
+|---|---|---|---|---|
+| **200** | **+1.488** | 284.7 | 0 | **3** |
+| 250 | +0.505 | 286.1 | 0 | 3 |
+| 300 | +0.194 | 318.7 | 0 | 3 |
+| 350 | +0.045 | 355.7 | 0 | 3 |
+| 400 | -0.117 | 382.1 | 56 | 3 |
+
+EG4S20 同 RTL: +0.102 / 204.2 / 5 级(擦线)。
+⇒ PH1A60 在 800 Mbps 档 **余 30%**, fabric 天花板 ≈ 380 MHz pclk = 需求的 1.9×。
+**4:1 不是问题, 55nm 才是** —— 28nm 把它抹平了。再往上是 IO 限制 (LVDS25 HR 1250 / IOCLK 680), 不是 fabric。
+
+## PH1 特有的坑 (build_ph1.sh 已处理, commit b4f5802)
+- TD 的 `ph1_60.db` 只认 `-speed 3`, DS900 却说 PH1A60 只有 -2 —— 矛盾查不到解释; 若 3 是慢档, 真 -2 只会更好
+- **PH1 没有 BUFIO**, 用 `PH1_PHY_LCLK_V2` (`DIV` 是字符串 "2"); `PH1_PHY_LCLK` 是 A100 专用
+- `PH1_LOGIC_IDDRx2` 端口与 `EG_LOGIC_IDDRx2` 逐字相同; `PH1_PHY_PLL` 参数表 = `DR1_PHY_PLL`
+- `derive_pll_clocks` 已 obsolete → `derive_clocks`, 且它**把 LCLK ÷2 推对了**
+- 没锁位置的 IO 让 bitgen 报 BIT-8123 **ERROR** (EG4 只警告)
+- LUT 口径: PH1 报 LUT6 位点 (39,360 = 70,848÷1.8), 与 EG4 `#lut` 不直接可比
+- ⚠ 待上板: DS900 "LCLK 375 MHz" 是分频器输入 (sclk 400) 还是本地时钟网 (pclk 200) 的上限, 文档没说 TD 不告警
+
+## 同日 EG4 侧的反向发现
+DS300 表 3-2-2 PLL 周期抖动 **160 ps p-p**, 而 EG4 那次 +0.102 的 SDC **没加 set_clock_uncertainty**
+⇒ 算上抖动 200 MHz 是 **零或负**; 700M (175 MHz) 加抖动后等效 180 MHz, 对 204.2 余 13%。
+(实验在跑, 结果见 [[project_pov3d_uplink_rate_pin_budget]])
+
+相关: [[project_pov3d_uplink_rate_pin_budget]]

@@ -274,3 +274,127 @@ RUN-1001 :     key_i    |   LVCMOS33
 TD 把 `F10` 与 `B14`(被测的 PLL 输入脚)划进**同一个 bank 3**。
 ⇒ 要留按键就得改被测对象的 IOSTANDARD ⇒ 放弃按键。
 **在实验板上加一个"便利功能"之前, 先查它和被测对象是不是同一个 TD-bank。**
+
+## 🔴 "PLL0 有没有被占用" —— 别读 `PLL setting string`, 去读布线后的物理站点
+
+2026-09-08, `dr1v90/eg4_2260_e104` (E104 / EG4X20BG256) 实测。
+
+**背景**: 该工程把 `BE19`(B14/A14, 复用 `GPLL0_CLKIN`) 与 `BE20`(D11/D12, 复用 `GPLL0_OUT`)
+当普通 IO 用掉了 ⇒ 设计里的 PLL **必须**落在 PLL1/2/3, 综合后要能证明这一点。
+
+**❌ 错误做法**: 看 bitgen 日志最后那行
+```
+BIT-1004 : PLL setting string = 1000
+```
+它只有 4 个 0/1, **位序没有任何文档**。按直觉"首位 = PLL0"读, 这一版会被判成"占用了 PLL0"——
+**假警报**, 而且假警报的方向最坏: 会让人去改一个本来没问题的设计。
+
+**✅ 正确做法: 从布线后的 db 直接读实例的物理站点, 并且先用一个已知答案的工程把量具标定好。**
+
+```tcl
+# 在 <prj>/fpga_prj_Runs/phy_1/ 里跑 (只读, 不导出任何东西)
+import_device eagle_20.db -package EG4X20BG256
+open_project {fpga_prj.prj} -noanalyze
+import_db {fpga_prj_pr.db}
+foreach c [get_cells *] {
+  if {[string match -nocase "*u_pll*" $c] && ![string match -nocase "*bufg*" $c]} {
+    puts "PLLSITE: $c ROW=[get_property PLACED_ROW $c] COL=[get_property PLACED_COL $c] REF=[get_property REF_NAME $c]"
+  }
+}
+exit
+```
+(`td_commands_prompt.exe q.tcl < nul`; `get_cells` / `get_property` / `list_property` 都在 TD 的
+tcl 里, 用 `puts [lsort [info commands]]` 可以列全。)
+
+**标定 —— 这一步才是关键**: 拿 `dr1v90/eg4_pll400` 当基准, 它有两颗 PLL, 其中 `u_pll_b` 的
+refclk 走 **B14 = `GPLL0_CLKIN` 专用输入** ⇒ 它**必然**是 PLL0。实测:
+
+| 工程 / 实例 | refclk 来源 | 站点 |
+|---|---|---|
+| `eg4_pll400` `u_pll_b` | B14 = `GPLL0_CLKIN` ⇒ **必是 PLL0** | **ROW=0 COL=0** |
+| `eg4_pll400` `u_pll_a` | H3 (板载 50 MHz 晶振) | ROW=0 COL=40 |
+| `eg4_2260_e104` (100/150 两档 × 4 个相位版, 8 次跑) | H3 | **ROW=0 COL=40** ⇒ 不是 PLL0 ✅ |
+
+⇒ **`ROW=0 COL=0` 就是 PLL0。**
+⇒ 顺带把那个字符串的位序也定死了: `eg4_pll400` 两颗 = `1001`, `eg4_2260_e104` 只有 COL=40 那颗
+= `1000` ⇒ **首位是 COL=40 那颗, 末位才是 PLL0**。想用它当旁证可以, 但别拿它当判据。
+
+## 这条真正的教训: 又一次是"先证明量具自己对"救了场
+
+判据本身是可以骗人的。`PLL setting string` 看起来像个现成的判据 —— 4 个位、名字就叫 PLL、
+一眼就能读 —— 但它**位序未知**, 而未知的位序会把结论**整个翻过来**。
+把它换成"物理站点"并不是因为站点更精确, 而是因为**站点可以用一个答案已知的工程标定**
+(refclk 走专用脚 ⇒ 必是 PLL0), 而那个字符串没有任何东西可以标定它。
+
+⇒ **判据要先能被标定, 才配当判据。** 同一条教训在本仓已经出现过至少三次:
+[[feedback_criterion_must_not_contain_its_answer]]、
+[[feedback_changed_instrument_and_design_together]]、
+以及 `reference_eg4_iol_phase_measurable` 里那个"TD 把 IOCLK 插入延迟记成 0.000 ns 且标 unrouted"
+—— 那次也是一个**看起来是数据、其实是占位符**的值差点让人选错方案。
+
+相关: [[reference_eg4x20_vs_eg4a20_portability]] [[reference_anlogic_dr1_fs03_eval]]
+
+# 🔴 slack 不能做减法 (2026-09-08, 我自己犯的)
+
+## 犯法现场
+
+`eg4_2260_e104` 的 SDC 漏了 `set_clock_uncertainty`(桥片 `build.sh` 默认带 `UNCERT=0.160`)。
+我发现这一点是**对的** —— 那意味着两个工程**不是同一把尺子**。但接下来我做了个减法:
+
+```
+它报的       150 MHz  SWNS = +0.107 ns   (无 sdc uncertainty, TD 默认 0.100)
+我算的       +0.107 − 0.160 = −0.053 ns  ⇒ "加上抖动就是违例"    🔴 错
+重跑出来的   +0.367 ns, 零违例                                    ✅ 对
+```
+
+**收紧约束, 余量反而变大。**
+
+## 为什么
+
+**TD 的布局布线是朝着约束优化的 —— 约束一紧它就更用力。**
+`+0.107` 是「**满足即停**」的 slack, 不是 Fmax, **不是可以拿来做减法的量**。
+两个数不是同一把尺子量的同一个东西。
+
+⇒ **要知道加了不确定度之后什么样, 唯一办法是把约束写进 SDC 重跑。** 20 分钟, 省不掉。
+
+⚠ 我引的那条先例(`uplink_rx` 补上 160 ps 抖动后 `+0.102 → −0.056`, 见
+`project_pov3d_eg4a20bg256_bridge_selection` §一 证据 1)之所以成立,
+**正因为当初也是重跑出来的**。我**抄了它的形式, 丢了它的方法**。
+
+## 第二条: 反证可能就在你自己手里
+
+同一轮我还编了个因果: 「4:1 相位 mux + 多一级 BUFG 压过了抖动线」。
+但**上一条消息里我自己刚转述过**: 转发时钟改成自由跑、**`ck_fwd` 域里一个寄存器都没有**。
+**一个没有寄存器的时钟域不可能出现在任何 setup 路径上。**
+两句话自相矛盾, 我没察觉。(实际最差路径两版都在 `u_tx` 里, `+0.298 → +0.107` 是布线噪声。)
+
+⇒ **下断言之前, 先跟自己前面几句话对一遍。** 尤其是"我刚说过 X 域没有寄存器"这类
+**结构性事实** —— 它们能直接否掉一整类因果假设, 成本是零。
+
+## ⇒ 落地成判据, 别靠记性
+
+`build.sh` 的判据里直接打出这一行, 并写明期望值:
+```
+Clock Uncertainty : 0.260ns (sdc uncertainty: 0.160ns, default uncertainty: 0.100ns)
+                                              ^^^^^ 不是 0.160 就是约束没生效, SWNS 是假余量
+```
+⇒ **约束没生效当场看得出来, 不用事后猜。** 这和"先证明量具自己对"是同一条,
+只不过这次量的是**约束本身**。
+
+`TAG` 里带口径(`d150_p0_u0.160h0_poultra`), **不同口径的结果不放在同一个名字下比**。
+
+## 顺带两条实测(同一轮)
+
+- `UNCERT_HOLD` **只改分析不改设计**: `UNCERT_HOLD=0.160` 与 `=0` 两版
+  `Bitstream CRC` **逐位相同**, 只是 HWNS 从 +0.160 变 +0.000。
+  ⇒ 周期抖动加在同沿 hold 上是方法学过保守, 但**即便按最保守口径查也照样零违例**时,
+  就不必再争这一条。
+- `PHYS_OPT=ultra` 在这个小设计里**反而略差**(+0.510 → +0.367, 只占 3% 面积, 是布局噪声)。
+  仍**默认常开** —— 它防的是 seed 波动, 不是给这一次跑用的
+  (见 `project_pov3d_eg4_200mhz_solved`: `PLACE_SEED=3` 不开掉到 −0.310, 开了回 +0.132)。
+
+## 🔴🔴 一条**显眼的未了项**: 抖动只建模了手册那一项
+
+`UNCERT=0.160` 来自 DS300 表 3-2-2 的 **PLL 输出周期抖动 160 ps p-p**(fOUT > 100 MHz)。
+**板级电源噪声、晶振自身抖动、5R 电阻网络的边沿抖动, 一项都没进预算。**
+⇒ **"两档零违例"是工具侧结论, 不是上板结论。** 别让那个 ✅ 盖住这条。

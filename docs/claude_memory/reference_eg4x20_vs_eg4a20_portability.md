@@ -86,3 +86,48 @@ metadata:
 台架工单: `zynq_pov/docs/E104_点亮接线单.html`(可勾选) · 接线方案: `E104_2260_接线方案.md`
 相关: [[project_pov3d_e104_eval_board_plan]] [[project_pov3d_eg4a20bg256_bridge_selection]]
 [[reference_eg4s20_bank_voltage_and_lvds33]] [[project_eg4_bridge_verification]]
+
+## 🔴 又一处 X20 与 A20 不同: `HSWAPEN` 是**引脚**还是**寄存器位** (2026-09-08 查证)
+
+决定「**配置期普通 IO 是 High-Z 还是被上拉**」, 而这条直接决定**外部下拉要多强** ——
+是要落到焊台上的数。
+
+| | `HSWAPEN` 形态 | 默认值 | ⇒ 配置期 `Others` |
+|---|---|---|---|
+| **EG4A20BG256** | **控制寄存器 `CTRL[31]`**(只能由位流改写) | **1** | High-Z |
+| **EG4X20BG256** | **一个 I/O 引脚**(`C4 = IO_BE1P_HSWAPEN_0`), 默认弱上拉 | **1** | High-Z |
+
+DS300 表 2-8-8 有**两列**, 极易读错:
+```
+Pin      HSWAPEN=0(enable)    HSWAPEN=1(disable)   Post-configuration
+Others   Pull-up to Vccio     High-Z               User I/O
+```
+⚠ **我 2026-09-08 就读错过一次** —— 只看了 `HSWAPEN=0` 那一列, 断言"配置期普通 IO 被上拉到
+Vccio", 据此要求外部下拉必须压过 250 µA 内部上拉(⇒ 1 kΩ)。**默认是 `=1` 那一列, 是 High-Z。**
+
+### E104 板上的实际接法(更要紧)
+
+`C4` 在 E104 上**接到了 SDRAM 的 `DQ2`**(原理图网名 `NLSDRAM0DQ2`), **不是接成 strap**。
+⇒ 配置期 SDRAM 未初始化、DQ 无人驱动 ⇒ `HSWAPEN` **浮空** ⇒ 内部弱上拉赢 ⇒ **=1 = disable**
+⇒ **E104 上普通 IO 在配置期确实是 High-Z。**
+
+### ⇒ 对"用普通 IO 做电源使能"的两条结论
+
+1. **High-Z 下外部下拉不必压过内部上拉** —— 10 k~100 kΩ 都够, **不需要 1 kΩ**。
+   (1 kΩ 那个值是 MSEL 那条的: MSEL 在两列里**都是 Pull-up to Vccio**, 必须压过 250 µA,
+    `10k×250µA = 2.5 V` / `4.7k×250µA = 1.175 V` 都高于 `VIL max 0.7 V` ⇒ 上限 2.8 kΩ。
+    **两件事别混。**)
+2. 🔴 **但 High-Z 意味着脚是真浮空的, 全靠那只外部下拉** ⇒ **下拉必须真的存在且接地良好**,
+   这条比阻值重要。⚠ 且 E104 上 `HSWAPEN` 挂在 SDRAM DQ2 上,
+   **若配置期有人把 DQ2 拉低, `HSWAPEN` 就变 0, 全部 IO 转为上拉** —— 概率低但不是零。
+
+### 顺带: 配置期**不受控制**的引脚(会输出高/低脉冲)
+
+DS300 表 2-8-8 后附的列表, 设成 output/inout 时会在加载期输出脉冲:
+```
+EG4X20BG256   M15,M16,L12,K15,P16,L13,K1,L14,T13,R15,L16,L1,T6,P11,L10,M10,N9,P9
+EG4A20BG256   L7,M6,P1,P2,C14,G5,A5,A13,C6,F7,A7,A3,B4,A4,D5,D6
+```
+⇒ **电源使能、屏复位、I2C 这类"配置期必须确定"的信号, 绝不能落在这些球上。**
+(`eg4_2260_e104` 用的 `M12` 不在列表内 ✅; 输出脚 `H4/F15/E16/E15/C16/D11/B12/C13/B14` 也都不在。
+ `K15` 在列表里但本工程用作**输入**(相位跳线), 不受影响。)

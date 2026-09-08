@@ -286,6 +286,127 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--rule);font-si
   </div>
   <p class="step-note">bank0 在 J4 上有 4 対连续仿真対（J4.51~58），一颗 2260 正好要 4 対。<b>全走仿真対 ⇒ 完全不碰 bank1，不用拆焊任何板载元件。</b></p>
 
+  <h3>先做一块小转接板 —— 装配指南</h3>
+
+  <p class="step-note">要做的不是「一根飞线」，是<b>一块过 20 只电阻的小转接板</b>。三根单端信号不进这块板。</p>
+
+  <div class="scroll"><pre>
+E104 排针 J4 ──(8 根线)──►  [ 小转接板 : 20 只电阻 ]  ──(8 根线)──►  灯板 J1
+                                                    
+另外 3 根单端 (I_SYNC / ACK_O / DCLK) ────────── 直接从 J4 拉到 J1, 不进小板
+</pre></div>
+
+  <h4>料表</h4>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>东西</th><th>规格</th><th>数量</th></tr></thead>
+    <tbody>
+      <tr><td>万能板（洞洞板）</td><td>2.54 mm 间距，<b>5×7 cm 就够</b></td><td>1 块</td></tr>
+      <tr><td><b>电阻</b></td><td>🔴 <b>直插金属膜 1%，1/4 W —— 不要 0402 贴片</b><span class="sm">（0402 是最终 PCB 的规格，台架治具用直插，腿能弯能量能拆）</span></td><td><code>150Ω</code>×8 · <code>430Ω</code>×8 · <code>140Ω</code>×4</td></tr>
+      <tr><td>电阻（焊灯板那头）</td><td>同上</td><td><code>100Ω</code>×4</td></tr>
+      <tr><td><b>裸铜线</b></td><td>剪下来的电阻腿就行，或 0.8 mm 实心线</td><td>一根 ≈6 cm</td></tr>
+      <tr><td>杜邦线</td><td>母头（插排针用）</td><td>≈20 根</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>一対 = 一个单元（5 只电阻）</h4>
+  <div class="scroll"><pre>
+   来自 J4 的 P                                      来自 J4 的 N
+        │                                                │
+      [150]  RS                                        [150]  RS
+        │                                                │
+        ├──────────────────[140]  RP────────────────────┤
+        │                                                │
+   ◄────┤  去灯板 J1 (RXP)              去灯板 J1 (RXN)  ├────►
+        │                                                │
+      [430]  Rpd                                       [430]  Rpd
+        │                                                │
+   ═════┴════════════════════════════════════════════════┴═════   GND 裸铜排
+</pre></div>
+
+  <p class="step-note">🔴 <b><code>150</code> 的下端 = <code>140</code> 的一端 = <code>430</code> 的上端 = 去灯板那根线 —— 这四样接在<u>同一个点</u>上</b>（图里那个 <code>├</code>）。
+  <b><code>140</code> 横跨左右两个这样的点，两端都<u>不碰</u>地排</b>；只有 <code>430</code> 的下端落在地排上。</p>
+
+  <h4>四个单元并排，共用一根地排</h4>
+  <div class="scroll"><pre>
+    対0 (时钟)      対1 (D0 蓝)     対2 (D1 绿)     対3 (D2 红)
+   ┌───单元───┐   ┌───单元───┐   ┌───单元───┐   ┌───单元───┐
+   │  P    N  │   │  P    N  │   │  P    N  │   │  P    N  │
+   └──┬────┬──┘   └──┬────┬──┘   └──┬────┬──┘   └──┬────┬──┘
+      │    │         │    │         │    │         │    │
+   ═══╧════╧═════════╧════╧═════════╧════╧═════════╧════╧═══►  两端各引一根线
+                                                              回 J4.59 / J4.60 (GND)
+</pre></div>
+
+  <h4>焊接顺序 —— 照这个顺序，最难的部分变成最容易的</h4>
+  <ul class="list">
+    <li><label class="row"><input type="checkbox" data-k="asm1"><span class="txt"><b>① 先焊那根地排</b><span class="why">裸铜线横着贴在板子中间一整排孔上，<b>每隔几个孔点一下锡</b>让它趴牢。有了这根排，8 只 <code>430Ω</code> 就是「立上去焊一下」，<b>不用一根根扯地线</b> —— <code>Rpd</code> 从最难焊变成最好焊。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="asm2"><span class="txt"><b>② 焊 8 只 <code>430Ω</code></b><span class="why">下端全部落在地排上，上端朝上留腿。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="asm3"><span class="txt"><b>③ 焊 8 只 <code>150Ω</code></b><span class="why">接在 <code>430Ω</code> 的上端继续往上。这个交点就是「节点」。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="asm4"><span class="txt"><b>④ 焊 4 只 <code>140Ω</code></b><span class="why">🔴 横着跨在<b>同一対的两个节点</b>之间，<b>两端都不碰地排</b>。焊到地排上 = <code>RP</code> 一端接地 = 差分全废，而<b>表现还是"屏不亮"</b>。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="asm5"><span class="txt"><b>⑤ 上下各焊 8 根杜邦线</b><span class="why">上面 8 根从 <code>150Ω</code> 的上端出去插 J4；下面 8 根<b>从节点引出</b>去灯板 J1（<b>不是从地排引出</b>）。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="asm6"><span class="txt"><b>⑥ 地排两端各引一根线 → <code>J4.59</code> 和 <code>J4.60</code></b></span></label></li>
+  </ul>
+
+  <h4>小板上下各 8 根接哪（详细脚号见下面的接线表）</h4>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>单元</th><th>上边 → E104 <code>J4</code></th><th>下边 → 灯板 <code>J1</code></th></tr></thead>
+    <tbody>
+      <tr><td>対0 时钟</td><td class="pin">52 / 51</td><td class="pin">25 / 26</td></tr>
+      <tr><td>対1 <b>D0 蓝</b></td><td class="pin">58 / 57</td><td class="pin">28 / 29</td></tr>
+      <tr><td>対2 D1 绿</td><td class="pin">56 / 55</td><td class="pin">31 / 32</td></tr>
+      <tr><td>対3 D2 红</td><td class="pin">54 / 53</td><td class="pin">34 / 35</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>另外 3 根不进小板，从 J4 直接拉到 J1</h4>
+  <div class="scroll"><pre>
+J4.50 ──────────► J1.23   I_SYNC
+J4.49 ──────────► J1.22   ACK_O   (FPGA 侧上拉)
+J4.48 ──────────► J1.21   DCLK    (恒 0)
+</pre></div>
+
+  <h4>灯板那一头还有 4 只 <code>100Ω</code></h4>
+  <p class="step-note">跨在灯板 <code>J1</code> 的每対 P、N 之间，<b>尽量靠近连接器</b>：<code>J1.25-26</code>、<code>J1.28-29</code>、<code>J1.31-32</code>、<code>J1.34-35</code> 各一只。<b>灯板上没有端接，必须自己加。</b></p>
+
+  <h4>焊完先做两个不通电检查（两分钟，能省一整天）</h4>
+  <ul class="list">
+    <li><label class="row"><input type="checkbox" data-k="asm7"><span class="txt"><b>逐只量阻值</b><span class="why">🔴 <code>150</code> / <code>430</code> / <code>140</code> 三种色环<b>极容易看错</b>。拿错一只 ⇒ 共模出窗 ⇒ <b>屏不亮</b>，而这和相位错、协议错、字序反<b>完全分不出来</b>，能让你白扫一整天。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="asm8"><span class="txt"><b>通断档查短路</b><span class="why">相邻対之间、以及同一対的 P 与 N 之间，都不该导通。顺便确认 <code>140Ω</code> 两端都没碰到地排。</span></span></label></li>
+  </ul>
+
+  <div class="note danger">
+    <span class="hd">🔴 上电后必测：差分幅值 —— 纸面预测跨 1.3 倍，只有实测能定</span>
+    <b>判据</b>：<code>100 mV &lt; |VID| &lt; 600 mV</code>（2260 手册 <code>VID</code> 范围），且 <code>&gt; VTH 100 mV</code>。
+    示波器差分模式，或两通道相减。<br>
+    ⚠ <b>预测值三个来源互不一致，取决于按满轨还是按 <code>VOH/VOL</code> 最坏角算</b>：
+    <div class="scroll"><pre>
+365 mV   VCCIO 3.3V + 5R, 按 VOH≥VCCIO−0.4 / VOL≤0.4 的最坏角 (有效摆幅 2.5V)
+432 mV   E104_2260_接线方案.md 的表
+455 mV   3R@3.3V(509) × Rpd 引入的 0.895 衰减    ← "457 mV" 那个数的来路
+481 mV   3.3 × 54.63/(54.63+320)   完整并联算法, 载 = 140∥860∥100
+</pre></div>
+    ⇒ <b>区间 365~481 mV，散布近 1.3 倍。以实测为准，别拿任何一个当"应该是多少"。</b><br>
+    🔴 <b>而 500 mV 那道门槛就在旁边</b>（文档：「幅值低于 500 mV 才能用片内端接」，备选档 <code>115/160/333</code> 就是因为 530 mV 被标成"要片外端接"）。
+    按 481 算离门槛只剩 <b>19 mV</b>。<b>实测 &gt; 500 mV ⇒ 片内端接不可用，端接方案要重新确认。</b>
+  </div>
+
+  <div class="note">
+    <span class="hd">🔴 根源找到了：厂家的 <code>150/140</code> 档位是按 <code>VCCIO = 2.5 V</code> 设计的</span>
+    <code>LVDS25_E</code> —— 名字里的 25 就是 2.5 V。用同一组 <code>150/140</code>：
+    <div class="scroll"><pre>
+VCCIO 2.5V + 3R  ⇒  385 mV   ← 正好落在 LVDS 标称 350 mV 附近 ✅ 这是厂家的设计点
+VCCIO 3.3V + 5R  ⇒  481 mV   ← E104 的实际情况, 幅值大 1.25× (= 481/385)
+                              ⚠ 不是电压比 1.32 —— Rpd 的 860Ω 跨接把差分负载
+                                 从 58.33 拉到 54.63, 抵掉一部分
+</pre></div>
+    ⇒ <b>E104 上幅值逼近 500 mV 门槛，根源是它的 bank0 焊死 3.3 V、改不了</b>，不是阻值选错了。<br>
+    ⇒ <b>最终桥片板（自己设 2.5 V + 3R）不会有这个问题</b>，幅值回到 385 mV，离门槛 115 mV。
+  </div>
+
   <h3>接线表</h3>
   <div class="scroll">
   <table>
@@ -311,6 +432,14 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--rule);font-si
   </div>
 
   <h3>5R 电阻网络 · 每対 5 只</h3>
+  <div class="note danger">
+    <span class="hd">🔴 <code>RS</code> 与 <code>Rpd</code> 必须同档配对 —— 混档的表现是「屏不亮」，<u>与协议错分不出来</u></span>
+    同样 430 Ω 配 <code>RS=210</code>，共模掉到 <b>1.092 V 出窗</b>，芯片收不到 ⇒ <b>屏黑</b>。
+    而相位错、配置没进去、字序反了，<b>表现也是屏黑</b>。
+    ⇒ <b>阻值拿错一只，你会去扫相位、查协议、翻寄存器，扫一整天也扫不出来。</b>
+    这是这组值最危险的地方。<b>焊完先逐只量阻值</b>（三种色环极易看错），再用通断档查相邻対有没有短。
+  </div>
+
   <div class="note">
     <span class="hd">2026-09-08 勘误与补充（驱动工程建好之后）</span>
     <b>① 转发时钟対的球号原先写反了（已改）。</b> 原理图第 9 页 J4 网表原文：
@@ -421,7 +550,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--rule);font-si
       <line x1="470" y1="55" x2="470" y2="185" stroke="var(--rule-strong)" stroke-width="1" stroke-dasharray="3 3"/>
       <text x="530" y="112" text-anchor="middle" font-size="11" fill="var(--ink-3)">共模</text>
       <text x="530" y="130" text-anchor="middle" font-size="15" font-weight="600" fill="var(--pass)">1.203 V</text>
-      <text x="530" y="147" text-anchor="middle" font-size="10.5" fill="var(--ink-3)">幅值 ≈457 mV</text>
+      <text x="530" y="147" text-anchor="middle" font-size="10.5" fill="var(--ink-3)">幅值 365~481 mV 待实测</text>
     </g>
   </svg>
   <figcaption>VCM = (VCCIO/2) × Rpd / (Rpd + Rout + RS)　　Rout = 10 Ω（TN309 注 1）</figcaption>
@@ -431,7 +560,7 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--rule);font-si
     <div><dt>VCCIO0</dt><dd>3.3 V<small>焊死，绕不开</small></dd></div>
     <div><dt>不加 Rpd</dt><dd style="color:var(--danger)">1.65 V<small>出窗</small></dd></div>
     <div class="ok"><dt>加 Rpd 后</dt><dd>1.203 V<small>VIC 1.1~1.3 正中</small></dd></div>
-    <div class="ok"><dt>差分幅值</dt><dd>≈457 mV<small>旧文档写 432，偏低 5%</small></dd></div>
+    <div><dt>差分幅值</dt><dd style="color:var(--caution)">365~481<small>mV · 预测散布 1.3×，<b>以实测为准</b></small></dd></div>
   </dl>
 
   <div class="note danger">
@@ -453,6 +582,105 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--rule);font-si
     <li><label class="row"><input type="checkbox" data-k="p1f"><span class="txt"><b>按接线表接 8 根差分 + 3 根单端 + 地</b></span></label></li>
     <li><label class="row"><input type="checkbox" data-k="p1g"><span class="txt"><b>上电前用万用表量通断与对地阻值</b><span class="why">每条腿对地应当读到约 <code>430 + 150 = 580 Ω</code>（未接灯板时）。读到 0 就是短了。</span></span></label></li>
   </ul>
+</section>
+
+<section class="step">
+  <div class="step-head">
+    <span class="step-num">1.5</span>
+    <h2>变体：接地实在难焊时，把 <code>RP</code> 拆两半从中点对地</h2>
+    <span class="tag">未实测</span>
+  </div>
+
+  <p class="step-note"><code>Rpd</code> 是全网络里<b>唯一需要接地</b>的元件，每対两只 ⇒ 四対共 <b>8 个接地点</b>。
+  若万能板上不好走地，可以换成下面这个拓扑：<b>元件数一样是 5 只/対，但接地点减半</b>。</p>
+
+  <div class="scroll"><pre>
+现方案 (默认)                                 变体 (接地点减半)
+
+P ─[RS 150]─┬──────────┬─ RXP                P ─[RS 150]─┬─[62]─┬─[62]─┬─ RXP
+            │       [RP 140]                             │      │      │
+        [Rpd 430]      │                                 │  [Rct 180]  │
+            ⏚          │                                 │      ⏚      │
+N ─[RS 150]─┴──────────┴─ RXN                N ─[RS 150]─┴─────────────┴─ RXN
+        [Rpd 430]
+            ⏚
+接地点 2 个/対 · 四対共 8 个                  接地点 1 个/対 · 四対共 4 个
+</pre></div>
+
+  <h3>等效性核对（手推等效电路，<b>比值可信、绝对值别引用</b>）</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th></th><th>现方案 <code>430/430/140</code></th><th>变体 <code>62/62/180</code></th><th>变体 <code>68/68/180</code></th></tr></thead>
+    <tbody>
+      <tr><td>共模源阻抗 <code>(RS+Rout)/2</code></td><td>80.0 Ω</td><td>80.0 Ω</td><td>80.0 Ω</td></tr>
+      <tr><td><b>共模对地负载</b></td><td><b>215.0 Ω</b><span class="sm">（430∥430）</span></td><td>211.0 Ω<span class="sm">（62∥62 + 180）</span></td><td>214.0 Ω</td></tr>
+      <tr><td><b>共模电压</b></td><td><b>1.2025 V</b></td><td><b>1.1964 V</b><span class="sm">（Δ 6 mV）</span></td><td>1.2010 V</td></tr>
+      <tr><td>差分负载<span class="sm">（含灯板侧 100 Ω）</span></td><td>54.6 Ω</td><td>55.4 Ω</td><td>57.6 Ω</td></tr>
+      <tr><td><b>幅值相对现方案</b></td><td>—</td><td><b>+1.1%</b></td><td>+4.7% ⚠</td></tr>
+      <tr><td>元件数 / 接地点（每対）</td><td>5 / <b>2</b></td><td>5 / <b>1</b></td><td>5 / 1</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="hd">为什么共模能对上、差分要小心</span>
+    <b>共模</b>：<code>RP</code> 两端等电位 ⇒ 共模下不载流；<code>Rct</code> 在中点 ⇒ 差分下是虚地。
+    两个拓扑的共模等效电路本来就是「源阻抗 80 Ω 串一个对地负载」，<b>负载相同则共模相同</b>。<br>
+    🔴 <b>差分则不然</b>：现方案里<b>两只 <code>Rpd</code> 串联（860 Ω）也跨在 P–N 上</b>，是差分负载的一部分；
+    而变体的 <code>Rct</code> 是虚地，<b>一点差分负载都不贡献</b>。
+    ⇒ 拆一半必须取 <b>62 Ω 而不是 68 Ω</b>，否则幅值多出 4.7%，会吃掉「幅值 &lt; 500 mV 才能用片内端接」那条余量。<br>
+    <span class="sm">数学上最完美的是 <code>60 + 185</code>（共模 215.0 Ω 与现方案<b>逐位相同</b>、差分 −0.1%），
+    但 60 与 185 都不是 E24（要 E96 的 60.4 / 187）⇒ 实用上取 <b>62 + 180</b>，两个都是 E24。</span>
+  </div>
+
+  <h3>为什么是 <code>62</code> 不是 <code>68</code> —— 共模和差分要<b>分别</b>算，而 <code>Rpd</code> 同时出现在两条路径里</h3>
+
+  <p class="step-note">取半值时最容易犯的错，是把差分目标当成 <code>RP = 140 Ω</code>。<b>不是。</b>
+  现方案里<b>两只 <code>Rpd</code> 串联（430+430 = 860 Ω）也跨在 P–N 之间</b> ——
+  从 P 经 <code>Rpd</code> 到 GND、再经另一只 <code>Rpd</code> 到 N，是一条实实在在的电阻通路。
+  接线方案 §4 的参数表自己写着：<b>「两只 Rpd 串联 = 860 Ω <u>跨接</u>」</b>。
+  ⇒ <b>真正的差分目标是 <code>140 ∥ 860 = 120.4 Ω</code>，不是 140。</b></p>
+
+  <div class="scroll">
+  <table>
+    <thead><tr><th>半值</th><th>差分 <code>2×R_h</code><br><span class="sm">目标 120.4 Ω</span></th><th>差分含灯板 100 Ω<br><span class="sm">目标 54.6 Ω</span></th><th>幅值 vs 现方案</th><th><code>Rct</code></th><th>共模负载<br><span class="sm">目标 215.0 Ω</span></th><th>VCM<br><span class="sm">现方案 1.2025 V</span></th></tr></thead>
+    <tbody>
+      <tr><td><b>68</b></td><td>136 Ω <b>+13.0%</b> ⚠</td><td>57.6 Ω +5.5%</td><td>+4.7%</td><td>180</td><td>214.0 Ω −0.5%</td><td>1.2010 V</td></tr>
+      <tr><td><b>62</b> ← 推荐</td><td>124 Ω <b>+3.0%</b> ✅</td><td>55.4 Ω +1.5%</td><td><b>+1.1%</b></td><td>180</td><td>211.0 Ω −1.9%</td><td>1.1964 V<span class="sm">（Δ6 mV）</span></td></tr>
+      <tr><td><b>60</b> ← E96 最优</td><td>120 Ω −0.3%</td><td>54.5 Ω −0.1%</td><td>−0.1%</td><td><b>185</b></td><td><b>215.0 Ω 0.0%</b></td><td><b>1.2025 V</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p class="step-note"><b><code>62</code> 是拿 1.9% 的共模误差（= VCM 差 <b>6 mV</b>）换来<b>四倍好</b>的差分匹配。</b>
+  <code>VIC</code> 窗是 1.1~1.3 V（±100 mV）⇒ <b>6 mV 是噪声级</b>；
+  而差分幅值要顶着「幅值 &lt; 500 mV 才能用片内端接」那条线 ⇒ <b>5% 是真的</b>。
+  何况「与现方案等效」正是这个变体唯一的卖点，更该往等效那边取。</p>
+
+  <div class="note">
+    <span class="hd">选值判据（照这句买料）</span>
+    <b>推荐 <code>RS 150×2 + 62×2 + Rct 180×1</code></b>（E24 全有）；
+    <b>能买到 E96 就用 <code>60 + 185</code></b>（共模负载与现方案 <b>215.0 Ω 逐位相同</b>、差分 −0.1%，数学上完美等效）。
+    <b>🔴 <code>68</code> 不要用</b> —— 差分偏 13%，把变体唯一的卖点丢掉了。
+  </div>
+
+  <div class="note">
+    <span class="hd">这条演示的通用规则</span>
+    <b>共模路径与差分路径要分别算，同一只电阻可能同时出现在两条里、权重还不一样。</b><br>
+    · <code>RP</code>：共模下两端等电位 ⇒ <b>不载流</b>，只进差分账。<br>
+    · <code>Rct</code>：差分下中点是虚地 ⇒ <b>不载流</b>，只进共模账。<br>
+    · 🔴 <code>Rpd</code>：<b>两条账都要进</b> —— 共模看 <code>430∥430 = 215 Ω</code>，差分看 <b>串联 860 Ω 跨接</b>。<br>
+    漏掉最后这条，就会把差分目标当成 140 而选出 68。
+  </div>
+
+  <div class="note danger">
+    <span class="hd">🔴 默认仍用现方案</span>
+    现方案的 1.203 V 是本仓算过两轮、并有 UG303 表 3-1 / TN309 表 4-2 的厂家档位背书的；
+    <b>变体是 2026-09-08 现推的，没有任何人实测过</b>。
+    ⇒ <b>只在「接地实在难焊」时才换，而且换了必须实测共模再确认</b>（目标 1.1~1.3 V，落在 2260 的 <code>VIC</code> 窗内）。
+    ⚠ 另：手推模型的<b>绝对幅值</b>对不上文档那个 432 mV（模型给 481 mV）——
+    文档的数来自厂家表。<b>上表的比值可信（两边同一模型），绝对值以厂家表为准。</b>
+  </div>
 </section>
 
 <!-- ============ STEP 2 ============ -->
@@ -506,6 +734,55 @@ footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--rule);font-si
     <li><label class="row"><input type="checkbox" data-k="p3e"><span class="txt"><b>示波器量实际共模，与算出的 1.203 V 对</b><span class="why">上一块板上实测过 1.294 V 能收，但那是<b>单颗样品值不是规格保证</b>。这次要的是"电阻网络定出来的共模准不准"。</span></span></label></li>
     <li><label class="row"><input type="checkbox" data-k="p3f"><span class="txt"><b>看 300 Mbps 眼图与上升沿</b><span class="why">电阻网络的 SI 是这次真正要测的东西之一。</span></span></label></li>
   </ul>
+</section>
+
+<!-- ============ 扫相位之前：先确认芯片在跑 ============ -->
+<section class="step">
+  <div class="step-head">
+    <span class="step-num">3.4</span>
+    <h2>扫相位之前：先确认芯片在跑（量<b>电流</b>，不只是量电压）</h2>
+    <span class="tag gate">2 分钟</span>
+  </div>
+
+  <div class="note danger">
+    <span class="hd">🔴 这一步 2026-08-20 就被点名，至今没做过</span>
+    <code>project_lxb_icnd2260_bringup</code> 结尾原话：卡在 5 个自推的未验证假设
+    （通道映射 / 4 倍过采样 / 90° 相位 / CRC / 寄存器使能位），
+    <b>「没有反馈通道等于闭眼穷举」⇒ 当务之急是量电源电流判断芯片有没有在运行。</b><br>
+    现在处境一模一样：<b><code>ACK</code> 这条反馈通道在这块样板上不成立</b>（历史上从没见过真回包），
+    唯一反馈是「屏亮不亮」——<b>而"不亮"同时对应至少五种原因</b>。<br>
+    <b>电流是一个独立的、便宜的反馈通道，它能把这五种一刀切成两半。</b>
+  </div>
+
+  <h3>怎么量</h3>
+  <p class="step-note">用电源自带的电流表，或串一只万用表在 <b>2.8 V（<code>VDDR</code>）</b>那一路。
+  记下<b>三个时刻</b>的读数：</p>
+  <ul class="list">
+    <li><label class="row"><input type="checkbox" data-k="cur1"><span class="txt"><b>① <code>M12</code> 拉高<u>前</u></b><span class="why">应当 ≈ 0 —— 屏还没上电。不为 0 说明有别的路径在给屏供电（或 <code>M12</code> 已经高了）。</span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="cur2"><span class="txt"><b>② 配置包发送中</b><span class="why">上电后约 25 ms 起，seq 在发 238 个寄存器。<b>这一段电流应当能看到变化。</b></span></span></label></li>
+    <li><label class="row"><input type="checkbox" data-k="cur3"><span class="txt"><b>③ 稳定显示循环里</b><span class="why">📌 参考量级（上一块板实测）：<b>平均 ~16 mA</b>，但<b>峰值 ~700 mA</b>（9 颗同步扫同一行，40 通道 × 1.96 mA × 9）。万用表读到的是平均值。</span></span></label></li>
+  </ul>
+
+  <h3>判读 —— 这张表决定要不要扫相位</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>读数</th><th>结论</th><th>下一步</th></tr></thead>
+    <tbody>
+      <tr><td><b>两路都 ≈ 0 mA</b></td><td>🔴 <b>芯片根本没上电 / 没在跑</b></td><td><b>别扫相位，一定白扫。</b>查 <code>M12</code> 电平、查灯板侧电压、查连接器接触</td></tr>
+      <tr><td><b>有几十 mA，且随配置包变化</b></td><td>✅ <b>芯片活着、在收东西</b></td><td><b>扫相位才有意义</b> → 下一节</td></tr>
+      <tr><td>电流正常但屏黑</td><td>问题在<b>显示端</b>不在链路端</td><td>查 <code>EN_OP</code> / 寄存器配置 / 亮度设置，<b>不是相位</b></td></tr>
+      <tr><td>电流远超预期 / 电压被拉塌</td><td>🔴 短路，或峰值供给不足</td><td>立刻断电。当年现象是「只有底部一条带亮 + 右侧彩色雪花」⇒ <b>灯板输入端并大容量低 ESR 电容</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="hd">为什么值得先花这 2 分钟</span>
+    扫一轮相位是 <b>8 次拔插 + 8 次复位</b>。如果芯片压根没在跑，扫完只会得到<b>八个「全黑」</b>，
+    而你会以为"相位都试遍了还是不行"，从而去怀疑别的东西。<br>
+    <b>这与本轮已经做对过两次的是同一条规则：先证明被测对象/量具自己是对的。</b>
+    （① <code>probe_ref_div</code> 做基准，排除量具；② 用 <code>eg4_pll400</code> 标定 PLL 站点，排除位序假设。）
+  </div>
 </section>
 
 <!-- ============ 屏黑时怎么办：扫相位 ============ -->

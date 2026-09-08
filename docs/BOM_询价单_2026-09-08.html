@@ -1,0 +1,335 @@
+<title>POV-3D 器件与询价单</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F1F3F4; --surface:#FFFFFF; --surface2:#F7F8F9;
+  --ink:#151A1F; --muted:#5D6773; --faint:#8A939E;
+  --line:#D7DCE1; --line2:#E7EAEE;
+  --accent:#0E6E7A; --accent-soft:#DDEEEF;
+  --ok:#1D7A4E; --ok-soft:#E0F0E7;
+  --warn:#9C6206; --warn-soft:#F6ECD9;
+  --gap:#AE3446; --gap-soft:#F7E2E5;
+  --shadow:0 1px 2px rgba(20,30,40,.06),0 8px 24px rgba(20,30,40,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1114; --surface:#161B20; --surface2:#1B2127;
+    --ink:#E7EBEF; --muted:#9AA4AF; --faint:#78838F;
+    --line:#2A323A; --line2:#222931;
+    --accent:#54C4CE; --accent-soft:#123036;
+    --ok:#5CB683; --ok-soft:#14291E;
+    --warn:#D5A24A; --warn-soft:#2B2416;
+    --gap:#E3808C; --gap-soft:#2E1A1E;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.28);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1114; --surface:#161B20; --surface2:#1B2127;
+  --ink:#E7EBEF; --muted:#9AA4AF; --faint:#78838F;
+  --line:#2A323A; --line2:#222931;
+  --accent:#54C4CE; --accent-soft:#123036;
+  --ok:#5CB683; --ok-soft:#14291E;
+  --warn:#D5A24A; --warn-soft:#2B2416;
+  --gap:#E3808C; --gap-soft:#2E1A1E;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.28);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Archivo",-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans CJK SC","Source Han Sans SC",sans-serif;
+  font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.wrap{max-width:1180px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:30px;line-height:1.2;margin:0 0 8px;letter-spacing:-.02em;text-wrap:balance;font-weight:700}
+h2{font-size:19px;margin:0 0 4px;letter-spacing:-.01em;font-weight:600}
+h3{font-size:15px;margin:0;font-weight:600}
+p{margin:0 0 12px;max-width:66ch}
+a{color:var(--accent)}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+.lede{color:var(--muted);font-size:15.5px;max-width:70ch}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:26px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:22px}
+.stat{background:var(--surface);padding:13px 15px}
+.stat .k{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.stat .v{font-family:"IBM Plex Mono",monospace;font-size:23px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.3}
+.stat .v small{font-size:12px;color:var(--muted);font-weight:400}
+section{margin:38px 0 0}
+.sechead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:9px;border-bottom:1px solid var(--line2)}
+.sechead .note{color:var(--faint);font-size:12.5px;font-family:"IBM Plex Mono",monospace}
+figure{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 16px 10px;box-shadow:var(--shadow)}
+.figscroll{overflow-x:auto}
+figure svg{display:block;min-width:940px;width:100%;height:auto;color:var(--ink)}
+figcaption{margin-top:12px;padding-top:11px;border-top:1px solid var(--line2);color:var(--muted);font-size:13px}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:8px;font-size:12px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:22px;height:0;border-top-width:2px;border-top-style:solid;display:inline-block}
+.swbox{width:15px;height:11px;border:1.5px solid var(--ink);border-radius:2px;display:inline-block}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+button{font:inherit;font-size:13px;padding:7px 13px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.sync{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--faint);margin-left:auto}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--faint);margin-right:6px;vertical-align:middle}
+.dot.live{background:var(--ok)}
+.dot.local{background:var(--warn)}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;min-width:1080px;font-size:13.5px}
+thead th{position:sticky;top:0;z-index:2;background:var(--surface2);border-bottom:1px solid var(--line);text-align:left;padding:9px 10px;font-size:11.5px;font-family:"IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+thead th.fill{background:var(--accent-soft);color:var(--accent)}
+tbody td{border-bottom:1px solid var(--line2);padding:8px 10px;vertical-align:top}
+tbody tr:hover td{background:var(--surface2)}
+tr.grp td{background:var(--surface2);font-weight:600;font-size:13px;letter-spacing:.02em;border-bottom:1px solid var(--line)}
+tr.grp td .cnt{color:var(--faint);font-weight:400;font-family:"IBM Plex Mono",monospace;font-size:12px;margin-left:8px}
+td.id,td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.num{text-align:right}
+td.id{color:var(--faint);font-size:12px}
+td.model{font-family:"IBM Plex Mono",monospace;font-size:12.5px;max-width:250px}
+td.name{font-weight:500;min-width:140px}
+td.note{color:var(--muted);font-size:12.5px;max-width:280px}
+.pill{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-family:"IBM Plex Mono",monospace;white-space:nowrap;border:1px solid transparent}
+.pill.ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+.pill.sel{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+.pill.gap{background:var(--gap-soft);color:var(--gap);border-color:var(--gap)}
+input.f{font:inherit;font-size:13px;width:100%;min-width:78px;padding:4px 7px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink)}
+input.f.price,input.f.lead{font-family:"IBM Plex Mono",monospace;text-align:right;font-variant-numeric:tabular-nums;min-width:66px}
+input.f::placeholder{color:var(--faint)}
+td.sub{font-family:"IBM Plex Mono",monospace;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+td.sub b{color:var(--ink);font-weight:600}
+tfoot td{padding:11px 10px;border-top:1px solid var(--line);background:var(--surface2);font-family:"IBM Plex Mono",monospace;font-size:13px;font-variant-numeric:tabular-nums}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:15px 16px;box-shadow:var(--shadow)}
+.card.flag{border-left:3px solid var(--gap)}
+.card h3{margin-bottom:6px}
+.card p{font-size:13.5px;color:var(--muted);margin:0}
+ul.tight{margin:0;padding-left:18px;color:var(--muted);font-size:13.5px}
+ul.tight li{margin:5px 0}
+ul.tight b{color:var(--ink);font-weight:600}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--faint);font-size:12.5px;font-family:"IBM Plex Mono",monospace}
+@media (prefers-reduced-motion:no-preference){input.f{transition:border-color .15s}}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">POV-3D 旋转体三维显示 · 整机器件</p>
+  <h1>器件与询价单</h1>
+  <p class="lede">转子上三块板（主控板 ×1、屏板 ×2）加跨界与机械件的全部器件。左边是系统 2D 器件图，下面是清单——<b>灰底四列由采购填写</b>，填完自动算小计。整理于 2026-09-08，口径见页尾。</p>
+  <div class="stats" id="stats"></div>
+</header>
+
+<section>
+  <div class="sechead"><h2>系统器件图</h2><span class="note">主控与桥片都在转子上 · 跨旋转界面只剩电源</span></div>
+  <figure>
+    <div class="figscroll">
+      <svg viewBox="0 0 1420 740" role="img" aria-label="POV-3D 整机器件图：固定侧的渲染主机经 WiFi、24~32 V 电源经无线供电线圈进入转子；转子上主控板 DR1V90GEG484 通过每面 13 対 800 Mbps LVDS 加 1 対 400 MHz 转发时钟驱动两块屏板，每块屏板由 EG4A20 桥片经 72 対 mini-LVDS 驱动 24 颗 ICND2260 与 41472 像素 LED 阵列；转子供电为 24 V 2 A 无线模块，48 W 是整机功率上限"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker><marker id="aht" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#0E6E7A"/></marker><marker id="ahp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8A939E"/></marker></defs><text x="20" y="30" font-size="11.5" text-anchor="start" fill="currentColor" opacity=".55" font-family="IBM Plex Mono, monospace">固定侧</text><rect x="20" y="110" width="190" height="64" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/><text x="115" y="136" font-size="13" text-anchor="middle" fill="currentColor">渲染主机</text><text x="115" y="155" font-size="10.5" text-anchor="middle" fill="currentColor" opacity=".6">体素表 lz4 · 26.4 Mb/s</text><rect x="20" y="500" width="190" height="86" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/><text x="115" y="528" font-size="12.5" text-anchor="middle" fill="currentColor">24~32 V 直流电源</text><text x="115" y="547" font-size="11.5" text-anchor="middle" fill="currentColor" opacity=".72">+ 无线供电发射模块</text><text x="115" y="566" font-size="10.5" text-anchor="middle" fill="currentColor" opacity=".55">发射线圈（定子侧）</text><line x1="232" y1="16" x2="232" y2="724" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 5" opacity=".45"/><text x="226" y="700" font-size="11" text-anchor="end" fill="currentColor" opacity=".55" font-family="IBM Plex Mono, monospace">旋转界面</text><rect x="250" y="16" width="1150" height="708" rx="10" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".3"/><text x="264" y="36" font-size="11.5" text-anchor="start" fill="currentColor" opacity=".55" font-family="IBM Plex Mono, monospace">转子侧 · 900 RPM · 68~136 g</text><line x1="210" y1="142" x2="324" y2="142" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 4" marker-end="url(#ah)"/><text x="268" y="134" font-size="10.5" text-anchor="middle" fill="currentColor" opacity=".7">WiFi</text><rect x="330" y="116" width="200" height="52" rx="6" fill="none" stroke="#9C6206" stroke-width="1.4" stroke-dasharray="5 4"/><text x="430" y="137" font-size="12" text-anchor="middle" fill="currentColor">USB WiFi dongle</text><text x="430" y="155" font-size="10.5" text-anchor="middle" fill="#9C6206">待选型 · 需灌胶固定</text><line x1="430" y1="168" x2="430" y2="188" stroke="currentColor" stroke-width="1.2" opacity=".55"/><rect x="300" y="190" width="340" height="280" rx="8" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="314" y="210" font-size="12.5" text-anchor="start" fill="currentColor" font-weight="600">主控板 ×1</text><rect x="314" y="220" width="312" height="56" rx="5" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="470" y="241" font-size="13" text-anchor="middle" fill="currentColor" font-family="IBM Plex Mono, monospace">DR1V90GEG484</text><text x="470" y="258" font-size="10.5" text-anchor="middle" fill="currentColor" opacity=".62">RISC-V + PL · 渲染 IP ×2 · 上行串化</text><rect x="314" y="286" width="152" height="44" rx="5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="390.0" y="304" font-size="11.5" text-anchor="middle" fill="currentColor">DDR3L ×2</text><text x="390.0" y="319" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">32 bit / 1 GB</text><rect x="474" y="286" width="152" height="44" rx="5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="550.0" y="304" font-size="11.5" text-anchor="middle" fill="currentColor">QSPI Flash</text><text x="550.0" y="319" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">GD25LB256E</text><rect x="314" y="338" width="152" height="44" rx="5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="390.0" y="356" font-size="11.5" text-anchor="middle" fill="currentColor">USB PHY</text><text x="390.0" y="371" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">USB3320</text><rect x="474" y="338" width="152" height="44" rx="5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="550.0" y="356" font-size="11.5" text-anchor="middle" fill="currentColor">晶振 ×3</text><text x="550.0" y="371" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">33.33M / 25M / 24M</text><rect x="314" y="390" width="312" height="46" rx="5" fill="none" stroke="#9C6206" stroke-width="1.4" stroke-dasharray="5 4"/><text x="470" y="408" font-size="11.5" text-anchor="middle" fill="currentColor">电源 0.95 / 1.8 / <tspan font-weight="600">2.5</tspan> / 3.3 / 1.35 V</text><text x="470" y="424" font-size="10" text-anchor="middle" fill="#9C6206">2.5 V 轨是自研板新增的第一位需求</text><path d="M236 529 Q254.0 543 236 557" fill="none" stroke="#8A939E" stroke-width="2" opacity=".8"/><path d="M248 523 Q272.0 543 248 563" fill="none" stroke="#8A939E" stroke-width="2" opacity=".55"/><path d="M260 517 Q290.0 543 260 569" fill="none" stroke="#8A939E" stroke-width="2" opacity=".35"/><line x1="284" y1="543" x2="300" y2="543" stroke="#8A939E" stroke-width="2.6" stroke-dasharray="6 4" marker-end="url(#ahp)"/><rect x="300" y="500" width="200" height="86" rx="6" fill="none" stroke="#9C6206" stroke-width="1.6" stroke-dasharray="5 4"/><text x="400" y="526" font-size="13" text-anchor="middle" fill="currentColor">无线供电接收</text><text x="400" y="545" font-size="12" text-anchor="middle" fill="currentColor" font-family="IBM Plex Mono, monospace">24 V · 2 A = 48 W</text><text x="400" y="564" font-size="10.5" text-anchor="middle" fill="#9C6206">现役已带接近整机负载</text><rect x="300" y="610" width="200" height="48" rx="6" fill="none" stroke="#9C6206" stroke-width="1.4" stroke-dasharray="5 4"/><text x="400" y="630" font-size="11.5" text-anchor="middle" fill="currentColor">索引传感器 + 遮光片</text><text x="400" y="647" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">非接触 · 每圈一次基准</text><rect x="656" y="250" width="44" height="32" rx="4" fill="none" stroke="#AE3446" stroke-width="1.4" stroke-dasharray="4 3"/><text x="678" y="271" font-size="10.5" text-anchor="middle" fill="currentColor">J1</text><rect x="656" y="530" width="44" height="32" rx="4" fill="none" stroke="#AE3446" stroke-width="1.4" stroke-dasharray="4 3"/><text x="678" y="551" font-size="10.5" text-anchor="middle" fill="currentColor">J2</text><path d="M700 266 H740 V150 H874" stroke="#0E6E7A" stroke-width="2" fill="none" marker-end="url(#aht)"/><text x="748" y="132" font-size="11" text-anchor="start" fill="#0E6E7A" font-family="IBM Plex Mono, monospace">13 対 LVDS 800 Mb/s</text><text x="748" y="116" font-size="11" text-anchor="start" fill="#0E6E7A" font-family="IBM Plex Mono, monospace">+ 1 対 400 MHz 转发钟</text><path d="M700 546 H740 V600 H874" stroke="#0E6E7A" stroke-width="2" fill="none" marker-end="url(#aht)"/><text x="748" y="592" font-size="11" text-anchor="start" fill="#0E6E7A" font-family="IBM Plex Mono, monospace">同 A 面</text><path d="M640 410 H652 A8 8 0 0 1 668 410 H760 V210 H874" stroke="currentColor" stroke-width="1.2" fill="none" stroke-dasharray="4 3" opacity=".6"/><path d="M760 410 V650 H874" stroke="currentColor" stroke-width="1.2" fill="none" stroke-dasharray="4 3" opacity=".6"/><text x="686" y="432" font-size="10.5" text-anchor="start" fill="currentColor" opacity=".62" font-family="IBM Plex Mono, monospace">配置 5~6 根</text><text x="686" y="448" font-size="10.5" text-anchor="start" fill="currentColor" opacity=".62" font-family="IBM Plex Mono, monospace">（两面并联）</text><path d="M400 586 V706 H1300" stroke="#8A939E" stroke-width="2.6" fill="none" stroke-dasharray="6 4"/><path d="M560 706 V474" stroke="#8A939E" stroke-width="2.6" fill="none" stroke-dasharray="6 4" marker-end="url(#ahp)"/><path d="M1000 706 V694" stroke="#8A939E" stroke-width="2.6" fill="none" stroke-dasharray="6 4" marker-end="url(#ahp)"/><path d="M660 706 V28 H1120 V36" stroke="#8A939E" stroke-width="2.6" fill="none" stroke-dasharray="6 4" marker-end="url(#ahp)"/><text x="700" y="700" font-size="10.5" text-anchor="start" fill="#8A939E" font-family="IBM Plex Mono, monospace">24 V 母线 · 48 W 封顶 ⇒ 亮度按内容口径设计，不按满白（130 W）</text><rect x="880" y="40" width="500" height="300" rx="8" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="896" y="62" font-size="12.5" text-anchor="start" fill="currentColor" font-weight="600">A 面屏板 ×1</text><text x="1221" y="66" font-size="11" text-anchor="middle" fill="#0E6E7A" font-family="IBM Plex Mono, monospace">72 対 mini-LVDS 300 Mb/s（板内）</text><rect x="896" y="74" width="160" height="48" rx="5" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="976" y="94" font-size="12" text-anchor="middle" fill="currentColor" font-family="IBM Plex Mono, monospace">EG4A20BG256I7</text><text x="976" y="111" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">87 対 / 天花板 195 根</text><rect x="896" y="132" width="160" height="38" rx="5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="976" y="155.0" font-size="11" text-anchor="middle" fill="currentColor">3R 网络 153 只</text><rect x="896" y="178" width="160" height="38" rx="5" fill="none" stroke="#9C6206" stroke-width="1.3" stroke-dasharray="5 4"/><text x="976" y="201.0" font-size="11" text-anchor="middle" fill="currentColor">8:1 mux ×3（ack）</text><rect x="896" y="224" width="160" height="44" rx="5" fill="none" stroke="#AE3446" stroke-width="1.3" stroke-dasharray="5 4"/><text x="976" y="242" font-size="11" text-anchor="middle" fill="currentColor">屏电源 2.8 / 3.8 V</text><text x="976" y="257" font-size="10" text-anchor="middle" fill="#AE3446">空白 · 桥片 en 使能</text><rect x="896" y="276" width="160" height="36" rx="5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="976" y="298.0" font-size="11" text-anchor="middle" fill="currentColor">25 M 晶振 · Flash(DNP)</text><path d="M1056 98 H1074" stroke="#0E6E7A" stroke-width="2" fill="none" marker-end="url(#aht)"/><g stroke="currentColor" stroke-width="1.2" fill="none"><rect x="1080" y="76" width="42" height="24" rx="3"/><rect x="1128" y="76" width="42" height="24" rx="3"/><rect x="1176" y="76" width="42" height="24" rx="3"/><rect x="1224" y="76" width="42" height="24" rx="3"/><rect x="1272" y="76" width="42" height="24" rx="3"/><rect x="1320" y="76" width="42" height="24" rx="3"/><rect x="1080" y="106" width="42" height="24" rx="3"/><rect x="1128" y="106" width="42" height="24" rx="3"/><rect x="1176" y="106" width="42" height="24" rx="3"/><rect x="1224" y="106" width="42" height="24" rx="3"/><rect x="1272" y="106" width="42" height="24" rx="3"/><rect x="1320" y="106" width="42" height="24" rx="3"/><rect x="1080" y="136" width="42" height="24" rx="3"/><rect x="1128" y="136" width="42" height="24" rx="3"/><rect x="1176" y="136" width="42" height="24" rx="3"/><rect x="1224" y="136" width="42" height="24" rx="3"/><rect x="1272" y="136" width="42" height="24" rx="3"/><rect x="1320" y="136" width="42" height="24" rx="3"/><rect x="1080" y="166" width="42" height="24" rx="3"/><rect x="1128" y="166" width="42" height="24" rx="3"/><rect x="1176" y="166" width="42" height="24" rx="3"/><rect x="1224" y="166" width="42" height="24" rx="3"/><rect x="1272" y="166" width="42" height="24" rx="3"/><rect x="1320" y="166" width="42" height="24" rx="3"/></g><text x="1221" y="216" font-size="11.5" text-anchor="middle" fill="currentColor">ICND2260 × 24（4 × 6，每颗 40 通道 × 48 扫）</text><path d="M1221 224 H1221 V238" stroke="#0E6E7A" stroke-width="2" fill="none" marker-end="url(#aht)"/><rect x="1080" y="242" width="282" height="48" rx="5" fill="none" stroke="#9C6206" stroke-width="1.4" stroke-dasharray="5 4"/><text x="1221" y="262" font-size="11.5" text-anchor="middle" fill="currentColor">LED 阵列 192 × 216 = 41,472 px</text><text x="1221" y="279" font-size="10.5" text-anchor="middle" fill="#9C6206">间距 0.78125 mm · 待选型（整机最大一笔）</text><rect x="880" y="390" width="500" height="300" rx="8" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="896" y="412" font-size="12.5" text-anchor="start" fill="currentColor" font-weight="600">B 面屏板 ×1</text><text x="1221" y="416" font-size="11" text-anchor="middle" fill="#0E6E7A" font-family="IBM Plex Mono, monospace">与 A 面同料 · 180° + 手性翻转</text><rect x="896" y="424" width="160" height="48" rx="5" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="976" y="444" font-size="12" text-anchor="middle" fill="currentColor" font-family="IBM Plex Mono, monospace">EG4A20BG256I7</text><text x="976" y="461" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">同一份 bitstream</text><rect x="896" y="482" width="160" height="38" rx="5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="976" y="505.0" font-size="11" text-anchor="middle" fill="currentColor">3R 网络 153 只</text><rect x="896" y="528" width="160" height="38" rx="5" fill="none" stroke="#9C6206" stroke-width="1.3" stroke-dasharray="5 4"/><text x="976" y="551.0" font-size="11" text-anchor="middle" fill="currentColor">8:1 mux ×3（ack）</text><rect x="896" y="574" width="160" height="44" rx="5" fill="none" stroke="#AE3446" stroke-width="1.3" stroke-dasharray="5 4"/><text x="976" y="592" font-size="11" text-anchor="middle" fill="currentColor">屏电源 2.8 / 3.8 V</text><text x="976" y="607" font-size="10" text-anchor="middle" fill="#AE3446">空白 · 桥片 en 使能</text><rect x="896" y="626" width="160" height="36" rx="5" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="976" y="648.0" font-size="11" text-anchor="middle" fill="currentColor">25 M 晶振 · Flash(DNP)</text><path d="M1056 448 H1074" stroke="#0E6E7A" stroke-width="2" fill="none" marker-end="url(#aht)"/><g stroke="currentColor" stroke-width="1.2" fill="none"><rect x="1080" y="426" width="42" height="24" rx="3"/><rect x="1128" y="426" width="42" height="24" rx="3"/><rect x="1176" y="426" width="42" height="24" rx="3"/><rect x="1224" y="426" width="42" height="24" rx="3"/><rect x="1272" y="426" width="42" height="24" rx="3"/><rect x="1320" y="426" width="42" height="24" rx="3"/><rect x="1080" y="456" width="42" height="24" rx="3"/><rect x="1128" y="456" width="42" height="24" rx="3"/><rect x="1176" y="456" width="42" height="24" rx="3"/><rect x="1224" y="456" width="42" height="24" rx="3"/><rect x="1272" y="456" width="42" height="24" rx="3"/><rect x="1320" y="456" width="42" height="24" rx="3"/><rect x="1080" y="486" width="42" height="24" rx="3"/><rect x="1128" y="486" width="42" height="24" rx="3"/><rect x="1176" y="486" width="42" height="24" rx="3"/><rect x="1224" y="486" width="42" height="24" rx="3"/><rect x="1272" y="486" width="42" height="24" rx="3"/><rect x="1320" y="486" width="42" height="24" rx="3"/><rect x="1080" y="516" width="42" height="24" rx="3"/><rect x="1128" y="516" width="42" height="24" rx="3"/><rect x="1176" y="516" width="42" height="24" rx="3"/><rect x="1224" y="516" width="42" height="24" rx="3"/><rect x="1272" y="516" width="42" height="24" rx="3"/><rect x="1320" y="516" width="42" height="24" rx="3"/></g><text x="1221" y="566" font-size="11.5" text-anchor="middle" fill="currentColor">ICND2260 × 24（4 × 6，每颗 40 通道 × 48 扫）</text><path d="M1221 574 H1221 V588" stroke="#0E6E7A" stroke-width="2" fill="none" marker-end="url(#aht)"/><rect x="1080" y="592" width="282" height="48" rx="5" fill="none" stroke="#9C6206" stroke-width="1.4" stroke-dasharray="5 4"/><text x="1221" y="612" font-size="11.5" text-anchor="middle" fill="currentColor">LED 阵列 41,472 px</text><text x="1221" y="629" font-size="10.5" text-anchor="middle" fill="#9C6206">待选型</text></svg>
+    </div>
+    <figcaption>整机 = 主控板 ×1 + 屏板 ×2 + 跨界件，<b>跨旋转界面已全部非接触</b>（无线供电 + WiFi + 光电索引）。<b>每颗 ICND2260 有 4 个通道不接 LED</b>（216 = 6 × 36，填充必须均摊到 6 颗），这一条直接落到屏板布线上。</figcaption>
+    <div class="legend">
+      <span><i class="swbox"></i>已定器件</span>
+      <span><i class="swbox" style="border-color:#9C6206;border-style:dashed"></i>待选型</span>
+      <span><i class="swbox" style="border-color:#AE3446;border-style:dashed"></i>空白</span>
+      <span><i class="sw" style="border-top-color:#0E6E7A"></i>数据</span>
+      <span><i class="sw" style="border-top-color:#8A939E;border-top-style:dashed"></i>电源</span>
+    </div>
+  </figure>
+</section>
+
+<section>
+  <div class="sechead"><h2>器件清单与询价</h2><span class="note">采购填 供应商 / 单价 / 货期 / 备注</span></div>
+  <div class="toolbar">
+    <button id="btnPend">只看待填</button>
+    <button id="btnCsv" hidden>导出 CSV</button>
+    <span class="sync" id="sync"><span class="dot" id="dot"></span>连接中…</span>
+  </div>
+  <div class="tablewrap">
+    <table id="bom">
+      <thead><tr>
+        <th>编号</th><th>器件</th><th>型号 / 规格</th><th>封装</th>
+        <th style="text-align:right">单板</th><th style="text-align:right">整机</th><th>状态</th><th>说明</th>
+        <th class="fill">供应商 / 品牌</th><th class="fill" style="text-align:right">单价 ¥</th><th class="fill" style="text-align:right">货期(周)</th><th class="fill">备注</th>
+        <th style="text-align:right">小计 ¥</th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+      <tfoot><tr>
+        <td colspan="8">合计（仅统计已填单价的行）</td>
+        <td colspan="4" id="fcount" style="color:var(--muted)"></td>
+        <td id="ftotal" style="text-align:right;font-weight:600"></td>
+      </tr></tfoot>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sechead"><h2>填表前请先看这五条</h2></div>
+  <div class="cards">
+    <div class="card flag"><h3>48 W 够用，但按内容口径，不按满白</h3><p>转子供电是无线供电（24 V 2 A = <b>48 W</b>），<b>已在接近整机的负载上跑过</b>。按内容口径（体素点亮率 1.7%，屏平均约 2 W）余量很大；按满白满电流则要 38.7 A / <b>130 W</b>，只够 22%。<b>用户已定：以内容为主</b>，所以不加大功率，代价是<b>亮度上限由这条线定</b>——2260 的电流增益要按预算封顶，不能开满。平均不是问题，<b>峰值是</b>：屏板输入端必须放足够的低 ESR 储能电容，否则重演 VDDR 塌到 1.9 V。</p></div>
+    <div class="card flag"><h3>LED 灯珠是金额上的大头</h3><p>82,944 个 RGB 像素（两面），间距 0.78125 mm。这个间距基本只能做 COB，工艺与良率直接决定单价，请按 P0.78 级 COB 询，并同时问清最小批量与打样条件。</p></div>
+    <div class="card"><h3>工艺等级由 ICND2260 定死</h3><p>2260 是 0.5 mm pitch BGA225，它定死整块屏板的工艺等级与层数，FPGA 的 1.0 mm 封装反而不是约束。PCB 报价要按这个口径问，别按普通四层板问。</p></div>
+    <div class="card"><h3>连接器要按 136 g 离心选</h3><p>主控板与屏板都在转子上，承受 68~136 g。普通板对板连接器和 USB 座不是按这个加速度设计的，选型要看锁扣与保持力，必要时改焊接式模块加灌胶。</p></div>
+    <div class="card"><h3>数量口径：单板 × 板数</h3><p>屏板一式两块，屏板行的"整机"列已经乘过 2；主控板只有一块。标"1 套"的行是成套无源件，数量待硬件出原理图后细化，先按套询价即可。</p></div>
+  </div>
+</section>
+
+<footer>
+  口径：192 × 216 / 面 · 603 片/圈 · 900 RPM · 30 Hz 体帧率 · 内容 15 fps · 单面 24 颗 ICND2260（4 × 6，48 扫）· 上行 13 対 @800 Mb/s + 1 対 400 MHz · 下行 72 対 @300 Mb/s。
+  详见仓库 <span class="mono">pcb/00_目标电路总览.md</span> 与 <span class="mono">pcb/dr1v90_core_v1/</span>、<span class="mono">pcb/eg4_bridge_v1/</span>。整理于 2026-09-08。
+</footer>
+</div>
+
+<script>
+const ROWS=[
+ {g:"A. 主控板 ×1",id:"A01",n:"FPSoC 主控",m:"DR1V90GEG484（安路）",pk:"GEG484 · 484 球 · 0.8 mm",p:1,q:1,s:"ok",note:"RISC-V + PL；跑 2 个渲染 IP 与上行串化"},
+ {g:"A. 主控板 ×1",id:"A02",n:"DDR3L 颗粒",m:"16 bit × 2（共 32 bit / 1 GB）；参考 GDP2BFLM-WB",pk:"BGA96",p:2,q:2,s:"sel",note:"必须贴满 32 bit，FS03 只贴了一半"},
+ {g:"A. 主控板 ×1",id:"A03",n:"QSPI Flash",m:"GD25LB256EYIG",pk:"WSON8",p:1,q:1,s:"ok",note:"启动镜像"},
+ {g:"A. 主控板 ×1",id:"A04",n:"DCDC 0.95 V",m:"TPS54821RHLR 或等效 ≥6 A",pk:"VQFN14",p:1,q:1,s:"sel",note:"VCCINT，FS03 按 8 A 设计"},
+ {g:"A. 主控板 ×1",id:"A05",n:"DCDC 1.8 / 3.3 V",m:"ES5030 或等效",pk:"POD24",p:3,q:3,s:"sel",note:"VCCAUX / VCCIO / 外设"},
+ {g:"A. 主控板 ×1",id:"A06",n:"DCDC 2.5 V",m:"待选型（新增轨）",pk:"—",p:1,q:1,s:"sel",note:"驱屏/上行 LVDS 的共模全靠它，FS03 没有这一路"},
+ {g:"A. 主控板 ×1",id:"A07",n:"DDR 电源 1.35 V + VTT",m:"SGM2054XTD10G 或等效",pk:"VQFN10",p:1,q:1,s:"sel",note:"VTT 必须晚于 VDDQ 起"},
+ {g:"A. 主控板 ×1",id:"A08",n:"USB 2.0 PHY",m:"USB3320（ULPI）",pk:"QFN32",p:1,q:1,s:"sel",note:"接 WiFi dongle"},
+ {g:"A. 主控板 ×1",id:"A09",n:"USB 限流 + ESD",m:"CH217K + TPD2EUSB30DRTR",pk:"SOT23-6 / SOT-3",p:2,q:2,s:"sel",note:""},
+ {g:"A. 主控板 ×1",id:"A10",n:"调试串口桥",m:"CH342K",pk:"ESSOP-10",p:1,q:1,s:"sel",note:"双串口，板级调试用"},
+ {g:"A. 主控板 ×1",id:"A11",n:"有源晶振 33.3333 MHz",m:"1.8 V 四脚，如 OT322533.3333MJBA4SL",pk:"3225",p:1,q:1,s:"sel",note:"PS_CLK"},
+ {g:"A. 主控板 ×1",id:"A12",n:"有源晶振 25 MHz",m:"3.3 V 四脚",pk:"3225",p:1,q:1,s:"sel",note:"PL / PHY"},
+ {g:"A. 主控板 ×1",id:"A13",n:"无源晶振 24 MHz",m:"如 M24000E027",pk:"3225",p:1,q:1,s:"sel",note:""},
+ {g:"A. 主控板 ×1",id:"A14",n:"以太网 PHY + 变压器",m:"YT8531 + HY911130A",pk:"QFN-40B",p:1,q:1,s:"sel",note:"⚠ 转子上是否保留待定，可裁剪"},
+ {g:"A. 主控板 ×1",id:"A15",n:"RTC + 电池 + EEPROM",m:"PT7C4337 + CR1220 + 24LC02B",pk:"SOIC-8",p:1,q:1,s:"sel",note:"可裁剪"},
+ {g:"A. 主控板 ×1",id:"A16",n:"eMMC 或 SD 卡座",m:"待定（转子上建议 eMMC，不用卡）",pk:"—",p:1,q:1,s:"sel",note:"卡座在 136 g 下不可靠"},
+ {g:"A. 主控板 ×1",id:"A17",n:"上行连接器",m:"≥40 pin 高速差分，耐 136 g",pk:"待选型",p:2,q:2,s:"gap",note:"400 MHz 转发钟走这里，抖动与机械固定都压在它身上"},
+ {g:"A. 主控板 ×1",id:"A18",n:"无源件（成套）",m:"参考 FS03：电容 ~190、电阻 ~140、电感/磁珠 ~12",pk:"0201/0402",p:1,q:1,s:"sel",note:"自研板出原理图后重估，先按套询"},
+
+ {g:"B. 屏板 ×2",id:"B01",n:"桥片 FPGA",m:"EG4A20BG256I7（安路）",pk:"BGA256 · 1.0 mm · 17×17",p:1,q:2,s:"ok",note:"87 対 + 18 单端 / 天花板 195，余 3"},
+ {g:"B. 屏板 ×2",id:"B02",n:"LED 驱动",m:"ICND2260（映己鸿鹄）",pk:"BGA225 · 0.5 mm",p:24,q:48,s:"ok",note:"4×6 排布，每颗 40 通道 × 48 扫，只用 36 通道"},
+ {g:"B. 屏板 ×2",id:"B03",n:"LED 灯珠 / COB",m:"RGB，像素间距 0.78125 mm（P0.78 级 COB）",pk:"待选型",p:41472,q:82944,s:"sel",note:"金额大头；请一并问 MOQ 与打样条件"},
+ {g:"B. 屏板 ×2",id:"B04",n:"3R 网络电阻 RS",m:"150 Ω ±1%",pk:"0402 / 0201",p:102,q:204,s:"ok",note:"仿真 LVDS 每腿一只"},
+ {g:"B. 屏板 ×2",id:"B05",n:"3R 网络电阻 RP",m:"140 Ω ±1%",pk:"0402 / 0201",p:51,q:102,s:"ok",note:"跨接；本板只需 3R，不要照抄 E104 的 5R"},
+ {g:"B. 屏板 ×2",id:"B06",n:"差分端接电阻",m:"100 Ω ±1%",pk:"0402",p:72,q:144,s:"ok",note:"焊在灯板侧、尽量靠近 2260"},
+ {g:"B. 屏板 ×2",id:"B07",n:"模拟开关 8:1",m:"74HC4051 / SN74LV4051 类",pk:"TSSOP-16",p:3,q:6,s:"sel",note:"把 24 链 ack 收敛成 3 根"},
+ {g:"B. 屏板 ×2",id:"B08",n:"屏电源 VDDR 2.8 V",m:"大电流多相 DCDC，待选型",pk:"—",p:1,q:2,s:"gap",note:"屏阵列整机规格上限 43 A，主要电流在这一路"},
+ {g:"B. 屏板 ×2",id:"B09",n:"屏电源 VDDGB 3.8 V",m:"待选型",pk:"—",p:1,q:2,s:"gap",note:"低于 3.5 V 绿蓝不亮"},
+ {g:"B. 屏板 ×2",id:"B10",n:"桥片电源 4 路",m:"1.0 / 1.8 / 2.5 / 3.3 V",pk:"—",p:4,q:8,s:"sel",note:"2.5 V 决定仿真対共模 1.25 V"},
+ {g:"B. 屏板 ×2",id:"B11",n:"有源晶振 25 MHz",m:"3.3 V",pk:"3225",p:1,q:2,s:"ok",note:"桥片参考时钟"},
+ {g:"B. 屏板 ×2",id:"B12",n:"配置 SPI Flash（DNP）",m:"如 W25Q64，留焊盘不贴",pk:"SOP-8",p:1,q:2,s:"ok",note:"正常由主控推 bit；这是零成本对冲"},
+ {g:"B. 屏板 ×2",id:"B13",n:"板对板连接器",m:"与 A17 配对",pk:"待选型",p:1,q:2,s:"gap",note:""},
+ {g:"B. 屏板 ×2",id:"B14",n:"去耦与无源件（成套）",m:"每颗 2260 与 FPGA 的去耦网络",pk:"0201/0402",p:1,q:2,s:"sel",note:"数量待原理图，先按套询"},
+
+ {g:"C. 跨界与互连",id:"C01",n:"无线供电（现役在用）",m:"发射 + 接收模块 + 耦合线圈对；输入 24~32 V，输出 24 V 2 A = 48 W",pk:"线圈 Φ80~145 环形",p:1,q:1,s:"ok",note:"已在接近整机的负载上跑过；按内容口径够用，不加大功率"},
+ {g:"C. 跨界与互连",id:"C05",n:"转子侧储能电容组",m:"低 ESR 电解 + 陶瓷，容量待算",pk:"—",p:1,q:2,s:"gap",note:"48 W 是平均口径；峰值靠电容扛。踩过 VDDR 塌到 1.9 V 与瞬时电流拉重启"},
+ {g:"C. 跨界与互连",id:"C02",n:"上行差分线缆 / FFC",m:"100 Ω 差分，28 対 + 配置线",pk:"待选型",p:1,q:2,s:"gap",note:"400 MHz，等长与偏斜画板时定死"},
+ {g:"C. 跨界与互连",id:"C03",n:"USB WiFi dongle",m:"待选型（需支持 Linux 驱动）",pk:"—",p:1,q:1,s:"sel",note:"136 g 下需灌胶或改焊接式模块"},
+ {g:"C. 跨界与互连",id:"C04",n:"光电索引传感器 + 遮光片",m:"对射或反射式，待选型",pk:"—",p:1,q:1,s:"sel",note:"每圈一个基准脉冲"},
+
+ {g:"D. 转子与机械",id:"D01",n:"电机 + 驱动器",m:"900 RPM 连续",pk:"—",p:1,q:1,s:"sel",note:"现状限速 850 RPM，动平衡是瓶颈"},
+ {g:"D. 转子与机械",id:"D02",n:"转子结构件 + 配重",m:"macha v4：法兰盘 / hub_disc / rim_ring 等",pk:"3D 打印",p:1,q:1,s:"sel",note:"线圈座已在法兰盘上（Φ80~145 环形槽，8+8 M3）；主控板上转子后质量与不平衡量都增加"},
+ {g:"D. 转子与机械",id:"D03",n:"防护罩 / 散热件",m:"待设计",pk:"—",p:1,q:1,s:"sel",note:""},
+ {g:"D. 转子与机械",id:"D04",n:"定子侧直流电源",m:"24~32 V，供无线供电发射端；容量按发射效率折算",pk:"—",p:1,q:1,s:"sel",note:"整机功耗预算仍未做（按内容口径而非满白）"},
+
+ {g:"E. PCB 与加工",id:"E01",n:"主控板 PCB",m:"参考 FS03 为 10 层；0.8 mm BGA484",pk:"—",p:1,q:1,s:"sel",note:"阻抗控制，含阻焊/钢网"},
+ {g:"E. PCB 与加工",id:"E02",n:"屏板 PCB",m:"层数待定；0.5 mm BGA225 定工艺等级；100 Ω 差分",pk:"—",p:1,q:2,s:"sel",note:"面积大、器件密，按 HDI 能力询"},
+ {g:"E. PCB 与加工",id:"E03",n:"打样 + SMT（NRE）",m:"首批小批量",pk:"—",p:1,q:1,s:"sel",note:"含钢网、编程、首件"},
+ {g:"E. PCB 与加工",id:"E04",n:"测试治具",m:"待定",pk:"—",p:1,q:1,s:"sel",note:""},
+];
+const ST={ok:["已定","ok"],sel:["待选型","sel"],gap:["空白","gap"]};
+const FIELDS=["sup","price","lead","note"];
+const state={};ROWS.forEach(r=>state[r.id]={sup:"",price:"",lead:"",note:""});
+let db=null,useLocal=false,pendOnly=false;
+const fmt=n=>n.toLocaleString("zh-CN",{maximumFractionDigits:2});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function stats(){
+  const tot=ROWS.length,ok=ROWS.filter(r=>r.s==="ok").length,sel=ROWS.filter(r=>r.s==="sel").length,gap=ROWS.filter(r=>r.s==="gap").length;
+  const chips=48+2+1;
+  document.getElementById("stats").innerHTML=`
+   <div class="stat"><div class="k">器件条目</div><div class="v">${tot}</div></div>
+   <div class="stat"><div class="k">整机有源芯片</div><div class="v">${chips} <small>颗</small></div></div>
+   <div class="stat"><div class="k">LED 像素</div><div class="v">82,944</div></div>
+   <div class="stat"><div class="k">已定 / 待选型 / 空白</div><div class="v">${ok} <small>/</small> ${sel} <small>/</small> ${gap}</div></div>`;
+}
+function render(){
+  const tb=document.getElementById("tb");let html="",g=null;
+  ROWS.forEach(r=>{
+    const filled=!!state[r.id].price;
+    if(pendOnly&&filled)return;
+    if(r.g!==g){g=r.g;const cnt=ROWS.filter(x=>x.g===g).length;html+=`<tr class="grp"><td colspan="13">${esc(g)}<span class="cnt">${cnt} 项</span></td></tr>`;}
+    const st=ST[r.s];
+    html+=`<tr data-id="${r.id}">
+      <td class="id">${r.id}</td><td class="name">${esc(r.n)}</td><td class="model">${esc(r.m)}</td>
+      <td class="model" style="opacity:.75">${esc(r.pk)}</td>
+      <td class="num">${fmt(r.p)}</td><td class="num">${fmt(r.q)}</td>
+      <td><span class="pill ${st[1]}">${st[0]}</span></td><td class="note">${esc(r.note)}</td>
+      <td><input class="f" data-f="sup" placeholder="—"></td>
+      <td><input class="f price" data-f="price" inputmode="decimal" placeholder="0.00"></td>
+      <td><input class="f lead" data-f="lead" inputmode="numeric" placeholder="—"></td>
+      <td><input class="f" data-f="note" placeholder="MOQ / 替代料"></td>
+      <td class="sub" data-sub></td></tr>`;
+  });
+  tb.innerHTML=html;
+  tb.querySelectorAll("tr[data-id]").forEach(tr=>paint(tr));
+}
+function paint(tr){
+  const id=tr.dataset.id,r=ROWS.find(x=>x.id===id),v=state[id];
+  FIELDS.forEach(f=>{const el=tr.querySelector(`[data-f="${f}"]`);if(el&&document.activeElement!==el)el.value=v[f]||"";});
+  const price=parseFloat(v.price);
+  tr.querySelector("[data-sub]").innerHTML=isFinite(price)?`<b>${fmt(Math.round(price*r.q*100)/100)}</b>`:"—";
+}
+function totals(){
+  let sum=0,n=0;
+  ROWS.forEach(r=>{const p=parseFloat(state[r.id].price);if(isFinite(p)){sum+=p*r.q;n++;}});
+  document.getElementById("ftotal").textContent=n?"¥ "+fmt(Math.round(sum*100)/100):"—";
+  document.getElementById("fcount").textContent=`${n} / ${ROWS.length} 行已填单价`;
+}
+function save(id){
+  const v=state[id];
+  if(db){db.doc("quotes/"+id).set({...v,updatedAt:new Date().toISOString()}).catch(()=>{});}
+  else{try{localStorage.setItem("pov3d_bom",JSON.stringify(state));}catch(e){}}
+}
+const timers={};
+document.getElementById("tb").addEventListener("input",e=>{
+  const el=e.target;if(!el.classList.contains("f"))return;
+  const tr=el.closest("tr"),id=tr.dataset.id;
+  state[id][el.dataset.f]=el.value;
+  paint(tr);totals();
+  clearTimeout(timers[id]);timers[id]=setTimeout(()=>save(id),700);
+});
+document.getElementById("btnPend").addEventListener("click",e=>{
+  pendOnly=!pendOnly;e.target.classList.toggle("on",pendOnly);
+  e.target.textContent=pendOnly?"看全部":"只看待填";render();
+});
+function csv(){
+  const head=["编号","分组","器件","型号/规格","封装","单板","整机","状态","说明","供应商","单价","货期(周)","采购备注","小计"];
+  const q=s=>'"'+String(s==null?"":s).replace(/"/g,'""')+'"';
+  const lines=[head.map(q).join(",")];
+  ROWS.forEach(r=>{const v=state[r.id],p=parseFloat(v.price);
+    lines.push([r.id,r.g,r.n,r.m,r.pk,r.p,r.q,ST[r.s][0],r.note,v.sup,v.price,v.lead,v.note,isFinite(p)?Math.round(p*r.q*100)/100:""].map(q).join(","));});
+  return "﻿"+lines.join("\r\n");
+}
+stats();render();totals();
+try{const raw=localStorage.getItem("pov3d_bom");if(raw){const o=JSON.parse(raw);Object.keys(o).forEach(k=>{if(state[k])state[k]={...state[k],...o[k]};});render();totals();}}catch(e){}
+
+(async()=>{
+  const dot=document.getElementById("dot"),sync=document.getElementById("sync");
+  const use=(typeof claude!=="undefined"&&claude&&claude.use)?claude.use.bind(claude):async()=>null;
+  const dl=await use("downloads");
+  const b=document.getElementById("btnCsv");b.hidden=false;
+  b.addEventListener("click",async()=>{
+    const data=csv();
+    if(dl){try{await dl.save({filename:"POV3D_器件询价单.csv",data});return;}catch(e){if(e&&e.code==="declined")return;}}
+    const url=URL.createObjectURL(new Blob([data],{type:"text/csv;charset=utf-8"}));
+    const a=document.createElement("a");a.href=url;a.download="POV3D_器件询价单.csv";
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);
+  });
+  db=await use("db");
+  if(!db){useLocal=true;dot.className="dot local";sync.lastChild.textContent="本地模式 · 填写存在本机浏览器 · 可导出 CSV";return;}
+  dot.className="dot live";sync.lastChild.textContent="共享填写已连接 · 自动保存";
+  db.collection("quotes").onSnapshot(snap=>{
+    snap.docs.forEach(d=>{
+      const id=d.id,v=d.data()||{};if(!state[id])return;
+      FIELDS.forEach(f=>{if(typeof v[f]==="string")state[id][f]=v[f];});
+      const tr=document.querySelector(`tr[data-id="${id}"]`);if(tr)paint(tr);
+    });
+    totals();
+  },()=>{dot.className="dot local";sync.lastChild.textContent="共享存储中断 · 改存本机";db=null;});
+})();
+</script>

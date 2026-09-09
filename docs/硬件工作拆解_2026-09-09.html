@@ -1,0 +1,554 @@
+<title>POV-3D 硬件里程碑</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --paper:#F1F2EE; --surface:#FBFCFA; --surface-2:#E9EBE5; --surface-3:#E1E4DC;
+  --ink:#15191B; --ink-2:#3A4245; --muted:#69736F; --rule:#D2D6CE; --rule-2:#BAC1B5;
+  --accent:#A8531C; --accent-soft:#F5E6DA;
+  --ok:#1F6F5C; --ok-soft:#E0EEE8;
+  --risk:#A32418; --risk-soft:#F7E2DE;
+  --t-gate:#A8531C; --t-scr:#2A5B9E; --t-soc:#6A4A9C; --t-mech:#2F7A45; --t-done:#8A938E;
+  --band:#F7E2DE;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#121513; --surface:#191D1B; --surface-2:#222724; --surface-3:#2A302C;
+    --ink:#E8ECE7; --ink-2:#C2C9C3; --muted:#8D958F; --rule:#2E3532; --rule-2:#414945;
+    --accent:#E39154; --accent-soft:#3A2618;
+    --ok:#5FC0A3; --ok-soft:#16302A;
+    --risk:#F0897C; --risk-soft:#361A17;
+    --t-gate:#E39154; --t-scr:#6DA2E0; --t-soc:#A98FE0; --t-mech:#5FBE7C; --t-done:#7C857F;
+    --band:#361A17;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121513; --surface:#191D1B; --surface-2:#222724; --surface-3:#2A302C;
+  --ink:#E8ECE7; --ink-2:#C2C9C3; --muted:#8D958F; --rule:#2E3532; --rule-2:#414945;
+  --accent:#E39154; --accent-soft:#3A2618;
+  --ok:#5FC0A3; --ok-soft:#16302A;
+  --risk:#F0897C; --risk-soft:#361A17;
+  --t-gate:#E39154; --t-scr:#6DA2E0; --t-soc:#A98FE0; --t-mech:#5FBE7C; --t-done:#7C857F;
+  --band:#361A17;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-size:14.5px;line-height:1.6}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.93em}
+.wrap{max-width:1180px;margin:0 auto;padding:0 26px 80px}
+
+header.mast{border-bottom:2px solid var(--ink);margin-bottom:30px;padding:40px 0 16px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 9px}
+h1{font-size:31px;line-height:1.24;margin:0 0 8px;font-weight:700;letter-spacing:-.012em;text-wrap:balance}
+.sub{margin:0 0 20px;color:var(--muted);font-size:13.5px;max-width:76ch}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:1px;border:1px solid var(--rule);border-radius:3px;overflow:hidden;background:var(--rule)}
+.meta div{background:var(--surface);padding:10px 13px;display:flex;flex-direction:column;gap:1px}
+.meta .k{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.meta .v{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.005em}
+
+section{margin:0 0 46px}
+h2{font-size:19px;font-weight:600;margin:0 0 4px;padding-bottom:7px;border-bottom:1px solid var(--rule-2);display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+h2 .sec{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--accent);font-weight:500;flex:none}
+h3{font-size:13px;font-weight:600;margin:22px 0 6px;color:var(--ink-2);font-family:"IBM Plex Mono",monospace;letter-spacing:.03em;text-transform:uppercase}
+.lead{margin:9px 0 14px;color:var(--muted);font-size:13px;max-width:80ch}
+p{margin:8px 0;max-width:80ch}
+ul{margin:8px 0;padding-left:20px;max-width:80ch}
+li{margin:3px 0}
+
+.tw{overflow-x:auto;margin:12px 0;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;
+   padding:8px 11px;border-bottom:1px solid var(--rule-2);background:var(--surface-2);white-space:nowrap}
+td{padding:7px 11px;border-bottom:1px solid var(--rule);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.k{background:var(--surface-2);font-weight:600;white-space:nowrap;width:1%}
+td.note{color:var(--ink-2);font-size:12.5px}
+td.nw{white-space:nowrap}
+caption{caption-side:bottom;text-align:left;padding:8px 11px;color:var(--muted);font-size:12px;border-top:1px solid var(--rule)}
+
+.pill{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+      padding:1px 6px;border-radius:2px;border:1px solid currentColor;white-space:nowrap}
+.pill.ok{color:var(--ok)} .pill.risk{color:var(--risk)} .pill.new{color:var(--accent)} .pill.tbd{color:var(--muted)}
+.yes{color:var(--ok);font-weight:600} .no{color:var(--risk);font-weight:600} .warn{color:var(--accent);font-weight:600}
+
+.callout{border:1px solid var(--rule);border-left:3px solid var(--rule-2);border-radius:3px;padding:10px 14px;margin:13px 0;font-size:13px;color:var(--ink-2);background:var(--surface);max-width:none}
+.callout.risk{border-left-color:var(--risk);background:var(--risk-soft)} .callout.risk b{color:var(--risk)}
+.callout.ok{border-left-color:var(--ok);background:var(--ok-soft)} .callout.ok b{color:var(--ok)}
+.callout.acc{border-left-color:var(--accent);background:var(--accent-soft)} .callout.acc b{color:var(--accent)}
+.callout p{max-width:none;margin:5px 0}
+.callout p:first-child{margin-top:0} .callout p:last-child{margin-bottom:0}
+
+/* ---- 排期条 ---- */
+.ganttbox{overflow-x:auto;margin:14px 0 6px;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+.gantt{min-width:900px;padding:14px 16px 6px;position:relative}
+.grow{display:grid;grid-template-columns:150px repeat(25,1fr);align-items:center;gap:0;position:relative;min-height:26px}
+.grow + .grow{margin-top:3px}
+.glab{font-size:12px;padding-right:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.glab .gm{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted);margin-right:5px}
+.gmonth{grid-row:1;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.08em;color:var(--muted);
+        border-left:1px solid var(--rule);padding:0 0 4px 5px}
+.gbar{height:19px;border-radius:2px;display:flex;align-items:center;padding:0 5px;font-family:"IBM Plex Mono",monospace;
+      font-size:10px;color:#fff;white-space:nowrap;overflow:hidden;position:relative;z-index:2;letter-spacing:.02em}
+.gbar.done{background:var(--t-done)}
+.gbar.gate{background:var(--t-gate)}
+.gbar.scr{background:var(--t-scr)}
+.gbar.soc{background:var(--t-soc);opacity:.75}
+.gbar.mech{background:var(--t-mech)}
+.gband{grid-row:1/-1;background:var(--band);border-left:1px dashed var(--risk);border-right:1px dashed var(--risk);z-index:0;pointer-events:none;align-self:stretch}
+.gbandlab{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--risk);padding-left:5px;white-space:nowrap}
+.glegend{display:flex;flex-wrap:wrap;gap:7px 16px;margin:10px 0 2px;font-size:12px;color:var(--ink-2);padding:0 16px 12px}
+.glegend span{display:inline-flex;align-items:center;gap:6px}
+.glegend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+
+/* ---- 里程碑卡 ---- */
+.ms{border:1px solid var(--rule);border-radius:3px;background:var(--surface);margin:16px 0;overflow:hidden}
+.ms.crit{border-left:3px solid var(--risk)}
+.ms-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:12px 16px;background:var(--surface-2);border-bottom:1px solid var(--rule)}
+.ms-id{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:600;color:var(--accent);flex:none}
+.ms-t{font-size:15.5px;font-weight:600;flex:1 1 240px}
+.ms-d{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ms-b{padding:13px 16px 15px}
+.goal{font-size:14px;margin:0 0 4px;max-width:80ch}
+.goal b{color:var(--accent)}
+.crit-chain{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:14px 0;font-family:"IBM Plex Mono",monospace;font-size:11.5px}
+.crit-chain span{background:var(--surface-2);border:1px solid var(--rule-2);border-radius:2px;padding:3px 8px;white-space:nowrap}
+.crit-chain span.hot{background:var(--risk-soft);border-color:var(--risk);color:var(--risk);font-weight:600}
+.crit-chain em{color:var(--muted);font-style:normal}
+
+.act{counter-reset:actstep;list-style:none;padding:0;margin:12px 0;display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden;max-width:none}
+.act li{counter-increment:actstep;background:var(--surface);padding:11px 14px 11px 46px;position:relative;font-size:13.5px;margin:0}
+.act li::before{content:counter(actstep);position:absolute;left:14px;top:11px;font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;color:var(--accent);border:1px solid var(--accent);border-radius:50%;width:19px;height:19px;display:flex;align-items:center;justify-content:center}
+
+footer{border-top:1px solid var(--rule-2);margin-top:48px;padding-top:14px;color:var(--muted);font-size:12px}
+footer p{max-width:80ch}
+::selection{background:var(--accent-soft);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media print{body{background:#fff;color:#000;font-size:9.5pt}.ganttbox,.tw{overflow:visible}tr,.ms{break-inside:avoid}h2{break-after:avoid}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">POV-3D · 硬件工作拆解 · 以里程碑为单位</p>
+  <h1>从现在到整机上转子</h1>
+  <p class="sub">把硬件剩余工作按「目标 → 判据 → 任务」拆成六个门。每个门有可验收的硬判据，不是工时表。基线日期 2026-09-09，选型与接口已冻结的部分不再列为任务。</p>
+  <div class="meta">
+    <div><span class="k">基线</span><span class="v">2026-09-09</span></div>
+    <div><span class="k">里程碑</span><span class="v">M0 – M5</span></div>
+    <div><span class="k">参考周期</span><span class="v">25 周</span></div>
+    <div><span class="k">参考完成</span><span class="v">2027-03-03</span></div>
+    <div><span class="k">关键门</span><span class="v">M2 验证板</span></div>
+    <div><span class="k">人力假设</span><span class="v">硬件 1 人</span></div>
+  </div>
+</header>
+
+<!-- ============ 现状 ============ -->
+<section>
+  <h2><span class="sec">§0</span> 起点：已经定死的和还卡着的</h2>
+  <p class="lead">排期只对「还没做的」有意义。这一节划清边界——上半是不用再讨论的，下半是现在就卡住 M1 的三条。</p>
+
+  <h3>已定案，不再列入任务</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>项</th><th>结论</th><th>定案日</th></tr></thead>
+    <tbody>
+      <tr><td class="k">桥片 FPGA</td><td>EG4A20BG256I7（安路）。87 対 + 18 单端 / 天花板 195，余 3</td><td class="nw mono">09-07</td></tr>
+      <tr><td class="k">主控 SoC</td><td>DR1V90GEG484（安路，RISC-V + PL）</td><td class="nw mono">09-07</td></tr>
+      <tr><td class="k">屏板排布</td><td>4 × 6 = 24 颗 / 面 @ 48 扫。由几何反推，不是估算</td><td class="nw mono">09-04</td></tr>
+      <tr><td class="k">LVDS 拓扑</td><td>一颗一组，每颗 3 対数据由 FPGA 直驱，删掉芯片间级联</td><td class="nw mono">09-09</td></tr>
+      <tr><td class="k">灯板对外接口</td><td>邮票孔 168 焊盘 @ 1.0 mm，每颗一束，対间夹地 —— 冻结版 v1</td><td class="nw mono">09-09</td></tr>
+      <tr><td class="k">FPGA bank VCCIO</td><td>2.5 V，3R 网络 RS 150 / RP 140 + Rpd 3.9 kΩ</td><td class="nw mono">09-09</td></tr>
+      <tr><td class="k">转子供电</td><td>无线供电 24 V × 2 A = 48 W，<b>现役就在用</b>，不是滑环</td><td class="nw mono">09-08</td></tr>
+      <tr><td class="k">询价单</td><td>46 行料已发采购，等回价与货期</td><td class="nw mono">09-09</td></tr>
+    </tbody>
+    <caption>出处：<span class="mono">灯板改板_邮票孔FPGA接口_2026-09-09.html</span> · <span class="mono">HW_SPEC_2026-09-04.html</span> · 记忆库 <span class="mono">project_pov3d_eg4a20bg256_bridge_selection</span> / <span class="mono">project_pov3d_rotor_wireless_power</span></caption>
+  </table>
+  </div>
+
+  <h3>三条卡点 —— 第一条不关，M1 一天都动不了</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>#</th><th>卡什么</th><th>为什么卡</th><th>怎么关</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="k">1</td>
+        <td class="nw"><span class="pill risk">卡外形</span><br>灯板宽度四选一</td>
+        <td class="note">邮票孔 168 焊盘 @ 1.0 mm = <b>168 mm</b>，而灯板只有 <b>160 mm</b> 宽，单边放不下。外形不定，原理图能画、PCB 画不了</td>
+        <td class="note">推荐方案 (d)：延长区做成 ≥175 mm 凸台，LED 区仍 160 mm。延长区没有 LED，且在旋转内径侧，加宽对转动惯量影响小</td>
+      </tr>
+      <tr>
+        <td class="k">2</td>
+        <td class="nw">板对板连接器料号</td>
+        <td class="note">官方只说过是「山谷道」品牌，立创与搜索引擎均无收录。封装本身有官方 PcbLib 可直接用，但下不了单</td>
+        <td class="note">量实物，或问小梅哥</td>
+      </tr>
+      <tr>
+        <td class="k">3</td>
+        <td class="nw">集创北方问询单</td>
+        <td class="note">表 13 的 #2 / #5 / #11 / #12，外加 IIC 那几条。答复影响端接与配置流程</td>
+        <td class="note">整理成一页发原厂。技术对接走代理商映己鸿鹄，问价走原厂</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout acc">
+    <p><b>还有一条不卡设计、但卡排期：芯片货期。</b> 询价单 L 列现在全是空白。安路 EG4A20 / DR1V90 与集创北方 ICND2260 的货期一旦超过 8 周，下单动作就必须从「设计定稿后」提到「设计中」——这会改变 M3/M4 的做法，不改变设计本身。</p>
+  </div>
+</section>
+
+<!-- ============ 排期 ============ -->
+<section>
+  <h2><span class="sec">§1</span> 排期全景与关键路径</h2>
+  <p class="lead">六个门，25 周。屏板一条线走到底，主控板是可以并行、也可以推后的支线——它不在关键路径上，前提是过渡期继续用 FS03 现货。</p>
+
+  <div class="ganttbox">
+    <div class="gantt">
+      <div class="grow">
+        <div class="glab"></div>
+        <div class="gmonth" style="grid-column:2/6">9 月</div>
+        <div class="gmonth" style="grid-column:6/10">10 月</div>
+        <div class="gmonth" style="grid-column:10/14">11 月</div>
+        <div class="gmonth" style="grid-column:14/19">12 月</div>
+        <div class="gmonth" style="grid-column:19/23">1 月</div>
+        <div class="gmonth" style="grid-column:23/27">2 月</div>
+      </div>
+
+      <div class="grow">
+        <div class="glab"><span class="gm">M0</span>卡点清零</div>
+        <div class="gband" style="grid-column:23/26"></div>
+        <div class="gbar gate" style="grid-column:2/3" title="1 周"></div>
+      </div>
+      <div class="grow">
+        <div class="glab"><span class="gm">M1</span>验证板进厂</div>
+        <div class="gband" style="grid-column:23/26"></div>
+        <div class="gbar scr" style="grid-column:3/6" title="3 周 · 灯板改板 + 转接板">3 周</div>
+      </div>
+      <div class="grow">
+        <div class="glab"><span class="gm">M2</span>验证板点亮</div>
+        <div class="gband" style="grid-column:23/26"></div>
+        <div class="gbar gate" style="grid-column:6/10" title="4 周 · 三条硬轴">4 周 ◆ 关键门</div>
+      </div>
+      <div class="grow">
+        <div class="glab"><span class="gm">M3a</span>正式屏板设计</div>
+        <div class="gband" style="grid-column:23/26"></div>
+        <div class="gbar scr" style="grid-column:10/16" title="6 周 · 24 颗 · 8 层 HDI">6 周 · 24 颗 HDI</div>
+      </div>
+      <div class="grow">
+        <div class="glab"><span class="gm">M3b</span>主控板设计</div>
+        <div class="gband" style="grid-column:23/26"></div>
+        <div class="gbar soc" style="grid-column:10/16" title="6 周 · 并行支线 · 可推后">6 周 · 可推后</div>
+      </div>
+      <div class="grow">
+        <div class="glab"><span class="gm">M4</span>正式板点亮</div>
+        <div class="gband" style="grid-column:23/26"></div>
+        <div class="gbar scr" style="grid-column:16/21" title="5 周 · 打样 + 贴片 + 双面">5 周 · 打样贴片</div>
+      </div>
+      <div class="grow">
+        <div class="glab"><span class="gm">M5</span>整机上转子</div>
+        <div class="gband" style="grid-column:23/26"></div>
+        <div class="gbar mech" style="grid-column:21/27" title="6 周 · 动平衡 + 900 RPM">6 周 · 900 RPM</div>
+      </div>
+      <div class="grow">
+        <div class="glab"></div>
+        <div class="gbandlab" style="grid-column:23/27">▲ 春节停工窗（2027-02-06）</div>
+      </div>
+    </div>
+    <div class="glegend">
+      <span><i style="background:var(--t-gate)"></i>决策门 / 验证门</span>
+      <span><i style="background:var(--t-scr)"></i>屏板线（关键路径）</span>
+      <span><i style="background:var(--t-soc);opacity:.75"></i>主控板线（可推后）</span>
+      <span><i style="background:var(--t-mech)"></i>机械与整机</span>
+      <span><i style="background:var(--band);border:1px dashed var(--risk)"></i>春节停工风险带</span>
+    </div>
+  </div>
+
+  <h3>关键路径</h3>
+  <div class="crit-chain">
+    <span class="hot">灯板宽度</span><em>→</em>
+    <span>灯板改板 PCB</span><em>→</em>
+    <span>打样贴片</span><em>→</em>
+    <span class="hot">点亮 + 三条硬轴</span><em>→</em>
+    <span>正式屏板设计</span><em>→</em>
+    <span>打样贴片</span><em>→</em>
+    <span>双面装配</span><em>→</em>
+    <span>动平衡 900 RPM</span>
+  </div>
+  <p>链上任何一环滑动，整机日期等量后移。主控板不在链上——它有 FS03 过渡可用，可以晚起步、也可以两人并行。<b>但它周期长（10 层、BGA484、0.8 mm）</b>，推得太晚就会反过来变成关键路径。</p>
+</section>
+
+<!-- ============ M0 ============ -->
+<section>
+  <h2><span class="sec">§2</span> 六个门，逐个拆</h2>
+  <p class="lead">每个门给出目标、可验收判据、任务清单和前置依赖。判据都是能当场判真假的，不写「基本完成」这类。</p>
+
+  <div class="ms crit">
+    <div class="ms-h">
+      <span class="ms-id">M0</span>
+      <span class="ms-t">卡点清零</span>
+      <span class="ms-d">1 周 · 09-09 → 09-16</span>
+    </div>
+    <div class="ms-b">
+      <p class="goal">目标：<b>灯板外形能冻结、料能下单、板能开画。</b></p>
+      <ol class="act">
+        <li><b>定灯板宽度方案。</b>四选一，推荐 (d) 延长区 ≥175 mm 凸台。这一条决定外形，其余都等它</li>
+        <li><b>拿到板对板连接器料号。</b>量实物或问小梅哥；封装直接导官方 <span class="mono">ACA420--CORE.PcbLib</span>（封装名 <span class="mono">ACG525_ACA420--CORE</span>），别按数字自己重画</li>
+        <li><b>发出集创北方问询单。</b>表 13 的 #2 / #5 / #11 / #12 + IIC 若干</li>
+        <li><b>回收采购询价。</b>重点盯三行的货期：EG4A20BG256I7、DR1V90GEG484、ICND2260</li>
+      </ol>
+      <div class="callout ok">
+        <p><b>判据　</b>① 灯板外形图冻结并出图　② 连接器有料号、可下单　③ 问询单已发出　④ 询价单 46 行有价、有货期</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- M1 -->
+  <div class="ms">
+    <div class="ms-h">
+      <span class="ms-id">M1</span>
+      <span class="ms-t">验证板进厂</span>
+      <span class="ms-d">3 周 · 09-16 → 10-07</span>
+    </div>
+    <div class="ms-b">
+      <p class="goal">目标：<b>一块能点亮 12 颗 2260 的板子投产。</b>不是 24 颗的大板——先用便宜的小板把三条硬轴证掉。</p>
+
+      <h3>灯板侧 · 七类改动（接口已冻结，照做即可）</h3>
+      <div class="tw">
+      <table>
+        <thead><tr><th></th><th>改动</th><th>要点</th></tr></thead>
+        <tbody>
+          <tr><td class="k">①</td><td class="nw">邮票孔本体</td><td class="note">168 焊盘 · 1.0 mm 单排 · 每颗一束（1 clk + 3 data = 12 焊盘）· 対间夹地</td></tr>
+          <tr><td class="k">②</td><td class="nw">端接电阻 48 只</td><td class="note">36 数据 + 12 时钟，全部紧贴 2260 的 G1/G2、D1/D2、E1/E2、F1/F2。参考板走级联、原本没有独立端接，<span class="warn">这是新增</span></td></tr>
+          <tr><td class="k">③</td><td class="nw">时钟共模逃生位</td><td class="note">12 対各留分裂端接 2 × 49.9 Ω + 中心抽头 CM 测试点 + AC 耦合位 + 共享 VBIAS 网，约 60 个 0402。<b>基线全贴 0 Ω 直通。</b><span class="no">必须留在灯板上</span>——见 M2 硬轴②</td></tr>
+          <tr><td class="k">④</td><td class="nw">I_SYNC 缓冲</td><td class="note">换 <b>74LVC244 @ 2.8 V</b>，3 路输出各驱 4 颗。<span class="no">不能照抄参考板的 74HC245 @ 3.8 V</span>——VCCIO 2.5 V 驱不动它</td></tr>
+          <tr><td class="k">④b</td><td class="nw">VDDD 降压</td><td class="note">3.8 V → 2.8 V（规格 2.8~3.8 V），M2 的 VIH 从 2.66 V 降到 1.96 V。连带 LVDS_EN / SCL / SDA 上拉改接 2.8 V</td></tr>
+          <tr><td class="k">⑤</td><td class="nw">ACK 回读</td><td class="note">12 颗独立引出 → 2 颗 8:1 mux → 2 根出。已定案，不用菊花链</td></tr>
+          <tr><td class="k">⑥</td><td class="nw">要删的</td><td class="note">芯片间 36 対 SDO→SDI 级联 · L_CKOP/L_CKON · 两个 RJ45 · 整条 DCLK 与 74HC245 的那一半 · JIN 排针</td></tr>
+          <tr><td class="k">⑦</td><td class="nw">要留的</td><td class="note">LVDS_EN 每颗一个电阻硬拉 · SEL_I/SEL_O 悬空 · 每颗去耦与 ROW CAP (B10/N7) / VCORE (E14) · LED 阵列 160×180 60 扫不动</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>转接板侧 + 布线工艺</h3>
+      <ul>
+        <li><b>转接板按表 12 画</b>，注意 P2 相对 P1 旋转 180°</li>
+        <li><span class="no">🔴 表 12.3 只解出 12 対，点亮要 13 対</span>——必须在 Altium 里用资料包 SchLib 补齐并复核全表，<b>不要照抄那张表就投板</b></li>
+        <li><b>168 根信号背面 → 正面换层过孔。</b>2260 在背面、焊盘在正面，差分対在过孔处切参考平面、回流会断，这是 340 Mbps 上会真实劣化的一条。靠那 60 个地焊盘的伴地过孔缝合——<span class="no">这些地不能删</span></li>
+        <li><b>背面 LVDS 全新布线。</b>LED 阵列和 2260 位置不动，但原来是 4 対进板串一条链，现在是 48 対分别走到 12 颗</li>
+        <li><b>叠层与 100 Ω 差分阻抗表</b>，交 PCB 厂确认</li>
+        <li><span class="warn">跟 PCB 厂确认 0.5 mm pitch BGA225 的工艺等级 / HDI / 报价</span>——工艺等级由 2260 定死，<b>不是 FPGA</b></li>
+        <li><b>ACA420 核心板改造</b>：拆掉磁珠 FB2，Bank0 的 VCCIO 从 3.3 V 改 2.5 V，由转接板经 P1 的 A9/A10 供电。<b>FB3 / FB4 / FB5 不要动</b></li>
+      </ul>
+
+      <div class="callout ok">
+        <p><b>判据　</b>① 原理图评审通过　② 13 対连接器脚位在 Altium 里复核完毕　③ 阻抗表经板厂确认　④ 板子投产、BOM 齐套</p>
+      </div>
+      <div class="callout"><p><b>依赖　</b>M0 第 1 条（外形）。第 2、3 条不关也能画原理图，但下单和定稿要等。</p></div>
+    </div>
+  </div>
+
+  <!-- M2 -->
+  <div class="ms crit">
+    <div class="ms-h">
+      <span class="ms-id">M2</span>
+      <span class="ms-t">验证板点亮 + 三条硬轴</span>
+      <span class="ms-d">4 周 · 10-07 → 11-04</span>
+    </div>
+    <div class="ms-b">
+      <p class="goal">目标：<b>12 颗 2260 点亮，三条硬轴有实测结论。</b>这是全项目最关键的一道门——它的成败决定正式屏板能不能画。</p>
+
+      <div class="tw">
+      <table>
+        <thead><tr><th>硬轴</th><th>测什么</th><th>为什么只能上板</th><th>不过怎么办</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="k">①</td>
+            <td class="nw">IOL 内 pclk ↔ sclk 相位</td>
+            <td class="note">工具不检查这条。<span class="yes">好消息</span>：现在能先算——<span class="mono">set_annotated_check</span> + <span class="mono">report_annotated_check</span>（SWUG105 §4.5.19 / §4.9.11），上板只做验证</td>
+            <td class="note">调 PLL 相位（dclk / dclk90）</td>
+          </tr>
+          <tr>
+            <td class="k">②</td>
+            <td class="nw">LVDS 驱 2260 实际共模 + 眼图</td>
+            <td class="note"><span class="no">最可能不过的一条</span>：扇出 IC 的 Voc 上限 <b>1.375 V</b> 超出 2260 的接收窗 <b>1.3 V</b>；GW5A 的原生 MINILVDS 上限同样是 1.375 V。两条路都可能超窗，而超窗<b>只能在接收端补救</b></td>
+            <td class="note">把 ③ 那 60 个 0402 从 0 Ω 直通切成 AC 耦合。<b>不用改版</b>——这正是逃生位存在的理由</td>
+          </tr>
+          <tr>
+            <td class="k">③</td>
+            <td class="nw">上行环回误码</td>
+            <td class="note">800 M 与 700 M <b>两档都要测</b>。700 M 是退路：时序余量从 2.1% 变 16.7%，代价每面多 2–3 対</td>
+            <td class="note">退 700 M 档，屏板对数相应加</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>本阶段其余工作</h3>
+      <ul>
+        <li>打样 + 贴片回板（2~3 周，串行，压不动）</li>
+        <li>上电时序验证 / FPGA 配置通路 / 时钟锁定</li>
+        <li>点亮阶段用 <b>ACA420-CORE</b>（安路 EG4S20BG256）插转接板；正式子板另画 EG4A20BG256</li>
+      </ul>
+
+      <div class="callout ok">
+        <p><b>判据　</b>① 12 颗 2260 点亮　② 共模实测落在 2260 接收窗内（或 AC 耦合后落在窗内）　③ 800 M 与 700 M 双档环回误码为 0</p>
+      </div>
+      <div class="callout risk">
+        <p><b>这道门不过，正式屏板不能画。</b>大板设计得再漂亮，硬轴没证过就是空的。如果时间紧，<b>宁可砍掉后面的进度，也要把这块做扎实</b>——这是 09-04 计划里就写死的原则，至今没有理由推翻。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- M3 -->
+  <div class="ms">
+    <div class="ms-h">
+      <span class="ms-id">M3</span>
+      <span class="ms-t">正式板设计（两条并行）</span>
+      <span class="ms-d">6 周 · 11-04 → 12-16</span>
+    </div>
+    <div class="ms-b">
+      <p class="goal">目标：<b>正式屏板与自研主控板设计完成并投产。</b></p>
+
+      <h3>M3a · 正式屏板 <span class="pill new">关键路径</span></h3>
+      <ul>
+        <li>24 颗 ICND2260、192 × 216 px / 面、48 扫、<b>FPGA 直接放灯板上，无邮票孔</b>（邮票孔是验证板的形态）</li>
+        <li>73 対差分（24 链 × 3 + 1 时钟）+ 96 只端接</li>
+        <li>三路电源 0.95 / 1.8 / 2.5 V，上电时序 VCCINT → VCCAUX → VCCIO，下电反序</li>
+        <li>8 层 HDI、via-in-pad，内圈必须；工艺等级由 2260 的 0.5 mm BGA 定死</li>
+        <li>SI 仿真：差分对等长、参考平面完整、每対配地，逐条过评审清单</li>
+      </ul>
+
+      <h3>M3b · DR1V90 自研主控板 <span class="pill tbd">可推后</span></h3>
+      <div class="callout">
+        <p><b>现状：只有交接资料包，原理图一行没画。</b><span class="mono">pcb/dr1v90_core_v1/</span> 有 62 MB / 39 个文件、6 篇设计要点 1100+ 行，但 <span class="mono">pcb/</span> 下唯一的真工程是 <span class="mono">zynq7020_dev_v1</span>（KiCad，Zynq 那块）。这块的起步成本比屏板高。</p>
+      </div>
+      <ul>
+        <li><span class="no">🔴 上行 LVDS 重排 bank</span>，避开 bank33 那 35 个上电被固定的球——其中 4 対差分被「劈开」（P 端下拉、N 端上拉），上电后约 90 ms 内对端会看到<b>稳定的假差分电平</b>。<b>要 RTL 侧先出新分配，硬件才能画</b></li>
+        <li>2.5 V 新增轨的电流预算与 bank 分配（驱屏 / 上行 LVDS 的共模全靠它，FS03 没有这一路）</li>
+        <li>DDR3L 32 bit / 1 GB 选型与等长约束（16 bit 已够用，32 bit 是放大余量）</li>
+        <li>boot mode strap <b>做成可切，不焊死</b>；<span class="mono">RSV_R2GND</span>(G10 / F8) 必须 4.7 kΩ 下拉，否则 PS BOOT 整条路走不通</li>
+        <li>定 <span class="mono">HSWAPEN</span>（球 K16）的值——决定上电 90 ms 内 PL I/O 是被拉高还是浮空</li>
+        <li>每条 LVDS 留 AC 耦合 + 共模偏置位；接收端留 100 Ω 端接位</li>
+        <li>10 层、BGA484 / 0.8 mm 球距</li>
+        <li><span class="warn">画原理图用 <span class="mono">05_机读数据/DR1V90GEG484_pinmap.csv</span></span>，不要用 PINLIST——484 球里两处与 DS1200 打架（H18 / P7），已在 csv 里修正并注明</li>
+      </ul>
+
+      <div class="callout ok">
+        <p><b>判据　</b>① 两块板原理图 + PCB 评审通过　② SI 仿真通过　③ 投产、BOM 齐套</p>
+      </div>
+      <div class="callout acc">
+        <p><b>人力提醒　</b>这 6 周是按<b>两条并行</b>算的，需要第二个人。若只有一名硬件工程师，两条串行 ⇒ <b>+4 周</b>，整机日期后移到 2027-03-31。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- M4 -->
+  <div class="ms">
+    <div class="ms-h">
+      <span class="ms-id">M4</span>
+      <span class="ms-t">正式板回板点亮</span>
+      <span class="ms-d">5 周 · 12-16 → 2027-01-20</span>
+    </div>
+    <div class="ms-b">
+      <p class="goal">目标：<b>两面屏板各自点亮，主控板起 Linux 并驱动两面。</b></p>
+      <ul>
+        <li>HDI 打样 + 贴片。比验证板重得多：一块板含 24 颗 0.5 mm BGA + FPGA + 约 300 只无源件</li>
+        <li>主控板上电、Linux 起来、QSPI 启动通路验证</li>
+        <li>单面点亮 → 双面点亮 → 主控 + 双屏联调</li>
+      </ul>
+      <div class="callout ok">
+        <p><b>判据　</b>① 两面屏板静态点亮，192 × 216 全阵列无坏区　② 主控板从 QSPI 启动 Linux　③ 主控经上行链路驱两面，误码为 0</p>
+      </div>
+      <div class="callout risk">
+        <p><b>这里没有给改版留时间。</b>上面每块板都按「一次回板成功」算。一块含 24 颗 0.5 mm BGA 的 HDI 板做到一版即通，是乐观假设——<b>现实里至少要给验证板留 1 轮改版（+3~4 周）</b>。见 §3 风险 1。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- M5 -->
+  <div class="ms">
+    <div class="ms-h">
+      <span class="ms-id">M5</span>
+      <span class="ms-t">整机集成上转子</span>
+      <span class="ms-d">6 周 · 2027-01-20 → 03-03</span>
+    </div>
+    <div class="ms-b">
+      <p class="goal">目标：<b>900 RPM 连续运转，30 Hz 体帧率。</b></p>
+      <ul>
+        <li>两块屏板背靠背装配 + 主控板上转子；所有元件固定方式按 <b>68–136 g</b> 离心校核</li>
+        <li>转子结构件 macha v4（法兰盘 / hub_disc / rim_ring），线圈座已在法兰盘上</li>
+        <li>48 W 无线供电接入 —— 现役模块已接近整机负载，亮度按内容口径设计、不按满白</li>
+        <li><span class="no">动平衡</span>：现状限速 <b>≤850 RPM</b>，根因是 v3.1 偏心 13.4 mm、配重放不下。<b>两面各一颗桥片只是不再恶化，解不掉偏心</b>——要靠 v4 结构解</li>
+        <li>索引传感器 + 遮光片标定，每圈一次基准</li>
+      </ul>
+      <div class="callout ok">
+        <p><b>判据　</b>① 900 RPM 连续运转，动平衡达标　② 体帧率 30 Hz、603 片/圈　③ 整机功耗在 48 W 内</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 风险 ============ -->
+<section>
+  <h2><span class="sec">§3</span> 三条会真实改变日期的风险</h2>
+  <p class="lead">不是「可能有风险」那种清单，是三件已经能看见、且会按周计价的事。</p>
+
+  <div class="callout risk">
+    <p><b>风险 1 · 全程没算改版轮次 —— 最可能失守的一条</b></p>
+    <p>25 周是按每块板「一次回板成功」排的。M2 那块验证板要证的恰恰是三条<b>没证过的</b>硬轴，其中共模那条已经能预见有超窗风险。合理做法是<b>预留 1 轮改版：+3~4 周</b>，把参考完成推到 2027-03-31。逃生位（③ 那 60 个 0402）的价值就在于把「共模超窗」从改版降级为换贴片，但它只覆盖这一条。</p>
+  </div>
+
+  <div class="callout risk">
+    <p><b>风险 2 · 春节停工正好压在 M5 上（2027-02-06）</b></p>
+    <p>板厂和 SMT 停工 2~3 周，物料也要提前备。M5 本身是装配调试、受影响小，<b>但 M4 只要有任何滑动，正式板的打样就会撞进停工窗口</b>——那不是等两周，是等两周之后再排队。<b>对策：M3 定稿的长货期料在 12 月底前下单，别等设计全部冻结。</b></p>
+  </div>
+
+  <div class="callout risk">
+    <p><b>风险 3 · 芯片货期是最大的外部变量，现在完全未知</b></p>
+    <p>询价单的货期列还是空的。安路 EG4A20 / DR1V90 属于国产 FPGA，货期波动大；ICND2260 单机要 48 颗。<b>若任一料货期超过 8 周，下单动作必须从 M3 结束提到 M3 开始</b>——按设计中的 BOM 先订长周期料，短周期料后补。这不改设计，只改采购节奏，但不做就会在 M4 门口白等。</p>
+  </div>
+</section>
+
+<!-- ============ 压缩 ============ -->
+<section>
+  <h2><span class="sec">§4</span> 两个压缩杠杆，和一个不能拉的</h2>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>杠杆</th><th>省多少</th><th>代价</th><th>建议</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="k">主控板先不做<br>用 FS03 过渡</td>
+        <td class="nw"><b>约 4 周</b><br><span class="mono">→ 2027-02-03</span></td>
+        <td class="note">转子上挂一块非自研板，机械固定、重量、不平衡量都要另算。记忆库口径本来就是「FS03 只是过渡」</td>
+        <td class="note"><span class="yes">可拉。</span>M3b 推到 M4 之后，让屏板独占关键路径。前提是 FS03 的 CEP 连接器能扛 136 g</td>
+      </tr>
+      <tr>
+        <td class="k">M3 两条真并行<br>（加第二个人）</td>
+        <td class="nw"><b>约 4 周</b><br><span class="mono">相对串行</span></td>
+        <td class="note">需要第二名硬件工程师。当前 25 周的排期<b>已经假设了并行</b>——若只有一人，是 +4 周而不是 −4 周</td>
+        <td class="note"><span class="warn">先确认人力。</span>这一条决定 25 周这个数成不成立</td>
+      </tr>
+      <tr>
+        <td class="k">验证板与正式屏板<br>重叠开工</td>
+        <td class="nw"><b>约 3 周</b></td>
+        <td class="note">硬轴没证就画大板。09-04 的计划明确反对，理由至今成立</td>
+        <td class="note"><span class="no">不建议拉。</span>硬轴 ① ③ 若提前出结论可以局部开工，但 ② 共模那条必须等实测——它直接决定端接网络怎么画</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout acc">
+    <p><b>一句话版本　</b>现在唯一该做的动作是<b>定灯板宽度</b>。它卡着 M1，M1 卡着 M2，M2 卡着后面全部。其余三条卡点可以并行处理，但都不像它这样一票否决。</p>
+  </div>
+</section>
+
+<footer>
+  <p>基线 2026-09-09。日期为参考值，按「硬件 1 人全职 + 软件侧配合 RTL / 综合 / 时序 / 工具链」、打样走常规档（未加急）、每块板一次回板成功推算；未含改版轮次与芯片货期，二者见 §3。</p>
+  <p>依据：<span class="mono">灯板改板_邮票孔FPGA接口_2026-09-09.html</span>（接口冻结版 v1）· <span class="mono">HW_SPEC_2026-09-04.html</span>（需求推导）· <span class="mono">HW_TASKS_2026-09-04.html</span>（原 12 周计划，其阶段一已被 09-07 选型定案覆盖）· <span class="mono">pcb/dr1v90_core_v1/01_设计要点/</span>（主控板 6 篇 1100+ 行）· 记忆库 <span class="mono">zynq_pov/docs/claude_memory/</span>。</p>
+</footer>
+
+</div>

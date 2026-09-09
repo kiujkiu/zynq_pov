@@ -133,6 +133,18 @@ LVDS18 与 LVDS25 同为 1250 Mbps, 需把 **J2(ADJ_BANK33) 跳到 1.8V 侧**"),
    ⚠ 但小板过渡期仍要接 FS03, 所以 CEP 的引脚/地仍是**小板接口定义**的输入,
    只是不该再拿它去倒逼最终架构降速。
 
+## 🔴 2026-09-07 追加: CEP1 = Bank33, 而 Bank33 的上电状态是被硬性固定的
+
+本篇查明「**CEP1 = DR1 Bank33 全 24 対 `IO_R1..R24_33`**」, 09-07 整理自研板资料时挖到
+**DS1200 §2.8.2 表 2-6**: bank33 有 **35 个球在上电完成到程序加载完成前(最坏 ~90ms)
+状态被硬性固定, `HSWAPEN` 管不了** —— 其中 **4 対差分被劈开**
+(`R16_33` 是 **P 端下拉 GND / N 端上拉 VCCIO**)。
+
+⇒ **CEP1 上那 24 対(含 09-03 那 14 対 800M 探针)在上电后 90ms 内, 对端看到的不是"无信号",
+而是一个稳定的假差分电平** —— 这一点我们从来没有考虑过。
+⚠ 不解释任何已知故障(上行是我们自己收, 不是屏在收), 但**接屏时要重新想一遍**。
+完整球位表与判据见 [[reference_dr1_bank33_poweron_forced_pins]]。
+
 相关: [[reference_fs03_cep_connector_pinout]] [[project_pov3d_master_and_bridge_both_on_rotor]]
 [[project_pov3d_eg4a20bg256_bridge_selection]] [[reference_eg4s20_bank_voltage_and_lvds33]]
 [[project_pov3d_uplink_rate_pin_budget]] [[reference_anlogic_dr1_fs03_eval]]

@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>灯板改板与邮票孔接口</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --paper:#F1F2EE; --surface:#FBFCFA; --surface-2:#E9EBE5; --surface-3:#E1E4DC;
+  --ink:#15191B; --ink-2:#3A4245; --muted:#69736F; --rule:#D2D6CE; --rule-2:#BAC1B5;
+  --accent:#A8531C; --accent-soft:#F5E6DA;
+  --ok:#1F6F5C; --ok-soft:#E0EEE8;
+  --risk:#A32418; --risk-soft:#F7E2DE;
+  --c-gnd:#8A938E; --c-clk:#A8531C; --c-r:#B4362B; --c-g:#2F7A45; --c-b:#2A5B9E;
+  --c-se:#6A4A9C; --c-pwr:#8E6B10;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#121513; --surface:#191D1B; --surface-2:#222724; --surface-3:#2A302C;
+    --ink:#E8ECE7; --ink-2:#C2C9C3; --muted:#8D958F; --rule:#2E3532; --rule-2:#414945;
+    --accent:#E39154; --accent-soft:#3A2618;
+    --ok:#5FC0A3; --ok-soft:#16302A;
+    --risk:#F0897C; --risk-soft:#361A17;
+    --c-gnd:#7C857F; --c-clk:#E39154; --c-r:#E8776A; --c-g:#5FBE7C; --c-b:#6DA2E0;
+    --c-se:#A98FE0; --c-pwr:#D6B05A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121513; --surface:#191D1B; --surface-2:#222724; --surface-3:#2A302C;
+  --ink:#E8ECE7; --ink-2:#C2C9C3; --muted:#8D958F; --rule:#2E3532; --rule-2:#414945;
+  --accent:#E39154; --accent-soft:#3A2618;
+  --ok:#5FC0A3; --ok-soft:#16302A;
+  --risk:#F0897C; --risk-soft:#361A17;
+  --c-gnd:#7C857F; --c-clk:#E39154; --c-r:#E8776A; --c-g:#5FBE7C; --c-b:#6DA2E0;
+  --c-se:#A98FE0; --c-pwr:#D6B05A;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-size:14.5px;line-height:1.6;}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.93em}
+.wrap{max-width:1240px;margin:0 auto;padding:0 26px 80px}
+
+header.mast{border-bottom:2px solid var(--ink);margin-bottom:30px;padding:40px 0 16px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 9px}
+h1{font-size:31px;line-height:1.24;margin:0 0 20px;font-weight:700;letter-spacing:-.012em}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;border:1px solid var(--rule);border-radius:3px;overflow:hidden;background:var(--rule)}
+.meta div{background:var(--surface);padding:10px 13px;display:flex;flex-direction:column;gap:1px}
+.meta .k{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.meta .v{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.005em}
+
+section{margin:0 0 44px}
+h2{font-size:19px;font-weight:600;margin:0 0 4px;padding-bottom:7px;border-bottom:1px solid var(--rule-2);display:flex;align-items:baseline;gap:11px}
+h2 .sec{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--accent);font-weight:500;flex:none}
+h3{font-size:14px;font-weight:600;margin:22px 0 6px;color:var(--ink-2);font-family:"IBM Plex Mono",monospace;letter-spacing:.02em}
+.lead{margin:8px 0 14px;color:var(--muted);font-size:13px;max-width:82ch}
+p{margin:8px 0;max-width:82ch}
+
+.tw{overflow-x:auto;margin:12px 0;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;
+   padding:8px 11px;border-bottom:1px solid var(--rule-2);background:var(--surface-2);white-space:nowrap}
+th.old{color:var(--muted)} th.new{color:var(--accent)}
+td{padding:6px 11px;border-bottom:1px solid var(--rule);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.k{background:var(--surface-2);font-weight:600;white-space:nowrap;width:1%}
+td.old{background:color-mix(in srgb,var(--surface-2) 55%, transparent);color:var(--muted)}
+td.new{background:color-mix(in srgb,var(--accent-soft) 45%, transparent);font-weight:500}
+td.num{font-family:"IBM Plex Mono",monospace;color:var(--muted);text-align:right;width:48px;white-space:nowrap;border-left:3px solid transparent}
+td.sig{white-space:nowrap;font-weight:500}
+td.dir,td.c{white-space:nowrap}
+td.note{color:var(--ink-2);font-size:12.5px}
+caption{caption-side:bottom;text-align:left;padding:8px 11px;color:var(--muted);font-size:12px;border-top:1px solid var(--rule)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;align-items:start}
+
+tr.gnd td.num{border-left-color:var(--c-gnd)} tr.gnd td.sig{color:var(--muted)}
+tr.clk td.num{border-left-color:var(--c-clk)} tr.clk td.sig{color:var(--c-clk)}
+tr.dR td.num{border-left-color:var(--c-r)}   tr.dR td.sig{color:var(--c-r)}
+tr.dG td.num{border-left-color:var(--c-g)}   tr.dG td.sig{color:var(--c-g)}
+tr.dB td.num{border-left-color:var(--c-b)}   tr.dB td.sig{color:var(--c-b)}
+tr.se  td.num{border-left-color:var(--c-se)} tr.se  td.sig{color:var(--c-se)}
+tr.pwr td.num{border-left-color:var(--c-pwr)}tr.pwr td.sig{color:var(--c-pwr)}
+.padbox{max-height:64vh;overflow:auto;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+.padbox table{font-size:12.5px}
+.padbox thead th{position:sticky;top:0;z-index:2}
+
+.legend{display:flex;flex-wrap:wrap;gap:7px 16px;margin:10px 0;font-size:12px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+
+.pill{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+      padding:1px 6px;border-radius:2px;border:1px solid currentColor;white-space:nowrap}
+.pill.keep{color:var(--ok)} .pill.del{color:var(--risk)} .pill.new{color:var(--accent)} .pill.tbd{color:var(--muted)}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:2px;background:var(--surface-3);color:var(--ink-2)}
+.yes{color:var(--ok);font-weight:600} .no{color:var(--risk);font-weight:600} .warn{color:var(--accent);font-weight:600}
+
+figure{margin:14px 0 6px}
+figcaption{font-size:12px;color:var(--muted);margin-top:7px}
+.diagram{width:100%;height:auto;background:var(--surface);border:1px solid var(--rule);border-radius:3px;display:block}
+
+.callout{border:1px solid var(--rule);border-left:3px solid var(--rule-2);border-radius:3px;padding:9px 13px;margin:12px 0;font-size:13px;color:var(--ink-2);background:var(--surface)}
+.callout.risk{border-left-color:var(--risk);background:var(--risk-soft)} .callout.risk b{color:var(--risk)}
+.callout.ok{border-left-color:var(--ok);background:var(--ok-soft)} .callout.ok b{color:var(--ok)}
+.callout.acc{border-left-color:var(--accent);background:var(--accent-soft)} .callout.acc b{color:var(--accent)}
+
+.toc{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden;margin:14px 0 6px}
+.toc-i{background:var(--surface);padding:8px 12px;display:flex;gap:10px;align-items:baseline;text-decoration:none;color:var(--ink);font-size:13px}
+.toc-i:hover{background:var(--surface-2)}
+.toc-n{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--accent);white-space:nowrap;min-width:52px}
+.act{counter-reset:actstep;list-style:none;padding:0;margin:12px 0;display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden;max-width:none}
+.act li{counter-increment:actstep;background:var(--surface);padding:11px 14px 11px 46px;position:relative;font-size:13.5px;margin:0}
+.act li::before{content:counter(actstep);position:absolute;left:14px;top:11px;font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;color:var(--accent);border:1px solid var(--accent);border-radius:50%;width:19px;height:19px;display:flex;align-items:center;justify-content:center}
+footer{border-top:1px solid var(--rule-2);margin-top:48px;padding-top:14px;color:var(--muted);font-size:12px}
+::selection{background:var(--accent-soft);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media print{body{background:#fff;color:#000;font-size:9.5pt}.padbox{max-height:none;overflow:visible}.tw{overflow:visible}tr{break-inside:avoid}h2{break-after:avoid}}
+@media (max-width:640px){.wrap{padding:0 14px 60px}h1{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">POV3D · 验证板 · 灯板对外接口冻结版 v1 · 2026-09-09</p>
+  <h1>灯板改板与邮票孔 FPGA 接口定义</h1>
+  <div class="meta">
+    <div><span class="k">底板</span><span class="v">ICN 160×180 60S</span></div>
+    <div><span class="k">定位</span><span class="v">验证板</span></div>
+    <div><span class="k">驱动芯片</span><span class="v">ICND2260 × 12</span></div>
+    <div><span class="k">灯板↔FPGA</span><span class="v">48 対 + 9 单端</span></div>
+    <div><span class="k">邮票孔</span><span class="v">168 焊盘 @1.0 mm</span></div>
+    <div><span class="k">FPGA↔DR1V90</span><span class="v">FPC 14 対</span></div>
+    <div><span class="k">帧率</span><span class="v">8,854 fps</span></div>
+    <div><span class="k">日期</span><span class="v">2026-09-09</span></div>
+  </div>
+</header>
+
+<section>
+  <h2 id="sec-s0"><span class="sec">§0</span>开工须知</h2>
+  <p class="lead">本文件是<b>灯板对外接口的冻结版</b>，供硬件据此改板与画转接板。左侧目录按阅读顺序编排；<b>只看三样就能开工：本节的行动清单、<a href="#sec-s1">§1 责任划分</a>、<a href="#sec-f-2-t-7">表 7 邮票孔脚位表</a></b>。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>已定案</th><th>值</th></tr></thead>
+    <tbody>
+      <tr><td class="k">板子定位</td><td class="new">验证板（12 颗 2260，60 扫，160 × 180）。目标板另议：24 颗、FPGA 直接放灯板上、无邮票孔</td></tr>
+      <tr><td class="k">LVDS 拓扑</td><td class="new"><b>一颗一组</b>：每颗 3 対数据由 FPGA 直驱，删掉芯片间级联</td></tr>
+      <tr><td class="k">时钟</td><td class="new">FPGA 出 1 対 → <b>子板上 1:12 扇出 IC</b> → <b>12 対穿邮票孔</b> → 点对点到 12 颗</td></tr>
+      <tr><td class="k">邮票孔</td><td class="new"><b>168 焊盘 @1.0 mm</b>，按<b>每颗一束</b>（1 clk + 3 data = 12 焊盘）连续排布，対间夹地</td></tr>
+      <tr><td class="k">端接</td><td class="new"><b>48 只</b>（36 数据 + 12 时钟），全部<b>分裂端接 2 × 49.9 Ω + CM 测试点</b>，贴灯板侧紧靠 2260</td></tr>
+      <tr><td class="k">ACK</td><td class="new">12 颗独立引出 → <b>2 × 8:1 mux</b> → 2 根出（<b>不用菊花链</b>）</td></tr>
+      <tr><td class="k">FPGA bank VCCIO</td><td class="new"><b>2.5 V</b>，用 3R 网络（RS 150 / RP 140）+ 建议加 <b>Rpd 3.9 kΩ</b></td></tr>
+      <tr><td class="k"><span class="mono">VDDD</span></td><td class="new">建议从 3.8 V 降到 <b>2.8 V</b>；<span class="mono">SCL/SDA/LVDS_EN</span> 上拉跟着改接 VDDD</td></tr>
+      <tr><td class="k">元件面</td><td class="new">两块灯板<b>背靠背</b> ⇒ 2260 与无源件在<b>背面</b>（位置不变），<b>转接板与 FPGA 在正面</b>延长区</td></tr>
+      <tr><td class="k">延长区</td><td class="new">下端延长 <b>50 mm</b>，转接板焊在正面</td></tr>
+      <tr><td class="k">FPGA</td><td class="new">点亮阶段用 <b>ACA420-CORE</b>（安路 EG4S20BG256）插转接板；正式子板另画 EG4A20BG256</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout risk"><b>🔴 三条卡住的，其中第一条决定灯板外形，不定就画不了：</b><br>
+  <b>① 灯板宽度四选一</b>——邮票孔 168 焊盘 @1.0 mm = <b>168 mm</b>，而灯板只有 160 mm 宽，单边放不下。<b>推荐 (d)：延长区做成 ≥175 mm 的凸台，LED 区仍 160 mm</b>（延长区没有 LED，可以比本体宽；且它在旋转内径侧，加宽对转动惯量影响小）。另三个方案见 <a href="#sec-t-12">表 12.6</a>。<br>
+  <b>② 旧版板对板连接器的厂商料号</b>——官方只说过是「山谷道」品牌，立创与搜索引擎均无收录。<b>要么量实物、要么问小梅哥</b>。封装本身有官方 PcbLib 可直接用。<br>
+  <b>③ 四条要发给集创北方的问询</b>——见 <a href="#sec-t-13">表 13</a> 的 #2 / #5 / #11 / #12，外加 IIC 那几条。</div>
+
+  <h3>硬件的行动清单</h3>
+  <ol class="act">
+    <li><b>先定灯板宽度方案</b>（上面 ①）。这一条决定外形，其余都等它。</li>
+    <li>按 <a href="#sec-s1">§1 责任划分表</a> 分工：灯板侧 7 类改动（邮票孔、48 只端接、12 対时钟的共模逃生位、<span class="mono">I_SYNC</span> 缓冲、ACK mux、要删的、要留的），子板侧 7 项。</li>
+    <li>邮票孔按 <a href="#sec-f-2-t-7">表 7</a> 的 168 焊盘脚位排布，<b>每颗一束、対间夹地</b>。⚠ 2260 在背面、焊盘在正面 ⇒ <b>168 根信号要过孔换层</b>，靠那 60 个地焊盘的伴地过孔缝合回流，<b>这些地不能删</b>。</li>
+    <li>转接板按 <a href="#sec-t-12">表 12</a> 画。连接器封装直接导官方 <span class="mono">ACA420--CORE.PcbLib</span>（封装名 <span class="mono">ACG525_ACA420--CORE</span>），<b>别按数字自己重画</b>；注意 <b>P2 相对 P1 旋转 180°</b>。</li>
+    <li>转接板的连接器脚位表（<a href="#sec-t-12">表 12.3</a>）我只解出 12 対，点亮要 13 対 ——<b>请在 Altium 里用资料包的 SchLib 补齐并复核全表</b>，不要照抄我那张表就投板。</li>
+    <li>量实物确认连接器料号（上面 ②），同时把问询单发出去（上面 ③）。</li>
+    <li>ACA420 上<b>拆掉磁珠 FB2</b>，把 Bank0 的 VCCIO 从 3.3 V 改成 2.5 V，由转接板经 P1 的 A9/A10 供电。<b>FB3/FB4/FB5 不要动。</b></li>
+  </ol>
+
+  <div class="callout acc"><b>本文依据。</b>凡是关于参考板的描述，都是用 <span class="mono">zynq_pov/icnd2260/tools/schdoc_netlist.py</span> 直接读客户 <span class="mono">.SchDoc</span> 抽出的<b>网表实读</b>结果，不是看 PDF 目视；芯片参数来自 <span class="mono">ICND2260 数据手册 V1.7</span> 与编程指导；ACA420 的机械数据是从官方 Altium 封装库里<b>逐个焊盘量出来的</b>。FPGA 侧信号名与现役 RTL <span class="mono">dr1v90/eg4_bridge/rtl/eg4_bridge_top.v</span> 的端口一一对应——<b>按本表画完，FPGA 代码不用改一行</b>。<br>
+  ⚠ 文中凡标 <b>🔴</b> 的是待决或有风险项，标「<b>已定案（09-09）</b>」的是本轮拍板的。</div>
+
+  <h3>目录</h3>
+<nav class="toc">
+<a class="toc-i" href="#sec-s1"><span class="toc-n">§1</span><span>责任划分：灯板侧做什么 / 子板侧做什么</span></a>
+<a class="toc-i" href="#sec-f-1"><span class="toc-n">图 1</span><span>系统连接</span></a>
+<a class="toc-i" href="#sec-t-1"><span class="toc-n">表 1</span><span>接口总账</span></a>
+<a class="toc-i" href="#sec-t-2"><span class="toc-n">表 2</span><span>参考板 → 改板：逐项对照</span></a>
+<a class="toc-i" href="#sec-t-3"><span class="toc-n">表 3</span><span>两颗为什么必须配对（行管账）</span></a>
+<a class="toc-i" href="#sec-t-4"><span class="toc-n">表 4</span><span>时钟分配：四方案对比</span></a>
+<a class="toc-i" href="#sec-t-5"><span class="toc-n">表 5</span><span>ACK 回读方案</span></a>
+<a class="toc-i" href="#sec-t-6"><span class="toc-n">表 6</span><span>电气参数与端接</span></a>
+<a class="toc-i" href="#sec-t-6b"><span class="toc-n">表 6b</span><span>I_SYNC：能并联，但要换器件</span></a>
+<a class="toc-i" href="#sec-t-6c"><span class="toc-n">表 6c</span><span>SCL / SDA（IIC）：不接，但要上拉</span></a>
+<a class="toc-i" href="#sec-f-2-t-7"><span class="toc-n">图 2 / 表 7</span><span>邮票孔脚位表（168 焊盘）</span></a>
+<a class="toc-i" href="#sec-t-8"><span class="toc-n">表 8</span><span>FPC：FPGA 子板 ↔ DR1V90</span></a>
+<a class="toc-i" href="#sec-t-9"><span class="toc-n">表 9</span><span>帧率账 / 电源 / FPGA 侧改动</span></a>
+<a class="toc-i" href="#sec-t-10"><span class="toc-n">表 10</span><span>1:12 扇出芯片选型</span></a>
+<a class="toc-i" href="#sec-t-11"><span class="toc-n">表 11</span><span>桥片选型：EG4 还是 GW5A，以及引脚账</span></a>
+<a class="toc-i" href="#sec-t-12"><span class="toc-n">表 12</span><span>转接板原理图：ACA420 ↔ 灯板邮票孔</span></a>
+<a class="toc-i" href="#sec-t-13"><span class="toc-n">表 13</span><span>待确认清单</span></a>
+</nav>
+</section>
+
+<section>
+  <h2 id="sec-s1"><span class="sec">§1</span>责任划分：灯板侧做什么 / 子板侧做什么</h2>
+  <p class="lead"><b>灯板接口是常量，FPGA 子板是变量。</b>EG4 一版、GW5A 一版，都来适配同一套邮票孔。本节是这条边界的定义——<b>左列冻结，右列可以随时换</b>。</p>
+  <div class="cols">
+    <div class="tw"><table>
+      <thead><tr><th class="new">灯板侧（冻结，本次要锁定的就是这些）</th></tr></thead>
+      <tbody>
+        <tr><td class="note"><b>① 邮票孔本体</b>：168 焊盘 · 1.0 mm 单排 · 按每颗一束（1 clk + 3 data = 12 焊盘）连续排布 · 対间夹地 · 板宽 ≥175 mm（或改 0.8 mm 间距 = 134 mm）</td></tr>
+        <tr><td class="note"><b>② 端接电阻 48 只</b>（36 数据 + 12 时钟），全部<b>紧贴 2260 的 G1/G2、D1/D2、E1/E2、F1/F2</b>。参考板走级联、原本没有独立端接，这是新增</td></tr>
+        <tr><td class="note"><b>③ 12 対时钟的共模逃生位</b>：分裂端接 2 × 49.9 Ω + 中心抽头 <span class="mono">CM</span> 测试点 + AC 耦合位 + 共享 <span class="mono">VBIAS</span> 网。🔴 <b>必须留在灯板上</b>——理由见下方</td></tr>
+        <tr><td class="note"><b>④ <span class="mono">I_SYNC</span> 缓冲</b>：一颗 <b>74LVC244 @2.8 V</b>，3 路输出各驱 4 颗。🔴 <b>不能照抄参考板的 74HC245 @3.8 V</b>——VCCIO 2.5 V 驱不动它，见表 6b</td></tr>
+        <tr><td class="note"><b>④b <span class="mono">VDDD</span> 建议从 3.8 V 降到 2.8 V</b>（规格 2.8~3.8 V）⇒ <span class="mono">M2</span> 的 VIH 从 2.66 V 降到 1.96 V。连带：<span class="mono">LVDS_EN / SCL / SDA</span> 上拉要改接 2.8 V</td></tr>
+        <tr><td class="note"><b>⑤ ACK</b>：12 颗独立引出 → <b>2 颗 8:1 mux</b> → 2 根出（<b class="yes">已定案，不用菊花链</b>）</td></tr>
+        <tr><td class="note"><b>⑥ 要删的</b>：芯片间 36 対 <span class="mono">SDO→SDI</span> 级联 · <span class="mono">L_CKOP/L_CKON</span> 级联 · <span class="mono">RJIN</span>/<span class="mono">ROUT</span> 两个 RJ45 · <span class="mono">DCLK</span> 整条 + 74HC245 的 DCLK 那一半 · <span class="mono">JIN</span> 排针</td></tr>
+        <tr><td class="note"><b>⑦ 要留的</b>：<span class="mono">LVDS_EN</span> 每颗一个电阻硬拉 · <span class="mono">SEL_I/SEL_O</span> 两端悬空 · 每颗去耦与 <span class="mono">ROW CAP</span>(B10/N7) / <span class="mono">VCORE</span>(E14) · LED 阵列 160×180 60 扫不动</td></tr>
+      </tbody>
+    </table></div>
+    <div class="tw"><table>
+      <thead><tr><th class="old">FPGA 子板侧（可换，灯板不受影响）</th></tr></thead>
+      <tbody>
+        <tr><td class="note"><b>FPGA 选型</b>：EG4A20BG256 / GW5A，两版子板各画各的</td></tr>
+        <tr><td class="note"><b>bank VCCIO = 2.5 V</b>（<b class="yes">已定案</b>）</td></tr>
+        <tr><td class="note"><b>驱动端网络</b>：3R（RS 150 / RP 140）+ 建议加 <b>Rpd 3.9 kΩ</b>，见表 6</td></tr>
+        <tr><td class="note"><b>12 対时钟从哪来</b>：EG4 ⇒ 板上 1:12 扇出 IC + 2.5 V LDO；GW5A ⇒ 也可 FPGA 引脚直出。<b>邮票孔那 12 対不变</b></td></tr>
+        <tr><td class="note"><b>PLL 相位</b>：<span class="mono">dclk / dclk90</span>，目标板再加一路补两组扇出的 600 ps</td></tr>
+        <tr><td class="note"><b>RTL 与工具链</b>：TD / 云源、原语、SDC</td></tr>
+        <tr><td class="note"><b>子板供电</b>：从灯板取 3.8 V ×2 + 2.8 V，自行降到 VCCINT / VCCIO 2.5 / VCCAUX</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+  <h3>🔴 元件面约束：两块灯板背靠背 ⇒ 背面不能有高元件</h3>
+  <div class="tw"><table>
+    <thead><tr><th>件</th><th>放哪一面</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td class="k new">转接板 + ACA420 核心板</td><td class="new"><b>正面（LED 面）</b>，延长区</td><td class="note">核心板 37.7 mm 深、连接器叠高，背面放不下；两块板背靠背时它们各自朝外，互不干涉</td></tr>
+      <tr><td class="k new">邮票孔 168 焊盘</td><td class="new"><b>正面</b>，延长区</td><td class="note">转接板焊在正面，焊盘必须同面</td></tr>
+      <tr><td class="k">ICND2260 × 12</td><td class="new"><b class="yes">背面（已确认 09-09）</b>，位置不变</td><td class="note">BGA225 低矮，两块板背面之间只需容纳 2 × 芯片高度 + 贴合层。<b>改板不动 LED 阵列与 2260 布局</b>，只把板子做大放下 FPGA</td></tr>
+      <tr><td class="k">48 只端接 · <span class="mono">I_SYNC</span> 缓冲 · ACK mux · 共模逃生位</td><td>背面，紧贴 2260</td><td class="note">0402 低矮；端接必须靠近接收端，不能挪到正面</td></tr>
+    </tbody>
+    <caption><b class="yes">✅ 已确认（09-09）</b>：2260 保持在 LED 背面、位置基本不变；改板只是「把板子做大一点、放下 FPGA」，<b>不动 LED 阵列与 2260 布局</b>。⇒ 下面的换层过孔是<b>确定要做的</b>，不是假设。<br>⚠ 但 LVDS 布线仍要重来：原来 12 颗串一条链（4 対进板），现在是 48 対分别走到 12 颗——LED 阵列和芯片位置不变，<b>背面的 LVDS 走线是全新的</b>。</caption>
+  </table></div>
+  <div class="callout risk"><b>🔴 由此新增一条必办事项：168 根信号要从背面过孔换层到正面。</b><br>
+  差分対在过孔处会切换参考平面，<b>回流路径会断</b>——这是 340 Mbps 上会真实劣化的一条。<br>
+  <b class="yes">好消息是邮票孔的地密度正好救了它</b>：焊盘排是「每対夹一根地」，那 <b>60 个地焊盘的过孔天然就是伴地过孔</b>，每対差分过孔两侧各有一个地过孔把回流缝合过去。<br>
+  ⇒ <b>这 60 个地不能为了缩短焊盘排而删掉</b>——它们在这里有第二个作用（这也让 §表 12.6 的方案 (c)「每 2 対一根地」变得更不划算）。</div>
+
+  <div class="callout risk"><b>🔴 第 ③ 条是唯一一处「子板的问题必须由灯板兜底」，别省。</b><br>
+  数据対的共模由子板的 3R + Rpd 决定（1.20 V，可设计）⇒ 灯板不用管。<br>
+  但<b>时钟対的共模取决于子板放了什么</b>：EG4 方案走扇出 IC，其 Voc 上限 1.375 V<b>超出 2260 的 1.3 V</b>；GW5A 的原生 MINILVDS 上限同样是 1.375 V。<b>两条路都可能超窗，而超窗只能在接收端补救</b>。<br>
+  ⇒ 灯板必须给 12 対时钟留出分裂端接 + CM 测试点 + AC 耦合位 + VBIAS 网。<b>基线全贴 0 Ω 直通</b>，实测超窗时不改版就能切成 AC 耦合。这是灯板保持「对两种子板都兼容」的代价，约 60 个 0402 位。</div>
+  <div class="callout ok"><b>🎯 邮票孔上过 12 対时钟而不是 1 対，正是这个划分的关键。</b>因为 12 対在连接器上，子板上放扇出 IC（EG4）还是 FPGA 引脚直出（GW5A），<b>灯板一个字都不用改</b>。若当初把扇出放灯板侧，换 FPGA 就要动灯板。</div>
+  <div class="callout acc"><b>⚠ 焊死的代价：</b>邮票孔一旦焊上，那块灯板就绑定那块子板。<b>要试 EG4 与 GW5A 两种子板，至少要做两块灯板</b>（或返修拆焊）。若灯板打样贵，可考虑「焊盘按邮票孔画、同时兼容一个板对板连接器封装」，验证期插连接器、定版后直焊。</div>
+</section>
+
+<section>
+  <h2 id="sec-f-1"><span class="sec">图 1</span>系统连接</h2>
+  <figure>
+  <svg class="diagram" viewBox="0 0 980 300" role="img" aria-label="系统框图">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-2)"></path></marker></defs>
+    <rect x="14" y="98" width="100" height="66" rx="3" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+    <text x="64" y="127" text-anchor="middle" font-size="13.5" font-weight="600" fill="var(--ink)">DR1V90</text>
+    <text x="64" y="145" text-anchor="middle" font-size="10.5" fill="var(--muted)">主控</text>
+    <line x1="116" y1="131" x2="172" y2="131" stroke="var(--ink-2)" stroke-width="1.4" marker-end="url(#ar)" marker-start="url(#ar)"></line>
+    <text x="144" y="120" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--accent)">FPC</text>
+    <text x="144" y="151" text-anchor="middle" font-size="10" fill="var(--muted)">14 対 · 100 Ω</text>
+    <rect x="168" y="48" width="134" height="182" rx="3" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+    <text x="235" y="68" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">FPGA 子板</text>
+    <rect x="178" y="78" width="114" height="50" rx="2" fill="var(--surface)" stroke="var(--rule-2)"></rect>
+    <text x="235" y="98" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">EG4A20BG256</text>
+    <text x="235" y="113" text-anchor="middle" font-size="9.5" fill="var(--muted)">备选 GW5A · eg4_bridge</text>
+    <path d="M235 128 V 150" stroke="var(--c-clk)" stroke-width="1.4" marker-end="url(#ar)"></path>
+    <text x="243" y="144" font-size="9.5" fill="var(--c-clk)">1 対</text>
+    <rect x="178" y="152" width="114" height="46" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"></rect>
+    <text x="235" y="170" text-anchor="middle" font-size="11" font-weight="600" fill="var(--accent)">1:12 LVDS 扇出</text>
+    <text x="235" y="186" text-anchor="middle" font-size="9.5" fill="var(--accent)">12 対输出</text>
+    <text x="235" y="219" text-anchor="middle" font-size="9.5" fill="var(--muted)">FPGA 引脚只占 1 対</text>
+    <line x1="304" y1="140" x2="344" y2="140" stroke="var(--ink-2)" stroke-width="1.4" marker-end="url(#ar)"></line>
+    <text x="324" y="129" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--accent)">邮票孔</text>
+    <text x="324" y="160" text-anchor="middle" font-size="10" fill="var(--muted)">48 対 · 168 焊盘</text>
+    <rect x="346" y="24" width="620" height="252" rx="3" fill="none" stroke="var(--rule-2)" stroke-dasharray="4 3"></rect>
+    <text x="360" y="42" font-size="10.5" fill="var(--muted)" letter-spacing="1.4">灯板 160 × 180 mm · 60 扫</text>
+    <rect x="360" y="56" width="96" height="44" rx="3" fill="none" stroke="var(--rule-2)" stroke-dasharray="3 3"></rect>
+    <text x="408" y="74" text-anchor="middle" font-size="10" fill="var(--muted)">灯板侧纯无源</text>
+    <text x="408" y="89" text-anchor="middle" font-size="10" fill="var(--muted)">无扇出 IC</text>
+    <rect x="364" y="200" width="88" height="42" rx="3" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+    <text x="408" y="218" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">2 × 8:1</text>
+    <text x="408" y="233" text-anchor="middle" font-size="11" fill="var(--ink-2)">ACK mux</text>
+    <g font-size="11.5" font-weight="600">
+      <rect x="486" y="56"  width="200" height="58" rx="2" fill="none" stroke="var(--rule-2)"></rect>
+      <rect x="486" y="122" width="200" height="58" rx="2" fill="none" stroke="var(--rule-2)"></rect>
+      <rect x="486" y="188" width="200" height="58" rx="2" fill="none" stroke="var(--rule-2)"></rect>
+      <rect x="700" y="56"  width="200" height="58" rx="2" fill="none" stroke="var(--rule-2)"></rect>
+      <rect x="700" y="122" width="200" height="58" rx="2" fill="none" stroke="var(--rule-2)"></rect>
+      <rect x="700" y="188" width="200" height="58" rx="2" fill="none" stroke="var(--rule-2)"></rect>
+      <rect x="494" y="64" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <rect x="590" y="64" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <rect x="494" y="130" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <rect x="590" y="130" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <rect x="494" y="196" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <rect x="590" y="196" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <rect x="708" y="64" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <rect x="804" y="64" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <rect x="708" y="130" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <rect x="804" y="130" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <rect x="708" y="196" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <rect x="804" y="196" width="88" height="42" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+      <text x="538" y="90"  text-anchor="middle" fill="var(--ink)">U1</text>
+      <text x="634" y="90"  text-anchor="middle" fill="var(--ink)">U2</text>
+      <text x="538" y="156" text-anchor="middle" fill="var(--ink)">U5</text>
+      <text x="634" y="156" text-anchor="middle" fill="var(--ink)">U6</text>
+      <text x="538" y="222" text-anchor="middle" fill="var(--ink)">U9</text>
+      <text x="634" y="222" text-anchor="middle" fill="var(--ink)">U10</text>
+      <text x="752" y="90"  text-anchor="middle" fill="var(--ink)">U3</text>
+      <text x="848" y="90"  text-anchor="middle" fill="var(--ink)">U4</text>
+      <text x="752" y="156" text-anchor="middle" fill="var(--ink)">U7</text>
+      <text x="848" y="156" text-anchor="middle" fill="var(--ink)">U8</text>
+      <text x="752" y="222" text-anchor="middle" fill="var(--ink)">U11</text>
+      <text x="848" y="222" text-anchor="middle" fill="var(--ink)">U12</text>
+    </g>
+    <g font-size="9.5" fill="var(--muted)">
+      <text x="586" y="52" text-anchor="middle">块 HA/HB · 80×60</text>
+      <text x="800" y="52" text-anchor="middle">块 HA/HB · 80×60</text>
+      <text x="586" y="118" text-anchor="middle">块 HC/HD · 80×60</text>
+      <text x="800" y="118" text-anchor="middle">块 HC/HD · 80×60</text>
+      <text x="586" y="184" text-anchor="middle">块 HE/HF · 80×60</text>
+      <text x="800" y="184" text-anchor="middle">块 HE/HF · 80×60</text>
+    </g>
+    <g stroke="var(--c-clk)" stroke-width="1.2" fill="none">
+      <path d="M346 72 C 442 72, 462 80, 486 80"></path>
+      <path d="M346 80 C 444 80, 464 146, 486 146"></path>
+      <path d="M346 88 C 446 88, 466 212, 486 212"></path>
+    </g>
+    <g stroke="var(--c-b)" stroke-width="1.2" fill="none" opacity=".75">
+      <path d="M346 116 C 462 116, 466 96, 486 96"></path>
+      <path d="M346 126 C 464 126, 466 162, 486 162"></path>
+      <path d="M346 136 C 466 136, 468 228, 486 228"></path>
+    </g>
+    <g stroke="var(--c-se)" stroke-width="1.2" fill="none">
+      <path d="M486 240 C 470 240, 466 224, 452 222"></path>
+      <path d="M364 222 C 352 222, 348 160, 346 146"></path>
+    </g>
+    <g font-size="9.5">
+      <text x="352" y="66" fill="var(--c-clk)">clk 12 対（子板扇出）</text>
+      <text x="352" y="110" fill="var(--c-b)">data 36 対（FPGA 直驱）</text>
+      <text x="462" y="258" fill="var(--c-se)">ACK 12 → 2</text>
+    </g>
+  </svg>
+  <figcaption>12 颗按 3 行 × 4 列排布，每 2 颗拼一个 80 × 60 块（60 扫 &gt; 单颗 48 行管上限，必须配对）；6 块 = 160 × 180 = 28,800 px。时钟由 <b>FPGA 子板上</b>的 1:12 扇出产生、<b>12 対穿邮票孔</b>点对点到每颗；数据 36 対由 FPGA 直驱。<b>灯板侧无有源器件。</b></figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 id="sec-t-1"><span class="sec">表 1</span>接口总账</h2>
+  <div class="tw"><table>
+    <thead><tr><th>分类</th><th>信号</th><th>対/根</th><th>焊盘</th><th>方向</th><th>芯片球位</th><th>RTL 端口</th></tr></thead>
+    <tbody>
+      <tr class="dB"><td class="k">数据 lane 0</td><td class="sig mono">SDI_B[11:0]</td><td>12 対</td><td>24</td><td class="dir">FPGA → 板</td><td class="mono">F1 / F2 = L_D0IP/N</td><td class="mono">scr_d[链×3+0]</td></tr>
+      <tr class="dG"><td class="k">数据 lane 1</td><td class="sig mono">SDI_G[11:0]</td><td>12 対</td><td>24</td><td class="dir">FPGA → 板</td><td class="mono">E1 / E2 = L_D1IP/N</td><td class="mono">scr_d[链×3+1]</td></tr>
+      <tr class="dR"><td class="k">数据 lane 2</td><td class="sig mono">SDI_R[11:0]</td><td>12 対</td><td>24</td><td class="dir">FPGA → 板</td><td class="mono">D1 / D2 = L_D2IP/N</td><td class="mono">scr_d[链×3+2]</td></tr>
+      <tr class="clk"><td class="k">时钟 · 穿邮票孔</td><td class="sig mono">SCR_CLK[11:0]</td><td>12 対</td><td>24</td><td class="dir">子板扇出IC → 灯板</td><td class="mono">G1 / G2 = L_CKIP/N</td><td class="mono">—（扇出 IC 输出）</td></tr>
+      <tr class="clk"><td class="k">时钟 · 子板内部</td><td class="sig mono">SCR_CLK</td><td>1 対</td><td>0</td><td class="dir">FPGA → 扇出IC</td><td class="mono">不出板</td><td class="mono">scr_clk</td></tr>
+      <tr class="se"><td class="k">同步</td><td class="sig mono">I_SYNC</td><td>1</td><td>1</td><td class="dir">FPGA → 板</td><td class="mono">M2</td><td class="mono">i_sync</td></tr>
+      <tr class="se"><td class="k">ACK 回读</td><td class="sig mono">ACK_D[1:0]</td><td>2</td><td>2</td><td class="dir">板 → FPGA</td><td class="mono">2 颗 8:1 mux 输出</td><td class="mono">ack_d[1:0]</td></tr>
+      <tr class="se"><td class="k">└ 上拉</td><td class="sig mono">—</td><td>—</td><td>—</td><td class="dir">—</td><td class="mono">10 kΩ → VDDD</td><td class="note">🔴 ACK 空闲为高；芯片未上电或 mux 切换间隙线会浮空</td></tr>
+      <tr class="se"><td class="k">ACK 选择</td><td class="sig mono">ACK_S[2:0]</td><td>3</td><td>3</td><td class="dir">FPGA → 板</td><td class="mono">两颗共用</td><td class="mono">ack_s[2:0]</td></tr>
+      <tr class="se"><td class="k">复位</td><td class="sig mono">PANEL_RSTN</td><td>1</td><td>1</td><td class="dir">FPGA → 板</td><td class="mono">G13</td><td class="mono">panel_rstn</td></tr>
+      <tr class="se"><td class="k">电源使能</td><td class="sig mono">EN_3V8 / EN_2V8</td><td>2</td><td>2</td><td class="dir">FPGA → 板</td><td class="mono">—</td><td class="mono">en_3v8 / en_2v8</td></tr>
+      <tr class="pwr"><td class="k">子板供电</td><td class="sig mono">V3V8_FPGA ×2 / V2V8_FPGA</td><td>3</td><td>3</td><td class="dir">板 → FPGA</td><td class="mono">—</td><td class="mono">—</td></tr>
+      <tr class="gnd"><td class="k">地</td><td class="sig mono">GND</td><td>—</td><td>60</td><td class="dir">—</td><td class="mono">—</td><td class="mono">—</td></tr>
+    </tbody>
+    <caption>合计 <b>48 対差分（36 数据 + 12 时钟）+ 9 单端 + 3 电源 + 60 地 = 168 焊盘</b>。数据编号规则 <span class="mono">i = 链 × 3 + lane</span>，<b>lane0 = D0 = B 対（不是 R）</b>——写在 <span class="mono">adc/bridge_pin.adc:25</span>，按此顺序画则 FPGA 侧一行不改。<br>🎯 邮票孔按 <b>每颗一束（1 clk + 3 data = 12 焊盘）</b> 连续排布 ⇒ 束内等长在灯板上天然成立。</caption>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="sec-t-2"><span class="sec">表 2</span>参考板 → 改板：逐项对照</h2>
+  <p class="lead">参考板一列全部来自网表实读（<span class="mono">schdoc_netlist.py</span> 直接读 <span class="mono">.SchDoc</span>）。</p>
+  <div class="tw"><table>
+    <thead><tr><th>项目</th><th class="old">参考板现状</th><th class="new">改板后</th><th>处置</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="k">LVDS 拓扑</td><td class="old">12 颗一条级联链，蛇形 U1→U2→U3→U4→U8→U7→U6→U5→U9→U10→U11→U12</td><td class="new">一颗一组，每颗 3 対直连 FPGA</td><td><span class="pill new">改</span></td><td class="note">36 対 <span class="mono">SDO→SDI</span> 互连全删</td></tr>
+      <tr><td class="k">进板接口</td><td class="old">RJ45（<span class="mono">RJIN</span> 4 対进 / <span class="mono">ROUT</span> 4 対出）</td><td class="new">邮票孔 <b>168 焊盘</b> @1.0 mm</td><td><span class="pill new">改</span></td><td class="note">RJ45 两个口均删；🔴 板宽须 ≥175 mm，或改 0.8 mm 间距</td></tr>
+      <tr><td class="k">时钟分配</td><td class="old"><span class="mono">L_CKOP/N</span> 芯片级联</td><td class="new">FPGA 出 1 対 → <b>FPGA 子板上</b> 1:12 扇出 → <b>12 対穿邮票孔</b> → 点对点到每颗</td><td><span class="pill new">改</span></td><td class="note">扇出 IC 在子板侧，灯板保持纯无源；见表 4</td></tr>
+      <tr><td class="k">TTL 时钟 <span class="mono">DCLK</span>(D3)</td><td class="old"><span class="mono">DCLK_IN</span> → 74HC245 1→3 → 12 颗</td><td class="new">整根删除</td><td><span class="pill del">删</span></td><td class="note">D3 是 TTL 模式专用；纯 LVDS 用 G1/G2</td></tr>
+      <tr><td class="k"><span class="mono">I_SYNC</span></td><td class="old"><span class="mono">I_DC_SYNC_IN</span> → 74HC245 1→3（每路 4 颗）</td><td class="new">1 根进板 → <b>74LVC244 @2.8 V</b>，3 路各驱 4 颗 → 12 颗 M2</td><td><span class="pill new">改</span></td><td class="note">🔴 <b>器件要换</b>：参考板的 74HC245 @3.8 V 在 VCCIO 2.5 V 下驱不动（VIH 2.66 V &gt; VOH 2.4 V），见表 6b</td></tr>
+      <tr><td class="k">ACK</td><td class="old">反向菊花链 <span class="mono">U12.N12 → … → U1.B4 = O_ACK1</span>，1 根出</td><td class="new">12 颗独立 → 2 × 8:1 mux → 2 根出</td><td><span class="pill new">改</span></td><td class="note">🔴 与参考板的实质差异，见表 5</td></tr>
+      <tr><td class="k"><span class="mono">LVDS_EN</span>(G3)</td><td class="old">每颗一个电阻硬拉到 3.8 V</td><td class="new">原样保留</td><td><span class="pill keep">留</span></td><td class="note">🎯 结掉 08-20「向供应商问 LVDS_EN 接法」的悬案：图上就是硬拉，不是 FPGA 控制</td></tr>
+      <tr><td class="k"><span class="mono">SCL</span>(E3)/<span class="mono">SDA</span>(F3)</td><td class="old">每颗各一个电阻，未组总线</td><td class="new">原样，可不引到 FPGA</td><td><span class="pill keep">留</span></td><td class="note">RTL 里恒高阻</td></tr>
+      <tr><td class="k"><span class="mono">RSTN</span>(G13)</td><td class="old"><b class="no">没接</b></td><td class="new">引到 FPGA，板上加 10 kΩ 下拉</td><td><span class="pill new">增</span></td><td class="note"><span class="mono">eg4_bridge_top</span> 有 <span class="mono">panel_rstn</span> 端口</td></tr>
+      <tr><td class="k"><span class="mono">SEL_I/SEL_O</span></td><td class="old">两端悬空</td><td class="new">原样悬空</td><td><span class="pill keep">留</span></td><td class="note">手册标「测试用」</td></tr>
+      <tr><td class="k">端接电阻</td><td class="old">链式，仅链两端</td><td class="new">每対一个，紧贴接收端 <b>48 处</b></td><td><span class="pill new">增</span></td><td class="note">🔴 取值待确认，见表 6</td></tr>
+      <tr><td class="k">辅助连接器 <span class="mono">JIN</span></td><td class="old">Header 2×8，仅 8 根有效（ACK / SYNC / DCLK / GND），8 脚 No-ERC</td><td class="new">删除，功能并入邮票孔</td><td><span class="pill del">删</span></td><td class="note">8 信号 : 2 地，正是串扰病根</td></tr>
+      <tr><td class="k">去耦 / <span class="mono">ROW CAP</span>(B10,N7) / <span class="mono">VCORE</span>(E14)</td><td class="old">按供应商推荐</td><td class="new">原样</td><td><span class="pill keep">留</span></td><td class="note">—</td></tr>
+      <tr><td class="k">LED 阵列</td><td class="old">160 × 180，60 扫，2 颗/块</td><td class="new">不动</td><td><span class="pill keep">留</span></td><td class="note">验证板不改屏，见表 7</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="sec-t-3"><span class="sec">表 3</span>两颗为什么必须配对（行管账）</h2>
+  <div class="cols">
+    <div class="tw"><table>
+      <thead><tr><th>芯片能力（手册 P1）</th><th>值</th></tr></thead>
+      <tbody>
+        <tr><td class="k">恒流通道</td><td>120 = 40 个 RGB 像素</td></tr>
+        <tr><td class="k">行管</td><td><b>48 NMOS</b></td></tr>
+        <tr><td class="k">最大扫数</td><td>96 = 2 × 48</td></tr>
+        <tr><td class="k">FDCLK max</td><td>170 MHz（mini-LVDS）/ 25 MHz（TTL-DDR）</td></tr>
+      </tbody>
+      <caption>60 扫 &gt; 单颗 48 行管 ⇒ 必须两颗配对。「最大 96 扫」说的就是这个模式。</caption>
+    </table></div>
+    <div class="tw"><table>
+      <thead><tr><th>网表实读</th><th>U1</th><th>U2</th></tr></thead>
+      <tbody>
+        <tr><td class="k"><span class="mono">VLED[0:47]</span> 实接</td><td>30 个</td><td>30 个</td></tr>
+        <tr><td class="k">行网</td><td class="mono">HA0..HA29</td><td class="mono">HA30..HA59</td></tr>
+        <tr><td class="k">悬空脚</td><td>18（孤立单脚网）</td><td>18</td></tr>
+        <tr><td class="k">列输出</td><td class="mono">1R0..1R39</td><td class="mono">2R0..2R39</td></tr>
+      </tbody>
+      <caption>U1 + U2 = 60 行 × 80 列 = 一个 80 × 60 块。</caption>
+    </table></div>
+  </div>
+  <div class="callout ok"><b>与我们目标板的关系：</b>我们定的 48 扫正好卡在单颗 48 行管上限 ⇒ 目标板是<b>一颗管 40 × 48 独立成块</b>；这块参考板是<b>两颗拼 80 × 60</b>。两种拓扑不同的根源在这里，不是随便选的。</div>
+  <div class="callout risk"><b>🔴 由此带出的待确认项：</b>两颗配对时「本片负责哪 30 行 / 列数据要覆盖全 60 行」是<b>寄存器配的</b>。手上那份 <span class="mono">2260lvds.xlsx</span>（238 条供应商实测）是给单颗 40 × 45 样板的，<b>不含配对模式</b> ⇒ 得向客户/供应商要这块 60 扫板的寄存器表。</div>
+</section>
+
+<section>
+  <h2 id="sec-t-4"><span class="sec">表 4</span>时钟分配：四方案对比</h2>
+  <div class="tw"><table>
+    <thead><tr><th>方案</th><th>FPGA 対数</th><th>板上器件</th><th>目标板可用</th><th>布线代价</th><th>判定</th></tr></thead>
+    <tbody>
+      <tr><td class="k new">B2. 扇出放 <b>FPGA 子板</b>，12 対穿邮票孔</td><td class="new">1（FPGA 引脚不变）</td><td class="new">扇出 IC + LDO 在子板上</td><td class="c yes">✅ 可用</td><td class="new">clk 与 3 対数据同点进灯板、成束同走，<b>束内等长天然成立</b>；灯板纯无源</td><td class="new"><b class="yes">✅ 选定</b></td></tr>
+      <tr><td class="k">B1. 扇出放<b>灯板</b>，1 対穿邮票孔</td><td>1</td><td>扇出 IC + LDO 在灯板上</td><td class="c yes">✅ 可用</td><td>数据来自邮票孔、时钟来自板中央扇出 IC，路径不对称，逐颗等长更麻烦</td><td><b class="warn">⚠ 备选</b></td></tr>
+      <tr><td class="k">C. 单対 multidrop（直接并联）</td><td>1</td><td><b>1 个端接电阻</b>（零 IC）</td><td class="c no">❌ 见下</td><td>幅度与共模都没问题，死在相位跨度与 SI</td><td><b class="no">❌ 24 颗上三条独立否定</b></td></tr>
+      <tr><td class="k">A. 每颗一対时钟</td><td>12（目标板 24）</td><td>无</td><td class="c no">❌ 给不出</td><td>最省事</td><td><b class="no">❌ 不用</b></td></tr>
+      <tr><td class="k">D. 芯片自带时钟中继 <span class="mono">L_CKO</span>（<b>参考板现役做法</b>）</td><td>1</td><td><b>无</b>（零 BOM）</td><td class="c yes">✅</td><td>🎯 <b>共模唯一保证合规</b>；但 12 跳累积延迟 ⇒ 每颗 data↔clk 相位各不相同</td><td><b class="no">❌ EG4 上做不了</b> / <b class="warn">GW5A 上可翻案</b></td></tr>
+    </tbody>
+  </table></div>
+  <div class="cols">
+    <div class="tw"><table>
+      <thead><tr><th>目标板引脚账（为什么不能用 A）</th><th>需要</th><th>干净可用</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="k">差分対</td><td>87</td><td>86</td><td><b class="no">🔴 差 1</b></td></tr>
+        <tr><td class="k">单端</td><td>14</td><td>11</td><td><b class="no">🔴 差 3</b></td></tr>
+      </tbody>
+      <caption>87 = 13 上行 + 1 上行时钟 + 72 下行 + 1 下行时钟。4 対被 TCK/TDI、TMS/PROGRAMN、TDO/CSN、MSEL 占死。<b>就算下行只出 1 対时钟也已经差 1 対</b> ⇒ 验证板不能用宽松画法。</caption>
+    </table></div>
+    <div class="tw"><table>
+      <thead><tr><th>B 方案唯一要处理的</th><th>处理方式</th></tr></thead>
+      <tbody>
+        <tr><td class="k">扇出 IC 固定延迟 1~3 ns</td><td>FPGA 侧移相补，<b>常数，一次标定管全部芯片</b></td></tr>
+        <tr><td class="k">补偿手段</td><td><span class="mono">scr_clk</span> 由 <span class="mono">dclk90</span> 打出，相位由 <span class="mono">bridge_clk.v</span> 的 <span class="mono">CLKCx_CPHASE/FPHASE</span> 算，步长 104~156 ps</td></tr>
+        <tr><td class="k">用走线补？</td><td><b class="no">不可能</b>——每対数据要加长 150~450 mm × 36 対</td></tr>
+      </tbody>
+      <caption>🎯 这正是验证板最该测出来的数：扇出 IC 实际延迟 + 板级走线 → FPGA 该设多少相位。目标板直接照抄。</caption>
+    </table></div>
+  </div>
+  <h3>方案 C 定量：clk 直接并联 24 颗为什么不行</h3>
+  <p class="lead">mini-LVDS 本来就是点对多点总线（TI SLDA007A §3.1/3.2：一対时钟带一排 source driver，只在末端接一个 R_T = 2×Z₀），ICND2260 高阻输入 + 内部无端接正是标准多点接收端。<b>所以「能不能并联」的答案不是「协议不允许」，而是几何算不过来。</b></p>
+  <div class="callout ok"><b>先说不是问题的两条：</b>① <b>幅度</b>——LVDS 是恒流源，V_od = I × R_net，全板只有 1 个端接 ⇒ R_net = 100 Ω ⇒ 350 mV typ / 247 mV 最差，远高于 V_ID 下限 100 mV ✅（若给每颗都端接就完了：24 × 100 Ω 并联 = 4.2 Ω ⇒ 约 15 mV ❌）。② <b>共模</b>——端接跨差分対、无对地路径，24 × 10 µA 漏电流压降可忽略，<b>完全不动共模</b>，是三种拓扑里对共模最友好的。</div>
+  <div class="tw"><table>
+    <thead><tr><th>否定项</th><th>数</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="k old">① 相位跨度补不了</td><td class="old"><b>7.8 ns = 2.35 UI</b></td><td class="note">干线蛇形串 24 颗 ≈ 6 × 112.5 + 5 × 45 + 30 = <b>930 mm</b>，加载后 8.7 ps/mm ⇒ 端到端 8.1 ns。走线补：末颗要 1164 mm 蛇形 × 3 lane，24 颗累计约 <b>14 m</b>，板上放不下。EG4 无 per-pin 延时链；芯片寄存器可配延时（注释 1）范围只有 1.67 ns = 0.5 UI 且三档离散</td></tr>
+      <tr><td class="k old">② 跨行间距超 Bragg 判据</td><td class="old"><b>45 mm &gt; 42 mm</b></td><td class="note">判据 f_c = 1/(π·Td) &gt; f_knee = 0.35/400 ps = <b>875 MHz</b>。行间距 45 mm ⇒ Td = 392 ps ⇒ f_c = <b>813 MHz，落在阻带里</b>，5 处跨行全中。（列间距 37.5 mm ⇒ 976 MHz ✅ 过）<br>⚠ 这条必须用<b>拐点频率</b>算；用基波 150 MHz 的 λ/10 会算出 88 mm，让你以为随便画</td></tr>
+      <tr><td class="k old">③ 干线阻抗被拉塌</td><td class="old">100 → <b>76 Ω</b></td><td class="note">24 个 3 pF 负载：C_0 = 125 pF，C_d ≈ 91 pF ⇒ k = √(1+C_d/C_0) = 1.31。单点反射 ρ ≈ Z_odd·C/(2·tr) 达 <b>25 %</b>，已超 20 % 可接受上限。要补救得把干线裸阻抗做到 130~140 Ω</td></tr>
+    </tbody>
+    <caption>几何假设：目标板 4 列 × 6 行，每颗 40 × 48 px @P0.9375 ⇒ 每颗 37.5 × 45 mm，屏 150 × 270 mm。<b>12 颗验证板上同样算下来是 1.42 UI，也不行</b>（干线 510 mm / 4.18 ns）。<br>⇒ <b>死在相位与 SI，不是死在驱动能力</b>。降速也救不了：把 7.8 ns 压到 20 % UI 需要 UI ≥ 39 ns ⇒ dclk ≈ 13 MHz，低于芯片 20 MHz 下限，且帧率崩到几百 fps。</caption>
+  </table></div>
+
+  <h3>🎯 方案 D 值得单独说：ICND2260 自己就是一颗时钟中继器</h3>
+  <div class="tw"><table>
+    <thead><tr><th>证据</th><th>原文 / 实证</th></tr></thead>
+    <tbody>
+      <tr><td class="k">芯片有时钟输出脚</td><td><span class="mono">L15 / L14 = L_CKOP / L_CKON</span>（手册 I/O 列标成 "I" 是排版错误——脚名以 OP/ON 结尾、描述写 output、且有独立发送端电源）</td></tr>
+      <tr><td class="k">有独立发送端电源</td><td><span class="mono">M14 VDD_LVDSTX / M13 GND_LVDSTX，2.8 V ~ 5 V</span>（接收端另有 <span class="mono">C2/C3 VDD_LVDSRX</span>）⇒ 片内确实有 LVDS 发送器</td></tr>
+      <tr><td class="k">手册明写</td><td>「最大支持 16 颗级联」（<span class="mono">ds.txt:33</span>；V1.3 的改动记录就是「添加最大级联数量」）</td></tr>
+      <tr><td class="k new">参考板网表实证</td><td class="new"><span class="mono">CLKIP/CLKIN → U1.G1/G2</span>，然后 <span class="mono">U1.L14 → U2.G2</span>、<span class="mono">U2.L14 → U3.G2</span>、<span class="mono">U4.L14 → U8.G2</span>…… 按蛇形串完 12 颗 ⇒ <b>这不是理论选项，是参考板正在用的做法</b></td></tr>
+      <tr><td class="k new">共模天然合规</td><td class="new">同族 ICND3230 特性页：<b>输入/输出共模 1.2 V ± 0.1 V</b> ⇒ 集创自家 TX 就是照着自家 RX 窗口设计的。<b>这是全部方案里唯一「手册保证」共模合规的</b>——所有第三方 LVDS 扇出的 Voc 保证值都是 1.1/1.125 ~ 1.375 V，上超</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout risk"><b>🔴 那为什么还是不选它？死穴不是温漂，是相位。</b><br>
+  我们要的是<b>「时钟级联 + 数据星型」的混合拓扑</b>（数据必须星型，否则带宽不够）。参考板之所以能级联，是因为<b>它数据也级联</b>——第 k 颗的数据来自第 k−1 颗的 <span class="mono">SDO</span>，已被第 k−1 颗的时钟重定时，数据与时钟一起走，关系自洽。<br>
+  把数据改成 FPGA 直出后这个自洽就断了：<b>第 k 颗的时钟晚了 k × tPD，数据却准时到 ⇒ 每颗的 data↔clk 相位各不相同</b>。⚠ <b>这里要按手册原文读准</b>：<span class="mono">tSTU / tHLD</span> 那两行<b>只填了「典型值」栏，min 与 max 都是空的</b>（<span class="mono">ds.txt:449-451</span>）⇒ 它描述的是<b>标称相位关系</b>（时钟沿落在数据位中心，前后各 ¼ 周期），<b>不是必须满足的最小窗口，手册根本没给容差</b>。所以正确说法是「容差未知，要问 FAE 或实测」，不是「零余量」。<br>
+  但这不救级联：级联的相位误差是 <b>ns 级累积</b>，和整个 UI（@150 MHz 为 3.33 ns）同量级甚至更大，不是余量多少的问题。<br>
+  ⇒ 只能靠<b>每颗独立的细相位调节</b>：<b>EG4 没有 per-pin 延时链，PLL 也给不出 12/24 个相位 ⇒ 做不了</b>；<b>GW5A 有 per-IO IODELAY（256 步 × 12.5 ps ≈ 3.2 ns &gt; 1 UI），刚好够</b>。<br>
+  <b>⇒ 这把「EG4 还是 GW5A」和「时钟拓扑」绑成了同一个选择。</b>若最终换 GW5A，方案 D 应当重新评估——零 BOM、零 LDO、共模唯一保证合规，目标板 24 颗时省下的是 3~4 颗扇出芯片。</div>
+
+  <h3>扇出放哪一侧：代价对照</h3>
+  <div class="tw"><table>
+    <thead><tr><th>项</th><th class="new">B2 · 扇出放 FPGA 子板（选定）</th><th class="old">B1 · 扇出放灯板</th></tr></thead>
+    <tbody>
+      <tr><td class="k">穿邮票孔的差分</td><td class="new"><b>48 対</b>（36 data + 12 clk）</td><td class="old">37 対（36 data + 1 clk）</td></tr>
+      <tr><td class="k">邮票孔焊盘</td><td class="new"><b>168</b> ⇒ 1.0 mm 需 168 mm 边长</td><td class="old">134 ⇒ 134 mm</td></tr>
+      <tr><td class="k">板宽要求</td><td class="new">🔴 <b>≥175 mm</b>（现 160 mm 不够）<br>或改 0.8 mm 间距 = 134 mm</td><td class="old">160 mm 单边放得下</td></tr>
+      <tr><td class="k">FPGA 引脚占用</td><td class="new">1 対（不变）</td><td class="old">1 対（不变）</td></tr>
+      <tr><td class="k">灯板 BOM</td><td class="new"><b class="yes">纯无源</b>，无扇出 IC、无额外电源轨</td><td class="old">多 1~4 颗扇出 IC + LDO + 去耦</td></tr>
+      <tr><td class="k">子板面积</td><td class="new">🔴 扇出 IC + LDO 要挤进小子板（已有 BGA256）</td><td class="old">子板宽松</td></tr>
+      <tr><td class="k">每颗 clk↔data 等长</td><td class="new"><b class="yes">天然成立</b>：4 対同点进板、成束同走</td><td class="old">两条路径不对称，需逐颗补偿</td></tr>
+      <tr><td class="k">迭代 / 换 FPGA</td><td class="new">扇出方案随子板一起换，灯板不动</td><td class="old">换扇出方案要动灯板</td></tr>
+      <tr><td class="k">目标板 24 颗</td><td class="new"><b class="yes">不适用</b>——目标板 FPGA 直接放灯板上，无邮票孔，96 対是板内走线</td><td class="old">同左，不适用</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout ok"><b>🎯 这个选择恰好与目标板同构。</b>目标板会把 <b>FPGA 直接放到灯板上</b>（一体板，没有邮票孔），那时扇出 IC 本来就和 FPGA 在同一块板上、24 対时钟在板内走线到各颗。验证板把扇出放 FPGA 子板，<b>复现的正是目标板的电气拓扑</b>——扇出紧邻 FPGA、每颗一束点对点。反过来若扇出放灯板侧，验证板验的是一个目标板不会用的结构。<br>⇒ 邮票孔只是验证阶段为「能换 FPGA 板」付的临时代价，168 焊盘是一次性的，不会传导到目标板。</div>
+  <h3>skew 到底怎么算 —— 一条容易搞反的推导</h3>
+  <div class="callout risk"><b>🔴 别照搬「每颗独立点对点、片间 skew 无所谓」这句话，它只对了一半。</b><br>
+  每颗 2260 确实只在自己 G1/G2 上比较「数据 vs 时钟」相位。<b>但数据是 FPGA 同相发出的</b>——没有任何东西跟着时钟一起偏移。所以时钟分配的 <b>output-to-output skew 会 1:1 吃掉每颗的 data↔clk 余量</b>。<br>
+  它能补，但只能靠<b>加长那颗的 3 対数据走线</b>（FR4 微带约 6.7 ps/mm）。<b>真正的判据是「skew 折算成多少 mm 走线，愿不愿意补」：</b></div>
+  <div class="tw"><table>
+    <thead><tr><th>时钟分配方式</th><th>芯片引入的 skew</th><th>折算走线（6.7 ps/mm）</th><th>判定</th></tr></thead>
+    <tbody>
+      <tr><td class="k new">单颗 1:12（CDCLVD1212）</td><td class="new">tsk(o) <b>35 ps</b></td><td class="new">5 mm</td><td class="new"><b class="yes">✅ 忽略不计，可不补</b></td></tr>
+      <tr><td class="k">单颗 1:12（LMK1D1212）</td><td>tsk(o) 20 ps</td><td>3 mm</td><td><b class="yes">✅</b></td></tr>
+      <tr><td class="k">单颗 1:16（LKC2327QF 国产）</td><td>tsk(o) 55 ps</td><td>8 mm</td><td><b class="yes">✅</b></td></tr>
+      <tr><td class="k">两级树 4 × CDCLVD1204</td><td>二级 <b>tsk(pp) 600 ps</b></td><td><b>90 mm × 3 lane × 每组</b></td><td><b class="warn">⚠ 要补，或吃掉 20 % UI</b></td></tr>
+      <tr><td class="k">12 跳芯片级联 <span class="mono">L_CKO</span></td><td><b class="no">ns 级累积</b></td><td>几百 mm</td><td><b class="no">❌ 补不了</b></td></tr>
+    </tbody>
+    <caption>⇒ <b>单颗 1:12 优于多颗树</b>，而且总成本几乎相同（CDCLVD1212 ≈ $5.45~7.95 vs 4 × CDCLVD1204 = 4 × $1.39 = $5.56）。按「每路成本最低」选多颗树，在「数据同相直驱」的架构下反而更差。</caption>
+  </table></div>
+  <div class="callout ok"><b>真正与片间无关的那条：</b>「配对两颗要扫同一行」由 <span class="mono">I_SYNC</span> + 数据流的帧/行级同步管，行周期 1.88 µs，几 ns 是它的 0.1 %。这条成立，但别和上面的 UI 级 skew 混为一谈。</div>
+
+  <h3>误差预算：按占 UI 的比例排序</h3>
+  <p class="lead">按<b>实际工作点</b>算：<span class="mono">dclk</span> 跑 <b>150 MHz</b>（<span class="mono">DCLK_FB_DIV=9</span>，VCO 900；166.67 MHz 是原生档，170 MHz 是芯片上限），DDR ⇒ <b>UI = 3.33 ns</b>。</p>
+  <div class="tw"><table>
+    <thead><tr><th>误差源</th><th>绝对值</th><th>占 UI</th><th>判定</th></tr></thead>
+    <tbody>
+      <tr><td class="k new">单颗扇出 tsk(o)（CDCLVD1212）</td><td class="new">35 ps</td><td class="new"><b>1.1 %</b></td><td class="new"><b class="yes">✅ 不用管</b></td></tr>
+      <tr><td class="k">走线失配 ±3 mm</td><td>±20 ps</td><td>0.6 %</td><td><b class="yes">✅</b></td></tr>
+      <tr><td class="k">EG4 PLL 周期抖动</td><td>160 ps</td><td>4.8 %</td><td><b class="yes">✅</b></td></tr>
+      <tr><td class="k">GW5A PLL 周期抖动</td><td>300 ps</td><td>9 %</td><td><b class="yes">✅</b></td></tr>
+      <tr><td class="k">两级树 tsk(pp)</td><td>600 ps</td><td><b>18 %</b></td><td><b class="warn">⚠ 要补走线</b></td></tr>
+      <tr><td class="k old">multidrop 干线首尾跨度（12 颗 / 510 mm）</td><td class="old"><b>4.18 ns</b></td><td class="old"><b>125 %</b></td><td><b class="no">❌ 超过一整个 UI</b></td></tr>
+      <tr><td class="k old">12 跳芯片级联 <span class="mono">L_CKO</span></td><td class="old">ns 级累积</td><td class="old">数个 UI</td><td><b class="no">❌</b></td></tr>
+    </tbody>
+    <caption>🔴 <b>「降速就不用这么准」只对了一半。</b><span class="mono">tSTU/tHLD = ¼ tLVCP</span> 是<b>比例</b>不是绝对值——降速时要求的窗口与 UI 同比例缩放，相对关系一点没松；降速只对<b>固定绝对值</b>的误差有效。而要把 multidrop 那 4.18 ns 压到 20 % UI 需要 UI ≥ 21 ns ⇒ <span class="mono">dclk</span> ≈ 24 MHz ⇒ fps = 24 M / 19,200 = <b>1,250 fps</b>，帧率直接崩。<br>
+    ⇒ 扇出方案的误差只占 1 % UI，<b>余量大得很</b>；问题从来不在「要求太准」，而在 multidrop / 级联的误差本身就和整个 UI 同量级。</caption>
+  </table></div>
+  <div class="callout acc"><b>🎯 手册注释 1 藏着一个可能更好的解法，值得问 FAE。</b><br>
+  <span class="mono">ds.txt:452</span> 原文：「<b>对于 mini-LVDS 驱动端，传输延时可设置为 1/8 tLVCP, 1/4 tLVCP 或 3/8 tLVCP</b>」。<br>
+  @150 MHz，1/8 → 3/8 的调节范围 = (3/8 − 1/8) × 6.67 ns = <b>1.67 ns = 半个 UI</b>，而且是<b>每颗独立、寄存器可配</b>的。<br>
+  🔴 <b>如果这个配置同时移动接收采样点</b>（手册只写「驱动端」，说不清），那 multidrop 与芯片级联的每颗相位补偿就能<b>靠寄存器解决，连 GW5A 的 IODELAY 都不需要，EG4 就能做</b>——整个架构选择会翻过来。手册太简略判断不了，<b>必须问 FAE</b>（见表 13 #12）。</div>
+  <div class="callout ok"><b>建议做单变量对照：</b>12 颗里 <b>8 颗走扇出、4 颗走 multidrop</b>，0 Ω 位切换，同板直接比。这套方法 08-20 用过并有效（DCLK 恒 0 vs 25 MHz 对照，一次锁定 ACK 串扰源）。几个 0 Ω 位换「目标板选 B 还是 C」的实测依据。</div>
+</section>
+
+<section>
+  <h2 id="sec-t-5"><span class="sec">表 5</span>ACK 回读方案</h2>
+  <div class="tw"><table>
+    <thead><tr><th>方案</th><th>板上器件</th><th>邮票孔占用</th><th>定位到哪颗</th><th>故障隔离</th><th>并行读</th><th>FPGA 侧</th></tr></thead>
+    <tbody>
+      <tr><td class="k new">12 颗独立 + 2 × 8:1 mux</td><td class="new">2 颗 mux + 12 根板内走线</td><td class="new">5 根</td><td class="new">✅（同左）</td><td class="new"><b class="yes">✅ 故障隔离：某颗坏了不影响其他</b></td><td class="new">✅ 可并行读 2 颗</td><td class="new">⚠ <span class="mono">ack_sel</span> 要跟 <span class="mono">DEVICE</span> 号联动（现在是随 <span class="mono">I_SYNC</span> 轮询递增）</td></tr>
+      <tr><td class="k">菊花链（<b>官方做法 + 参考板实做</b>）</td><td><b>无</b>（零器件）</td><td><b>1 根</b></td><td>✅ <span class="mono">DEVICE[3:0]</span> 点名</td><td><b class="no">❌ 第 k 颗转发坏了，编号更大的全读不回</b></td><td>❌ 串行</td><td>✅ 现役 RTL 已支持</td></tr>
+    </tbody>
+    <caption>mux #0 收链 0–7，mux #1 收链 8–11（余 4 路接地），<span class="mono">ACK_S[2:0]</span> 两颗共用。独立引出时每颗都是「最后一颗」⇒ <b>12 颗的 <span class="mono">ACK_I</span>(N12) 全部浮空</b>（手册允许）。<br>
+    🔴 <b>更正：mux#1 余下的 4 路输入要接<b>高</b>（VDDD 或经上拉），不能接地。</b>ACK 的<b>空闲态是高</b>，接地会让解调器持续看到「start = 低」的条件。虽然 FPGA 可以简单地不选那 4 个选择值，但接高才是安全的默认。</caption>
+  </table></div>
+  <div class="callout risk"><b>🔴 先说一件必须知道的事：截至 2026-09-09，本项目从未成功收到过一帧 ACK。</b>三次不同场合、三种不同失败模式，<b>没有一次拿到过 CRC 正确的回包</b>。而 ACK 恰恰是「芯片到底活没活」唯一的自动判据。<b>验证板要一次把 12 路都做起来，等于第一次让这个功能真正工作。</b></div>
+  <div class="tw"><table>
+    <thead><tr><th>时间 / 场合</th><th>观测</th><th>查明的原因</th></tr></thead>
+    <tbody>
+      <tr><td class="k">2026-08-19<br>鹿小班转接板首测</td><td><span class="mono">ack_frame_cnt = 0</span> 且 <span class="mono">ack_err_cnt = 0</span></td><td class="note">两个都是 0 是<b>有判别力</b>的：协议/CRC 错会表现为 frame_cnt 涨但 crc_ok 不亮，线上有噪声会表现为 err_cnt 涨 ⇒ <b>指向物理层，不是协议层</b>。20 M 也不通 ⇒ 与速率无关</td></tr>
+      <tr><td class="k old">2026-08-20<br>排查中挖出自己的两个缺陷</td><td class="old">① 加上拉前：解调器狂出垃圾帧，<b>实测 18,245 帧/秒，而我们每秒只问 83 次</b><br>② 扫 16 个设备号「找到 7 颗」（dev 4/5/6/7/13/14/15 都有应答、data0 有值）</td><td class="note">① <b>ACK 输入引脚没上拉</b>——手册规定空闲为高，芯片没接时这根悬空，悬空 CMOS 输入放大耦合噪声<br>② <b>读寄存器的 DEVICE 写死成 0xF</b>——手册 <span class="mono">4'b1010</span> 是「读<b>指定</b>设备，不支持广播」，<b>设备号第 1 颗 = 0</b>；序列器里 <span class="mono">cmd_device</span> 跟写广播共用 0xF ⇒ 一直在点名第 16 颗。<b>两个 TB 都没抓到，因为它们复制了同一个误解</b></td></tr>
+      <tr><td class="k">2026-08-20<br>加上拉 + 修 DEVICE 后重扫</td><td>有效回包<b>全 0</b>；残留错误率 <b>≈669/s 且与设备号无关</b></td><td class="note">669/s 对得上 <span class="mono">I_SYNC</span> 的 662 Hz，而 <b>ACK(J1.22) 与 SYNC(J1.23) 在连接器上相邻</b> ⇒ <b>ACK 悬空、被邻线耦合拽动，屏侧没有任何东西在驱动它</b>。<br>⇒ 反过来<b>基本排除了「协议不认」</b>：芯片只要活着且 ACK 通到 FPGA，推挽输出会把线钉在空闲高，邻线那点耦合拽不动</td></tr>
+      <tr><td class="k">单芯片 fps 扫描</td><td>「这块屏没接线，10/10 次 <span class="mono">ack_cnt = 0</span>」</td><td class="note"><b>没有自动成功判据</b>，只能靠肉眼看屏</td></tr>
+      <tr><td class="k">2026-08-20 FS03</td><td>DCLK 串扰把 ACK 拽出 <b>5 万次/秒</b>假计数</td><td class="note">单变量对照：DCLK 恒 0 时 0/s。病根 J1.21/22 紧邻无地</td></tr>
+    </tbody>
+    <caption>🎯 <b>08-20 那条教训值得单独记住</b>：那组「找到 7 颗级联芯片」的垃圾数据长得非常像真结果，差点据此去协议层排查一整天。<b>戳穿它的是速率——回包不可能比提问还多。</b>⇒ <b>任何「应答数 &gt; 提问数」的观测，先怀疑量具不是被测物。</b></caption>
+  </table></div>
+  <div class="callout ok"><b class="yes">✅ 好消息：这次改板恰好把三条已知根因全解决了。</b><br>
+  ① <b>物理通路</b>——以前失败是因为「LED 板是供应商客户样板、拿不到原理图、ACK 在屏侧根本没接」。<b>现在灯板是我们自己改的</b>，ACK 从每颗 <span class="mono">B4</span> 引出 → mux → 邮票孔 → FPGA，全程自己画，通路这次能保证。<br>
+  ② <b><span class="mono">RSTN</span></b>——当时的头号嫌疑是「Altium 转接板 J1 上根本没有 RSTN，屏那边若无上拉芯片会一直在复位里」。<b>现在接口里有 <span class="mono">PANEL_RSTN</span> 引到 FPGA，灯板侧另加 10 kΩ 下拉</b>（表 1 / 表 2）。<br>
+  ③ <b>邻线耦合</b>——当时 ACK 与 I_SYNC 在连接器上相邻。<b>现在邮票孔是每対夹地、单端区也插地</b>，且下方专门写了 ACK 走线要远离时钟対。<br>
+  ⚠ 但要确认 <b>DEVICE 编号那个 bug 已经修掉</b>（第 1 颗 = 0，不是 0xF），并且 TB 也要跟着改——原来两个 TB 只查了写指令的 DEVICE。</div>
+
+  <h3>ACK 是什么：一条带 CRC 的串行回读通道，不是电平</h3>
+  <div class="tw"><table>
+    <thead><tr><th>项</th><th>内容</th></tr></thead>
+    <tbody>
+      <tr><td class="k">编码</td><td>脉宽调制。空闲高 → start 低 &gt;1 µs → 每位<b>先高 w1、后低 w2</b>，<b>w1 &gt; w2 判 1</b>、w1 &lt; w2 判 0，每位 <b>1 µs &lt; w1+w2 &lt; 5 µs</b> → 帧尾高 &gt;10 µs</td></tr>
+      <tr><td class="k">帧结构</td><td class="mono">ACK[3:0] | DEVICE[3:0] | OFFSET[7:0] | LENGTH[7:0] | DATA… | CHKSUM[15:0]</td></tr>
+      <tr><td class="k">校验</td><td><b>CRC-16</b>，CHKSUM 从 LSB 先回传；帧长 &lt;56 位判太短丢弃</td></tr>
+      <tr><td class="k">速率</td><td>约 200 kbps ~ 1 Mbps；一帧 56~280 µs</td></tr>
+      <tr><td class="k">传什么</td><td>① <b>读寄存器的返回数据</b>（手册：「读取返回的数据通过 ACK 传输」）② 开短路检测结果 ③ 温度回读</td></tr>
+      <tr><td class="k">怎么点名</td><td><span class="mono">CMD[3:0] = 4'b1010</span>「<b>读指定设备</b>（注：不支持读取所有设备）」+ <span class="mono">DEVICE[3:0]</span> 设备号</td></tr>
+    </tbody>
+    <caption>协议实现见 <span class="mono">dr1v90/td_eg4_port/rtl/opt_ack/icnd2260_ack_rx_serial.v</span>（纯串行改写版，4 态 FSM，帧内所有判决逐拍等价于原版）。</caption>
+  </table></div>
+  <div class="callout risk"><b>🔴 2026-09-09 更正：先前写「菊花链只知道有没有、2 mux 才能定位到具体哪颗」——<b>这是错的</b>。</b><br>
+  手册引脚表原文：<span class="mono">ACK_I</span>(N12)「数据回传输入。如需回传功能，级联情况下需接入下一颗芯片的 <span class="mono">ACK_O</span>，<b>最后一颗 ACK_I 可浮空</b>」；<span class="mono">ACK_O</span>(B4)「数据回传输出。…接入上一颗芯片的 <span class="mono">ACK_I</span>，<b>第一颗 ACK_O 输出所有芯片回传数据</b>」。<br>
+  配合 <span class="mono">CMD=4'b1010</span> 的 <span class="mono">DEVICE[3:0]</span> 点名 ⇒ <b>菊花链是「主机点名问、被点名的答」，完全能定位到具体哪一颗</b>。那 4 位 DEVICE 字段本来就是干这个的。<br>
+  ⇒ 去掉这条错理由后，<b>mux 方案唯一的实质好处是「故障隔离」</b>；并行度这条不值钱（ACK 是 µs 级低速，串行读完 12 颗也就几毫秒）。代价是 2 颗 mux + 12 根走线 + 4 个焊盘 + RTL 侧 <span class="mono">ack_sel</span> 要改成跟 DEVICE 号联动。<b>目标板 24 颗则是 3 颗 mux + 24 根走线。</b></div>
+  <h3>ACK 只在「读寄存器」时有活动</h3>
+  <div class="callout ok">编程指导全文的 ACK 出现处只有：引脚定义、ACK 协议章节、TTL 与 mini-LVDS 两处「读寄存器」、开短路检测结果读回。<b><span class="mono">Display Data</span> / <span class="mono">VSYNC</span> / <span class="mono">Write Register</span> / <span class="mono">Correction Data</span> 都不产生 ACK 活动</b>（手册注 2：「对于读操作 CMD=0b1010，则没有数据域，读取返回的数据通过 ACK 传输」）。<br>
+  开短路检测与温度也一样：芯片自己检测、结果存进寄存器（<span class="mono">0x54</span>，地址 3840~3935），<b>事后用 Read Register 读回</b>，不是实时上报。而手册允许「两个 VSYNC 之间发送任意多组指令、顺序随意，Read Register 可以只在个别帧发」⇒ <b>读操作完全由 FPGA 调度</b>。<br>
+  ⇒ 两条推论：<b>① mux 切换可以在推显示数据时自由进行</b>（那时 ACK 空闲，不打断任何东西），「先切 mux 再发读命令」的时序很宽松；<b>② ACK 的实时性要求极低</b>，读寄存器是诊断/标定用途，不在显示关键路径上——这也再次说明「并行读 2 颗」不值钱。</div>
+  <div class="callout risk"><b>🔴 由此发现一处现在就该改的：ACK 接收器没有门控，一直在监听。</b><br>
+  <span class="mono">icnd2260_ack_rx</span> 的端口只有 <span class="mono">clk / rst_n / ack_pin / crc_refl</span>，<b>没有 enable</b> ⇒ 任何时候线上的毛刺都会被当成 start 去解析。这正是 08-20 那 5 万次/秒假计数与 18,245 帧/秒垃圾帧的放大器。<br>
+  <b>修法几乎零成本</b>——ACK 只在读命令之后才该有响应，顶层加一行门控即可（空闲是高，所以门控值取 1）：
+  <div class="tw" style="margin:8px 0"><table><tbody><tr><td class="mono" style="font-size:12.5px">assign ack_gated = ack_rd_window ? ack_d[sel] : 1'b1;</td></tr></tbody></table></div>
+  窗口从「发出读命令」拉起，到「收到帧或超时」落下，<b>不用动 <span class="mono">icnd2260_ack_rx</span> 内部一个字</b>。<br>
+  这把串扰问题从「只能靠布线解决」降级成「布线 + 门控双保险」。<b>布线该做的还是要做</b>——在读窗口内串扰照样会破坏数据。</div>
+  <div class="callout risk"><b>⚠ ACK 走线要当敏感信号对待，别因为它慢就随便走。</b>它的判决基于<b>脉宽</b>（w1 vs w2），<b>串扰毛刺会被直接误判成位边界</b>。08-20 实测就踩过：<span class="mono">DCLK</span> 串扰把 ACK 拽出 <b>5 万次/秒</b>的假计数（单变量对照：DCLK 恒 0 时 0/s），病根是 J1.21/22 紧邻无地。⇒ <b>ACK 走线远离时钟対、全程有地伴随</b>。</div>
+  <div class="callout acc"><b>为什么 ACK 是 2 根而不是 1 根。</b>一颗 8:1 只收 8 条，12 条链要 2 颗，各出 1 根。<b>想压成 1 根只能换 16:1</b>（如 74HC4067）⇒ 1 数据 + 4 选择 = <b>5 个焊盘，与现在 2 + 3 = 5 完全相同</b>，焊盘一个没省，却要改 RTL（现役 <span class="mono">ack_d[2:0]/ack_s[2:0]</span> 是按 3 颗 8:1 设计的，目标板 24 链正好 3 颗）。<br>而 2 根还白得一个好处：<b>可同时读 2 条链，ACK 扫描时间减半</b>；目标板 3 根即 1/3。</div>
+  <div class="callout ok"><b class="yes">✅ 2026-09-09 定案：用 12 颗独立 + 2 × 8:1 mux，不用菊花链。</b>邮票孔脚位表按此排布（<span class="mono">ACK_D[1:0]</span> + <span class="mono">ACK_S[2:0]</span> 共 5 个焊盘），与现役 RTL 的 <span class="mono">ack_d/ack_s</span> 端口直接对上。</div>
+</section>
+
+<section>
+  <h2 id="sec-t-6"><span class="sec">表 6</span>电气参数与端接</h2>
+  <div class="tw"><table>
+    <thead><tr><th>项</th><th>符号</th><th>手册值 V1.7</th><th>实测 / 设计值</th><th>余量</th><th>对硬件的含义</th></tr></thead>
+    <tbody>
+      <tr><td class="k">输入电流</td><td class="mono">IIN</td><td>≤ 10 µA @2.4V/0V</td><td>—</td><td>—</td><td class="note">≈ 240 kΩ ⇒ <b>接收端高阻，芯片内部无端接</b></td></tr>
+      <tr><td class="k">Module chain 匹配</td><td class="mono">RBD</td><td>80 / <b>100</b> / 120 Ω</td><td>—</td><td>—</td><td class="note">🔴 取值待确认</td></tr>
+      <tr><td class="k">Data chain 匹配</td><td class="mono">RDC</td><td>160 / <b>200</b> / 240 Ω</td><td>—</td><td>—</td><td class="note">🔴 与上者差一倍</td></tr>
+      <tr><td class="k">共模输入</td><td class="mono">VIC</td><td>1.1 ~ 1.3 V</td><td>实测 1.294 V<br>EG4 5R 网络设计值 1.203 V</td><td><b class="no">6 mV</b></td><td class="note">🔴 端接一变共模就变，<b>必须随端接方案重算 5R（<span class="mono">RS150/RP140/Rpd430</span>）并打样实测</b></td></tr>
+      <tr><td class="k">差分输入</td><td class="mono">VID</td><td>±100 ~ ±600 mV</td><td>—</td><td>—</td><td class="note">—</td></tr>
+      <tr><td class="k"><span class="mono">I_SYNC</span> 输入电平</td><td class="mono">VIH</td><td>≈ 0.7 × VDDD = <b>1.96 V</b>（VDDD 2.8 V）</td><td>FPGA 2.5 V 驱动</td><td>有余量 ✅</td><td class="note">🔴 若 FPGA 该 bank 不是 2.5 V 要重核，甚至加电平转换（<span class="mono">02_lvds_bringup.md:37/42</span>）。手册<b>未给 I_SYNC 对 DCLK 的建立/保持</b>——有指标的是 <span class="mono">SDI↔DCLK</span>（TTL <span class="mono">tSU0/tSU1</span>=3 ns；mini-LVDS <span class="mono">tSTU/tHLD</span>=¼tLVCP）⇒ I_SYNC 是行/帧级信号，板上缓冲几 ns 偏差 = 行周期 1.88 µs 的 0.1 %，<b>1 根进板足够</b></td></tr>
+      <tr><td class="k">时钟频率</td><td class="mono">1/tLVCP</td><td>20 ~ 170 MHz</td><td>本板 170 MHz</td><td>—</td><td class="note">⚠ <b>最低 20 MHz</b>：想降到几 MHz 慢放看波形，芯片不干</td></tr>
+      <tr><td class="k">通用 LVDS 器件共模</td><td class="mono">Voc</td><td>TIA-644: 1.125 ~ 1.375 V</td><td>—</td><td><b class="no">两端都超窗</b></td><td class="note">🔴 <b>不能按「符合 LVDS 标准」选料</b>——必须逐颗看数据手册 Voc max ≤ 1.3 V（依据：<span class="mono">panel_resolution_tradeoff_report.html:371</span>）</td></tr>
+      <tr><td class="k">FPGA 侧 5R 网络<br>（VCCIO 3.3 V）</td><td class="mono">RS/RP/Rpd</td><td>150 / 140 / <b>430 Ω</b></td><td>算得共模 <b>1.203 V</b> / 幅值 432 mV</td><td>正中</td><td class="note">🔴 <b>RS 与 Rpd 必须配对</b>：同样 430 Ω 配 RS=210 共模掉到 1.092 V <b>出窗</b>。差分衰减 10.5 %。<b>这组值是算出来的，没量过</b>（<span class="mono">eg4_2260_e104/README.md:671</span>）</td></tr>
+      <tr><td class="k new">FPGA 侧 3R 网络<br>（<b>VCCIO = 2.5 V，已定案</b>）</td><td class="mono">RS/RP</td><td>150 / 140 Ω，无 Rpd</td><td class="new">共模天然 = VCCIO/2 = <b>1.25 V</b></td><td class="old"><b class="no">仅 50 mV</b></td><td class="note">🔴 <b>VCCIO ±5 % ⇒ 共模 1.188 ~ <b class="no">1.313 V</b>，上端出窗 13 mV</b></td></tr>
+      <tr><td class="k new">建议：3R + <b>Rpd 3.9 kΩ</b><br>（VCCIO 2.5 V）</td><td class="mono">RS/RP/Rpd</td><td class="new">150 / 140 / <b>3.9 kΩ</b></td><td class="new"><span class="mono">VCM = (VCCIO/2)×Rpd/(Rpd+10+RS)</span><br>= 1.25 × 3900/4060 = <b>1.201 V</b></td><td class="new"><b class="yes">99 mV</b></td><td class="note"><b class="yes">✅ VCCIO ±5 % ⇒ 共模 1.141 ~ 1.261 V，全落窗内。</b>差分衰减：两只 3.9 k 串联 7.8 k 跨接，与 100 Ω 并联 = 98.7 Ω ⇒ <b>仅 1.3 %</b>（对比 E104 那套 3.3 V 的 Rpd 430 Ω 衰减 10.5 %）。<b>代价每対多 2 只 0402</b></td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout risk"><b>🔴 端接取 100 Ω 还是 200 Ω，要问供应商。</b>我们这条是「FPGA 直驱板内芯片」，字面上既不完全是 module chain 也不是芯片间 data chain。按传输线匹配应该用 100 Ω，但两个值差一倍会直接改变 VOD 和共模。这与当初 <span class="mono">LVDS_EN</span> 是同一类「手册推不出来只能问」的事。<br><b>放法：</b>每対的差分电阻放在<b>接收端、紧贴该颗</b>的 G1/G2（时钟）与 D1/D2、E1/E2、F1/F2（数据）。<br>🔴 <b>数量要改</b>：询价单 <span class="mono">B06</span> 只列了 72 只/板（= 数据対），是按「时钟走芯片级联」算的。本方案<b>时钟対也要端接</b> ⇒ 验证板 <b>48 只</b>（36 data + 12 clk），目标板 96 只。</div>
+  <div class="callout ok"><b>共模不合时的退路已经是既定决策：</b>记忆库 <span class="mono">MEMORY.md:252</span> 明写「每条链路留 <b>AC 耦合 + 共模偏置位</b>」。所以扇出 IC 即使 Voc 落在 1.3 V 以上，也能靠预留的耦合电容 + 偏置电阻把共模重新拉进窗——<b>请硬件在 12 対时钟上都留出这个位置（默认 0 Ω 直通）</b>，这能把扇出芯片的选型风险降到可控。</div>
+</section>
+
+<section>
+  <h2 id="sec-t-6b"><span class="sec">表 6b</span><span class="mono">I_SYNC</span>：能并联，但要换器件</h2>
+  <p class="lead"><b>结论：可以一路并联驱 12 颗，skew 完全不是约束。</b>真正要处理的是边沿速率与电平。</p>
+  <div class="tw"><table>
+    <thead><tr><th>问题</th><th>判据 / 数</th><th>结论</th></tr></thead>
+    <tbody>
+      <tr><td class="k">skew 要多准？</td><td>mini-LVDS 命令结构 <span class="mono">RSYNC[23:0] CMD[3:0] DEVICE[3:0] <b>IDLE[127:0]</b></span>，原文「<b>IDLE[127:0]：固定为 0，在此期间需要有正常的时钟，I_SYNC 也需要拉低</b>」⇒ <b>128 bit = 427 ns</b> @150 MHz。<br>TTL 模式那节更直接：「<b>不少于 16 DCLK</b>」= 107 ns</td><td class="new"><b class="yes">✅ 并联走线 skew 只有 3~15 ns，差 1~2 个数量级，随便并</b></td></tr>
+      <tr><td class="k">容性负载</td><td>12 颗 CMOS 输入 ≈ 4 pF/颗 + 走线 ~700 mm ≈ <b>118 pF</b><br>74HC245（±6 mA）一路直驱 ⇒ 上升沿 <b>≈ 75 ns</b><br>74LVC244（±24 mA）⇒ <b>≈ 19 ns</b><br>分 3 支 × 4 颗（每支 ~40 pF）⇒ LVC <b>≈ 7 ns</b></td><td><b class="warn">⚠ HC 一路直驱边沿太慢</b>：穿越 CMOS 阈值区久，噪声敏感 + 穿通电流</td></tr>
+      <tr><td class="k old">🔴 电平（VCCIO 2.5 V 后新冒出来的）</td><td class="old">参考板 <span class="mono">VDDD = 3.8 V</span>（F14 球，规格 2.8~3.8 V）⇒ <span class="mono">M2</span> 的 <b>VIH = 0.7 × 3.8 = 2.66 V</b><br>74HC245 @3.8 V 自己的 VIH 同样是 <b>2.66 V</b><br>FPGA @2.5 V VCCIO 的 <b>VOH ≈ 2.4 V</b></td><td class="old"><b class="no">❌ 2.4 V &lt; 2.66 V，驱不动参考板那颗 74HC245</b></td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout ok"><b class="yes">✅ 建议画法：一颗 74LVC244 @2.8 V，3 路输出各驱 4 颗。</b><br>
+  ① <b>74LVC 是 TTL 门限，VIH = 2.0 V 与 VCC 无关</b> ⇒ FPGA 的 2.4 V 驱得动；<br>
+  ② 同一颗芯片内 3 路之间 skew &lt; 1 ns，每支只 4 颗 ≈ 40 pF ⇒ 边沿 ~7 ns；<br>
+  ③ 输出 2.8 V 进 <span class="mono">M2</span>，落在 <span class="mono">0~VDDD</span> 范围内。<br>
+  <b>同时建议把 <span class="mono">VDDD</span> 从 3.8 V 降到 2.8 V</b>（规格允许 2.8~3.8 V）⇒ <span class="mono">M2</span> 的 VIH 降到 <b>1.96 V</b>，余量从 140 mV 变成 840 mV。<br>
+  ⚠ <b>连带改动</b>：<span class="mono">LVDS_EN</span>(G3) / <span class="mono">SCL</span>(E3) / <span class="mono">SDA</span>(F3) 的上拉电阻要从 3.8 V 改接 <b>2.8 V</b>——这三个也是 <span class="mono">0~VDDD</span> 输入，拉到 3.8 V 会超出范围。</div>
+  <div class="callout risk"><b>🔴 VDDD 降到 2.8 V 前要核一件事：</b>参考板把 <span class="mono">VDD_LVDSRX</span>(C2) 与 <span class="mono">VDD_LVDSTX</span>(M14) 也接在 3.8 V（规格 2.8~5 V），<span class="mono">VDDGB</span>(B6/B12/N3/N10) 是 3.5~5 V、<span class="mono">VDDR</span>(I2) 参考板接 2.8 V。<b>这几条轨相互独立</b>，改 VDDD 不影响它们，但要确认板上 2.8 V 轨的电流预算能再扛下 12 颗的 VDDD。</div>
+</section>
+
+<section>
+  <h2 id="sec-t-6c"><span class="sec">表 6c</span><span class="mono">SCL</span> / <span class="mono">SDA</span>（IIC）：不接，但要上拉</h2>
+  <p class="lead"><b>结论：每颗的 <span class="mono">SCL</span>(E3)、<span class="mono">SDA</span>(F3) 各配一只 4.7 kΩ 独立上拉到本板 <span class="mono">VDDD</span>，彼此不相连；不组总线、不引到 FPGA、不悬空、不下拉。</b>照参考板画即可，只改上拉的目标轨。</p>
+  <div class="tw"><table>
+    <thead><tr><th>问题</th><th>证据</th><th>结论</th></tr></thead>
+    <tbody>
+      <tr><td class="k">它是什么功能？</td><td>手册引脚表只有六个字：<span class="mono">E3 SCL「IIC 时钟端」I/O VDDD/GND</span> / <span class="mono">F3 SDA「IIC 数据端」I/O VDDD/GND</span>。<b>完整中文数据手册 + NDA 客户版编程指导 V2.8（31 页）全文无 IIC 章节</b>——没有器件地址、没有寄存器映射、没有时序图、没有「需寄存器使能」字样。传输模式只有 TTL 与 mini-LVDS 两种</td><td class="old"><b>官方资料未说明</b></td></tr>
+      <tr><td class="k">同族芯片怎么做？</td><td>ICND2200 / 2270 / 3230 / 3270 / 3289 <b>引脚表全无 SCL/SDA</b>；直系后继 <b>3289 保留了 ACK / DFT_EN / ATEST / GPIO / STATUS 一整套，唯独砍掉 IIC</b></td><td class="old">2260 是孤例，且被后代废弃</td></tr>
+      <tr><td class="k">组总线有用吗？</td><td><b>没有任何地址选择脚</b>（无 ADDR / A0 / A1）⇒ 12 或 24 颗同型号并总线必然地址冲突</td><td class="old"><b class="no">❌ 功能上也拿不到好处</b></td></tr>
+      <tr><td class="k new">参考板怎么画的？</td><td class="new">每颗 SCL、SDA 各挂一只 <b>4.7 kΩ</b>（原理图 Value 字段实读 <span class="mono">'4.7K'</span>）上拉到 VDDD，24 个独立网互不相连。而同一张图上 <span class="mono">GPIO0/GPIO1/DFT_EN/ATEST</span> 是<b>真悬空</b></td><td class="new"><b class="yes">⇒ 那 24 只电阻是刻意加的，不是模板残留</b></td></tr>
+      <tr><td class="k">行业惯例？</td><td>聚积 MBI5153/5762/5780、TI TLC6983、明微 SM16017 等 LED 显示驱动<b>无一颗有可用 I2C</b>；带 I2C 的全在指示灯/RGB 灯效品类</td><td class="old">「把驱动 IC 的 I2C 组成总线」全行业找不到实例</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout risk"><b>🔴 唯一必须改的一处：上拉接 <span class="mono">VDDD</span>，不是照抄「3.8 V」。</b><br>
+  参考板拉 3.8 V，是因为<b>它那块板的 <span class="mono">VDDD</span>(F14) 就在 3.8 V 网上</b>（网表实读：F14 在 3.8 V 网，2.8 V 网上只有 <span class="mono">VDDR</span>(I2)）。<br>
+  我们把 VDDD 定成 <b>2.8 V</b> 后，绝对最大额定 <span class="mono">VIN = −0.4 ~ VDD+0.4 = 3.2 V</span>，再拉 3.8 V 就<b>超额定</b>：被 pad 的 ESD 二极管钳在约 3.5 V，每脚 (3.8−3.5)/4.7 k ≈ <b>64 µA</b> 倒灌 VDDD，24 颗 × 2 脚 ≈ 3 mA；更麻烦的是<b>上电时序</b>——若 3.8 V 先起而 2.8 V 未起，这条路会反向抬 VDDD。<br>
+  ⇒ <b>正确表述是「上拉到 VDDD」，就近接同一颗芯片的 VDDD 局部网</b>，让它天然跟随上电。<span class="mono">LVDS_EN</span>(G3) 那只同理。</div>
+  <div class="tw"><table>
+    <thead><tr><th>画法</th><th>判定</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td class="k new">每颗独立 4.7 kΩ 上拉到 VDDD</td><td class="new"><b class="yes">✅ 采用</b></td><td class="note">与厂家量产参考设计逐字一致；代价只有 ≤1 µA 级漏电流。最坏情况「芯片内部把该脚拉低」= 4.7 k @2.8 V = 0.6 mA/脚，在 CMOS pad 灌电流能力内</td></tr>
+      <tr><td class="k">悬空</td><td><b class="warn">⚠ 不用</b></td><td class="note">双向 CMOS I/O 悬空 ⇒ 输入级停在 VDD/2、P/N 同时导通，穿通电流 + 易被噪声推得自振。旁边就是 ~900 mA 级行开关回流。手册<b>未给这两脚的 IIH/IIL 与迟滞</b>（那两行明确只适用 SDI、CLKI），量级算不出来</td></tr>
+      <tr><td class="k">下拉</td><td><b class="no">❌ 绝不</b></td><td class="note"><b>零验证、零先例</b>。若这两脚真被上电采样为配置 strap（手册未提，但「没写」≠「不采样」），<b>拉低是唯一可能改变行为的方向</b>。按非对称风险处理</td></tr>
+      <tr><td class="k">组成总线</td><td><b class="no">❌</b></td><td class="note">省 46 只电阻，换来 24 个双向 I/O 争用风险绑在一起 + 一根横跨整块转子屏的单端天线，且无地址脚 ⇒ 用未知换省钱</td></tr>
+      <tr><td class="k">引到 FPGA</td><td><b class="no">❌</b></td><td class="note">两条独立理由：① FPGA VCCIO 3.3 V <b>&gt; 该脚绝对最大 3.2 V</b>；② <b>配置期 FPGA 的 I/O 常被弱拉到 VCCIO，这个窗口控制不了</b>——项目内已有判例：EG4 配置期 <span class="mono">D[7:2]</span> 恒弱上拉，当初迫使 2260 的 <span class="mono">RSTN</span> 加了 10 kΩ 下拉</td></tr>
+    </tbody>
+    <caption>💡 <b>可选</b>：只在<b>第 1 颗</b>的 SCL/SDA 各留一个<b>探针测试焊盘</b>（不进连接器、不引到 FPGA）。将来若厂家给了 IIC 资料，飞两根线就能试，现在零风险零脚数。<br>
+    <b>BOM</b>：验证板 12 颗 ⇒ 4.7 kΩ ±5 % 0402 <b>24 只</b>（SCL/SDA）+ 12 只（LVDS_EN，已有）；目标板 24 颗 ⇒ 48 + 24 只。可用 <b>4 合 1 排阻 4.7 k</b> 替代 SCL/SDA 那批，贴装数降到 1/4。</caption>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="sec-f-2-t-7"><span class="sec">图 2 / 表 7</span>邮票孔脚位表（168 焊盘）</h2>
+  <p class="lead">单排、间距 <b>1.0 mm</b>、共 <b>168 焊盘</b> ⇒ 约 168 mm 边长。🔴 现 160 mm 板宽<b>不够</b>：板宽要做到 <b>≥175 mm</b>，或改 <b>0.8 mm 间距</b>（134 mm，160 板宽仍单边放得下）。差分区按<b>対间夹地</b>、并按<b>每颗一束（1 clk + 3 data = 12 焊盘）</b>连续排布。</p>
+  <figure><svg class="diagram" viewBox="0 0 1110 92" role="img" aria-label="邮票孔 134 焊盘排布示意">
+<line x1="26.0" y1="36" x2="944.9" y2="36" stroke="var(--c-clk)" stroke-width="1.6"></line><text x="485.5" y="30" text-anchor="middle" font-size="10.5" fill="var(--c-clk)" font-weight="600">差分区 · 48 対（36 data + 12 clk）· 每颗一束 · 焊盘 1–146</text><line x1="945.8" y1="36" x2="1033.1" y2="36" stroke="var(--c-se)" stroke-width="1.6"></line><text x="989.5" y="30" text-anchor="middle" font-size="10.5" fill="var(--c-se)" font-weight="600">单端 14</text><line x1="1034.0" y1="36" x2="1083.5" y2="36" stroke="var(--c-pwr)" stroke-width="1.6"></line><text x="1058.8" y="30" text-anchor="middle" font-size="10.5" fill="var(--c-pwr)" font-weight="600">电源/地 8</text>
+<rect x="26.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="32.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="38.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="44.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="51.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="57.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="63.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="70.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="76.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="82.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="89.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="95.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="101.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="107.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="114.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="120.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="126.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="133.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="139.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="145.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="152.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="158.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="164.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="170.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="177.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="183.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="189.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="196.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="202.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="208.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="215.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="221.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="227.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="233.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="240.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="246.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="252.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="259.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="265.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="271.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="278.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="284.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="290.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="296.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="303.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="309.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="315.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="322.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="328.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="334.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="341.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="347.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="353.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="359.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="366.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="372.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="378.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="385.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="391.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="397.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="404.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="410.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="416.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="422.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="429.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="435.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="441.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="448.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="454.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="460.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="467.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="473.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="479.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="485.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="492.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="498.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="504.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="511.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="517.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="523.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="530.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="536.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="542.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="548.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="555.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="561.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="567.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="574.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="580.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="586.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="593.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="599.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="605.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="611.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="618.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="624.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="630.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="637.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="643.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="649.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="656.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="662.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="668.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="674.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="681.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="687.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="693.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="700.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="706.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="712.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="719.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="725.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="731.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="737.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="744.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="750.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="756.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="763.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="769.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="775.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="782.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="788.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="794.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="800.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="807.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="813.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="819.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="826.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="832.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="838.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="845.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="851.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="857.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="863.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="870.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="876.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-clk)" opacity="0.95"></rect><rect x="882.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="889.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="895.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-b)" opacity="0.95"></rect><rect x="901.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="908.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="914.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-g)" opacity="0.95"></rect><rect x="920.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="926.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="933.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-r)" opacity="0.95"></rect><rect x="939.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="945.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-se)" opacity="0.95"></rect><rect x="952.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="958.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-se)" opacity="0.95"></rect><rect x="964.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-se)" opacity="0.95"></rect><rect x="971.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="977.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-se)" opacity="0.95"></rect><rect x="983.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-se)" opacity="0.95"></rect><rect x="989.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-se)" opacity="0.95"></rect><rect x="996.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="1002.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-se)" opacity="0.95"></rect><rect x="1008.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="1015.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-se)" opacity="0.95"></rect><rect x="1021.4" y="46" width="5.4" height="26" rx="1" fill="var(--c-se)" opacity="0.95"></rect><rect x="1027.7" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="1034.0" y="46" width="5.4" height="26" rx="1" fill="var(--c-pwr)" opacity="0.95"></rect><rect x="1040.3" y="46" width="5.4" height="26" rx="1" fill="var(--c-pwr)" opacity="0.95"></rect><rect x="1046.6" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="1052.9" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="1059.2" y="46" width="5.4" height="26" rx="1" fill="var(--c-pwr)" opacity="0.95"></rect><rect x="1065.5" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="1071.8" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect><rect x="1078.1" y="46" width="5.4" height="26" rx="1" fill="var(--c-gnd)" opacity="0.35"></rect>
+<line x1="32.3" y1="72" x2="32.3" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="69.7" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U1</text><line x1="107.9" y1="72" x2="107.9" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="145.2" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U2</text><line x1="183.5" y1="72" x2="183.5" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="220.9" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U3</text><line x1="259.1" y1="72" x2="259.1" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="296.5" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U4</text><line x1="334.7" y1="72" x2="334.7" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="372.1" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U5</text><line x1="410.3" y1="72" x2="410.3" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="447.7" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U6</text><line x1="485.9" y1="72" x2="485.9" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="523.3" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U7</text><line x1="561.5" y1="72" x2="561.5" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="598.9" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U8</text><line x1="637.1" y1="72" x2="637.1" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="674.5" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U9</text><line x1="712.7" y1="72" x2="712.7" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="750.1" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U10</text><line x1="788.3" y1="72" x2="788.3" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="825.7" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U11</text><line x1="863.9" y1="72" x2="863.9" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="901.3" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">U12</text><line x1="945.8" y1="72" x2="945.8" y2="77" stroke="var(--rule-2)" stroke-width="1"></line><text x="1015.1" y="89" text-anchor="middle" font-size="9.5" fill="var(--muted)">单端 · 电源</text>
+</svg>
+  <figcaption>按真实脚位顺序着色，下方刻度标出每颗芯片的束（U1…U12，各 12 焊盘）。差分区 1–146（每対前夹一根地）· 单端 147–160 · 电源与地 161–168。</figcaption>
+  </figure>
+  <div class="legend">
+    <span><i style="background:var(--c-clk)"></i>时钟差分</span>
+    <span><i style="background:var(--c-b)"></i>B 通道 lane0</span>
+    <span><i style="background:var(--c-g)"></i>G 通道 lane1</span>
+    <span><i style="background:var(--c-r)"></i>R 通道 lane2</span>
+    <span><i style="background:var(--c-se)"></i>单端控制</span>
+    <span><i style="background:var(--c-pwr)"></i>电源</span>
+    <span><i style="background:var(--c-gnd);opacity:.5"></i>地</span>
+  </div>
+  <div class="padbox"><table>
+    <thead><tr><th>#</th><th>信号</th><th>类型</th><th>方向</th><th>说明</th></tr></thead>
+    <tbody>
+<tr class="gnd"><td class="num">1</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">差分区起始屏蔽</td></tr>
+<tr class="gnd"><td class="num">2</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 0（U1）束起始隔离</td></tr>
+<tr class="clk"><td class="num">3</td><td class="mono sig">SCR_CLK0_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 0（U1）· 板上 1:12 扇出第 0 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">4</td><td class="mono sig">SCR_CLK0_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">5</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">6</td><td class="mono sig">SCR_D0_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 0 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">7</td><td class="mono sig">SCR_D0_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 0 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">8</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">9</td><td class="mono sig">SCR_D1_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 0 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">10</td><td class="mono sig">SCR_D1_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 0 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">11</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">12</td><td class="mono sig">SCR_D2_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 0 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">13</td><td class="mono sig">SCR_D2_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 0 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">14</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 1（U2）束起始隔离</td></tr>
+<tr class="clk"><td class="num">15</td><td class="mono sig">SCR_CLK1_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 1（U2）· 板上 1:12 扇出第 1 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">16</td><td class="mono sig">SCR_CLK1_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">17</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">18</td><td class="mono sig">SCR_D3_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 1 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">19</td><td class="mono sig">SCR_D3_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 1 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">20</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">21</td><td class="mono sig">SCR_D4_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 1 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">22</td><td class="mono sig">SCR_D4_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 1 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">23</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">24</td><td class="mono sig">SCR_D5_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 1 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">25</td><td class="mono sig">SCR_D5_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 1 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">26</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 2（U3）束起始隔离</td></tr>
+<tr class="clk"><td class="num">27</td><td class="mono sig">SCR_CLK2_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 2（U3）· 板上 1:12 扇出第 2 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">28</td><td class="mono sig">SCR_CLK2_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">29</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">30</td><td class="mono sig">SCR_D6_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 2 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">31</td><td class="mono sig">SCR_D6_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 2 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">32</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">33</td><td class="mono sig">SCR_D7_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 2 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">34</td><td class="mono sig">SCR_D7_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 2 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">35</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">36</td><td class="mono sig">SCR_D8_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 2 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">37</td><td class="mono sig">SCR_D8_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 2 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">38</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 3（U4）束起始隔离</td></tr>
+<tr class="clk"><td class="num">39</td><td class="mono sig">SCR_CLK3_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 3（U4）· 板上 1:12 扇出第 3 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">40</td><td class="mono sig">SCR_CLK3_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">41</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">42</td><td class="mono sig">SCR_D9_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 3 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">43</td><td class="mono sig">SCR_D9_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 3 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">44</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">45</td><td class="mono sig">SCR_D10_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 3 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">46</td><td class="mono sig">SCR_D10_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 3 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">47</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">48</td><td class="mono sig">SCR_D11_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 3 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">49</td><td class="mono sig">SCR_D11_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 3 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">50</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 4（U5）束起始隔离</td></tr>
+<tr class="clk"><td class="num">51</td><td class="mono sig">SCR_CLK4_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 4（U5）· 板上 1:12 扇出第 4 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">52</td><td class="mono sig">SCR_CLK4_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">53</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">54</td><td class="mono sig">SCR_D12_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 4 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">55</td><td class="mono sig">SCR_D12_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 4 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">56</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">57</td><td class="mono sig">SCR_D13_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 4 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">58</td><td class="mono sig">SCR_D13_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 4 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">59</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">60</td><td class="mono sig">SCR_D14_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 4 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">61</td><td class="mono sig">SCR_D14_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 4 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">62</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 5（U6）束起始隔离</td></tr>
+<tr class="clk"><td class="num">63</td><td class="mono sig">SCR_CLK5_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 5（U6）· 板上 1:12 扇出第 5 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">64</td><td class="mono sig">SCR_CLK5_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">65</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">66</td><td class="mono sig">SCR_D15_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 5 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">67</td><td class="mono sig">SCR_D15_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 5 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">68</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">69</td><td class="mono sig">SCR_D16_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 5 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">70</td><td class="mono sig">SCR_D16_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 5 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">71</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">72</td><td class="mono sig">SCR_D17_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 5 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">73</td><td class="mono sig">SCR_D17_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 5 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">74</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 6（U7）束起始隔离</td></tr>
+<tr class="clk"><td class="num">75</td><td class="mono sig">SCR_CLK6_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 6（U7）· 板上 1:12 扇出第 6 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">76</td><td class="mono sig">SCR_CLK6_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">77</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">78</td><td class="mono sig">SCR_D18_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 6 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">79</td><td class="mono sig">SCR_D18_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 6 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">80</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">81</td><td class="mono sig">SCR_D19_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 6 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">82</td><td class="mono sig">SCR_D19_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 6 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">83</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">84</td><td class="mono sig">SCR_D20_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 6 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">85</td><td class="mono sig">SCR_D20_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 6 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">86</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 7（U8）束起始隔离</td></tr>
+<tr class="clk"><td class="num">87</td><td class="mono sig">SCR_CLK7_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 7（U8）· 板上 1:12 扇出第 7 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">88</td><td class="mono sig">SCR_CLK7_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">89</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">90</td><td class="mono sig">SCR_D21_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 7 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">91</td><td class="mono sig">SCR_D21_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 7 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">92</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">93</td><td class="mono sig">SCR_D22_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 7 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">94</td><td class="mono sig">SCR_D22_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 7 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">95</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">96</td><td class="mono sig">SCR_D23_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 7 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">97</td><td class="mono sig">SCR_D23_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 7 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">98</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 8（U9）束起始隔离</td></tr>
+<tr class="clk"><td class="num">99</td><td class="mono sig">SCR_CLK8_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 8（U9）· 板上 1:12 扇出第 8 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">100</td><td class="mono sig">SCR_CLK8_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">101</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">102</td><td class="mono sig">SCR_D24_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 8 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">103</td><td class="mono sig">SCR_D24_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 8 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">104</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">105</td><td class="mono sig">SCR_D25_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 8 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">106</td><td class="mono sig">SCR_D25_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 8 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">107</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">108</td><td class="mono sig">SCR_D26_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 8 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">109</td><td class="mono sig">SCR_D26_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 8 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">110</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 9（U10）束起始隔离</td></tr>
+<tr class="clk"><td class="num">111</td><td class="mono sig">SCR_CLK9_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 9（U10）· 板上 1:12 扇出第 9 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">112</td><td class="mono sig">SCR_CLK9_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">113</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">114</td><td class="mono sig">SCR_D27_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 9 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">115</td><td class="mono sig">SCR_D27_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 9 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">116</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">117</td><td class="mono sig">SCR_D28_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 9 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">118</td><td class="mono sig">SCR_D28_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 9 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">119</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">120</td><td class="mono sig">SCR_D29_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 9 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">121</td><td class="mono sig">SCR_D29_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 9 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">122</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 10（U11）束起始隔离</td></tr>
+<tr class="clk"><td class="num">123</td><td class="mono sig">SCR_CLK10_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 10（U11）· 板上 1:12 扇出第 10 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">124</td><td class="mono sig">SCR_CLK10_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">125</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">126</td><td class="mono sig">SCR_D30_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 10 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">127</td><td class="mono sig">SCR_D30_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 10 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">128</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">129</td><td class="mono sig">SCR_D31_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 10 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">130</td><td class="mono sig">SCR_D31_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 10 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">131</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">132</td><td class="mono sig">SCR_D32_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 10 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">133</td><td class="mono sig">SCR_D32_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 10 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">134</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">链 11（U12）束起始隔离</td></tr>
+<tr class="clk"><td class="num">135</td><td class="mono sig">SCR_CLK11_P</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">链 11（U12）· 板上 1:12 扇出第 11 路 → 芯片 L_CKIP 球 G1</td></tr>
+<tr class="clk"><td class="num">136</td><td class="mono sig">SCR_CLK11_N</td><td>差分</td><td class="dir">FPGA板 → 灯板</td><td class="note">同上 → L_CKIN 球 G2</td></tr>
+<tr class="gnd"><td class="num">137</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dB"><td class="num">138</td><td class="mono sig">SCR_D33_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 11 · B 通道 · L_D0IP → 球 F1</td></tr>
+<tr class="dB"><td class="num">139</td><td class="mono sig">SCR_D33_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 11 · B 通道 · L_D0IN → 球 F2</td></tr>
+<tr class="gnd"><td class="num">140</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dG"><td class="num">141</td><td class="mono sig">SCR_D34_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 11 · G 通道 · L_D1IP → 球 E1</td></tr>
+<tr class="dG"><td class="num">142</td><td class="mono sig">SCR_D34_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 11 · G 通道 · L_D1IN → 球 E2</td></tr>
+<tr class="gnd"><td class="num">143</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">対间隔离</td></tr>
+<tr class="dR"><td class="num">144</td><td class="mono sig">SCR_D35_P</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 11 · R 通道 · L_D2IP → 球 D1</td></tr>
+<tr class="dR"><td class="num">145</td><td class="mono sig">SCR_D35_N</td><td>差分</td><td class="dir">FPGA → 灯板</td><td class="note">链 11 · R 通道 · L_D2IN → 球 D2</td></tr>
+<tr class="gnd"><td class="num">146</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">差分区结束屏蔽</td></tr>
+<tr class="se"><td class="num">147</td><td class="mono sig">I_SYNC</td><td>单端</td><td class="dir">FPGA → 灯板</td><td class="note">经板上缓冲扇到 12 颗 M2</td></tr>
+<tr class="gnd"><td class="num">148</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note"></td></tr>
+<tr class="se"><td class="num">149</td><td class="mono sig">ACK_D0</td><td>单端</td><td class="dir">灯板 → FPGA</td><td class="note">8:1 mux #0 输出（链 0–7）</td></tr>
+<tr class="se"><td class="num">150</td><td class="mono sig">ACK_D1</td><td>单端</td><td class="dir">灯板 → FPGA</td><td class="note">8:1 mux #1 输出（链 8–11，余 4 路接地）</td></tr>
+<tr class="gnd"><td class="num">151</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note"></td></tr>
+<tr class="se"><td class="num">152</td><td class="mono sig">ACK_S0</td><td>单端</td><td class="dir">FPGA → 灯板</td><td class="note">两个 mux 共用选择位 [0]</td></tr>
+<tr class="se"><td class="num">153</td><td class="mono sig">ACK_S1</td><td>单端</td><td class="dir">FPGA → 灯板</td><td class="note">共用选择位 [1]</td></tr>
+<tr class="se"><td class="num">154</td><td class="mono sig">ACK_S2</td><td>单端</td><td class="dir">FPGA → 灯板</td><td class="note">共用选择位 [2]</td></tr>
+<tr class="gnd"><td class="num">155</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note"></td></tr>
+<tr class="se"><td class="num">156</td><td class="mono sig">PANEL_RSTN</td><td>单端</td><td class="dir">FPGA → 灯板</td><td class="note">扇到 12 颗 G13，板上另加 10 kΩ 下拉</td></tr>
+<tr class="gnd"><td class="num">157</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note"></td></tr>
+<tr class="se"><td class="num">158</td><td class="mono sig">EN_3V8</td><td>单端</td><td class="dir">FPGA → 灯板</td><td class="note">3.8 V 轨使能（上电时序）</td></tr>
+<tr class="se"><td class="num">159</td><td class="mono sig">EN_2V8</td><td>单端</td><td class="dir">FPGA → 灯板</td><td class="note">2.8 V 轨使能</td></tr>
+<tr class="gnd"><td class="num">160</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note"></td></tr>
+<tr class="pwr"><td class="num">161</td><td class="mono sig">V3V8_FPGA</td><td>电源</td><td class="dir">灯板 → FPGA板</td><td class="note">子板供电（含扇出 IC 及其 LDO）</td></tr>
+<tr class="pwr"><td class="num">162</td><td class="mono sig">V3V8_FPGA</td><td>电源</td><td class="dir">灯板 → FPGA板</td><td class="note">同上，并联降阻</td></tr>
+<tr class="gnd"><td class="num">163</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">子板电源回流</td></tr>
+<tr class="gnd"><td class="num">164</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">子板电源回流</td></tr>
+<tr class="pwr"><td class="num">165</td><td class="mono sig">V2V8_FPGA</td><td>电源</td><td class="dir">灯板 → FPGA板</td><td class="note">可选，供 2.5 V VCCIO；不用则接地</td></tr>
+<tr class="gnd"><td class="num">166</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note"></td></tr>
+<tr class="gnd"><td class="num">167</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note"></td></tr>
+<tr class="gnd"><td class="num">168</td><td class="mono sig">GND</td><td>地</td><td class="dir">—</td><td class="note">邮票孔末端屏蔽</td></tr>
+    </tbody>
+  </table></div>
+  <div class="cols" style="margin-top:16px">
+    <div class="callout risk"><b>🔴 地的密度不要为省焊盘删。</b>08-20 实测：FS03 的 CEP1/CEP2 各 50 脚只有 1 根地（96 信号 : 2 地），<span class="mono">DCLK</span> 串扰把 ACK 拽出 <b>5 万次/秒</b>假计数——单变量对照：DCLK 恒 0 时 0/s，病根是 J1.21/22 紧邻无地。参考板的 <span class="mono">JIN</span>（8 信号 : 2 地）是同一个病。</div>
+    <div class="callout risk"><b>🔴 要你拍板：邮票孔 = 焊死，验证板换不了 FPGA 板。</b>而验证板的用途恰恰是迭代（引脚要改、EG4 ↔ GW5A 可能要换）。<br><b>(a)</b> 焊盘按邮票孔画，同时兼容一个板对板连接器封装——验证期插连接器、定版后直焊；<br><b>(b)</b> 接受焊死，FPGA 子板做便宜、一次做 5 块。<br>成本我判断不了，请硬件/采购给数。</div>
+  </div>
+  <div class="callout ok"><b>这个方案赚在哪：</b>① 桥片到 2260 从「过连接器 + 线缆」变成板内走线，08-20 那个 ACK 串扰的病根直接消失，共模那条零余量轴也松了；② 时钟与它的 3 対数据从同一位置进灯板、成束同走，<b>每颗的 clk↔data 等长不用单独做补偿</b>；③ 灯板纯无源，扇出方案要改只动子板。</div>
+</section>
+
+<section>
+  <h2 id="sec-t-8"><span class="sec">表 8</span>FPC：FPGA 子板 ↔ DR1V90</h2>
+  <div class="tw"><table>
+    <thead><tr><th>项</th><th>值</th><th>要求 / 依据</th></tr></thead>
+    <tbody>
+      <tr><td class="k">差分対数</td><td>14 対 = 28 根</td><td class="note">13 対数据 + 1 対转发时钟；上行接口原样保留不减</td></tr>
+      <tr><td class="k">速率</td><td>800 Mbps ~ 1 Gbps</td><td class="note">EG4 实测 800 M 板级只剩 <b>40 ps</b>，靠 <span class="mono">UNCERT=0.16 + PHYS_OPT=ultra</span> 才收敛</td></tr>
+      <tr><td class="k">导体数</td><td>≈ 43 根</td><td class="note">按 G-S-S-G 夹地</td></tr>
+      <tr><td class="k">宽度</td><td>≈ 21.5 mm</td><td class="note">0.5 mm 间距，尺寸没问题</td></tr>
+      <tr><td class="k">阻抗</td><td><b>100 Ω ±10 % 差分</b></td><td class="note">🔴 必须向 FPC 厂明确并给叠层；无阻抗控制的普通 FPC 会吃掉那 40 ps</td></tr>
+      <tr><td class="k">长度</td><td>尽量短</td><td class="note">—</td></tr>
+      <tr><td class="k">机械固定</td><td><b>ZIF 要点胶或加压条</b></td><td class="note">🔴 900 RPM 离心力下</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="sec-t-9"><span class="sec">表 9</span>帧率账 / 电源 / FPGA 侧改动</h2>
+  <div class="cols">
+    <div class="tw"><table>
+      <thead><tr><th>扫数</th><th>dclk 166.67 M</th><th>dclk 170 M（上限）</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td class="k">48</td><td>10,850 fps</td><td><b>11,068 fps</b></td><td>目标板定案</td></tr>
+        <tr><td class="k new">60（本板）</td><td class="new">8,681 fps</td><td class="new"><b>8,854 fps</b></td><td class="new">验证足够</td></tr>
+      </tbody>
+      <caption><span class="mono">fps = dclk ÷ (40 × 扫数 × 8)</span>。60 扫要 11 k 需 dclk 211.2 MHz，超芯片 170 MHz 上限 24 % ⇒ <b>60 扫的板只能是验证板</b>；目标屏板必须 48 扫 + 24 颗/面，那是重画一块。</caption>
+    </table></div>
+    <div class="tw"><table>
+      <thead><tr><th>电源</th><th>参考板网</th><th>改板后</th></tr></thead>
+      <tbody>
+        <tr><td class="k">3.8 V</td><td class="old"><span class="mono">POWER.2 / .3</span></td><td class="new">同时经 <span class="mono">V3V8_FPGA</span> ×2 供 FPGA 子板</td></tr>
+        <tr><td class="k">2.8 V</td><td class="old"><span class="mono">POWER.1</span></td><td class="new"><span class="mono">V2V8_FPGA</span> 可选（供 2.5 V VCCIO）</td></tr>
+        <tr><td class="k">GND</td><td class="old"><span class="mono">POWER.4/.5/…</span></td><td class="new">邮票孔 48 根</td></tr>
+        <tr><td class="k">扇出 IC</td><td class="old">—</td><td class="new">🔴 在 <b>FPGA 子板</b>上由 <span class="mono">V3V8_FPGA</span> 降压产生，多一颗 LDO + 去耦，占子板面积</td></tr>
+        <tr><td class="k">时序</td><td class="old">—</td><td class="new"><span class="mono">EN_3V8 / EN_2V8</span> 由 FPGA 出（<span class="mono">icnd2260_seq.v</span>）</td></tr>
+      </tbody>
+      <caption>若 FPGA 子板独立供电，则三个电源焊盘改接地，其余不变。</caption>
+    </table></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>FPGA 侧同步改动（不影响硬件开工）</th><th class="old">现值</th><th class="new">改成</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr><td class="k mono">BR_NCHAIN</td><td class="old">24</td><td class="new">12</td><td class="note">—</td></tr>
+      <tr><td class="k mono">BR_LINES</td><td class="old">48</td><td class="new">60</td><td class="note">每颗列数据仍覆盖全 60 行（行管分半，列数据不分）</td></tr>
+      <tr><td class="k mono">BR_WORDS_PER_CHIP</td><td class="old">1920</td><td class="new">2400</td><td class="note">= 40 × 60</td></tr>
+      <tr><td class="k mono">START_SLOTS / BR_FIFO_SLOTS</td><td class="old">90 / 384</td><td class="new">重算</td><td class="note">🔴 公式在 <span class="mono">eg4_bridge_top.v</span> 文件头；用消费速率算上界会偏大 15 %</td></tr>
+      <tr><td class="k mono">adc/mkadc_bridge.py</td><td class="old">24 链</td><td class="new">12 链</td><td class="note">重生成 <span class="mono">.adc</span>；<b>别手改 .adc</b>（生成物）</td></tr>
+      <tr><td class="k mono">icnd2260_regs_vendor.mem</td><td class="old">238 条 @45 扫</td><td class="new">要新表</td><td class="note">🔴 见表 13 #1</td></tr>
+      <tr><td class="k">上行 13 対</td><td class="old">占用 98 %</td><td class="new">占用 ≈ 58 %</td><td class="note">🎯 原样保留不减，顺手验掉「协议开销没算、没给训练序列/对齐图案留位置」这个缺口</td></tr>
+    </tbody>
+    <caption>⚠ 实际被综合的源来自冻结快照 <span class="mono">_snap/</span>；改完 <span class="mono">rtl/</span> 与 <span class="mono">td_eg4_port/rtl/</span> 后要跑 <span class="mono">tools/freeze_snapshot.sh</span>。</caption>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="sec-t-10"><span class="sec">表 10</span>1:12 扇出芯片选型</h2>
+  <p class="lead">全部参数取自数据手册原文。<b>排序判据：① 输出共模 Voc 能否落进 2260 的 VIC 1.1~1.3 V ② tsk(o) 折算走线是否可忽略 ③ 一片到位 ④ 国内现货。</b>skew 为什么仍然要看，见表 4 的推导。</p>
+  <div class="tw"><table>
+    <thead><tr><th>型号</th><th>厂商</th><th>输入:输出</th><th>最高频率</th><th class="new">输出共模 Voc(SS)</th><th>合窗?</th><th>供电</th><th>封装 / 电流</th><th>tsk(o)</th><th>国内现货 / 价</th><th>结论</th></tr></thead>
+    <tbody>
+      <tr><td class="k new">CDCLVD1212</td><td>TI</td><td class="new">2:12</td><td>800 MHz</td><td class="new">1.1 ~ <b>1.375 V</b></td><td><b class="warn">typ 合 / max 超 75 mV</b></td><td class="new"><b>仅 2.5 V</b></td><td>VQFN-40 6×6 · 110 mA@100M</td><td>35 ps</td><td class="new">LCSC <span class="mono">C701730</span> 有货<br><b>$5.45~7.95</b></td><td class="new"><b class="yes">✅ 首选</b></td></tr>
+      <tr><td class="k">LMK1D1212</td><td>TI</td><td>2:12</td><td>2 GHz</td><td>1.1 ~ <b>1.375 V</b> @2.5/3.3 V</td><td><b class="warn">同上</b></td><td><b>1.8 / 2.5 / <b>3.3 V</b></b></td><td>VQFN-40 6×6 · ~130 mA</td><td>20 ps</td><td>LCSC 仅 3 pcs<br>$16.6</td><td><b class="warn">⚠ 备选</b>：3.3 V 单电源可省 LDO，但货少价高 3×</td></tr>
+      <tr><td class="k">LMK1D1216</td><td>TI</td><td>2:16</td><td>2 GHz</td><td>同上</td><td><b class="warn">同上</b></td><td>1.8/2.5/3.3 V</td><td>VQFN-48 7×7</td><td>20 ps</td><td>需代理</td><td>留 4 路余量 / 测试点</td></tr>
+      <tr><td class="k">ADCLK854</td><td>ADI</td><td>1:12</td><td>1.2 GHz</td><td>1.125 / 1.25 / <b>1.375 V</b></td><td><b class="warn">同上</b></td><td><b>仅 1.8 V</b></td><td>LFCSP-48 6.75×7</td><td>65 ps</td><td>LCSC <span class="mono">C514316</span><br>$9.30~13.63</td><td>第三备选：要再加 1.8 V 轨</td></tr>
+      <tr><td class="k">SY89838U</td><td>Microchip</td><td>1:8</td><td>1.5 GHz</td><td class="new">1.125 ~ <b>1.275 V</b></td><td><b class="yes">✅ 唯一天然合窗</b></td><td>仅 2.5 V</td><td>QFN-32 5×5 · <b class="no">350 mA</b></td><td>40 ps</td><td>代理</td><td><b class="no">❌ 功耗否决</b>：12 路要 2 颗 = <b>~2 W</b>，旋转灯板扛不住</td></tr>
+      <tr><td class="k">LKC2327QF</td><td>瓴科微 LKWIC</td><td>1:16</td><td>800 MHz</td><td>1.1 ~ <b>1.375 V</b></td><td><b class="warn">同上</b></td><td>仅 2.5 V</td><td>QFN-48 7×7</td><td>55 ps</td><td>立创有售 ~¥56</td><td><b class="warn">国产对标 CDCLVD1216</b>，自带 <span class="mono">VAC_REF</span> 偏置基准脚（但见下方 ⚠）</td></tr>
+      <tr><td class="k">CDCLVD1204 × 4（两级树）</td><td>TI</td><td>4 × 2:4</td><td>800 MHz</td><td>1.1 ~ <b>1.375 V</b></td><td><b class="warn">同上</b></td><td>仅 2.5 V</td><td>VQFN-16 3×3 · 43 mA</td><td class="old"><b>二级 tsk(pp) 600 ps</b></td><td>立创 <span class="mono">C485561</span> <b>935 pcs</b> ¥10/颗</td><td><b class="warn">⚠ 每路最便宜（$0.35）但 skew 差 17×</b>，总价与单颗 1212 几乎相同 ⇒ 不划算</td></tr>
+      <tr><td class="k">DS90LV110A</td><td>TI</td><td>1:10</td><td>200 MHz 时钟</td><td>1.125 / 1.25 / 1.375 V</td><td><b class="warn">同上</b></td><td>3.3 V 单电源</td><td>TSSOP-28 · 160 mA</td><td>91 ps max</td><td>LCSC <b>无货</b></td><td>路数不够（10 &lt; 12），频率余量仅 1.2×</td></tr>
+      <tr><td class="k">8SLVD1208-33I</td><td>Renesas</td><td>2:8</td><td>2 GHz</td><td class="old">1.125 ~ <b>1.55 V</b></td><td><b class="no">❌ 超 250 mV</b></td><td>3.3 V</td><td>VFQFN-28 · 190 mA</td><td>40 ps</td><td>代理</td><td><b class="no">❌ 出局</b></td></tr>
+      <tr><td class="k">CDCLVD110A</td><td>TI</td><td>2:10</td><td>1.1 GHz</td><td class="old">0.95 ~ <b>1.45 V</b></td><td><b class="no">❌ 超 150 mV</b></td><td>仅 2.5 V</td><td>VQFN-32 5×5</td><td>30 ps</td><td>代理</td><td><b class="no">❌ 出局</b></td></tr>
+      <tr><td class="k">所有 LVPECL 扇出</td><td>TI/onsemi 等</td><td>—</td><td>—</td><td class="old">≈ <b>2.0 V</b>（VCC−1.3）</td><td><b class="no">❌ 差 700 mV</b></td><td>—</td><td>—</td><td>—</td><td>—</td><td><b class="no">❌ 别选</b>：单端摆幅 800 mV 还超 VID ±600 mV 上限，端接功耗也爆炸</td></tr>
+      <tr><td class="k">HCSL / LP-HCSL 输出</td><td>—</td><td>—</td><td>—</td><td class="old">≈ 0.35 V</td><td><b class="no">❌</b></td><td>—</td><td>—</td><td>—</td><td>—</td><td><b class="no">❌ 差太远</b></td></tr>
+    </tbody>
+    <caption>🔴 <b>LMK1D 系列必须把 <span class="mono">AMP_SEL</span> 接地（= 0）</b>：置 1 的 boost 模式 Voc 掉到 0.9~1.15 V，反而低于 VIC 下限。也别把 LMK1D 挂 1.8 V（Voc 1.0~1.2 V）。</caption>
+  </table></div>
+
+  <h3>共模这一条怎么收</h3>
+  <div class="callout risk"><b>🔴 现状：市面上一片到位的 12 路扇出，没有一颗能「保证」Voc ≤ 1.3 V。</b>唯一保证的 SY89838U 因功耗出局。所有候选的 <b>典型值都是 1.20~1.25 V（正中窗口）</b>，只有数据手册的 max 摸到 1.375 V。两条路二选一：<br>
+  <b>(a) 先问集创北方一句</b>：<span class="mono">VIC 1.1~1.3 V</span> 是<b>绝对最大额定</b>还是<b>推荐工作范围</b>？mini-LVDS 标准（TI SLDA007A）的接收窗口比这宽得多，1.1~1.3 更像推荐值。若是推荐值 ⇒ 直接 DC 耦合用典型 1.2 V 的芯片，整个问题消失。<br>
+  <b>(b) 若是硬限值</b> ⇒ 上 AC 耦合 + 共模再偏置（下方电路），共模由我们自己钉死在 1.20 V，与芯片 Voc 完全解耦。</div>
+  <div class="callout ok"><b>推荐画法：分裂端接 + 共模测试点 —— DC 基线起步，不改版就能切 AC 耦合。</b>记忆库 <span class="mono">MEMORY.md:252</span> 的既定决策就是「每条链路留 AC 耦合 + 共模偏置位」，这里给出具体阻容值。<b>时钟是 50 % 占空、直流平衡信号，AC 耦合安全</b>（数据 lane 不是，绝不能这么做）。</div>
+  <div class="tw"><table>
+    <thead><tr><th>位置</th><th class="new">DC 基线（默认贴法）</th><th>实测共模超窗时改贴</th></tr></thead>
+    <tbody>
+      <tr><td class="k">每线串联位 <span class="mono">C1/C2</span></td><td class="new">贴 <b>0 Ω</b> 0402（直通）</td><td>换 <b>100 nF X7R 0402</b>（拐点 32 kHz；170 MHz 时 Xc = 9.4 mΩ）</td></tr>
+      <tr><td class="k">端接（<b>不要用单只 100 Ω</b>）</td><td class="new"><b>2 × 49.9 Ω ±1 % 0402 串联</b>跨接差分対 = 99.8 Ω，功能与单只 100 Ω 等价</td><td>不变</td></tr>
+      <tr><td class="k">中心抽头 <span class="mono">CM</span></td><td class="new"><b>悬空 + 引一个测试点 TP</b> ⇒ 打样直接量 CM 对地 = 接收端实际共模，不用在两根线上做加法</td><td>贴上 0 Ω 接到 <span class="mono">VBIAS</span> 网</td></tr>
+      <tr><td class="k"><span class="mono">VBIAS</span> 分压网<br>（全板共用一组）</td><td class="new">不贴</td><td>从板上 <b>2.8 V</b> 取电：<b>R_top 200 Ω / R_bot 150 Ω ±1 %</b> ⇒ <b>VBIAS = 1.200 V</b>，Z_th = 85.7 Ω，静态 8 mA（22 mW）。负载 12 対 × 2 × 10 µA = 240 µA ⇒ 压降 21 mV ⇒ <b>1.179 V，稳在窗内</b>。去耦 10 µF 0805 + 100 nF，每 3~4 対再补 100 nF</td></tr>
+    </tbody>
+    <caption>⚠ <b>不要用扇出芯片的 <span class="mono">VAC_REF</span> 脚当偏置源</b>：它的规格条件是 Iload = 100 µA，而 12 対 24 个输入合计 240 µA 已超规格 2.4 倍，共模环会被拖偏。老实用电阻分压。<br>⚠ <b>板上 2.8 V 不能直接喂 2.5 V 器件</b>：CDCLVD 系列 VCC 绝对最大值就是 2.8 V，正好压线 ⇒ 必须加 LDO。</caption>
+  </table></div>
+
+  <h3>目标板 24 路怎么办</h3>
+  <p class="lead">24 路没有单颗器件（目前查到最大 1:16 —— LMK1D1216 / LKC2327QF），必然是 <b>1 颗 1:2 前级 + 2 颗 CDCLVD1212</b>。两颗二级件之间是 <b>tsk(pp) 600 ps</b>（不是 tsk(o) 35 ps）= 18 % UI。</p>
+  <div class="callout ok"><b>🎯 这 600 ps 不用补走线，用 FPGA 多开一路 PLL 相位补掉 —— EG4 就能做。</b><br>
+  关键：这 600 ps <b>不是 24 个各不相同的值，是「两组之间」一个固定偏差</b>。所以只要给两组数据用两个不同相位的 ODDR 时钟：
+  <div class="tw" style="margin:10px 0"><table>
+    <thead><tr><th>PLL 输出</th><th>用途</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td class="k mono">C0 = 250 MHz</td><td>反馈专用（fanout 1）</td><td>现役</td></tr>
+      <tr><td class="k mono">C1 = dclk</td><td>A 组 36 対数据的 ODDR</td><td>现役</td></tr>
+      <tr><td class="k mono">C2 = dclk90</td><td><span class="mono">scr_clk</span> 转发时钟</td><td>现役</td></tr>
+      <tr><td class="k new mono">C3 = dclk + 600 ps</td><td class="new">B 组 36 対数据的 ODDR</td><td class="new"><b>新增一路</b></td></tr>
+    </tbody>
+  </table></div>
+  <span class="mono">CLKCx_CPHASE / FPHASE</span> 步长 104~156 ps ⇒ 600 ps = 4~6 步，精度足够。<b>只需要 2 个相位，不是 24 个</b>——EG4 做不到的是 per-pin，不是 per-group。两路同频同源，是静态可分析的相位关系，不是真正的跨时钟域。<br>
+  <b>⇒ EG4 + 扇出 IC + 两路 PLL 相位 = 目标板成立，不必为此换 GW5A。</b></div>
+
+  <h3>BOM 行（验证板，12 路）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>位号</th><th>器件</th><th>规格</th><th>封装</th><th>数量</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr><td class="k mono">U_FO</td><td>LVDS 时钟扇出</td><td><b>CDCLVD1212</b>（备选 LMK1D1212）</td><td>VQFN-40 6×6</td><td>1</td><td class="note">放 FPGA 子板；LCSC <span class="mono">C701730</span></td></tr>
+      <tr><td class="k mono">U_LDO</td><td>2.5 V LDO</td><td>≥200 mA，如 TLV75725</td><td>SOT-23-5</td><td>1</td><td class="note">🔴 仅 CDCLVD1212 需要；选 LMK1D1212 走 3.3 V 则免此件</td></tr>
+      <tr><td class="k mono">R_T*</td><td>差分端接</td><td>100 Ω ±1 %</td><td>0402</td><td><b>48</b></td><td class="note">36 数据 + <b>12 时钟</b>，均贴灯板侧、紧靠 2260 · 🔴 询价单 B06 原为 72 只，要改</td></tr>
+      <tr><td class="k mono">C_AC*</td><td>AC 耦合位</td><td>0.1 µF X7R / <b>默认 0 Ω</b></td><td>0402</td><td>24</td><td class="note">12 対 × 2 线，先贴 0 Ω 直通</td></tr>
+      <tr><td class="k mono">R_B*</td><td>共模偏置</td><td>49.9 Ω ±1 %</td><td>0402</td><td>24</td><td class="note">仅在启用 AC 耦合时贴</td></tr>
+      <tr><td class="k mono">R_D1/2</td><td>1.2 V 偏置分压</td><td>4.7 k / 2.7 k + 1 µF</td><td>0402</td><td>3</td><td class="note">同上，共享一条偏置轨</td></tr>
+    </tbody>
+    <caption>扇出 IC 的固定传播延迟（CDCLVD1212 <span class="mono">tPD</span> = 1.5~2.5 ns）由 FPGA 侧移相一次性补掉，见表 4。</caption>
+  </table></div>
+</section>
+
+<section>
+  <h2 id="sec-t-11"><span class="sec">表 11</span>桥片选型：EG4 还是 GW5A，以及引脚账</h2>
+  <p class="lead">逻辑资源不是约束——<span class="mono">eg4_bridge</span> 整机实测只占 <b>4387 LUT4 ≈ 1.9 k LUT6 当量</b>，GW5A-25 的 10 k 绰绰有余。这是一道<b>纯引脚与封装题</b>。</p>
+
+  <h3>三种时钟拓扑的引脚需求</h3>
+  <div class="tw"><table>
+    <thead><tr><th>拓扑</th><th>下行</th><th>上行</th><th>验证板 12 颗</th><th>目标板 24 颗</th></tr></thead>
+    <tbody>
+      <tr><td class="k">A · 每颗一対独立时钟（FPGA 直出）</td><td>数据 + 每颗 1 対时钟</td><td>13 + 1</td><td class="new"><b>62 対</b> ⇒ 142 pad</td><td class="old"><b>110 対</b> ⇒ <b>238 pad</b></td></tr>
+      <tr><td class="k new">B · FPGA 出 1 対 → 扇出 IC（本文件采用）</td><td>数据 + 1 対时钟</td><td>13 + 1</td><td class="new"><b>51 対</b> ⇒ 120 pad</td><td class="new"><b>87 対</b> ⇒ 192 pad</td></tr>
+      <tr><td class="k">D · 芯片自带 <span class="mono">L_CKO</span> 级联</td><td>同 B</td><td>13 + 1</td><td>51 対 ⇒ 120 pad</td><td>87 対 ⇒ 192 pad</td></tr>
+    </tbody>
+    <caption>pad = 対数 × 2 + 18 单端（<span class="mono">eg4_bridge</span> 实测单端数）。注意 <b>D 方案不省引脚</b>，它省的是扇出 IC 与 LDO。</caption>
+  </table></div>
+
+  <h3>候选器件能不能撑住</h3>
+  <div class="tw"><table>
+    <thead><tr><th>器件 / 封装</th><th>外形</th><th>用户 IO</th><th>真 TLVDS 対</th><th>验证板 A（142）</th><th>目标板 B（192）</th><th>目标板 A（238）</th></tr></thead>
+    <tbody>
+      <tr><td class="k">EG4A20BG256（现役）</td><td>1.0 mm 17×17</td><td>196</td><td class="old"><b>39</b>（另 51 対靠 5R 网络仿真）</td><td><b class="warn">⚠ 靠仿真対</b></td><td><b class="no">❌ 86/87 差 1 対</b></td><td><b class="no">❌</b></td></tr>
+      <tr><td class="k">GW5A-25 PG256</td><td>1.0 mm 17×17</td><td>184</td><td>88</td><td><b class="yes">✅ 余 42</b></td><td><b class="no">❌</b></td><td><b class="no">❌</b></td></tr>
+      <tr><td class="k">GW5A-25 PG256C / UG256C</td><td>1.0 mm 17×17 / 0.8 mm 14×14</td><td>191</td><td>90</td><td><b class="yes">✅</b></td><td><b class="no">❌ 差 1 pad</b></td><td><b class="no">❌</b></td></tr>
+      <tr><td class="k new">GW5A-25 <b>PG256S</b></td><td class="new">1.0 mm 17×17<br><b>与 EG4 同 land pattern</b></td><td class="new">194</td><td class="new"><b>93</b></td><td class="new"><b class="yes">✅ 余 52</b></td><td class="new"><b class="warn">⚠ 只余 2 pad</b></td><td><b class="no">❌</b></td></tr>
+      <tr><td class="k new">GW5A-60 <b>UG324S</b></td><td class="new">0.8 mm 15×15<br>换封装，footprint 重画</td><td class="new">226</td><td class="new"><b>110</b></td><td class="new"><b class="yes">✅</b></td><td class="new"><b class="yes">✅ 余 34</b></td><td><b class="no">❌ 差 12 pad</b></td></tr>
+      <tr><td class="k">GW5A-25 UG324S</td><td>0.8 mm 15×15</td><td>239</td><td>116</td><td><b class="yes">✅</b></td><td><b class="warn">⚠ 取决于 Bank2/6 速率注记，最坏只剩 85 対 ⇒ 不通过</b></td><td><b class="no">❌</b></td></tr>
+      <tr><td class="k">GW5AT-60 PG484A</td><td>—</td><td>297</td><td>143</td><td><b class="yes">✅</b></td><td><b class="yes">✅</b></td><td><b class="warn">⚠ 唯一可能撑住 238 pad 的；但同样无供货</b></td></tr>
+    </tbody>
+    <caption>⚠ <b>判定口径更正</b>：手册的「最大用户 I/O 总数」是<b>含 JTAG bank 与配置脚的毛数</b>，不能直接对比 pad 需求；应按 <b>GPIO bank 单端脚数</b>判（如 PG256S 毛数 194、GPIO 单端脚 <b>189</b>）。<br>🔴 <b>目标板走 A 方案（每颗一対独立时钟）需要 238 pad，所有 GW5A 封装都撑不住</b>，只有 GW5AT-60 PG484A 有可能——而它同样买不到。<b>顺带确认：现役 EG4A20BG256 的 196 IO 本来也撑不住 ⇒ 目标板从来就只能走 B 或 D。</b></caption>
+  </table></div>
+
+  <div class="callout ok"><b>🎯 若换 GW5A，验证板有一个更干净的走法：FPGA 直出 12 対时钟（A 方案）。</b><br>
+  邮票孔脚位表<b>一个字都不用改</b>——现在的 168 焊盘里本来就有 <span class="mono">SCR_CLK[11:0]</span> 12 対穿过去，只是来源从「子板上的扇出 IC」变成「FPGA 引脚直出」。于是<b>扇出 IC、2.5 V LDO、AC 耦合网络、第三方芯片的共模不确定性、600 ps 的 tsk(pp)，全部消失</b>。<br>
+  每颗的 1 clk + 3 data 出自同一颗 FPGA、同一套 OSER、同相位 ⇒ clk↔data 关系由 FPGA 定死，灯板上只要束内等长。</div>
+
+  <div class="callout risk"><b>🔴 但这又踩回那个老陷阱：验证板成立、目标板不成立（238 pad 没器件撑）。</b><br>
+  <b>建议的折中：验证板用 GW5A 直出 12 対时钟，同时在子板上留扇出 IC 的位置不贴，用 0 Ω 跳线切换</b>，两种拓扑同板对照，实测扇出 IC 到底带来多少代价，再决定目标板走 A 还是 B。这套单变量对照方法 08-20 用过并且有效。</div>
+
+  <h3>GW5A 相对 EG4 的两个实质好处</h3>
+  <div class="tw"><table>
+    <thead><tr><th>项</th><th class="old">EG4A20BG256（现役）</th><th class="new">GW5A</th></tr></thead>
+    <tbody>
+      <tr><td class="k">mini-LVDS 输出共模</td><td class="new">无原生标准，但 <b>5R 网络</b>（RS150/RP140/Rpd430）把共模<b>按构造钉在 1.203 V</b> ⇒ <b class="yes">合窗，且可设计</b></td><td class="old">有原生 MINILVDS IO 标准，但 <b>VOS = 1.125 / 1.250 / <b class="no">1.375 V</b></b>（DS1103-1.0.9 表 3-27）⇒ <b class="no">上限同样超 1.3 V，不保证合窗</b></td></tr>
+      <tr><td class="k">gearing</td><td class="old"><b>4:1 顶死</b> ⇒ fabric 200 MHz，800 Mbps 只剩 40 ps 板级余量</td><td class="new">IDES8 <b>1600</b> / OSER8 <b>2000</b> Mbps ⇒ 1 Gbps 是常规工作点，fabric 掉到 125 MHz</td></tr>
+      <tr><td class="k">per-IO 延迟</td><td class="old"><b>无</b>（只有时钟树级相位；但 PLL 可给 per-<b>组</b>相位，见表 4）</td><td class="new">IODELAY <b class="yes">✅ 确认可用于输出路径</b>（UG304 §4.4.1 原文「输入输出」；图 4-1 输出侧有独立 <span class="mono">ODELMUX</span>；11 个 OSER 原语连接规则均写 "or connect DI in IODELAY"；DDR IP 有 "Enable Output IODELAY"）。<br>🔴 <b>但量程不够</b>：全量程 typ 3.45 ns / <b>快角仅 2.76 ns</b>，而 1 UI = 2.94 ns @340 Mbps ⇒ <b>连一个 UI 都盖不满</b>，multidrop 的 1.42~2.35 UI 补不了</td></tr>
+      <tr><td class="k">真差分対</td><td class="old">39 真対 + 51 仿真対</td><td class="new">88 ~ 110 <b>全部真対</b></td></tr>
+      <tr><td class="k">逻辑</td><td class="old">19.6 k LUT4（实测占用 22.4 %）</td><td class="new">GW5A-25 ≈ 23 k / GW5A-60 59.9 k LUT4</td></tr>
+      <tr><td class="k">PLL 抖动</td><td class="old">周期抖动 160 ps p-p</td><td class="old">周期抖动 &lt;300 ps / &lt;400 ps —— <b>纸面比 EG4 差</b>，但 8:1 让 fabric 掉到 125 MHz，只占 3.75 %，压力转移到 IO 采样窗</td></tr>
+      <tr><td class="k">供货与价格</td><td class="new">已在用，便宜，0 违例跑通</td><td class="old">🔴 <b>公开渠道只有一颗能下单</b>：GW5A-LV25MG121N（82 IO / 36 対，装不下任何拓扑）。PG256S / UG324S 全部「受限供货」<b>无价无货</b>；<b>GW5A-60 零渠道、零报价、零开发板</b></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout risk"><b>⚠ 外形兼容 ≠ pin2pin。</b>GW5A-25 PG256x 与 EG4A20BG256 都是 1.0 mm / 17×17 / 16×16 网格，<b>land pattern、扇出过孔结构、层叠可以复用</b>；但球数账就对不上（194 IO/62 非 IO vs 196/60），电源体系也不同（GW5A 多一条 <span class="mono">VCCX</span> 辅助轨、多 Bank10 JTAG / Bank11 Reserved）⇒ <b>网表要全部重连，信号走线等于重画</b>。旁证：同为安路、同一颗 die、同一个 BG256 的 EG4X20 与 EG4A20，256 球尚且无一同名且晶粒方向翻转。</div>
+
+  <div class="callout risk"><b>🔴 2026-09-09 核实结论：GW5A 不解决共模、买不到、也救不了 multidrop 与级联。</b><br>
+  ① <b>共模</b>：原生 MINILVDS 的 VOS 上限同样是 1.375 V，不保证落进 2260 的 1.1~1.3 V ⇒ 换过去<b>问题原样存在</b>，而 EG4 的 5R 网络反而能把共模按构造钉在 1.203 V。<br>
+  ② <b>IODELAY</b>：确认可用于输出路径（四重证据），<b>但快角量程 2.76 ns 连一个 UI（2.94 ns）都盖不满</b> ⇒ 方案 C（multidrop 1.42~2.35 UI）与方案 D（ns 级累积）在 GW5A 上<b>同样不成立</b>。<br>
+  ③ <b>供货</b>：够用的封装全部无价无货。<br>
+  ⇒ <b>本表作为备选记录归档。现役 EG4 + 扇出 IC + 两路 PLL 相位（表 4）是当前定案，不因 GW5A 而改。</b><br>
+  <span style="color:var(--muted)">若日后 EG4 撞墙需要重启评估，还剩三个未证实项：<span class="mono">IODELAY.DO → TLVDS_OBUF</span> 能否布通（连接规则只点名 OBUF/IOBUF/TBUF，需跑最小工程实测）；IODELAY 无 PVT 校准基准，绝对延时不可信；GAO 抓不到 IOLOGIC 输出，只能示波器 + 回环调。</span></div>
+  <div class="callout acc"><b>移植不是零成本：</b>封装换 ⇒ 子板重画；原语全换（<span class="mono">EG_LOGIC_ODDR / ODDRx2 / IDDRx2 / EG_PHY_CLKDIV / EG4 PLL</span> → <span class="mono">OSER8 / IDES8 / CLKDIV / rPLL</span>）；TD → 云源，SDC、引脚约束、<span class="mono">build.sh</span> 全重写；电源按 <b>VCCX ≥ 2.5 V</b>（&gt;600 Mbps IO）/ <b>≥ 3 V</b>（用片上 ODT）重新规划。<br>RTL 本体（<span class="mono">ul_dispatch / tx_array / icnd2260_seq</span>）是通用 Verilog，可以直接搬。</div>
+</section>
+
+<section>
+  <h2 id="sec-t-12"><span class="sec">表 12</span>转接板原理图：ACA420 ↔ 灯板邮票孔</h2>
+  <p class="lead"><b>定位：这块板等于「FPGA 子板减去 FPGA」。</b>ACA420 核心板插在它上面，它自己用邮票孔焊到灯板。承载驱动端网络、时钟扇出、电源变换。后面画 EG4A20 正式子板时，把它和 FPGA 合成一块即可。</p>
+
+  <figure>
+  <svg class="diagram" viewBox="0 0 960 280" role="img" aria-label="转接板框图">
+    <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-2)"></path></marker></defs>
+    <rect x="12" y="30" width="120" height="220" rx="3" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+    <text x="72" y="54" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">灯板</text>
+    <text x="72" y="72" text-anchor="middle" font-size="10" fill="var(--muted)">12 颗 ICND2260</text>
+    <text x="72" y="90" text-anchor="middle" font-size="10" fill="var(--muted)">端接 · I_SYNC 缓冲</text>
+    <text x="72" y="106" text-anchor="middle" font-size="10" fill="var(--muted)">ACK mux · 共模逃生位</text>
+    <line x1="134" y1="140" x2="176" y2="140" stroke="var(--ink-2)" stroke-width="1.4" marker-end="url(#ar2)" marker-start="url(#ar2)"></line>
+    <text x="155" y="128" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--accent)">邮票孔</text>
+    <text x="155" y="160" text-anchor="middle" font-size="9.5" fill="var(--muted)">168 焊盘</text>
+
+    <rect x="178" y="18" width="500" height="244" rx="3" fill="none" stroke="var(--accent)" stroke-dasharray="4 3"></rect>
+    <text x="192" y="36" font-size="11" fill="var(--accent)" font-weight="600" letter-spacing="1">转接板</text>
+
+    <rect x="196" y="52" width="130" height="56" rx="2" fill="var(--surface)" stroke="var(--rule-2)"></rect>
+    <text x="261" y="72" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">3R / 5R 网络</text>
+    <text x="261" y="88" text-anchor="middle" font-size="9.5" fill="var(--muted)">RS150 / RP140 / Rpd3.9k</text>
+    <text x="261" y="101" text-anchor="middle" font-size="9.5" fill="var(--c-b)">12 対数据</text>
+
+    <rect x="196" y="120" width="130" height="56" rx="2" fill="var(--accent-soft)" stroke="var(--accent)"></rect>
+    <text x="261" y="140" text-anchor="middle" font-size="11" font-weight="600" fill="var(--accent)">CDCLVD1212</text>
+    <text x="261" y="156" text-anchor="middle" font-size="9.5" fill="var(--accent)">1 対进 → 12 対出</text>
+    <text x="261" y="169" text-anchor="middle" font-size="9.5" fill="var(--c-clk)">时钟扇出</text>
+
+    <rect x="196" y="188" width="130" height="58" rx="2" fill="var(--surface)" stroke="var(--rule-2)"></rect>
+    <text x="261" y="208" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">电源</text>
+    <text x="261" y="224" text-anchor="middle" font-size="9.5" fill="var(--muted)">3.8 V → 3.3 V / 2.5 V</text>
+    <text x="261" y="238" text-anchor="middle" font-size="9.5" fill="var(--muted)">2 颗 LDO</text>
+
+    <line x1="330" y1="80" x2="378" y2="80" stroke="var(--c-b)" stroke-width="1.3" marker-start="url(#ar2)"></line>
+    <line x1="330" y1="148" x2="378" y2="148" stroke="var(--c-clk)" stroke-width="1.3" marker-start="url(#ar2)"></line>
+    <line x1="330" y1="217" x2="378" y2="217" stroke="var(--ink-2)" stroke-width="1.3" marker-end="url(#ar2)"></line>
+    <text x="354" y="72" text-anchor="middle" font-size="9" fill="var(--c-b)">12 対</text>
+    <text x="354" y="140" text-anchor="middle" font-size="9" fill="var(--c-clk)">1 対</text>
+    <text x="354" y="209" text-anchor="middle" font-size="9" fill="var(--muted)">3.3/2.5 V</text>
+
+    <rect x="380" y="52" width="94" height="194" rx="2" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+    <text x="427" y="76" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)">P1 / P2</text>
+    <text x="427" y="93" text-anchor="middle" font-size="9.5" fill="var(--muted)">2 × 100 脚</text>
+    <text x="427" y="150" text-anchor="middle" font-size="9.5" fill="var(--muted)">连接器</text>
+    <text x="427" y="228" text-anchor="middle" font-size="9" fill="var(--risk)">型号待核</text>
+
+    <rect x="500" y="52" width="164" height="194" rx="3" fill="var(--surface-2)" stroke="var(--rule-2)"></rect>
+    <text x="582" y="80" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">ACA420-CORE</text>
+    <text x="582" y="100" text-anchor="middle" font-size="10.5" fill="var(--muted)">安路 EG4S20BG256</text>
+    <text x="582" y="122" text-anchor="middle" font-size="10" fill="var(--ink-2)">Bank0 @2.5 V</text>
+    <text x="582" y="138" text-anchor="middle" font-size="10" fill="var(--ink-2)">13 対 + 9 单端</text>
+    <text x="582" y="166" text-anchor="middle" font-size="9.5" fill="var(--risk)">须拆磁珠 FB2</text>
+    <text x="582" y="188" text-anchor="middle" font-size="9.5" fill="var(--muted)">板载 50 MHz 晶振</text>
+    <text x="582" y="204" text-anchor="middle" font-size="9.5" fill="var(--muted)">图案 FPGA 内部产生</text>
+    <text x="582" y="228" text-anchor="middle" font-size="9.5" fill="var(--muted)">不接 DR1V90</text>
+
+    <text x="700" y="90" font-size="10.5" fill="var(--ink-2)" font-weight="600">点亮配置</text>
+    <text x="700" y="112" font-size="9.5" fill="var(--muted)">每颗 1 个数据通道</text>
+    <text x="700" y="128" font-size="9.5" fill="var(--muted)">帧率 1/3 ≈ 2600 fps</text>
+    <text x="700" y="150" font-size="9.5" fill="var(--muted)">13 対全在 Bank0</text>
+    <text x="700" y="166" font-size="9.5" fill="var(--muted)">共模统一 1.20 V</text>
+    <text x="700" y="188" font-size="9.5" fill="var(--muted)">不碰 Bank1/2/3</text>
+  </svg>
+  <figcaption>点亮配置的信号流。灯板侧的端接、I_SYNC 缓冲、ACK mux、共模逃生位都在灯板上（见 §1 责任划分），转接板只做网络、扇出与电源。</figcaption>
+  </figure>
+
+  <h3>12.1 电源树</h3>
+  <div class="tw"><table>
+    <thead><tr><th>轨</th><th>来源</th><th>去处</th><th>估算电流</th><th>器件</th></tr></thead>
+    <tbody>
+      <tr class="pwr"><td class="k mono">V3V8_FPGA</td><td>邮票孔 ×2 并联</td><td>转接板总输入</td><td>—</td><td>—</td></tr>
+      <tr class="pwr"><td class="k mono">3.3 V</td><td>3.8 V → LDO1</td><td>ACA420 主供电（P1 的 A1~A4，共 4 脚）</td><td>≥ 500 mA</td><td>低压差 LDO，压差仅 500 mV，选 dropout &lt; 300 mV 的型号</td></tr>
+      <tr class="pwr"><td class="k mono">2.5 V</td><td>3.8 V → LDO2</td><td>① ACA420 的 <b>VCCIO0</b>（P1 的 A9/A10）② CDCLVD1212</td><td>≥ 300 mA</td><td>TLV75725 类</td></tr>
+      <tr class="pwr"><td class="k mono">V2V8_FPGA</td><td>邮票孔</td><td>备用（也可改由它降 2.5 V，压差更小）</td><td>—</td><td>—</td></tr>
+    </tbody>
+    <caption>🔴 <b>ACA420 上必须拆掉磁珠 FB2</b>——板上 VCC3P3 经 FB2/FB3/FB4/FB5 给四个 bank 供 3.3 V。拆掉 FB2 后 VCCIO0 与 3.3 V 断开，改由转接板经 A9/A10 供 2.5 V。<b>FB3/FB4/FB5 不要动</b>（Bank1/3 的 VCCIO 在 EG4S20 芯片内部就短接到 SDRAM 电源与 VCCAUX，拆了也改不成 2.5 V；Bank2 有配置电路必须留 3.3 V）。</caption>
+  </table></div>
+
+  <h3>12.2 信号分配 —— 点亮配置全部落在 Bank0</h3>
+  <div class="tw"><table>
+    <thead><tr><th>信号</th><th>数量</th><th>FPGA 侧</th><th>转接板上经过什么</th><th>邮票孔侧</th></tr></thead>
+    <tbody>
+      <tr class="dB"><td class="k">数据（每颗 1 通道）</td><td>12 対</td><td>Bank0 仿真差分 <span class="mono">LVDS25E</span></td><td><b>3R + Rpd 网络</b></td><td class="mono">SCR_D0, D3, D6 … D33</td></tr>
+      <tr class="clk"><td class="k">时钟（进扇出）</td><td>1 対</td><td>Bank0 仿真差分</td><td>3R 网络 → <b>CDCLVD1212 IN0</b></td><td>不出板</td></tr>
+      <tr class="clk"><td class="k">时钟（出扇出）</td><td>12 対</td><td>—</td><td>CDCLVD1212 OUT0~11</td><td class="mono">SCR_CLK[11:0]</td></tr>
+      <tr class="se"><td class="k">单端</td><td>9</td><td>Bank0 <span class="mono">LVCMOS25</span></td><td>直通</td><td class="mono">I_SYNC · ACK_D[1:0] · ACK_S[2:0] · PANEL_RSTN · EN_3V8 · EN_2V8</td></tr>
+      <tr class="gnd"><td class="k">未用邮票孔焊盘</td><td>—</td><td>—</td><td>24 対数据焊盘悬空或接地</td><td>点亮阶段不接，灯板侧照留</td></tr>
+    </tbody>
+    <caption>Bank0 引出 <b>20 対 = 40 个脚</b>。占用：13 対（26 脚）+ 9 单端 = <b>35 脚</b>，<b class="yes">余 5 脚</b>。<br>🎯 <b>全部信号同在 Bank0 @2.5 V</b> ⇒ 共模统一用 3R+Rpd 钉在 1.20 V，<b>不用混 3R/5R 两种网络，也不碰 Bank1/2/3</b>。这是这块板上最干净的配置。<br>⚠ 满帧率（每颗 3 通道 = 37 対）在这块板上要动用 Bank1/3 的真差分対 @3.3 V，那就必须再加一套 5R 网络（Rpd 430 Ω），复杂度陡增——<b>点亮阶段别做</b>。</caption>
+  </table></div>
+
+  <h3>12.3 ACA420 连接器脚位（从原理图 PDF 逐脚解析）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>差分対</th><th>P 脚</th><th>N 脚</th><th>差分対</th><th>P 脚</th><th>N 脚</th></tr></thead>
+    <tbody>
+      <tr><td class="k mono">B0_B1</td><td class="mono">A25</td><td class="mono">A23</td><td class="k mono">B0_B12</td><td class="mono">A56</td><td class="mono">A54</td></tr>
+      <tr><td class="k mono">B0_B3</td><td class="mono">A50</td><td class="mono">A52</td><td class="k mono">B0_B13</td><td class="mono">A27</td><td class="mono">A29</td></tr>
+      <tr><td class="k mono">B0_B4</td><td class="mono">A44</td><td class="mono">A42</td><td class="k mono">B0_B16</td><td class="mono">A62</td><td class="mono">A60</td></tr>
+      <tr><td class="k mono">B0_B8</td><td class="mono">A45</td><td class="mono">A47</td><td class="k mono">B0_B17</td><td class="mono">A41</td><td class="mono">A43</td></tr>
+      <tr><td class="k mono">B0_B10</td><td class="mono">A46</td><td class="mono">A48</td><td class="k mono">B0_B18</td><td class="mono">A53</td><td class="mono">A55</td></tr>
+      <tr><td class="k mono">B0_B11</td><td class="mono">A49</td><td class="mono">A51</td><td class="k mono">B0_B20</td><td class="mono">A61</td><td class="mono">A59</td></tr>
+    </tbody>
+    <caption>⚠ <b>这 12 対是确切的</b>：从 <span class="mono">ACA420-CORE.pdf</span> 第 1 页逐行解析，用「同列 + 脚号连续（奇, 奇+1）」约束，<b>零冲突</b>。<br>🔴 <b>但覆盖不全</b>：全表 200 脚只可靠解出 85 脚，Bank0 另有 6 个半対（<span class="mono">B0_B6_N=A34 · B0_B7_P=A38 · B0_B14_P=A37 · B0_B15_N=A33 · B0_B21_P=A70 · B0_B24_N=A63</span>）的配对脚未能确认。<b>点亮需要 13 対，这里有 12 対，还差 1 対</b>——请硬件在 Altium 里打开原理图补齐，或向小梅哥要引脚表。<b>不要照抄我这张表就投板，先在 EDA 里核一遍。</b></caption>
+  </table></div>
+
+  <h3>12.4 每対的网络（13 対都一样）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>元件</th><th>值</th><th>位置</th><th>每対数量</th><th>作用</th></tr></thead>
+    <tbody>
+      <tr><td class="k mono">RS</td><td>150 Ω ±1 %</td><td>P/N 各串一只，紧靠 FPGA 连接器</td><td>2</td><td class="note">源端串阻（安路 <span class="mono">LVDS25E</span> 要求的 3R 之一）</td></tr>
+      <tr><td class="k mono">RP</td><td>140 Ω ±1 %</td><td>跨接 P—N</td><td>1</td><td class="note">同上</td></tr>
+      <tr><td class="k mono">Rpd</td><td><b>3.9 kΩ ±1 %</b></td><td>P/N 各一只对地</td><td>2</td><td class="note">🎯 把共模从 1.25 V 拉到 <b>1.201 V</b>，VCCIO ±5 % 时 1.141~1.261 V 全落窗内；差分只衰减 1.3 %</td></tr>
+    </tbody>
+    <caption>共 <b>5 只 0402 / 対 × 13 対 = 65 只</b>。公式 <span class="mono">VCM = (VCCIO/2) × Rpd/(Rpd + 10 + RS)</span>，Rout = 10 Ω。<br>⚠ 接收端 100 Ω 端接在<b>灯板侧</b>，不在这块板上（见 §1 责任划分）。</caption>
+  </table></div>
+
+  <h3>12.5 BOM</h3>
+  <div class="tw"><table>
+    <thead><tr><th>位号</th><th>器件</th><th>规格</th><th>封装</th><th>数量</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr><td class="k mono">U1</td><td>LVDS 时钟扇出</td><td><b>CDCLVD1212</b></td><td>VQFN-40 6×6</td><td>1</td><td class="note">LCSC <span class="mono">C701730</span>；IN0 输入共模要求 1 V ~ VCC−0.3 V，3R 给的 1.20 V ✅</td></tr>
+      <tr><td class="k mono">U2</td><td>3.3 V LDO</td><td>≥500 mA，dropout &lt; 300 mV</td><td>SOT-223 / DFN</td><td>1</td><td class="note">供 ACA420</td></tr>
+      <tr><td class="k mono">U3</td><td>2.5 V LDO</td><td>≥300 mA</td><td>SOT-23-5</td><td>1</td><td class="note">供 VCCIO0 + U1</td></tr>
+      <tr><td class="k mono">RS*</td><td>串阻</td><td>150 Ω ±1 %</td><td>0402</td><td>26</td><td class="note">13 対 × 2</td></tr>
+      <tr><td class="k mono">RP*</td><td>跨接</td><td>140 Ω ±1 %</td><td>0402</td><td>13</td><td class="note">—</td></tr>
+      <tr><td class="k mono">Rpd*</td><td>共模下拉</td><td>3.9 kΩ ±1 %</td><td>0402</td><td>26</td><td class="note">13 対 × 2</td></tr>
+      <tr><td class="k mono">P1/P2</td><td>ACA420 配对连接器</td><td><b>0.5 mm 间距 · 2 × 50 · 带定位柱</b></td><td>排间距 3.8 mm</td><td>2</td><td class="note"><b class="yes">✅ 封装可直接用</b>：<span class="mono">ACA420--CORE.PcbLib</span>（封装名 <span class="mono">ACG525_ACA420--CORE</span>，即官方标注的「旧版本」）导进 Altium 即可，别按数字自己重画。<br>🔴 <b>厂商料号官方没公布</b>：芯航线只说过旧版用的是「山谷道」品牌板对板连接器，该品牌立创/搜索引擎均无收录。<b>要么量实物、要么问小梅哥</b>。<br>⚠ <b>新版不能拿来代</b>：ACG525-CORE-V2 改用连兴旺 <span class="mono">LB3524-G100P/S</span>（立创 C52269550/C52269553，¥0.94~1.53，堆高 3.0 mm），但它<b>排中心距 3.3 mm、两连接器中心距 26.635 mm，与旧版不兼容</b></td></tr>
+      <tr><td class="k">去耦</td><td>—</td><td>每电源脚 100 nF + 每轨 10 µF</td><td>0402 / 0805</td><td>~20</td><td class="note">—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>12.6 机械：4 cm 够不够（已用封装库实测）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>项</th><th>实测值</th><th>来源</th></tr></thead>
+    <tbody>
+      <tr><td class="k">ACA420-CORE 外形</td><td class="new"><b>50.32 × 35.31 mm</b>，四角 <b>R1.27</b> 圆角</td><td class="note">官方封装机械层「4 段直线 + 4 段 R1.27 圆弧」实测。⚠ 我先前按整个 layer 33 的外接矩形算得 37.7 mm，<b>那个数偏大</b>（含丝印），以 35.31 为准</td></tr>
+      <tr><td class="k">焊盘阵列外接</td><td class="new"><b>24.5 × 29.8 mm</b></td><td class="note">200 个焊盘（A1~A100 / B1~B100）的外接矩形</td></tr>
+      <tr><td class="k">连接器</td><td class="new">两组 <b>2 × 50</b>，<b>间距 0.5 mm</b></td><td class="note">同排相邻脚 X 间距恒 0.500 mm，50 脚跨 24.5 mm</td></tr>
+      <tr><td class="k">排间距 / 组间中心距</td><td class="new"><b>3.8 mm</b> / <b>26.0 mm</b></td><td class="note">A 组 y = 8.39 与 12.19；B 组 y = 34.39 与 38.19；两连接器内侧排净间距 22.20 mm，X 方向完全对齐</td></tr>
+      <tr><td class="k">焊盘尺寸</td><td class="new">0.25 × 1.8 mm</td><td class="note">—</td></tr>
+      <tr><td class="k new">定位柱孔</td><td class="new">每连接器 <b>2 个 ⌀0.6 mm</b></td><td class="note">X 间距 <b>26.4 mm</b>，Y 向偏离该连接器中心线 <b>1.25 mm（朝板外侧）</b>；底板推荐孔 ⌀0.7</td></tr>
+      <tr><td class="k new">🔴 脚序方向</td><td class="new">P2 相对 P1 <b>旋转 180°</b></td><td class="note">P1 的 A1 在左下角、奇数脚下排、从左往右递增；<b>P2 的 B1 在右上角</b>。底板 PCB 里两个连接器 Rotation 分别是 0° 和 180°——<b>画错会整排接反</b></td></tr>
+      <tr><td class="k">堆叠方式</td><td class="new"><b>平行叠</b>（mezzanine）</td><td class="note">SMT 立贴板对板，核心板平行悬在转接板上方。<b>堆叠高度查不到</b>（新版 ACG525-CORE-V2 是 3.0 mm）</td></tr>
+      <tr><td class="k">转接板最小尺寸</td><td class="new"><b>≥168 × ~53 mm</b>（1.0 mm 间距）<br>或 <b>≥134 × ~53 mm</b>（0.8 mm 间距）</td><td class="note">宽度由邮票孔排决定；深度 = 焊盘出线 8 + 网络/扇出/LDO 10 + 核心板 <b>35.3</b> ≈ <b>53 mm</b></td></tr>
+    </tbody>
+    <caption>资料包路径：<span class="mono">小梅哥ACA420-EDA 国产安路FPGA学习板开发板资料/</span> —— <span class="mono">06_原理图&amp;PCB/</span> 有核心板原理图 PDF、底板原理图 PDF、<b>SchLib + PcbLib</b>；<span class="mono">04_引脚功能信息/安路EG4S20管脚分配表.xlsx</span> 是底板外设的 FPGA 球位表（不含连接器脚位映射）。</caption>
+  </table></div>
+  <div class="callout acc"><b>🎯 意外发现：这块转接板可以同时接受 EG4 和 GW5A 两种核心板。</b><br>
+  ACA420-CORE 的连接器封装官方就叫 <span class="mono">ACG525/ACA420--CORE</span>——因为 <b>ACA420-CORE（安路 EG4S20BG256）与 ACG525-CORE（高云 <b>GW5A-LV25UG324C2/I1</b>）机械与脚位兼容</b>，原理图符号名沿用 ACG525-CORE1/CORE2 就是这个缘故。<br>
+  ⇒ <b>按旧版封装画一块转接板，插 ACA420 就是 EG4 方案，插 ACG525(V1) 就是 GW5A 方案</b>，同一块灯板上直接对比两种 FPGA。<br>
+  ⚠ 两点限制：① 两块核心板的 FPGA 不同，<b>网表要各画一版</b>（机械通用、电气不通用）；② <b>ACG525-CORE-<b>V2</b> 换了连接器，插不上</b>，要找 V1。<br>
+  🎯 顺带修正一条既有判断：先前工作流查到「GW5A 全系公开渠道只有一颗能下单」，但 <b>ACG525 核心板上就是一颗 GW5A-LV25UG324</b> —— <b>做样机阶段 GW5A 是买得到的</b>，买不到的是散片。</div>
+  <div class="callout ok"><b class="yes">✅ 定案：延长 50 mm，转接板焊在正面（LED 面）。</b>深度账：
+  <div class="tw" style="margin:10px 0"><table>
+    <thead><tr><th>区段</th><th>深度</th></tr></thead>
+    <tbody>
+      <tr><td class="k">邮票孔焊盘排 + 换层过孔区</td><td>~8 mm</td></tr>
+      <tr><td class="k">3R/Rpd 网络 + 扇出 IC + 2 颗 LDO</td><td>~10 mm</td></tr>
+      <tr><td class="k new">ACA420 核心板（实测）</td><td class="new"><b>35.3 mm</b></td></tr>
+      <tr><td class="k">合计</td><td><b>≈ 53 mm</b></td></tr>
+    </tbody>
+  </table></div>
+  50 mm ⇒ <b>只差 3 mm</b>。两种收法都行：<b>(1)</b> 让核心板末端悬出灯板边缘 6 mm；<b>(2)</b> 把邮票孔排贴着延长区上沿放，转接板整体向外挪 6 mm。<b>50 mm 够用。</b><br>
+  ⚠ 转接板本体仍需 <b>≥168 mm 宽</b>（由邮票孔排决定），比核心板宽得多，两侧是空的——可以把网络电阻和 LDO 摊在两侧，把深度压到 50 mm 以内。</div>
+  <div class="callout risk"><b>🔴 真正的硬约束是<b>宽度</b>，而且它跟延长多少无关。</b><br>
+  <b>168 焊盘 @1.0 mm = 168 mm 长的一排，而灯板只有 160 mm 宽 ⇒ 单边放不下。</b>三条出路：<br>
+  <b>(a)</b> 板宽做到 <b>≥175 mm</b>（保持 1.0 mm 间距 + 每対夹地，最稳）；<br>
+  <b>(b)</b> 改 <b>0.8 mm 间距 = 134 mm</b>（板宽不变，但 0.8 mm 邮票孔工艺偏紧，孔径约 0.4 mm，要跟板厂确认能不能做）；<br>
+  <b>(c)</b> 保持 1.0 mm 但改成<b>每 2 対一根地</b> ⇒ 144 焊盘 = 144 mm（板宽不变、工艺常规，但地密度减半 —— 考虑到 08-20 那个「96 信号 : 2 根地」的教训本就要慎重，<b>而正面/背面换层的伴地过孔又给了这 60 个地第二个用途</b>，所以这条最不划算）。</div>
+  <div class="callout ok"><b class="yes">🎯 (d) 推荐：把延长区做成局部加宽的凸台。</b><br>
+  延长区<b>没有 LED</b>，所以它可以比灯板本体宽。做成 <b>≥175 mm 宽的凸台、LED 区仍保持 160 mm</b> ⇒ 邮票孔保持 <b>1.0 mm 间距 + 每対夹地</b>，工艺常规、地密度不减、伴地过孔照留。<br>
+  而且这个凸台在旋转时位于<b>内径侧</b>，加宽对转动惯量的影响远小于外径侧加宽。<b>这是四个方案里代价最小的。</b></div>
+  <div class="callout ok"><b>深度这边比你想的宽松：转接板不必整块坐在灯板上。</b><br>
+  邮票孔是把转接板<b>叠焊</b>在灯板的焊盘排上，所以灯板延长部分只需要容纳<b>焊盘排 + 出线</b>，约 <b>8~10 mm</b> 就够；转接板本体（连接器 + ACA420）可以<b>悬出灯板边缘</b>。<br>
+  <b>点亮阶段灯板不旋转，悬出完全没问题。</b>⇒ <b>延长 1~1.5 cm 即可，4 cm 是富余的。</b><br>
+  若希望转接板整块被支撑（比如想顺便测一下转起来的效果），那就按转接板实际尺寸留深度——但 ACA420 的外形和连接器间距目前<b>数不出来</b>（原理图里只有逻辑符号），要先拿到实物或厂商尺寸图才能定。</div>
+  <div class="callout acc"><b>⚠ 别忘了：目标板没有这块转接板。</b>目标板是 FPGA 直接放灯板上、无邮票孔（§表 4）。转接板与 4 cm 延长都只是<b>点亮/验证阶段的临时结构</b>。</div>
+
+  <h3>12.7 这套配置能验什么 / 验不了什么</h3>
+  <div class="cols">
+    <div class="tw"><table>
+      <thead><tr><th class="new">能验</th></tr></thead>
+      <tbody>
+        <tr><td class="note">通道映射（<span class="mono">i = 链×3+lane</span>、<span class="mono">lane0 = D0 = B 対</span> 这套顺序对不对）</td></tr>
+        <tr><td class="note">寄存器序列与配对 60 扫的寄存器表（<b>目前最大的未知</b>，待确认 #1）</td></tr>
+        <tr><td class="note">LVDS 电气与共模（3R+Rpd 实测是不是 1.20 V）</td></tr>
+        <tr><td class="note">扇出 IC 的固定延迟 → FPGA 该设多少相位</td></tr>
+        <tr><td class="note">开短路检测、过温保护、温度回读、ACK 回读</td></tr>
+        <tr><td class="note">两颗配对扫同一行的同步</td></tr>
+      </tbody>
+    </table></div>
+    <div class="tw"><table>
+      <thead><tr><th class="old">验不了</th></tr></thead>
+      <tbody>
+        <tr><td class="note">11 k fps 帧率（1 通道模式只有 1/3）</td></tr>
+        <tr><td class="note">上行 800 Mbps ~ 1 Gbps（不接 DR1V90；且 EG4S20 真対上限就是 800 Mbps，顶格）</td></tr>
+        <tr><td class="note">🔴 目标板的 bank 分配与电压方案 —— <b>EG4S20 的 Bank1/3 锁 3.3 V 是内嵌 SDRAM 带来的，EG4A20 没有这个限制</b></td></tr>
+        <tr><td class="note">旋转下的机械与 FPC（转接板悬出、不旋转）</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section>
+  <h2 id="sec-t-13"><span class="sec">表 13</span>待确认清单</h2>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>事项</th><th>问谁</th><th>卡住什么</th><th>优先级</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>配对模式的寄存器表——「本片负责哪 30 行 / 列数据覆盖全 60 行」是寄存器配的；手上 <span class="mono">2260lvds.xlsx</span>（238 条）是单颗 40×45 样板的，不含配对模式</td><td>客户 / 供应商</td><td>点亮</td><td><b class="warn">不卡画板</b></td></tr>
+      <tr><td class="num">2</td><td>端接取 <span class="mono">RBD</span> 100 Ω 还是 <span class="mono">RDC</span> 200 Ω（表 6）</td><td>供应商</td><td>BOM + 5R 网络阻值 + 共模</td><td><b class="no">🔴 高</b></td></tr>
+      <tr><td class="num">3</td><td><b class="yes">✅ 已定案（09-09）</b>：接受焊死，<b>灯板接口为契约、FPGA 子板为变量</b>，EG4 与 GW5A 各画一版子板来适配同一套邮票孔。⚠ 代价：要试两种子板需至少两块灯板</td><td>—</td><td>—</td><td><b class="yes">已定</b></td></tr>
+      <tr><td class="num">4</td><td><b class="yes">✅ 已定案（09-09）</b>：12 颗独立引出 + 2 × 8:1 mux，<b>不用菊花链</b></td><td>—</td><td>—</td><td><b class="yes">已定</b></td></tr>
+      <tr><td class="num">5</td><td><b>集创北方：<span class="mono">VIC 1.1~1.3 V</span> 是绝对最大额定还是推荐工作范围？</b>决定 12 路时钟是 DC 直连（贴 0 Ω）还是必须上 AC 耦合 + 共模偏置（表 10）</td><td>供应商</td><td>🔴 扇出选型能否 DC 直连；决定 60 个 0402 贴不贴</td><td><b class="no">🔴 高</b></td></tr>
+      <tr><td class="num">6</td><td><b class="yes">✅ 已定案（09-09）</b>：FPGA bank <b>VCCIO = 2.5 V</b> ⇒ 用 <b>3R 网络</b>（RS 150 / RP 140），不照抄 E104 的 5R。🔴 <b>但建议加 Rpd 3.9 kΩ</b> 把标称共模从 1.25 拉到 1.201 V——纯 3R 时 VCCIO ±5 % 会让共模摸到 1.313 V 出窗，加 Rpd 后 1.141~1.261 V 全落窗内，差分只衰减 1.3 %（表 6）</td><td>—</td><td>询价单 B05 按 3R + Rpd 报</td><td><b class="yes">已定</b></td></tr>
+      <tr><td class="num">7</td><td>询价单 <span class="mono">B06</span> 差分端接数量按「时钟走级联」算的 72 只/板，新方案要改成 48 只（验证板）/ 96 只（目标板）；<span class="mono">B07</span> 8:1 mux 目标板 3 颗、验证板 2 颗</td><td>采购</td><td>询价单要重发</td><td>中</td></tr>
+      <tr><td class="num">8</td><td>向集创北方问 <span class="mono">L_CKOP/L_CKON</span> 四件事：① 不做数据级联时时钟中继是否照常工作 ② <b>Voc / Vod 的 min-typ-max</b>（这是「共模已解决」的证据）③ <b>每跳 tPD 与抖动累积</b>、170 MHz 下最大级联深度 ④ 级联模式下 RX 是否仍需外挂 100 Ω。<b>决定换 GW5A 后方案 D 能否翻案</b></td><td>供应商 FAE</td><td>目标板架构（省 3~4 颗扇出 IC）</td><td>中</td></tr>
+      <tr><td class="num">9</td><td>🔴 <b>GW5A 的 IODELAY 能否用于「输出」路径</b>（与 OSER8 串联）——决定方案 D 在 GW5A 上是否成立；以及 <b>MINILVDS 输出共模 max 是否 ≤ 1.3 V</b>（DS1103 的 VOS 表不分 IO 标准，给的是 1.125/1.25/1.375）</td><td>高云 FAE / UG304</td><td>桥片选型 + 时钟架构</td><td><b class="no">🔴 高</b></td></tr>
+      <tr><td class="num">10</td><td>🔴 <b>GW5A-LV60UG324S / GW5A-LV25PG256S 的供货状态与单价</b>——官网只列 UG324A，PG256S 是老 1.0 mm PBGA；与 EG4A20 的价差直接决定换不换</td><td>高云代理</td><td>换不换桥片</td><td><b class="no">🔴 高</b></td></tr>
+      <tr><td class="num">11</td><td>🔴 <b><span class="mono">tSTU/tHLD = ¼ tLVCP</span> 的容差是多少？</b>手册那两行只填了典型值栏、min/max 全空（<span class="mono">ds.txt:449-451</span>），等于没给容差。要一个「数据相对时钟的相位允许偏离多少」的数，否则所有 skew 预算都没有验收线</td><td>供应商 FAE</td><td>🔴 所有时钟拓扑的验收判据</td><td><b class="no">🔴 高</b></td></tr>
+      <tr><td class="num">12</td><td>🔴 <b>注释 1 的「驱动端传输延时可设 1/8 / 1/4 / 3/8 tLVCP」是否同时移动接收采样点？</b>若是 ⇒ 每颗独立、寄存器可配的半个 UI 相位调节 ⇒ multidrop 与芯片级联在 EG4 上都重新成立，不需要 GW5A 的 IODELAY。这条能翻转整个架构选择。同时问：这个设置是哪个寄存器位、上电默认值是多少</td><td>供应商 FAE</td><td>🔴 时钟架构 + 是否换 GW5A</td><td><b class="no">🔴 高</b></td></tr>
+      <tr><td class="num">13</td><td>目标板差分「差 1 対」的回收：JTAG 四脚设 User I/O ⇒ +2 対，但 TD V6.2 查不到 EG4 可用的 <span class="mono">JtagPin</span> 开关，SWUG105 一条没有</td><td>安路原厂</td><td>只影响目标板</td><td>中</td></tr>
+    </tbody>
+    <caption>备查：手册提到 mini-LVDS 支持 1 / 2 / 3 通道传输，即允许只用 1 或 2 个数据通道——那是拿対数换帧率（2 通道 = 680 Mbps/颗，fps 掉 1/3），11 k 目标下用不了。</caption>
+  </table></div>
+  <div class="callout risk"><b>🔴 立创选料避坑（已核）：</b>① <b>瑞盟 MS90C031</b>（四路 LVDS 驱动，SOP-16，有货 478 pcs）只有 <b>155.5 Mbps = 77.7 MHz</b>，跑不了 170 MHz；② <b>SX-globalchip GC26L31 / GC26L32 / GC26E31</b> 被错误归类到「LVDS 芯片」分类下，实际是 <b>5 V 的 RS-422（26LS31 系列）</b>，摆幅和共模全不对；③ <b>老 repeater</b> SN65LVDS108（tsk(o) 300 ps / tsk(pp) 1.5 ns）与 DS90LV110A，偏斜比 CDCLVD 级差 5~25 倍，<b>别因为便宜就选</b>。</div>
+</section>
+
+<footer>
+POV3D · 灯板改板与邮票孔 FPGA 接口定义 · v1 · 2026-09-09 ·
+参考板网表由 <span class="mono">zynq_pov/icnd2260/tools/schdoc_netlist.py</span> 实读 ·
+FPGA 侧接口 <span class="mono">dr1v90/eg4_bridge/rtl/eg4_bridge_top.v:81-105</span> · 引脚 <span class="mono">adc/bridge_pin.adc</span> · 芯片 <span class="mono">ICND2260_datasheet V1.7</span>
+</footer>
+
+</div>
+</body>
+</html>

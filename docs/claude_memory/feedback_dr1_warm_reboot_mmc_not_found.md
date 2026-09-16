@@ -52,7 +52,10 @@ Loading Environment from FAT... *** Warning - bad CRC, using default environment
 **都写了 `non-removable`** ⇒ `anlogic_sdhci.c:301` 的"没插卡就直接返回"**永远不成立**
 ⇒ **空的 mmc1 每次开机都走完 8 相位扫描、打 9 行**。
 27 行 = mmc0 失败(9) + **mmc1 常态失败(9)** + 环境加载再 probe(9)。
-🎯 **判据是行数**: 正常开机 ≈ 9, 故障开机 = 9 的整数倍且 > 9。
+~~🎯 **判据是行数**: 正常开机 ≈ 9, 故障开机 = 9 的整数倍且 > 9。~~
+🔴 **09-16 反例, 行数判据作废**: DR1V90-2 装了 S00sdoff 后热重启, u-boot 打了 **27 行**(MMC: 后 18 行 + `f804a000 probe failed` + `f8049000: 0 (SD)` 后 9 行),
+却**照常** `Scanning mmc 0:1... Found U-Boot script /boot.scr` 起到 Linux。
+⇒ **唯一可靠的判据是有没有 `Found U-Boot script /boot.scr` / `Starting kernel`**, 不是 voltage select 的行数。
 
 **② "永久放弃该设备"不准确。** u-boot driver model 不拉黑设备(手敲 `mmc rescan`
 能认回来就是反证)。准确说法: `bootcmd=run an_bootcmd` 而 **`an_bootcmd` 一趟无重试**,

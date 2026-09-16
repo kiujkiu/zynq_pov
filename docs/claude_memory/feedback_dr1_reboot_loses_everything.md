@@ -70,6 +70,8 @@ powershell.exe ... -File '...\host\serial_send.ps1' \
   -LocalFile '...\board\povsh\povsh_riscv64' -RemotePath '/tmp/povsh'
 
 # 4. 起 povsh (🔴 后台进程必须自己接走三个 fd, 否则串口会话被挂住)
+#    🔴 09-16: -Cmd **以 `&` 结尾**会被 serial_run 拼上 `;` 变成 `& ;` ⇒ `-sh: syntax error: unexpected ";"`,
+#       **整行一条都不执行**(连前面的 touch 也没跑)。在 `&` 后面再跟一条命令: `... & echo STARTED`
 ... -Cmd "chmod +x /tmp/povsh; setsid /tmp/povsh -p 9600 -t poval01 </dev/null >/tmp/povsh.log 2>&1 &"
 
 # 5. 脱离串口

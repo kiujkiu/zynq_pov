@@ -87,4 +87,16 @@ frames_helix 36 帧 `--loop` @12fps, 每帧 ~186.5 KB 3 流):
   必须 `volatile` 并在 objdump 里看到 `sb` 循环。**任何"写了但没人读"的实验性副作用都要先查反汇编。**
 - 台架坑: 变体二进制换名(`pov_rxd_x`)会让 `rxd_board.sh` 的 `pidof pov_rxd` 判启动失败而进程已在后台监听 ⇒ 变体放 `/tmp/xbin/pov_rxd` 保持进程名。
 
-相关: [[project_dr1_hp1_lz4_verified]] [[project_lz4_pl_decoder]] [[project_dr1_parity_plan]] [[reference_wsl_p2p_wifi_rig]]
+## ✅ 2026-09-17 根因坐实: 内核 CCM 回写循环不关中断 (H1) —— povmem 关中断分段回写即修好
+- 实验模块(补丁 `results/2026-09-16/pl_x1/scripts/povmem_kx_irqsafe_flush.patch`, vermagic 与卡上一致): 运行时参数 `flushmode`
+  0=原内核 `ccm_dcache_op`(0x5cb 写一次 + 每行 0x5cc, **开着中断**) / 1=每 ≤64 行一段 `local_irq_save` 并重写 0x5cb / 2=1+FPIPE。
+- **flushmode=1: 36 帧循环 1660 PL 帧 0 故障**(原版 pov_rxd); **同一次开机运行时切回 0: 220 帧 3 故障(首个 seq 28, 全在流#2)** ⇒ H1 坐实, FPIPE 不是必要条件。
+- flushbench: 刷 187 KB 模式 0/1/2 = 0.106/0.121/0.124 ms ⇒ 关中断零代价; 整个回写窗口只有 ~0.1 ms, 3.6%/帧说明 USB 收包中断极密。
+- 机理: 同核软中断里 USB RX `sync_for_cpu`(WBINVAL) 也调 `ccm_dcache_op`, 改写 0x5cb ⇒ 我们剩下的行不回写; memcpy 已逐出前面 ⇒ 只坏最后 ~32 KB ⇒ 永远是流#2。
+- 🔴 **推论(未测)**: 同一个不关中断的循环服务**所有**非一致性 DMA(SD/MMC、USB、网口) ⇒ 进程上下文的回写被软中断打断时, 别的驱动缓冲也可能静默旧数据(如 SD 卡写入);
+  根治在内核 `arch/riscv/mm/dma-noncoherent.c` 的 `ccm_dcache_op()` 加关中断(要重编内核), povmem 局部修只保护帧区/comp 缓冲。
+- 台架坑: K1-1 板子重启后连到 **2.4 GHz** ⇒ 收帧体 0.5-0.9 s, 0.88 fps, 差点当成模块副作用; 用 `wifi5g.sh`(运行时 freq_list 限 5 GHz, 40 s 连不上自动回退) 拉回 5745。
+  办公网白天拥挤, 5 GHz 下也只有 3-5 fps(昨晚 22 点 11 fps) —— **吞吐数据要注明时段**。
+- 还没做: povmem 正式版默认关中断回写并进卡/MANIFEST; 内核根治; CPU 回退帧不 flush 的独立 bug; RTL 软复位/E_SRC 加固。
+
+相关: [[project_dr1_hp1_lz4_verified]] [[reference_dr1_cache_and_frame_memory]] [[project_lz4_pl_decoder]] [[project_dr1_parity_plan]] [[reference_wsl_p2p_wifi_rig]]

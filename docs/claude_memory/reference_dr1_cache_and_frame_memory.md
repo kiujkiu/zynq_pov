@@ -164,5 +164,7 @@ DR1 无 Svpbmt ⇒ 帧区**必须带 cache** ⇒ 每帧显式回写 8.85 MB。
 baremetal 版结尾那句 `CSR_CCM_FPIPE = 1`**(`nuclei_ccm_cache.c:48-57` 每个 range op
 都写)。厂商自己的 MMC/USB/网口 DMA 也走这条内核路径且正常, 所以大概率无所谓;
 但"回写返回时是否保证已落 DDR"无文档。**出现"偶发旧帧"时这里是第一嫌疑。**
+✅ **2026-09-17 结案(不是 FPIPE)**: 真正的坑是同一函数**开着中断**跑 0x5cb+0x5cc 序列, 被同核软中断里别的 DMA 同步改走地址指针 ⇒ 漏回写。
+povmem 里关中断分段回写后 PL 解码 1660 帧 0 故障, 不写 FPIPE 也行。详见 [[project_dr1_pl_decode_parity]]。
 
 相关：[[project_dr1_parity_plan]] [[project_dr1_soc_step1_done]] [[feedback_riscv_glibc_ifunc_sigill]]

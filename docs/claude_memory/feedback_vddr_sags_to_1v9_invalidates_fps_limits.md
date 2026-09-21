@@ -56,3 +56,17 @@ metadata:
 
 相关: [[feedback_vio_poke_survives_soft_rst]] [[feedback_vio_readback_tears_after_commit]]
 [[feedback_frame_rate_must_not_exceed_chip_display]]
+
+## 2026-09-15 追加: E104 那套加大了电容, 用户说「稳定了很多」
+
+用户在电源上**加大了电容** (哪一路 / 容值 / 位置未说), 反馈屏「**稳定了很多**」——
+与上面「灯板输入端加大容量低 ESR 电容」的解法**方向一致**。
+
+⚠ **只算旁证, 不算坐实**:
+1. 是看屏的定性印象, **没量电压**;
+2. 同一时段寄存器回读 (`nbad`/`rdbad`/`fdev`) 改前改后**一个字没变** ⇒ 回读指标**看不见**这个"稳定",
+   这件事的判据只能是屏或电压表;
+3. 上面那个 1.9 V 是 09-01 在鹿小班那套 (转接板 U1/U2 供电) 上量的, **E104 这套没量过 VDDR**。
+
+**How to apply**: 要坐实, 在屏跑着显示时量灯板侧 VDDR / VDDGB, 同一图案下"小电容 vs 大电容"各量一次,
+看平均值是否回到规格内。详见 `dr1v90/eg4_2260_e104/README.md` §6.53。

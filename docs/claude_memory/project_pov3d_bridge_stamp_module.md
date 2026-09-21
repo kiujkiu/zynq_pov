@@ -91,3 +91,14 @@ metadata:
 相关: [[project_eg4_bridge_firmware]] [[project_pov3d_bridge_architecture]] [[project_pov3d_chip_arrangement_4x6]]
 [[reference_icnd2260_spec]] [[project_pov3d_rotor_wireless_power]]
 文档: `pcb/eg4_bridge_v1/01_设计要点/02_管脚与BANK预算.md` §9(两侧脚数) 与 §10(FPC + 时钟拆分)
+
+---
+
+# ⚠ 2026-09-09/10 更新: 本文是**目标板(24 颗)**口径, 验证板另有定案
+
+验证板(12 颗)的接口已冻结, 数与本文不同: **邮票孔 168 焊盘**、**12 対时钟穿孔**(扇出 IC 放子板侧,
+不是本文的"2 対各带 12 颗")、**转接板与 FPGA 在正面**(两块灯板背靠背)、下端延长 50 mm。
+⇒ 见 [[project_pov3d_panel_rework_stamp_interface]] 与
+`zynq_pov/docs/灯板改板_邮票孔FPGA接口_2026-09-09.html`。
+
+本文仍然成立的两条: **上行走独立阻抗受控 FPC、不进邮票孔**; **8:1 mux 必须留在灯板上**。

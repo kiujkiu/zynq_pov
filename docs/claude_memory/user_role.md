@@ -15,3 +15,7 @@ User is building `zynq_pov` — a persistence-of-vision 3D rotating display on X
 Workflow: WSL for git/scripting, Windows for Vivado/Vitis. Comfortable with command-line workflows; expects me to drive Windows tools from WSL via `powershell.exe`.
 
 Communication style: terse Chinese, direct. Gives short instructions and expects me to act. Confirms with "是" / single words.
+
+🔴 **回复一律用中文** —— 2026-09-18 一轮里用户两次打断提醒("中文交互"、"用中文")。
+包括正文、表格、小标题、代码注释; 技术名词(LVDS25、ODDRx2、bank、SERDES)保持原文不必硬译。
+思考过程也用中文, 免得回复里混进英文。

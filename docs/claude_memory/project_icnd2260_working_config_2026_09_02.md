@@ -46,6 +46,9 @@ tools\build_bit_dbg.tcl -tclargs 6 lvds casc1 f167 noprobe
 ```
 CASCADE   1 (只喂第一颗; 下游会显示残帧噪声)
           若要整屏只剩第一块 ⇒ CASCADE=2 + 第二颗全黑(--pad-chips 1), 链路速率减半
+          ⚠ 2026-09-14 E104(EG4) `PATT=1 CASCADE=1`: 9 块**都是蓝为主 + 点状杂点**, 没有一块整块纯蓝(用户看屏)
+            ⇒ 后 8 块很可能也在显示 slice 0 的蓝; 候选(未验): VHEAD「级联数−1」=0 让每颗都吃开头那片;
+            点点原因未定; 见 `dr1v90/eg4_2260_e104/README.md` §6.53
 帧内容    14,755 拍  (关读探针后; 未关是 15,270)
           = 数据 14,400 (1800像素×16bit÷2 DDR, **协议硬地板**) + 开销 355
 READ_PROBE_FR = 0, QUIET_CYCLES = 0   (`noprobe` 关键字)

@@ -19,6 +19,12 @@ metadata:
 | 3 | `01_hpbw/` | HP 口实际带宽 + CPU 侧 DDR 带宽 | ~30 min | 要综合一版专用 bit(占 TD, 与 A 线冲突) |
 
 `03_wifibw` 排第一是因为**零成本且可能改写后面两步的目标**。
+✅ **2026-09-14 `03_wifibw` 已跑完**: 正向中位 64 / 反向 57 Mbps, 板上单核 88-100% 打满 ⇒ 天花板在 CPU,
+见 [[reference_dr1_wifi_ceiling_unestablished]]; 数据在 `03_wifibw/results/2026-09-14/`。
+🔴 **入库的 `out/iperf3` 不能用**(static-pie 下 cJSON hooks 为空, 一连客户端就崩), 那次用的是
+`results/2026-09-14/iperf3_nopie`(md5 `747a7b8f…`), 见 [[feedback_musl_static_pie_cjson_hooks_null]];
+`build_iperf3.sh` 与 `out/iperf3` **尚未修**。另: 跑流量时串口会被饿死, CPU 要后台采样写文件;
+WSL 是 NAT, 板子连不进 WSL ⇒ 板子当服务端、PC 当客户端。
 交叉编译好的 `iperf3` 已入库(riscv64 musl static-pie, 189 KB)。
 🔴 `-static` 会被 **libtool 吃掉** —— 给 `configure` 传 `LDFLAGS="-static"` 不够,
 产物照样 `dynamically linked`, 见 `build_iperf3.sh`。

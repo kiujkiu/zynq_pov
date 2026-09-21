@@ -75,6 +75,6 @@ metadata:
 
 ⇒ **剩下的唯一实项: 转子侧储能电容容量**(按最坏一帧的点亮率 × 允许压降算, 仍未做)。
 
-相关: [[project_pov3d_master_and_bridge_both_on_rotor]] [[project_pov3d_final_target_chip_verdict]]
+相关: [[project_pov3d_master_and_bridge_both_on_rotor]] [[project_pov3d_final_target_chip_verdict]] [[reference_rotor_power_alternatives]] [[reference_slip_ring_life_1000rpm_10a]]
 [[reference_pov3d_brightness_control_limits]] [[reference_icnd2260_spec]]
 文档: `pcb/00_目标电路总览.md` §2.3 · `zynq_pov/docs/BOM_询价单_2026-09-08.html`

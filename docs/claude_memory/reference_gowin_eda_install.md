@@ -18,7 +18,7 @@ tcl 用 `create_project -name X -dir ... -pn GW5A-LV25UG324C2/I1 -device_version
 原样拷到 `C:\Gowin\gowin.lic`(= gwlicense.ini 默认值, ini 未改); `MODE=NODELOCK TYPE=STD HOST_ID=84F758400219 EXP_DATE=2027-09-11` 🔴**一年到期要续**。
 冒烟实测: **GW5A-LV25UG324C2/I1 `-device_version A` 13s 到 bit / GW5A-LV60UG324SC2/I1 `-device_version B` 15s 到 bit**, 0 error。
 🔴 **`-pn` 不带 `-device_version` 直接报 `The target device does not have device version` 退出**; 版本号查 `IDE\data\device\device_info.csv` 第 6 列:
-GW5A-60 只有 **B**; GW5A-25 有 **A/B 两版**(B 多一列 180Kb 存储) ⇒ ⚠ **ACG525-V1 上贴的是 A 还是 B 版未确认**, 上板前要看芯片丝印/板卡资料。
+GW5A-60 只有 **B**; GW5A-25 有 **A/B 两版**(B 多一列 180Kb 存储) ⇒ ⚠ **ACG525-V1 上贴的是 A 还是 B 版未确认**, 上板前要看芯片丝印/板卡资料。 —— ✅ **09-16: 我们手上的 ACG525-CORE-V2 实物丝印 Date Code 2544BB0N ⇒ 25B** (构建用 `-device_version B`)
 UG324 可选 PN: 25 = C1/I0 C2/I1 SC1/I0 SC2/I1 ES; 60 = `UG324A{C1/I0,C2/I1,ES}` 与 `UG324S{C1/I0,C2/I1}`(还有 GW5AT-60 同封装)。
 
 以下为装 license 前的排查记录:

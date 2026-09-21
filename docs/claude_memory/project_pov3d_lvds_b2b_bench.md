@@ -157,10 +157,39 @@ TD 第 1 趟自推的时钟把 pclk 域按 sclk 频率约束 ⇒ SWNS 是按 2×
   ① 加 `DR1_LOGIC_DYNAMIC_IDELAY` per-lane 去偏斜(tap 步长手册自相矛盾, 要先标定, README §6.6);
   ② 把量具从"零误码眼宽"换成 **BER-vs-相位浴盆曲线**(边际链路本就该用浴盆, 不是零误码眼)。
 
-### 板子终态
-- 两块都已 `sh /mnt/mmcblk0p1/pov/povboot.sh pl` **恢复生产位流, POVBOOT: PASS**。
-- 卡上 `/mnt/mmcblk0p1/lvds_b2b/` 留着 p50/p100 的 tx/rx bin(BITREV=0, 已验)+ conn bin; p200(800M) 卡上还是 BITREV=1 旧 rx, 要重测得先重编。
-- RTL 改动(BITREV=0 / cap 接 MAP / 一次性冻结 / PROBE_LANE0=0)已提交到 `feature/lvds-b2b` 分支。
+## 🎯 2026-09-21 (下午) 加了 BER 浴盆量具, 测出眼宽-vs-速率曲线 (配置 A)
+
+原来的扫眼判据是"整个 dwell 零误码 + 6 条共用一个采样相位", 太苛 + 撞逐 lane 偏斜 ⇒ 只会 clean/DEAD。
+改成**运行时可调误码门限**: `b2b_regs` 新增 **THRESH 寄存器 @0x3C** (不能放 0x38 —— 那是自检
+"EYE 区尾后一个字 0x20+4*NLANE" 的未映射探测点, 09-21 放 0x38 直接自检 FAIL);
+`b2b_rx_top` 的 sticky 从"出过任何错"改成"脏 beat 数 > 门限"(每 lane 每极性 16 位饱和计数器,
+thresh 同步进 pclk 域)。门限=0 时与原零误码判据完全等价。
+MAP 口(找 bug 时借去当原始比特, 现已还原成眼图)每档每 lane 一位 ⇒ 就是**二值浴盆**,
+主机侧从 MAP 算每条 lane 自己的最长干净档 = 眼宽(%UI)。板端 `bath.sh` 扫门限、`load_b2b.sh thresh N`。
+
+### 眼宽-vs-速率实测 (配置 A: 两端各 33Ω=每腿 66Ω, ≤10cm 直通排线; 6 lane 全 PRBS)
+| 线速率 | pclk | 结果 |
+|---|---|---|
+| **200 Mbps** | 50 | lane1/2/3/4 **零误码满眼**(扫 2 UI 全干净); lane5 零误码眼 **22%UI**(容 16 脏beat 就满); **lane0 任何相位任何门限都 DEAD** |
+| 400 Mbps | 100 | 零误码全 DEAD; 门限放到 ~1~3% 只有 **lane3** 开(FLAGS=0x3700, MAP=0x08); 其余仍死 |
+| 800 Mbps | 200 | **全闭**: PLL 锁着(STATUS=0x5)、数据在流(ERR ~50%), 但门限拉到 256(≈6%)也没有一档一条 lane 干净 |
+
+⇒ **配置 A 下可用速率 ~200M(多 lane 零误码), 400M 已基本闭, 800M 全闭。眼在 200~400M 之间急闭。**
+
+### 🔴 lane0 是硬件问题, 不是电阻
+lane0 在 200M(1UI=5ns, 别的 lane 满眼)都全相位全门限 DEAD ⇒ **不是 66Ω 均匀衰减**(那会平等地压 6 条),
+是 lane0 那对差分线单独坏: **CEP1.35/36 = 球 F18/E18 = 排阻 R195 那一腿**(冷焊/开路/排线那芯)。用户要焊上查这一对。
+
+### 下一步 (未做)
+- 拆电阻做 **配置 B(收端 0Ω, 每腿 33Ω) → C(两端 0Ω)** 对比, 看可用速率能推到多高 —— 这才是台架要的
+  "33Ω 吃掉多少眼宽"的数; 量具已就绪, 换电阻后直接 `bath.sh` 扫。
+- 先修 lane0 那一对, 否则它一直污染整表。
+- 逐 lane 偏斜(不同 lane 眼位置不同)要 6 条同时零误码才需要 per-lane IDELAY 去偏斜; 测眼宽用不到。
+
+### 板子终态 / 提交
+- 两块都 `povboot.sh pl` **恢复生产位流, POVBOOT: PASS**。
+- 卡上 `/mnt/mmcblk0p1/lvds_b2b/` 现在是带量具的 p50/p100/p200 tx/rx bin(全 BITREV=0 / PROBE_LANE0=0) + conn bin + `bath.sh`。
+- RTL 改动分两批提交到 `feature/lvds-b2b`: 60b8cd8 (BITREV 修复), 后续一批 (THRESH 浴盆量具)。
 
 相关: [[feedback_uplink_pll_vco_overrange_above_500]] [[feedback_every_pl_bitstream_needs_a_gp0_slave]] [[project_pov3d_fs03_cep_ground_and_third_row]]
 [[project_dr1_uplink_tx_probe]] [[project_pov3d_hw_pack_dr1v90_gw5a]]

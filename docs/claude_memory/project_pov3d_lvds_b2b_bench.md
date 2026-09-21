@@ -118,9 +118,49 @@ TD 第 1 趟自推的时钟把 pclk 域按 sclk 频率约束 ⇒ SWNS 是按 2×
 - ✅ 收端三档综合通过, bit 已出; `build.sh rx` 还会顺手 bootgen 出 `out/b2b.bin`
 - ✅ **2026-09-20**: 四角色 (tx / rx / conn_tx / conn_rx) **全部挂 `b2b_sys`** —— 起因是发端按"JTAG 烧 bit"漏挂从机, `load_b2b.sh` 读 MAGIC 把单核挂死、看门狗重启回生产位流; 教训见 [[feedback_every_pl_bitstream_needs_a_gp0_slave]]
 - ✅ **2026-09-20 15:4x**: GP0 补齐后重编 **800M (`p200_n6`) 发/收** 出 bit+bin（`out/b2b_tx_p200_n6.bin` / `out/b2b_rx_p200_n6.bin`, MANIFEST 已更）; 发端 SWNS +0.348 / HWNS +0.004 / 0 违例; 收端 SWNS 仍是过严口径负值（看 Min Period 真余量, 同 §「收端三档也过了」）
-- ⏳ **双板对插眼宽实测未做**; 用户 09-18~20 在焊排线 / 改跳线; 板端加载通路已具备, 下一步是两块 DR1V90 对插 CEP1 跑配置 A（两端 33Ω）扫相位
 - 🔴 1.2G 那档收端只剩 10.1% 是**工具层**余量, 上板还要再扣 sclk 600MHz 贴 GCLK 上限(628)
   与 IOL 内部那一跳(TD 不报) ⇒ 先从 800M 做起
+
+## 🎯 2026-09-21 双板对插上板实测 —— 链路跑通, 定位并修掉一个真 bug
+
+板子: DR1V90-1(COM5)=发端, DR1V90-2(COM8→实为 COM18)=收端, 都跑 TF 卡 Linux。
+排线连通性(走马灯 conn_tx/conn_rx): **48/48 全通, 0 短路 0 错位**(重跑两轮)。
+
+### 🔴 根因: 4:1 解串比特序反了 (BITREV 应为 0, 不是 1); 09-20 因**另一个 bug 遮蔽**而选反
+- 现象: 800M 上板 6 条 lane 全 DEAD、整圈无眼; 但转发时钟対(C17/C18, ODDR/LVDS18)能让**收端 PLL 锁住**
+  ⇒ 物理链路是通的。发端 lane0 用 ODDR 发方波(PROBE_LANE0=1)在收端也收到干净的 `11001100`
+  ⇒ 基础 LVDS + IDDRx2 采样通; 挂的是全速率 ODDRx2 4:1 那条。
+- 定位手段(关键): 把 `b2b_rx_top.v` §3b 那段**原来只写不读、被综合剪掉**的原始比特捕获 `cap[]`
+  真接到 MAP 寄存器口(`map_ok` 从眼图改接 `cap_rd`), 并改成**扫眼结束后一次性冻结**(不再滚动重抓,
+  否则串口逐个读 MAP 相隔 ~100ms、缓冲每 ~5ms 重抓 ⇒ 拼不出连续比特)。上板抓 64 个连续 bit,
+  离线比对 PRBS7 m-序列: **把捕获流做 per-beat 反转后 lane3 吻合 100%、其余 94~98%** ⇒
+  正确比特序是 **q0 当最早 (BITREV=0)**, 与 TD 模板注释 "The 0th bit" 字面一致。
+- 为什么 09-20 选成 BITREV=1: 当时 `auto_start` 有 bug(pll_locked 查得太早, TLOCK 最大 250µs 还没锁,
+  扫眼 FSM 根本没跑完), BITREV=0/1 **都假性全 DEAD** ⇒ 拿一个坏掉的判据(扫眼没跑)去比两种接法,
+  两个都 fail 就选了错的那个。auto_start 修好(等 pll_locked 稳定后再延迟发 start)后才现原形。
+  📌 **教训**: 判据本身坏掉(扫眼没运行)时, "两个候选都 fail" 不能用来选方向; 要先弄一个**直接看原始数据**
+  的量具(抓真比特), 而不是信一个可能没在工作的 pass/fail。
+- 修法: `b2b_rx_top.v` 参数 `BITREV` 默认 1→**0**。BITREV=0 后误码立降 10~100×。
+
+### 实测结果 (BITREV=0, 配置 A 两端原样 33Ω = 每腿 66Ω, ≤10cm 直通排线)
+| 线速率 | pclk | 结果 |
+|---|---|---|
+| **200 Mbps** | 50 | **lane1 / lane3 在 314M beats(~12.6 亿 bit)上持续 0 误码 (clean)**; lane2=396 / lane4=129 (近乎干净); lane5、lane0 差(lane0 判 DEAD) |
+| 400 Mbps | 100 | 6 条全 DEAD, 但误码有 lane3<lane2<lane1<lane4<lane5<lane0 的**梯度**(lane3 最好), 原始比特离线验证仍是 PRBS |
+| 800 Mbps | 200 | 6 条全 DEAD; err_cnt 全 ~1.2~1.9G(≈50%) 但那是 BITREV=1 旧 bit 的数; BITREV=0 未在 800M 重测 |
+
+### 🔴 现在的墙: 单一全局采样相位 + 零误码 dwell 判据 + 逐 lane 偏斜
+- 扫眼判据是"某 tap 上整个 dwell(2^16 psclk≈百万 bit)**零误码**"⇒ 要求 BER<~1e-6, 对边际链路太苛。
+- 本版是**全局相位**(6 lane 共用一个采样点, 无 per-lane IDELAY 去偏斜, README §6.6 早写明)。
+  逐 lane 偏斜下, 没有一个全局相位能让 6 条同时干净 ⇒ 200M 也只有 lane1/3 撞上、其余差。
+- ⇒ 要往上做 400/800M 或让 6 条都干净, 下一步二选一(未做):
+  ① 加 `DR1_LOGIC_DYNAMIC_IDELAY` per-lane 去偏斜(tap 步长手册自相矛盾, 要先标定, README §6.6);
+  ② 把量具从"零误码眼宽"换成 **BER-vs-相位浴盆曲线**(边际链路本就该用浴盆, 不是零误码眼)。
+
+### 板子终态
+- 两块都已 `sh /mnt/mmcblk0p1/pov/povboot.sh pl` **恢复生产位流, POVBOOT: PASS**。
+- 卡上 `/mnt/mmcblk0p1/lvds_b2b/` 留着 p50/p100 的 tx/rx bin(BITREV=0, 已验)+ conn bin; p200(800M) 卡上还是 BITREV=1 旧 rx, 要重测得先重编。
+- RTL 改动(BITREV=0 / cap 接 MAP / 一次性冻结 / PROBE_LANE0=0)已提交到 `feature/lvds-b2b` 分支。
 
 相关: [[feedback_uplink_pll_vco_overrange_above_500]] [[feedback_every_pl_bitstream_needs_a_gp0_slave]] [[project_pov3d_fs03_cep_ground_and_third_row]]
 [[project_dr1_uplink_tx_probe]] [[project_pov3d_hw_pack_dr1v90_gw5a]]

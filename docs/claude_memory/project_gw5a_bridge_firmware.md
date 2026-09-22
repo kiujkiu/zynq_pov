@@ -70,10 +70,18 @@ Logic 28%   Register 28%   CLS 56%   I/O Port 191/239(80%)   IOLOGIC 86/232(38%)
 
 ## 下一步 (未做)
 
-1. 🔴 **时序未收敛**: dclk 目标 150MHz, PnR 报的 Actual Fmax 只有 **133.6MHz**
-   (差 ~11%); pclk(100MHz, 上行 IDES8 侧) 余量充足, Fmax 128.6MHz。要收敛 dclk
-   这条(大概率是 tx_array/icnd2260_seq/ul_dispatch 某条组合路径过长, 需要在
-   eg4_bridge 那份的关键路径上核一遍, 或加一级流水)。
+1. 🔴 **时序未收敛**: dclk 目标 150MHz, PnR 报的 Actual Fmax **133.6MHz**(差~11%);
+   pclk(100MHz, 上行 IDES8 侧) 余量充足。**关键路径已定位**(bridge.tr Path 1~25):
+   两组, 都在 dclk 域自身:
+   ① `u_rx/u_fifo/... → u_disp/g_chk.crc_hi_r_*/crc_lo_r_*` —— ul_dispatch 里
+      `CHK_EN=1` 打开的 CRC 校验器, 直接读 FIFO 输出算校验, data delay ~7.4ns
+      (周期 6.667ns), 组合路径太长。
+   ② `icnd2260_ack_rx` 的 `tcnt_0` 计数器 Q 扇出到一堆 `buf__buf__RAMREG_*_G/CE`
+      —— 高扇出网直接驱动多个寄存器的 CE 端, 典型的"扇出未插流水"。
+   试过 `set_option -place_option 1`(Gowin 时序驱动布局) **反而更差**(124.8MHz)
+   ⇒ 已撤回, 默认裸跑布局是目前最好的结果(133.6MHz)。**这条要靠 RTL 改动收敛,
+   不是布局参数能调出来的**: 给 CRC 校验器加一级流水(先锁存 FIFO 输出再算 CRC),
+   给 ack_rx 的 tcnt 扇出插缓冲/减少同拍驱动的 CE 数。下一次接着做从这里开始。
 2. `run.sdc` 里 `ck_clr_q` 的 false_path 因层次路径 (在 `u_io` 子模块里) 被裸名找不到,
    本轮先删掉过关, 收敛前要按真实例化层次名 (查 `bridge.rpt.txt`) 补回。
 3. 本轮 IO_LOC 只是"工具认的合法差分位点", 不是按转接板 PCB 网表排的 —— 上真板前

@@ -1,6 +1,6 @@
 ---
 name: project_gw5a_bridge_firmware
-description: 2026-09-22 WS4 — 把已时序收敛的 eg4_bridge(EG4A20, dclk150 整机0违例) 移植到 GW5A25 桥片; 工程 dr1v90/gw5a_bridge/; 新写两个器件层文件(bridge_clk_gw5a/bridge_io_gw5a) + 移植顶层, 其余(ul_dispatch/tx_array/icnd2260_seq/ack_rx/tx_shared_ctrl/tx_lane_dp)直接引用真源不改字; 综合/映射/布局布线全跑通(LUT 28%), 只卡最后IO引脚放置(37 IOBUF unPlaced, 抢配置复用脚冲突, 不是真装不下); 上行改IDES8(已验证, IDES4在GW5A零余量)
+description: 2026-09-22 WS4 — 把已时序收敛的 eg4_bridge(EG4A20, dclk150 整机0违例) 移植到 GW5A25 桥片; 工程 dr1v90/gw5a_bridge/; 综合+映射+布局布线全通过 BIT:OK (tools/gen_pins.py 按 bank 短接对+D0~D15专用脚规律生成显式 IO_LOC); 时序未收敛(dclk目标150实际Fmax 133.6MHz, 差~11%; pclk余量足)
 metadata:
   type: project
 ---
@@ -39,27 +39,49 @@ metadata:
   ② 差分端口从 EG4 的"每対一根、N 脚自动配对"改成 GW5A 的"物理 P/N 两根显式端口"
     (GW5A 差分是原语级 TLVDS_IBUF/OBUF, 不是约束级)。
 
-## 🎯 结果: 综合/映射/布局布线全跑通, 只卡最后 IO 引脚放置
+## 🎯 第一次结果 (已过时, 见下节): 综合/映射/布局布线全跑通, 只卡最后 IO 引脚放置
 
 ```
 LUT 6294 (28%)   Register 6494/23736 (28%)   I/O Port 191/239 (80%)
 ERROR (PR0003): Failed to place with '37 IOBUF(s) unPlaced'
 ```
-🔴 **不是资源真的装不下** (LUT/Register 都只占 28%, I/O Port 还有 20% 空), 是自动布局
-在抢配置复用脚 (D11/D13/D14/MODE1/GCLKT 等) 时冲突。旁证: `gw5a_oser8/results/` 里同样
-"只给 IO_TYPE、不给 LOCATION" 的纯 LVDS 対约束风格, 测过 **96 対、109 対都布局成功**
-(`gw25S_T_800_n96` / `_n109`), 我这版只要 86 対 + ~16 单端, 数量上远没到那两个测试的上限。
+不是资源真的装不下 (LUT/Register 都只占 28%), 是自动布局把单端信号撒进了太多 bank。
+
+## ✅ 2026-09-22 二修: 显式 IO_LOC, BIT: OK (综合+映射+布局布线全部通过)
+
+新增 `tools/gen_pins.py`: 从 Gowin 自带的器件球位表 (`IDE/data/device/GW5A-25A/
+UBGA324S-LV.json`, 权威数据不是手抄) 生成显式 IO_LOC, 上机试错定位到两条硬规律:
+
+1. **bank 两两物理短接同一 VCCIO 轨** (已坐实 0↔1、4↔5、6↔7 三对, CT1143 报
+   "locked by short circuit bank(x)"; 2↔3 按封装规律推定同样短接)。⇒ 单端(3.3V)
+   信号必须**整对整**占一对 bank, 不能跨对拆分 (拆了另一半被 2.5V LVDS 占用就
+   电压冲突)。
+2. **CFG 字段里的 D0~D15 (CPU/SPI-Flash 启动数据总线) 是真专用脚**, 哪怕标签里
+   还带别的名字 (如 "D08/SDA" 被 Gowin 报成 "dedicated pin (I2C)") 也会被 PR2017
+   拒收 —— 只按关键字 (SSPI/I2C/CPU 等字面匹配) 不够, 要再加正则挡 `D\d{1,2}`。
+
+最终方案: 19 个单端信号独占**最小的短接对** bank[4,5](17 位点, 用 10); 86 対
+LVDS25 分给其余三对 bank[0,1,2,3,6,7](86 位点, 精确用满零富余)。
+
+```
+BIT: OK
+Logic 28%   Register 28%   CLS 56%   I/O Port 191/239(80%)   IOLOGIC 86/232(38%)
+```
 
 ## 下一步 (未做)
 
-1. **手工排 LOCATION** (或先砍掉几个非关键单端信号如 dbg_st, 腾配置复用脚) 解决布局冲突。
-   参照 [[project_gw5a_bridge_verification]] 09-11 核过的 "UG985 UG324 104 个完整差分対" 表。
+1. 🔴 **时序未收敛**: dclk 目标 150MHz, PnR 报的 Actual Fmax 只有 **133.6MHz**
+   (差 ~11%); pclk(100MHz, 上行 IDES8 侧) 余量充足, Fmax 128.6MHz。要收敛 dclk
+   这条(大概率是 tx_array/icnd2260_seq/ul_dispatch 某条组合路径过长, 需要在
+   eg4_bridge 那份的关键路径上核一遍, 或加一级流水)。
 2. `run.sdc` 里 `ck_clr_q` 的 false_path 因层次路径 (在 `u_io` 子模块里) 被裸名找不到,
    本轮先删掉过关, 收敛前要按真实例化层次名 (查 `bridge.rpt.txt`) 补回。
-3. 尚未做时序收敛 (本轮卡在布局, 没到 STA)、未上机验证。
-4. `icnd2260_regs_vendor.mem` (238 条供应商实测表, 与 eg4_bridge 共用) 未按 GW5A 特有的
+3. 本轮 IO_LOC 只是"工具认的合法差分位点", 不是按转接板 PCB 网表排的 —— 上真板前
+   要按 `POV3D_GW5A转LED转接板_逐球引脚分配` 的实际网表重排。
+4. 未上机验证 (只到布局布线, 没到实测)。
+5. `icnd2260_regs_vendor.mem` (238 条供应商实测表, 与 eg4_bridge 共用) 未按 GW5A 特有的
    BSRAM 初始化写法核过。
-5. 上行 DR1 侧 `uplink_tx` 仍是 LFSR 探针 (见 `uplink_rx/README_x8.md` §五), 真联调前要
+6. 上行 DR1 侧 `uplink_tx` 仍是 LFSR 探针 (见 `uplink_rx/README_x8.md` §五), 真联调前要
    按 `uplink_rx_defs.vh` 的帧结构实现。
 
 相关: [[project_eg4_bridge_firmware]] [[project_pov3d_bridge_logic_need]] [[project_gw5a_bridge_verification]]

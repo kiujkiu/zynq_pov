@@ -216,12 +216,31 @@ lane0 在 200M(1UI=5ns, 别的 lane 满眼)都全相位全门限 DEAD ⇒ **不�
 | **800M** | **全闭 (0 条)** | 2 条 (lane0/lane2) | **✅ 6 条全开满眼零误码** |
 
 ⇒ **目标板 LVDS 対绝对不能放 33Ω 串阻 (每腿不放, 或只放极小值)。**
-链路本身 / 比特序 (BITREV=0) / PLL / 4:1 ODDRx2·IDDRx2 在 800M 都成立 —— 之前配置 A/B 所有"闭"
-都是那两只 33Ω 造成的, 不是 DR1 硅或 RTL 的锅。这条直接支撑 [[project_pov3d_bridge_architecture]]
-与目标板 LVDS 走线的电阻取舍。
 
-板子终态: 两块都恢复生产位流 (POVBOOT: PASS)。dr1v90 RTL 已推 github kiujkiu/dr1v90 (私有, 3 分支);
-本记忆推 kiujkiu/zynq_pov。
+## 🎯 2026-09-22 速率天花板 (配置 C, 0Ω/腿, 扫到 DR1 硅片极限)
+
+| 线速率 | pclk / sclk | 结果 |
+|---|---|---|
+| 800M | 200 / 400 | ✅ 6 条满眼零误码 |
+| **1.0G** | 250 / 500 | **✅ 6 条满眼零误码 (公共眼铺满 2 UI)** |
+| **1.2G** | 300 / 600 | ❌ 全死 ~50% 误码 (数据在流 beat 在涨、PLL 锁, 但眼闭) |
+
+🎯 **DR1↔DR1 可靠 LVDS 上限 = 1.0 Gbps。** 悬崖精确落在 1.0G→1.2G 之间 = **sclk 500→600MHz**
+那一跳 = `ODDRx2`/`IDDRx2` 硬 IOL + GCLK 网络上限 628MHz 的位置。与 DS(LVDS 1250 Mbps, IOCLK ~680)
+和 [[feedback_uplink_pll_vco_overrange_above_500]] / uplink 的"现实上限 ~1.2G"完全对上, 上板钉死为
+**1.0G 稳 / 1.2G 过**。1.2G 全死不是信道 (800M/1.0G 在 0Ω 完美) 也不是 fabric 时序 (rx +12.1% 过),
+是 DR1 的 IOL/sclk 硅片到顶, 换任何电阻/排线都救不了。
+
+### 两条独立的墙 (最终结论)
+1. **电阻墙**: FS03 33Ω 串阻必须全去掉 (66Ω→连 400M 都死; 0Ω→1.0G 满眼)。
+2. **硅片墙**: 0Ω 下 DR1↔DR1 到 1.0G 为止, 1.2G 是 DR1 IOL/sclk 到顶。
+⇒ 支撑 [[project_pov3d_bridge_architecture]] 与目标板 LVDS 走线取舍: 対上不放串阻, 单对目标速率 ≤1.0G。
+
+### 量具坑 (顺手修的)
+1.2G 上 rx 真时序 -1.2%(真违例): 浴盆量具的 16 位脏 beat 计数器进位链吃掉余量 (又是"高速域别放长
+进位链")。缩成 **8 位饱和计数器** (门限用不到 255 以上, 无损) 后回到 +12.1%。dr1v90 commit 待推。
+
+板子终态: 两块都恢复生产位流。dr1v90 RTL 推 github kiujkiu/dr1v90 (私有, 3 分支); 本记忆推 kiujkiu/zynq_pov。
 
 ### 板子终态 / 提交
 - 两块都 `povboot.sh pl` **恢复生产位流, POVBOOT: PASS**。

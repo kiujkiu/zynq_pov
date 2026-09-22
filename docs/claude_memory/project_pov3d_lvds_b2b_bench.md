@@ -236,6 +236,17 @@ lane0 在 200M(1UI=5ns, 别的 lane 满眼)都全相位全门限 DEAD ⇒ **不�
 2. **硅片墙**: 0Ω 下 DR1↔DR1 到 1.0G 为止, 1.2G 是 DR1 IOL/sclk 到顶。
 ⇒ 支撑 [[project_pov3d_bridge_architecture]] 与目标板 LVDS 走线取舍: 対上不放串阻, 单对目标速率 ≤1.0G。
 
+### 🔴 手册核对: 为什么"1.25G LVDS"与"实测 1.0G"不矛盾 (2026-09-22 查 DS1200 V1.0 坐实)
+- **DS1200 表 (IO 电气): LVDS18 / LVDS25 最大数据率 = 1250 Mbps** (收发都是, 输入/输出两张表)。
+  另有 VCCDPHY=0.95V 的 1500 Mbps (那是 MIPI/DPHY 硬核, 不是普通 LVDS IO)。
+- **DS1200 时钟网络表 (-2 档): GCLK 上限 628 MHz, IOCLK 上限 680 MHz** (MLCLK 680)。
+- 关键: 1250 是 **IO 缓冲器**的电气极限, 不是整条链路。DR1 只有 **4:1 ODDRx2/IDDRx2 (无真 SERDES)**
+  ⇒ 线速率=4×pclk, sclk=2×pclk。**要到 1250 Mbps 得 sclk=625MHz —— 正好顶在 GCLK 628 上 (0.5% 余量),
+  纸面上都没有余量。** 1200 Mbps 需 sclk 600 (离 628 仅 4.7%) + IOL 内部 TD 不建模那一跳 ⇒ 真硅采不稳。
+- ⇒ **1250 Mbps 的手册数只有配真 SERDES 才现实; DR1 4:1 gearing + 真实时钟树下, 系统极限 = 1.0G**
+  (sclk 500, 离 628 有 20% 余量, 满眼零误码)。要真吃 1.25G 得换有 8:1 SERDES 的器件 (sclk 只需 ~312, 时钟余量大)。
+- DS1200 副本: `dr1v90/docs/vendor/anlogic/DS1200_Datasheet_V1.0.pdf` (LVDS 速率表 / 时钟网络表)。
+
 ### 量具坑 (顺手修的)
 1.2G 上 rx 真时序 -1.2%(真违例): 浴盆量具的 16 位脏 beat 计数器进位链吃掉余量 (又是"高速域别放长
 进位链")。缩成 **8 位饱和计数器** (门限用不到 255 以上, 无损) 后回到 +12.1%。dr1v90 commit 待推。

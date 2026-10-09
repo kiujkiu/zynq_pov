@@ -42,3 +42,7 @@ ATF 放开 GP0 复位、PS 封装可沿用 RISC-V IP —— 这两条 09-22 已�
 D1 开工 = 显示工程改 `DR1M90GEG484` 出 bit，与 `povmem` aarch64 重编并行，都不占屏。
 
 相关：[[project_dr1m90_parity_2047_gap]] [[project_dr1m90_gp0_first_light]] [[project_dr1m90_jtag_port_checklist]] [[project_gw5a_bridge_firmware]] [[project_pov3d_final_target]] [[project_pov3d_trial_board_rotate_and_target_load]]
+
+## 进度
+- 2026-10-09 晚: 用户先接了 GW5A (ACG525, 无 DR1M90/2260), **D11 提前做完** —— gw5a_bench 单板验证,
+  见 [[project_gw5a_bench_1009]]。顺带发现寄存器定时刷新的坏帧问题 (D15/D17 前要解)。

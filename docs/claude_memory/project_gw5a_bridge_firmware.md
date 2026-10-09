@@ -174,3 +174,9 @@ led[2] = rstn;      // 松开 KEY0 → rstn=1 → 脚=1 → LED2 亮
 
 相关: [[project_eg4_bridge_firmware]] [[project_pov3d_bridge_logic_need]] [[project_gw5a_bridge_verification]]
 [[project_pov3d_lvds_b2b_bench]] [[project_pov3d_bridge_architecture]]
+
+## 2026-10-09 更新 (gw5a_bench, 见 [[project_gw5a_bench_1009]])
+- 顶层拆成 clk + io + `gw5a_bridge_core.v`, 逻辑逐字未改; 拆后 BIT:OK, dclk 151.0。
+- 下一步 #2 (`ck_clr_q` false path) ✅ 补回: `set_false_path -to [get_regs {u_io/ck_clr_q*}]`。
+- 下一步 #6 (regs .mem 的 BSRAM/pROM 初始化) ✅ 硅上签名与仿真逐位相同。
+- 桥核心功能 (分发/序列器/门控/tx 阵列 24 链) ✅ 硅上 22.5 万帧逐像素全对; 🔴 但寄存器定时刷新那帧坏 + 上行 retrain。

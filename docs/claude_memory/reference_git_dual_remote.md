@@ -13,6 +13,7 @@ type: feedback
 | | `yjhh` | `https://github.com/pov-yjhh/mlkpai_fs03.git` |
 | `zynq_pov` | `origin` | `https://github.com/kiujkiu/zynq_pov.git` |
 | | `yjhh` | `https://github.com/pov-yjhh/zynq_pov.git` |
+| `dr1v90`（工程/RTL） | `origin` | `https://github.com/kiujkiu/dr1v90.git`（私有；**只有这一个远端**，2026-10-09 核） |
 
 ## 推送方式
 
@@ -37,3 +38,10 @@ cmd.exe /c "cd /d D:\claude_workspace\pov3d\<repo> && git push origin <branch> &
 仓库里有: `BOOT.BIN`(4.7MB)、切片 bin(4.4MB×数个)、硬件引脚推导表、板子 IP 与 SSH 访问方式。
 `stream/pc/frames_*` 那 30+ 套动画帧共**数 GB**(多数未跟踪, 别误 add)。
 推到新组织前应确认仓库可见性 (public/private)。
+
+## 「保存记录」= 两个仓 (2026-10-09 用户再次强调)
+
+- **记忆 + docs 计划/报告** → `zynq_pov`（当前分支 `feature/icnd2260-lvds-debug`）→ 推 origin + yjhh。
+- **工程（RTL/脚本/README）** → `dr1v90`（当前分支 `feature/lvds-b2b`）→ 推 origin。
+- dr1v90 工作区有 ~1.4 万个未跟踪文件（jtag_load mock_board 产物、boot 镜像、frames 等，单个到 36 MB），
+  **不要 `git add -A`**；只加已跟踪改动 + 明确是源码/文档的新文件。

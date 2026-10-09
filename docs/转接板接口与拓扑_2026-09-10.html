@@ -1,0 +1,628 @@
+<title>转接板接口与拓扑</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --paper:#F1F2EE; --surface:#FBFCFA; --surface-2:#E9EBE5; --surface-3:#E1E4DC;
+  --ink:#15191B; --ink-2:#3A4245; --muted:#69736F; --rule:#D2D6CE; --rule-2:#BAC1B5;
+  --accent:#A8531C; --accent-soft:#F5E6DA;
+  --ok:#1F6F5C; --ok-soft:#E0EEE8;
+  --risk:#A32418; --risk-soft:#F7E2DE;
+  --c-gnd:#8A938E; --c-clk:#A8531C; --c-r:#B4362B; --c-g:#2F7A45; --c-b:#2A5B9E;
+  --c-se:#6A4A9C; --c-pwr:#8E6B10; --c-ul:#7A3E8F;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#121513; --surface:#191D1B; --surface-2:#222724; --surface-3:#2A302C;
+    --ink:#E8ECE7; --ink-2:#C2C9C3; --muted:#8D958F; --rule:#2E3532; --rule-2:#414945;
+    --accent:#E39154; --accent-soft:#3A2618;
+    --ok:#5FC0A3; --ok-soft:#16302A;
+    --risk:#F0897C; --risk-soft:#361A17;
+    --c-gnd:#7C857F; --c-clk:#E39154; --c-r:#E8776A; --c-g:#5FBE7C; --c-b:#6DA2E0;
+    --c-se:#A98FE0; --c-pwr:#D6B05A; --c-ul:#C89AD8;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121513; --surface:#191D1B; --surface-2:#222724; --surface-3:#2A302C;
+  --ink:#E8ECE7; --ink-2:#C2C9C3; --muted:#8D958F; --rule:#2E3532; --rule-2:#414945;
+  --accent:#E39154; --accent-soft:#3A2618;
+  --ok:#5FC0A3; --ok-soft:#16302A;
+  --risk:#F0897C; --risk-soft:#361A17;
+  --c-gnd:#7C857F; --c-clk:#E39154; --c-r:#E8776A; --c-g:#5FBE7C; --c-b:#6DA2E0;
+  --c-se:#A98FE0; --c-pwr:#D6B05A; --c-ul:#C89AD8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-size:14.5px;line-height:1.6}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.93em}
+.wrap{max-width:1200px;margin:0 auto;padding:0 26px 80px}
+
+header.mast{border-bottom:2px solid var(--ink);margin-bottom:30px;padding:40px 0 16px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 9px}
+h1{font-size:31px;line-height:1.24;margin:0 0 8px;font-weight:700;letter-spacing:-.012em;text-wrap:balance}
+.sub{margin:0 0 20px;color:var(--muted);font-size:13.5px;max-width:78ch}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;border:1px solid var(--rule);border-radius:3px;overflow:hidden;background:var(--rule)}
+.meta div{background:var(--surface);padding:10px 13px;display:flex;flex-direction:column;gap:1px}
+.meta .k{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.meta .v{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.005em}
+
+section{margin:0 0 46px}
+h2{font-size:19px;font-weight:600;margin:0 0 4px;padding-bottom:7px;border-bottom:1px solid var(--rule-2);display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+h2 .sec{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--accent);font-weight:500;flex:none}
+h3{font-size:13px;font-weight:600;margin:24px 0 6px;color:var(--ink-2);font-family:"IBM Plex Mono",monospace;letter-spacing:.03em}
+.lead{margin:9px 0 14px;color:var(--muted);font-size:13px;max-width:82ch}
+p{margin:8px 0;max-width:82ch}
+ul{margin:8px 0;padding-left:20px;max-width:82ch}
+li{margin:3px 0}
+
+.tw{overflow-x:auto;margin:12px 0;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;
+   padding:8px 11px;border-bottom:1px solid var(--rule-2);background:var(--surface-2);white-space:nowrap}
+td{padding:7px 11px;border-bottom:1px solid var(--rule);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.k{background:var(--surface-2);font-weight:600;white-space:nowrap;width:1%}
+td.note{color:var(--ink-2);font-size:12.5px}
+td.nw{white-space:nowrap}
+td.num{font-family:"IBM Plex Mono",monospace;text-align:right;white-space:nowrap;border-left:3px solid transparent}
+caption{caption-side:bottom;text-align:left;padding:8px 11px;color:var(--muted);font-size:12px;border-top:1px solid var(--rule)}
+tr.dB td.num{border-left-color:var(--c-b)} tr.dG td.num{border-left-color:var(--c-g)}
+tr.dR td.num{border-left-color:var(--c-r)} tr.clk td.num{border-left-color:var(--c-clk)}
+tr.se td.num{border-left-color:var(--c-se)} tr.pwr td.num{border-left-color:var(--c-pwr)}
+tr.gnd td.num{border-left-color:var(--c-gnd)} tr.ul td.num{border-left-color:var(--c-ul)}
+
+.pill{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.07em;
+      padding:1px 6px;border-radius:2px;border:1px solid currentColor;white-space:nowrap}
+.pill.ok{color:var(--ok)} .pill.risk{color:var(--risk)} .pill.new{color:var(--accent)} .pill.tbd{color:var(--muted)}
+.yes{color:var(--ok);font-weight:600} .no{color:var(--risk);font-weight:600} .warn{color:var(--accent);font-weight:600}
+
+.callout{border:1px solid var(--rule);border-left:3px solid var(--rule-2);border-radius:3px;padding:10px 14px;margin:13px 0;font-size:13px;color:var(--ink-2);background:var(--surface)}
+.callout.risk{border-left-color:var(--risk);background:var(--risk-soft)} .callout.risk b{color:var(--risk)}
+.callout.ok{border-left-color:var(--ok);background:var(--ok-soft)} .callout.ok b{color:var(--ok)}
+.callout.acc{border-left-color:var(--accent);background:var(--accent-soft)} .callout.acc b{color:var(--accent)}
+.callout p{max-width:none;margin:5px 0}
+.callout p:first-child{margin-top:0} .callout p:last-child{margin-bottom:0}
+
+figure{margin:16px 0 6px}
+figcaption{font-size:12px;color:var(--muted);margin-top:8px;max-width:82ch}
+.figscroll{overflow-x:auto;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+.diagram{display:block;min-width:960px;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:7px 16px;margin:10px 0;font-size:12px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+
+.act{counter-reset:actstep;list-style:none;padding:0;margin:12px 0;display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden;max-width:none}
+.act li{counter-increment:actstep;background:var(--surface);padding:11px 14px 11px 46px;position:relative;font-size:13.5px;margin:0}
+.act li::before{content:counter(actstep);position:absolute;left:14px;top:11px;font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;color:var(--accent);border:1px solid var(--accent);border-radius:50%;width:19px;height:19px;display:flex;align-items:center;justify-content:center}
+
+footer{border-top:1px solid var(--rule-2);margin-top:48px;padding-top:14px;color:var(--muted);font-size:12px}
+footer p{max-width:82ch}
+::selection{background:var(--accent-soft);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media print{body{background:#fff;color:#000;font-size:9.5pt}.tw,.figscroll{overflow:visible}tr{break-inside:avoid}h2{break-after:avoid}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">POV-3D · 验证板 · 转接板规格 v1</p>
+  <h1>转接板：接口、功能与拓扑</h1>
+  <p class="sub">这块板等于「FPGA 子板减去 FPGA」。ACA420-CORE 核心板插在它上面，它自己用邮票孔焊到灯板，另一侧用 FPC 接主控。本文定义它的三个接口、板上四件事，以及目前还没定的六条。</p>
+  <div class="meta">
+    <div><span class="k">定位</span><span class="v">验证板专用</span></div>
+    <div><span class="k">核心板</span><span class="v">ACA420-CORE</span></div>
+    <div><span class="k">↔ 灯板</span><span class="v">168 焊盘</span></div>
+    <div><span class="k">↔ 主控</span><span class="v">FPC 14 対</span></div>
+    <div><span class="k">板上有源</span><span class="v">3 颗</span></div>
+    <div><span class="k">日期</span><span class="v">2026-09-10</span></div>
+  </div>
+</header>
+
+<!-- ========== §0 ========== -->
+<section>
+  <h2><span class="sec">§0</span> 这块板是什么，以及为什么会有它</h2>
+  <p>目标板上没有这块板。<b>目标板是 FPGA 直接放在灯板上、24 颗 2260、没有邮票孔也没有转接板。</b>转接板与灯板下端那 50 mm 延长区，都只是点亮/验证阶段的临时结构。</p>
+  <p>它存在的唯一理由是：<b>让 FPGA 可以换。</b>验证阶段要比较不同桥片，而灯板打样贵、周期长。把接口冻结在灯板边缘（邮票孔），把「哪颗 FPGA、时钟从哪来、怎么供电」全部推到转接板上，灯板就成了常量。</p>
+
+  <div class="callout ok">
+    <p><b>🎯 一个意外好处：这块转接板能同时接受 EG4 和 GW5A 两种核心板。</b></p>
+    <p>ACA420-CORE 的连接器封装官方就叫 <span class="mono">ACG525_ACA420--CORE</span> —— 因为 ACA420-CORE（安路 EG4S20BG256）与 ACG525-CORE（高云 GW5A-LV25UG324C2/I1）<b>机械与脚位兼容</b>，原理图符号名沿用 <span class="mono">ACG525-CORE1/CORE2</span> 就是这个缘故。</p>
+    <p>⇒ 按旧版封装画一块转接板，<b>插 ACA420 就是 EG4 方案，插 ACG525(V1) 就是 GW5A 方案</b>，同一块灯板上直接对比两种 FPGA。这正好接住「桥片不锁定」这个要求。</p>
+    <p>⚠ 两点限制：① 两块核心板的 FPGA 不同，<b>网表要各画一版</b>（机械通用、电气不通用）；② ACG525-CORE-<b>V2</b> 换了连接器插不上，要找 <b>V1</b>。</p>
+    <p>🎯 顺带修正一条既有判断：先前查到「GW5A 全系公开渠道只有一颗能下单」，但 ACG525 核心板上就是一颗 GW5A-LV25UG324 —— <b>做样机阶段 GW5A 是买得到的，买不到的是散片。</b></p>
+  </div>
+</section>
+
+<!-- ========== 开工清单 ========== -->
+<section>
+  <h2><span class="sec">§0b</span> 转接板要做的事 —— 一页清单</h2>
+  <p class="lead">这块板<b>不含任何逻辑</b>，也<b>不含任何缓冲</b>。I_SYNC 的 74LVC244、ACK 的 8:1 mux、48 只端接、12 対时钟的共模逃生位，<b>全都在灯板上</b>，不在这块板。转接板只做四件事。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>要做的</th><th>器件</th><th>要点</th></tr></thead>
+    <tbody>
+      <tr><td class="k">1</td><td class="nw">画三个接口</td><td class="nw">P1/P2 · 邮票孔 · FPC</td>
+        <td class="note">P1/P2 用官方 <span class="mono">ACA420--CORE.PcbLib</span>（封装名 <span class="mono">ACG525_ACA420--CORE</span>），<span class="no">P2 相对 P1 旋转 180°</span>；邮票孔 168 焊盘与灯板一一对应；FPC 连接器待选型</td></tr>
+      <tr><td class="k">2</td><td class="nw">驱动端网络</td><td class="nw">65 只 0402</td>
+        <td class="note">13 対 × 5 只：RS 150 Ω ×2 · RP 140 Ω ×1 · Rpd 3.9 kΩ ×2 ⇒ 共模钉在 <b>1.201 V</b>。<b>接收端 100 Ω 端接在灯板侧，不在这里</b></td></tr>
+      <tr><td class="k">3</td><td class="nw">时钟扇出</td><td class="nw">CDCLVD1212 ×1</td>
+        <td class="note">1 対进 12 対出，供 2.5 V。<span class="warn">建议留位不贴 + 0 Ω 跳线</span>——换 GW5A 核心板时 FPGA 可直出 12 対时钟，此 IC 不需要</td></tr>
+      <tr><td class="k">4</td><td class="nw">电源变换</td><td class="nw">LDO ×2</td>
+        <td class="note">3.8 V →（LDO1）3.3 V 供 ACA420 主供电 · →（LDO2）2.5 V 供 VCCIO0 + 扇出 IC。<b>LDO1 压差仅 500 mV</b>，选 dropout &lt; 300 mV</td></tr>
+      <tr><td class="k">5</td><td class="nw">改造 ACA420</td><td class="nw">拆 1 颗磁珠</td>
+        <td class="note"><b>拆掉 FB2</b>，Bank0 的 VCCIO 从 3.3 V 改 2.5 V，由转接板经 P1 的 A9/A10 供。<span class="no">FB3 / FB4 / FB5 不要动</span></td></tr>
+    </tbody>
+    <caption>转接板本体 ≥168 × ~53 mm。宽度由邮票孔排决定，比核心板宽得多，两侧是空的——网络电阻与 LDO 可以摊在两侧把深度压到 50 mm 以内。</caption>
+  </table>
+  </div>
+  <div class="callout ok">
+    <p><b>职责边界一句话：灯板管「接收端与屏侧的一切」，转接板管「驱动端网络 + 时钟扇出 + 电源」。</b>凡是要紧贴 2260 的（端接、逃生位、I_SYNC 缓冲、ACK mux）都在灯板；凡是跟 FPGA 型号绑定的（3R 网络、扇出 IC、VCCIO 供电）都在转接板。换 FPGA 只动转接板，灯板一个字不改。</p>
+  </div>
+</section>
+
+<!-- ========== §1 拓扑 ========== -->
+<section>
+  <h2><span class="sec">§1</span> 拓扑总图</h2>
+  <p class="lead">三个接口、板上四件事。灯板侧的端接、I_SYNC 缓冲、ACK mux、共模逃生位都<b>不在</b>这块板上——它们在灯板上，转接板只做网络、扇出与电源。</p>
+
+  <figure>
+    <div class="figscroll">
+      <svg class="diagram" viewBox="0 0 1180 470" role="img" aria-label="转接板拓扑：左侧 DR1V90 主控板经 FPC 14 対差分接入转接板；转接板中部是 ACA420-CORE 核心板经 P1/P2 两组 2×50 板对板连接器插接，上行 14 対走核心板 Bank1/3 真差分、下行 13 対走 Bank0 仿真差分经 3R 加 Rpd 网络，1 対时钟经 CDCLVD1212 扇出成 12 対；右侧经 168 焊盘邮票孔接灯板上的 12 颗 ICND2260">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>
+          <marker id="arU" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--c-ul)"/></marker>
+          <marker id="arC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--c-clk)"/></marker>
+          <marker id="arB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--c-b)"/></marker>
+          <marker id="arP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--c-pwr)"/></marker>
+        </defs>
+
+        <!-- 主控板 -->
+        <rect x="16" y="120" width="150" height="120" rx="6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <text x="91" y="150" font-size="13" text-anchor="middle" fill="currentColor" font-weight="600">主控板</text>
+        <text x="91" y="171" font-size="11.5" text-anchor="middle" fill="currentColor" font-family="IBM Plex Mono, monospace">XC7Z020 / DR1V90</text>
+        <text x="91" y="190" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">待选型 · 两颗 pin2pin</text>
+        <text x="91" y="212" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">渲染 IP ×2 · 上行串化</text>
+        <text x="91" y="230" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">点亮阶段可用 FS03</text>
+
+        <!-- FPC 箭头 -->
+        <line x1="166" y1="180" x2="252" y2="180" stroke="var(--c-ul)" stroke-width="2.2" marker-end="url(#arU)"/>
+        <text x="209" y="166" font-size="10.5" text-anchor="middle" fill="var(--c-ul)" font-family="IBM Plex Mono, monospace">FPC</text>
+        <text x="209" y="198" font-size="10.5" text-anchor="middle" fill="var(--c-ul)" font-family="IBM Plex Mono, monospace">14 対</text>
+        <text x="209" y="212" font-size="9.5" text-anchor="middle" fill="var(--c-ul)" opacity=".8">800 M~1 G</text>
+
+        <!-- 转接板外框 -->
+        <rect x="256" y="28" width="600" height="414" rx="9" fill="none" stroke="var(--accent)" stroke-width="1.8"/>
+        <text x="270" y="50" font-size="12.5" text-anchor="start" fill="var(--accent)" font-weight="600">转接板（本文对象）</text>
+        <text x="842" y="50" font-size="10" text-anchor="end" fill="var(--accent)" opacity=".75" font-family="IBM Plex Mono, monospace">≥168 × ~53 mm</text>
+
+        <!-- FPC 连接器 -->
+        <rect x="270" y="150" width="62" height="60" rx="4" fill="none" stroke="var(--c-ul)" stroke-width="1.3" stroke-dasharray="4 3"/>
+        <text x="301" y="174" font-size="10" text-anchor="middle" fill="currentColor">FPC</text>
+        <text x="301" y="189" font-size="10" text-anchor="middle" fill="currentColor">ZIF</text>
+        <text x="301" y="203" font-size="8.5" text-anchor="middle" fill="var(--risk)">待选型</text>
+
+        <!-- ACA420 核心板 -->
+        <rect x="392" y="76" width="240" height="200" rx="6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+        <text x="512" y="99" font-size="12.5" text-anchor="middle" fill="currentColor" font-weight="600">ACA420-CORE</text>
+        <text x="512" y="117" font-size="10.5" text-anchor="middle" fill="currentColor" opacity=".65" font-family="IBM Plex Mono, monospace">安路 EG4S20BG256</text>
+        <text x="512" y="133" font-size="9.5" text-anchor="middle" fill="currentColor" opacity=".55">50.32 × 35.31 mm · 平行叠</text>
+
+        <rect x="406" y="146" width="212" height="40" rx="4" fill="none" stroke="var(--c-ul)" stroke-width="1.2"/>
+        <text x="512" y="163" font-size="10.5" text-anchor="middle" fill="var(--c-ul)">Bank1 / Bank3 · 真 LVDS</text>
+        <text x="512" y="178" font-size="9.5" text-anchor="middle" fill="currentColor" opacity=".6">上行 14 対接收 · 锁 3.3 V</text>
+
+        <rect x="406" y="196" width="212" height="40" rx="4" fill="none" stroke="var(--c-b)" stroke-width="1.2"/>
+        <text x="512" y="213" font-size="10.5" text-anchor="middle" fill="var(--c-b)">Bank0 · 仿真差分</text>
+        <text x="512" y="228" font-size="9.5" text-anchor="middle" fill="currentColor" opacity=".6">下行 13 対 + 9 单端 · 改 2.5 V</text>
+
+        <text x="512" y="256" font-size="9.5" text-anchor="middle" fill="var(--risk)">🔴 拆 FB2 · FB3/4/5 不动</text>
+
+        <!-- P1 / P2 连接器 -->
+        <rect x="392" y="282" width="240" height="20" rx="3" fill="none" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="3 2"/>
+        <text x="512" y="296" font-size="9.5" text-anchor="middle" fill="var(--accent)" font-family="IBM Plex Mono, monospace">P1 / P2 · 2×50 @0.5 mm · P2 转 180°</text>
+
+        <!-- 连线 FPC→Bank1/3 -->
+        <path d="M332 180 H406" stroke="var(--c-ul)" stroke-width="1.8" fill="none" marker-end="url(#arU)"/>
+
+        <!-- 3R 网络 -->
+        <rect x="672" y="196" width="88" height="52" rx="4" fill="none" stroke="var(--c-b)" stroke-width="1.3"/>
+        <text x="716" y="216" font-size="10.5" text-anchor="middle" fill="currentColor">3R + Rpd</text>
+        <text x="716" y="231" font-size="9" text-anchor="middle" fill="currentColor" opacity=".62">65 只 0402</text>
+        <text x="716" y="243" font-size="9" text-anchor="middle" fill="var(--ok)">共模钉 1.201 V</text>
+        <path d="M618 216 H672" stroke="var(--c-b)" stroke-width="1.8" fill="none" marker-end="url(#arB)"/>
+        <text x="645" y="209" font-size="9" text-anchor="middle" fill="var(--c-b)">12 対</text>
+
+        <!-- 扇出 IC -->
+        <rect x="672" y="96" width="88" height="66" rx="4" fill="none" stroke="var(--c-clk)" stroke-width="1.4"/>
+        <text x="716" y="117" font-size="10.5" text-anchor="middle" fill="currentColor">1:12 扇出</text>
+        <text x="716" y="132" font-size="9.5" text-anchor="middle" fill="currentColor" opacity=".65" font-family="IBM Plex Mono, monospace">CDCLVD1212</text>
+        <text x="716" y="147" font-size="9" text-anchor="middle" fill="currentColor" opacity=".6">VQFN-40 6×6</text>
+        <path d="M618 206 H646 V129 H672" stroke="var(--c-clk)" stroke-width="1.6" fill="none" marker-end="url(#arC)"/>
+        <text x="640" y="88" font-size="9" text-anchor="middle" fill="var(--c-clk)">1 対</text>
+
+        <!-- 电源 -->
+        <rect x="672" y="300" width="88" height="60" rx="4" fill="none" stroke="var(--c-pwr)" stroke-width="1.3" stroke-dasharray="4 3"/>
+        <text x="716" y="320" font-size="10.5" text-anchor="middle" fill="currentColor">LDO ×2</text>
+        <text x="716" y="335" font-size="9" text-anchor="middle" fill="currentColor" opacity=".62">3.8 → 3.3 V</text>
+        <text x="716" y="348" font-size="9" text-anchor="middle" fill="currentColor" opacity=".62">3.8 → 2.5 V</text>
+        <path d="M760 330 H790 V302" stroke="var(--c-pwr)" stroke-width="1.6" fill="none" stroke-dasharray="5 3"/>
+        <path d="M672 330 H648 V302" stroke="var(--c-pwr)" stroke-width="1.6" fill="none" stroke-dasharray="5 3" marker-end="url(#arP)"/>
+
+        <!-- 邮票孔 -->
+        <rect x="800" y="76" width="44" height="300" rx="4" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="822" y="200" font-size="10.5" text-anchor="middle" fill="var(--accent)" font-weight="600" transform="rotate(-90 822 200)">邮票孔 168 焊盘 @1.0 mm</text>
+
+        <path d="M760 129 H800" stroke="var(--c-clk)" stroke-width="1.8" fill="none" marker-end="url(#arC)"/>
+        <text x="780" y="121" font-size="9" text-anchor="middle" fill="var(--c-clk)">12 対</text>
+        <path d="M760 222 H800" stroke="var(--c-b)" stroke-width="1.8" fill="none" marker-end="url(#arB)"/>
+        <text x="780" y="215" font-size="9" text-anchor="middle" fill="var(--c-b)">12 対</text>
+        <path d="M618 226 H636 V262 H790 V262 H800" stroke="var(--c-se)" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+        <text x="716" y="275" font-size="9" text-anchor="middle" fill="var(--c-se)">9 单端 直通</text>
+
+        <!-- 灯板 -->
+        <rect x="884" y="76" width="280" height="300" rx="7" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <text x="1024" y="100" font-size="12.5" text-anchor="middle" fill="currentColor" font-weight="600">灯板（接口已冻结）</text>
+        <text x="1024" y="118" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">160 × 180 · 28,800 px · 60 扫</text>
+
+        <g stroke="currentColor" stroke-width="1.1" fill="none">
+          <rect x="906" y="136" width="56" height="32" rx="3"/><rect x="972" y="136" width="56" height="32" rx="3"/>
+          <rect x="1038" y="136" width="56" height="32" rx="3"/><rect x="1104" y="136" width="42" height="32" rx="3"/>
+          <rect x="906" y="178" width="56" height="32" rx="3"/><rect x="972" y="178" width="56" height="32" rx="3"/>
+          <rect x="1038" y="178" width="56" height="32" rx="3"/><rect x="1104" y="178" width="42" height="32" rx="3"/>
+          <rect x="906" y="220" width="56" height="32" rx="3"/><rect x="972" y="220" width="56" height="32" rx="3"/>
+          <rect x="1038" y="220" width="56" height="32" rx="3"/><rect x="1104" y="220" width="42" height="32" rx="3"/>
+        </g>
+        <text x="1024" y="274" font-size="11" text-anchor="middle" fill="currentColor">ICND2260 × 12（3 行 × 4 列）</text>
+        <text x="1024" y="292" font-size="9.5" text-anchor="middle" fill="currentColor" opacity=".6">每 2 颗拼一个 80 × 60 块 · 每颗一组</text>
+        <rect x="906" y="306" width="240" height="52" rx="4" fill="none" stroke="var(--ok)" stroke-width="1.2" stroke-dasharray="4 3"/>
+        <text x="1026" y="325" font-size="10" text-anchor="middle" fill="currentColor">48 只端接 · I_SYNC 缓冲</text>
+        <text x="1026" y="340" font-size="10" text-anchor="middle" fill="currentColor">ACK mux · 共模逃生位</text>
+        <text x="1026" y="353" font-size="9" text-anchor="middle" fill="var(--ok)">都在灯板上，不在转接板</text>
+
+        <path d="M844 200 H884" stroke="currentColor" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+        <text x="864" y="418" font-size="9.5" text-anchor="middle" fill="var(--c-pwr)" font-family="IBM Plex Mono, monospace">3.8 V ×2 / 2.8 V</text>
+        <path d="M884 400 H800 V376" stroke="var(--c-pwr)" stroke-width="1.8" fill="none" stroke-dasharray="5 3" marker-end="url(#arP)"/>
+        <path d="M790 376 V400 H716 V360" stroke="var(--c-pwr)" stroke-width="1.6" fill="none" stroke-dasharray="5 3" marker-end="url(#arP)"/>
+        <text x="1030" y="400" font-size="9.5" text-anchor="middle" fill="var(--c-pwr)">转接板从灯板取电</text>
+      </svg>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--c-ul)"></i>上行（主控 → FPGA）</span>
+      <span><i style="background:var(--c-b)"></i>下行数据</span>
+      <span><i style="background:var(--c-clk)"></i>时钟</span>
+      <span><i style="background:var(--c-se)"></i>单端</span>
+      <span><i style="background:var(--c-pwr)"></i>电源</span>
+    </div>
+    <figcaption>信号从左往右：主控经 FPC 送 14 対进来 → 核心板 Bank1/3 真差分收 → FPGA 内部串并转换与分发 → Bank0 仿真差分出 13 対 → 12 対数据经 3R+Rpd 网络、1 対时钟经 CDCLVD1212 扇成 12 対 → 穿邮票孔到灯板。转接板本身<b>不做任何逻辑</b>，只做电平网络、时钟扇出与电源变换。</figcaption>
+  </figure>
+</section>
+
+<!-- ========== §2 接口 C：FPC ========== -->
+<section>
+  <h2><span class="sec">§2</span> 接口 C：转接板 ↔ 主控板（FPC）<span class="pill risk">本文重点 · 定义最少</span></h2>
+  <p class="lead">三个接口里，只有这一个在 09-09 冻结版里没有展开——那份文档的表 8 只给了八行电气要求，没有脚序、没有连接器型号、也没说落在核心板哪个 bank。本节把已知的写死，把未知的列清楚。</p>
+
+  <h3>已定的电气要求</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>项</th><th>值</th><th>依据 / 要求</th></tr></thead>
+    <tbody>
+      <tr><td class="k">差分対数</td><td class="nw"><b>14 対 = 28 根</b></td><td class="note">13 対数据 + 1 対转发时钟。<b>上行接口原样保留不减</b>——与目标板一致，验证板不做裁剪</td></tr>
+      <tr><td class="k">lane 构成</td><td class="nw">12 数据 + 1 校验</td><td class="note">RTL <span class="mono">ul_d[12:0]</span>，`UL_NLANE` = 13</td></tr>
+      <tr><td class="k">方向</td><td class="nw">主控 → FPGA</td><td class="note">桥片侧全是输入：<span class="mono">input ul_d</span> / <span class="mono">input ul_clk</span></td></tr>
+      <tr><td class="k">速率</td><td class="nw">800 Mbps ~ 1 Gbps</td><td class="note">EG4 实测 800 M 板级<b>只剩 40 ps</b>，靠 <span class="mono">UNCERT=0.16</span> + <span class="mono">PHYS_OPT=ultra</span> 才收敛。DR1 发送端实测 SWNS +0.010 / Fmax 401.6 MHz ⇒ 800 M 档成立</td></tr>
+      <tr><td class="k">导体数</td><td class="nw">≈ 43 根</td><td class="note">按 <b>G-S-S-G</b> 夹地排布</td></tr>
+      <tr><td class="k">宽度</td><td class="nw">≈ 21.5 mm</td><td class="note">0.5 mm 间距。转接板 ≥168 mm 宽，放得下，尺寸不是问题</td></tr>
+      <tr><td class="k">阻抗</td><td class="nw"><b>100 Ω ±10 %</b> 差分</td><td class="note"><span class="no">🔴 必须向 FPC 厂明确并给叠层</span>。无阻抗控制的普通 FPC 会吃掉那 40 ps 余量</td></tr>
+      <tr><td class="k">长度</td><td class="nw">尽量短</td><td class="note">40 ps 余量下每一段都要算</td></tr>
+      <tr><td class="k">机械固定</td><td class="nw">ZIF + 点胶</td><td class="note"><span class="no">🔴 900 RPM 离心力下</span>，ZIF 要点胶或加压条。点亮阶段不转，但结构要按转起来设计</td></tr>
+    </tbody>
+    <caption>出处：灯板改板冻结版 表 8 · RTL <span class="mono">dr1v90/eg4_bridge/rtl/eg4_bridge_top.v:102-103</span> · 记忆库 <span class="mono">project_dr1_uplink_tx_probe</span></caption>
+  </table>
+  </div>
+
+  <h3>🎯 上行落在核心板哪个 bank —— 本文补的一块</h3>
+  <p>09-09 的表 12 只分配了下行：Bank0 引出 20 対 = 40 脚，占用 13 対（26 脚）+ 9 单端 = 35 脚，<b>余 5 脚</b>。而上行要 14 対 = 28 脚 —— <b>Bank0 装不下</b>。表 12 没说这 14 対去哪。</p>
+  <p>答案在 EG4S20 的 bank 结构里：</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bank</th><th>引脚前缀</th><th>対数</th><th>差分类型</th><th>VCCIO</th><th>这块板怎么用</th></tr></thead>
+    <tbody>
+      <tr class="ul"><td class="k">Bank1</td><td class="nw mono">IO_L*</td><td class="num">20</td><td class="nw"><b>真 LVDS</b></td><td class="nw"><span class="no">锁 3.3 V</span></td><td class="note"><span class="yes">✅ 上行 14 対接收</span>（二选一）</td></tr>
+      <tr class="ul"><td class="k">Bank3</td><td class="nw mono">IO_R*</td><td class="num">30</td><td class="nw"><b>真 LVDS</b></td><td class="nw"><span class="no">锁 3.3 V</span></td><td class="note"><span class="yes">✅ 上行 14 対接收</span>（二选一）</td></tr>
+      <tr class="dB"><td class="k">Bank0</td><td class="nw mono">IO_BE*</td><td class="num">29</td><td class="nw">仿真</td><td class="nw"><span class="yes">可 2.5 V</span></td><td class="note">下行 13 対 + 9 单端（表 12 已定）</td></tr>
+      <tr class="gnd"><td class="k">Bank2</td><td class="nw mono">IO_TE*</td><td class="num">25</td><td class="nw">仿真</td><td class="nw">可 2.5 V</td><td class="note">有配置电路，<b>必须留 3.3 V</b>，不动</td></tr>
+    </tbody>
+    <caption>出处：DS301 引脚表（BG256 / CG324 两表下各一份注）· DS300 表 2-7-1（左/右 = 真 LVDS，上/下 = 仿真需 3R）· 记忆库 <span class="mono">reference_eg4s20_bank_voltage_and_lvds33</span></caption>
+  </table>
+  </div>
+
+  <div class="callout ok">
+    <p><b>锁 3.3 V 在这里不是问题，反而正好。</b>DS301 原文：「内部 BANK1 与 BANK3 VCCIO 与 SDR SDRAM 电源相连，所以 VCCO1、VCCO3 只能接 3.3 V，且 VCCIO3、VCCAUX、VCCIO1 内部相互短路」——没有绕法。</p>
+    <p>但被锁的<b>正好是真差分的那两个 bank</b>，而<b>真対走 LVDS33 与 LVDS25 电气无差别</b>（同样 400 MHz、VOCM 同一窗口）。上行是<b>接收</b>，接收端共模窗由 FPGA 的 VICM 决定，配 100 Ω 端接即可。</p>
+    <p>⇒ 下行放 Bank0（仿真対，必须 2.5 V，走 3R+Rpd）、上行放 Bank1 或 Bank3（真対，3.3 V 无妨）—— <b>两边各得其所，互不打架</b>。这也解释了为什么表 12 说「全部信号同在 Bank0」是只针对下行说的。</p>
+    <p>⚠ 这条<b>只适用于 EG4S20</b>（合封 SDRAM 的型号）。EG4A20 / EG4X20 无内嵌 SDRAM，不受此限 —— 正式子板不必沿用这个分配。</p>
+  </div>
+
+  <div class="callout risk">
+    <p><b>🔴 但有一个必须先查的前提：ACA420 的连接器有没有把 Bank1/3 引出来、引了几対。</b></p>
+    <p>表 12.3 那张脚位表是从 <span class="mono">ACA420-CORE.pdf</span> 逐行解析的，<b>全表 200 脚只可靠解出 85 脚</b>，而且解出来的 12 対全是 Bank0（<span class="mono">B0_B*</span>）。Bank1/3 引出多少、脚号是什么，<b>目前完全未知</b>。</p>
+    <p>如果 ACA420 的连接器没引出足够的 Bank1/3 差分対，整个上行方案要重做——可能要退到「点亮阶段不接上行、用 FPGA 内部测试图案」（见 §5）。<b>这是画这块板之前必须先关掉的第一个问题。</b></p>
+  </div>
+
+  <h3>FPC 连接器与脚序 <span class="pill tbd">未定</span></h3>
+  <p>型号、脚序、正反插方向都还没定。定的时候要一起决定的几件事：</p>
+  <ul>
+    <li><b>脚序按 G-S-S-G 排</b>：43 根 = 14 対 × 2 + 15 根地。首尾各一根地，每対之间夹一根</li>
+    <li><b>翻转方向</b>：FPC 两端同向还是反向（决定线序要不要镜像）——这是最容易画反的一处</li>
+    <li><b>要不要走电源</b>：建议<b>不走</b>。转接板从灯板取电（3.8 V ×2 + 2.8 V），主控板自己供电，FPC 只走信号 + 地。少一路电源就少一处压降和一处故障点</li>
+    <li><b>共地</b>：靠 FPC 那 15 根地。若两块板另有机械共地路径，要避免地环路</li>
+  </ul>
+</section>
+
+<!-- ========== §3 接口 A：ACA420 ========== -->
+<section>
+  <h2><span class="sec">§3</span> 接口 A：转接板 ↔ ACA420-CORE（板对板）</h2>
+
+  <h3>连接器</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>项</th><th>实测值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="k">封装</td><td class="nw mono">ACG525_ACA420--CORE</td><td class="note"><span class="warn">直接导官方 <span class="mono">ACA420--CORE.PcbLib</span></span>（官方标注的「旧版本」），<b>别按数字自己重画</b></td></tr>
+      <tr><td class="k">规格</td><td class="nw">两组 2 × 50 · 0.5 mm</td><td class="note">同排相邻脚 X 间距恒 0.500 mm，50 脚跨 24.5 mm</td></tr>
+      <tr><td class="k">排间距 / 组中心距</td><td class="nw">3.8 mm / 26.0 mm</td><td class="note">A 组 y = 8.39 与 12.19；B 组 y = 34.39 与 38.19；两连接器内侧排净间距 22.20 mm，X 方向完全对齐</td></tr>
+      <tr><td class="k">焊盘尺寸</td><td class="nw">0.25 × 1.8 mm</td><td class="note">200 个焊盘（A1~A100 / B1~B100），外接矩形 24.5 × 29.8 mm</td></tr>
+      <tr><td class="k">定位柱孔</td><td class="nw">每连接器 2 个 ⌀0.6</td><td class="note">X 间距 26.4 mm，Y 向偏离该连接器中心线 1.25 mm（朝板外侧）；底板推荐孔 ⌀0.7</td></tr>
+      <tr><td class="k"><span class="no">🔴 脚序方向</span></td><td class="nw"><b>P2 相对 P1 旋转 180°</b></td><td class="note">P1 的 A1 在左下角、奇数脚下排、从左往右递增；P2 的 B1 在右上角。底板 PCB 里两个连接器 Rotation 分别是 <b>0° 和 180°</b>——<span class="no">画错会整排接反</span></td></tr>
+      <tr><td class="k">堆叠</td><td class="nw">平行叠（mezzanine）</td><td class="note">SMT 立贴板对板，核心板平行悬在转接板上方。堆叠高度查不到（新版 V2 是 3.0 mm）</td></tr>
+      <tr><td class="k"><span class="no">🔴 厂商料号</span></td><td class="nw">未公布</td><td class="note">芯航线只说过旧版用「山谷道」品牌，该品牌立创 / 搜索引擎<b>均无收录</b>。要么量实物、要么问小梅哥。<br>⚠ 新版不能代：ACG525-CORE-V2 改用连兴旺 LB3524-G100P/S（立创 C52269550 / C52269553），排中心距 3.3 mm、组中心距 26.635 mm，<b>与旧版不兼容</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>已解出的 Bank0 脚位（12 対，还差 1 対）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>差分対</th><th>P 脚</th><th>N 脚</th><th>差分対</th><th>P 脚</th><th>N 脚</th></tr></thead>
+    <tbody>
+      <tr><td class="k">B0_B1</td><td class="nw mono">A25</td><td class="nw mono">A23</td><td class="k">B0_B12</td><td class="nw mono">A56</td><td class="nw mono">A54</td></tr>
+      <tr><td class="k">B0_B3</td><td class="nw mono">A50</td><td class="nw mono">A52</td><td class="k">B0_B13</td><td class="nw mono">A27</td><td class="nw mono">A29</td></tr>
+      <tr><td class="k">B0_B4</td><td class="nw mono">A44</td><td class="nw mono">A42</td><td class="k">B0_B16</td><td class="nw mono">A62</td><td class="nw mono">A60</td></tr>
+      <tr><td class="k">B0_B8</td><td class="nw mono">A45</td><td class="nw mono">A47</td><td class="k">B0_B17</td><td class="nw mono">A41</td><td class="nw mono">A43</td></tr>
+      <tr><td class="k">B0_B10</td><td class="nw mono">A46</td><td class="nw mono">A48</td><td class="k">B0_B18</td><td class="nw mono">A53</td><td class="nw mono">A55</td></tr>
+      <tr><td class="k">B0_B11</td><td class="nw mono">A49</td><td class="nw mono">A51</td><td class="k">B0_B20</td><td class="nw mono">A61</td><td class="nw mono">A59</td></tr>
+    </tbody>
+    <caption>从 ACA420-CORE.pdf 第 1 页逐行解析，用「同列 + 脚号连续（奇, 奇+1）」约束，零冲突 —— 这 12 対是确切的。另有 6 个半対配对脚未确认：<span class="mono">B0_B6_N=A34 · B0_B7_P=A38 · B0_B14_P=A37 · B0_B15_N=A33 · B0_B21_P=A70 · B0_B24_N=A63</span></caption>
+  </table>
+  </div>
+  <div class="callout risk">
+    <p><b>🔴 点亮需要 13 対，这里只有 12 対 —— 差 1 対，而且 Bank1/3 一対都没解出来。</b></p>
+    <p>请硬件在 Altium 里用资料包的 SchLib 打开原理图<b>补齐并复核全表</b>，或向小梅哥要引脚表。<b>不要照抄这张表就投板。</b></p>
+  </div>
+
+  <h3>🔴 ACA420 上的改动：拆一颗磁珠</h3>
+  <p>板上 <span class="mono">VCC3P3</span> 经 FB2 / FB3 / FB4 / FB5 给四个 bank 供 3.3 V。<b>拆掉 FB2</b> 后 VCCIO0 与 3.3 V 断开，改由转接板经 <span class="mono">P1 的 A9/A10</span> 供 2.5 V。</p>
+  <div class="callout risk">
+    <p><b>FB3 / FB4 / FB5 不要动。</b>Bank1/3 的 VCCIO 在 EG4S20 芯片<b>内部</b>就短接到 SDRAM 电源与 VCCAUX，拆了也改不成 2.5 V；Bank2 有配置电路必须留 3.3 V。</p>
+  </div>
+</section>
+
+<!-- ========== §4 接口 B：邮票孔 ========== -->
+<section>
+  <h2><span class="sec">§4</span> 接口 B：转接板 ↔ 灯板（邮票孔）<span class="pill ok">已冻结</span></h2>
+  <p class="lead">这一侧 09-09 已经冻结，本文只做摘要。完整脚位见灯板改板冻结版的表 7。</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>分类</th><th>信号</th><th>対/根</th><th>焊盘</th><th>方向</th><th>芯片球位</th><th>RTL 端口</th></tr></thead>
+    <tbody>
+      <tr class="dB"><td class="k">数据 lane 0</td><td class="nw mono">SDI_B[11:0]</td><td class="num">12 対</td><td class="num">24</td><td class="nw">FPGA → 板</td><td class="nw mono">F1 / F2</td><td class="nw mono">scr_d[链×3+0]</td></tr>
+      <tr class="dG"><td class="k">数据 lane 1</td><td class="nw mono">SDI_G[11:0]</td><td class="num">12 対</td><td class="num">24</td><td class="nw">FPGA → 板</td><td class="nw mono">E1 / E2</td><td class="nw mono">scr_d[链×3+1]</td></tr>
+      <tr class="dR"><td class="k">数据 lane 2</td><td class="nw mono">SDI_R[11:0]</td><td class="num">12 対</td><td class="num">24</td><td class="nw">FPGA → 板</td><td class="nw mono">D1 / D2</td><td class="nw mono">scr_d[链×3+2]</td></tr>
+      <tr class="clk"><td class="k">时钟 · 穿孔</td><td class="nw mono">SCR_CLK[11:0]</td><td class="num">12 対</td><td class="num">24</td><td class="nw">扇出 IC → 板</td><td class="nw mono">G1 / G2</td><td class="note">扇出 IC 输出</td></tr>
+      <tr class="clk"><td class="k">时钟 · 板内</td><td class="nw mono">SCR_CLK</td><td class="num">1 対</td><td class="num">0</td><td class="nw">FPGA → 扇出</td><td class="nw">不出板</td><td class="nw mono">scr_clk</td></tr>
+      <tr class="se"><td class="k">同步</td><td class="nw mono">I_SYNC</td><td class="num">1</td><td class="num">1</td><td class="nw">FPGA → 板</td><td class="nw mono">M2</td><td class="nw mono">i_sync</td></tr>
+      <tr class="se"><td class="k">ACK 回读</td><td class="nw mono">ACK_D[1:0]</td><td class="num">2</td><td class="num">2</td><td class="nw">板 → FPGA</td><td class="note">2 颗 8:1 mux</td><td class="nw mono">ack_d[1:0]</td></tr>
+      <tr class="se"><td class="k">ACK 选择</td><td class="nw mono">ACK_S[2:0]</td><td class="num">3</td><td class="num">3</td><td class="nw">FPGA → 板</td><td class="note">两颗共用</td><td class="nw mono">ack_s[2:0]</td></tr>
+      <tr class="se"><td class="k">复位</td><td class="nw mono">PANEL_RSTN</td><td class="num">1</td><td class="num">1</td><td class="nw">FPGA → 板</td><td class="nw mono">G13</td><td class="nw mono">panel_rstn</td></tr>
+      <tr class="se"><td class="k">电源使能</td><td class="nw mono">EN_3V8 / EN_2V8</td><td class="num">2</td><td class="num">2</td><td class="nw">FPGA → 板</td><td class="nw">—</td><td class="nw mono">en_3v8 / en_2v8</td></tr>
+      <tr class="pwr"><td class="k">子板供电</td><td class="nw mono">V3V8 ×2 / V2V8</td><td class="num">3</td><td class="num">3</td><td class="nw">板 → 转接板</td><td class="nw">—</td><td class="nw">—</td></tr>
+      <tr class="gnd"><td class="k">地</td><td class="nw mono">GND</td><td class="num">—</td><td class="num">60</td><td class="nw">—</td><td class="nw">—</td><td class="nw">—</td></tr>
+    </tbody>
+    <caption>合计 <b>48 対差分（36 数据 + 12 时钟）+ 9 单端 + 3 电源 + 60 地 = 168 焊盘</b>。差分区 1–146（每対前夹一根地）· 单端 147–160 · 电源与地 161–168。数据编号规则 <span class="mono">i = 链 × 3 + lane</span>，<b>lane0 = D0 = B 対（不是 R）</b>——写在 <span class="mono">adc/bridge_pin.adc:25</span>，按此顺序画则 FPGA 侧一行不改。</caption>
+  </table>
+  </div>
+
+  <div class="callout acc">
+    <p><b>⚠ 验证板与目标板的一处差异：ACK mux 数量。</b>验证板 12 颗 ⇒ 2 颗 8:1 mux ⇒ <span class="mono">ack_d[1:0]</span>；目标板 24 颗 ⇒ 3 颗 ⇒ <span class="mono">ack_d[2:0]</span>。RTL 顶层声明的是 <span class="mono">ack_d[2:0]</span>（按目标板写的），验证板上<b>第 3 根悬空即可</b>，代码不用改。</p>
+  </div>
+</section>
+
+<!-- ========== §5 ACK ========== -->
+<section>
+  <h2><span class="sec">§5</span> ACK 回读：三个问题已结<span class="pill new">2026-09-10 查证</span></h2>
+  <p class="lead">ACK 是「芯片到底活没活」唯一的自动判据，而它<b>从项目开始到现在一帧都没成功收到过</b>。验证板要一次把 12 路都做起来，等于第一次让这个功能真正工作 —— 所以这三条要查死，不能推测。</p>
+
+  <h3>① 只接 ACK_O 到 mux —— 够</h3>
+  <p><b>手册原文</b>（ICND2260 编程指导 V2.8 P6 引脚表）：</p>
+  <div class="callout">
+    <p><span class="mono">ACK_O</span>(B4)：「数据回传输出。如需回传功能，级联情况下需接入上一颗芯片的 ACK_I，<b>第一颗 ACK_O 输出所有芯片回传数据</b>。」类型 <b>O</b>，电平 VDDD/GND，<b>推挽不是开漏</b></p>
+    <p><span class="mono">ACK_I</span>(N12)：「数据回传输入。如需回传功能，级联情况下需接入下一颗芯片的 ACK_O，<b>最后一颗 ACK_I 可浮空</b>。」类型 <b>I</b></p>
+  </div>
+  <p><b>推导</b>：ACK_I 的职能是「把下游的回包接力进来」，与本片自己的回包无关 —— 依据就是「最后一颗 ACK_I 可浮空」这句本身：链尾那颗没有下游、ACK_I 悬空，但它的数据必须能从自己的 ACK_O 出去，否则「第一颗 ACK_O 输出所有芯片回传数据」不成立。</p>
+  <p>⇒ 12 颗各自不级联 = <b>12 个「最后一颗」</b>，每颗 ACK_O 输出自己的回包，成立。</p>
+  <div class="callout risk">
+    <p><b>🔴 但手册没有一句话明写「非级联单颗也能回包」。</b>上面是推的。要 100 % 落实，向集创北方 FAE 问一句：<b>「12 颗 ACK_I 全部不接、ACK_O 各自独立引出，每颗能否正常输出自己的回包？」</b>——加进表 13 的问询单。</p>
+  </div>
+
+  <h3>② ACK_I 不用时：手册允许浮空，但建议 100 kΩ 上拉到 VDDD</h3>
+  <p>手册只有「最后一颗 ACK_I 可浮空」这一句。<b>两份手册全文都查不到</b>：ACK_I 有没有片内上下拉、ACK_I 的 VIH/VIL —— datasheet V1.7 P7「电气特性」表只有 SDO/CLKO 的 VOH/VOL 与 SDI/CLKI 的 IIH/IIL(±1 µA)，<b>全表没有任何一条 VIH/VIL</b>。</p>
+  <p><b>建议每颗 ACK_I 经 100 kΩ 上拉到 VDDD(2.8 V)，不悬空、绝不下拉。</b>三条依据：</p>
+  <ol class="act">
+    <li><b>方向必须是上拉。</b>ACK 空闲为高、start 是从高拉低（编程指导 P12 ACK 协议时序图 idle→start）。下拉等于持续喂一个「start = 低」的条件。这与灯板文档表 5 里已写的「mux 余下 4 路要接高不能接地」是同一条理由</li>
+    <li><b>悬空 CMOS 输入本项目已经吃过亏。</b>08-20 那次 18,245 帧/秒垃圾帧，根因就是 ACK 引脚悬空放大邻线耦合。同样机理对 N12 一样成立，而 <b>N12 紧邻 N11(SEL_O)</b></li>
+    <li>成本 12 只 0402，背面已有 48 只端接，<b>不增加工序</b></li>
+  </ol>
+  <p>预算实在要省的退路：确实浮空（手册允许），但要求 N12 走线极短、远离时钟対、下方完整地。</p>
+
+  <h3>③ 电平：不用加电平转换器件，但 mux 选型会翻转做法</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>项</th><th>值</th><th>出处</th></tr></thead>
+    <tbody>
+      <tr><td class="k">2260 VOH</td><td class="nw">≥ VDD−0.4 @IOH=−1 mA ⇒ VDDD 2.8 V 时 <b>≥2.4 V</b>，轻载 ≈2.8 V</td><td class="note">datasheet V1.7 <b>P7</b>（⚠ 测试条件栏写的是 SDO/CLKO，手册未单列 ACK_O，同属 VDDD/GND 域是借用）</td></tr>
+      <tr><td class="k">2260 VOL</td><td class="nw">≤0.4 V @1 mA</td><td class="note">同上</td></tr>
+      <tr><td class="k">EG4 LVCMOS25 VIH min</td><td class="nw"><b>1.7 V</b>（VIL max 0.7 V）</td><td class="note">DS300 表 3-1-13, <b>P77</b></td></tr>
+      <tr><td class="k">EG4 推荐操作 VI</td><td class="nw">−0.3 ~ VCCIO+0.3 = <b>2.8 V</b></td><td class="note">DS300 表 3-1-3, <b>P72</b></td></tr>
+      <tr><td class="k">EG4 最大容限</td><td class="nw">VCCIO ≤2.5 V 时 VIMAX = VCCIO+0.9 = <b>3.4 V</b></td><td class="note">DS300 §2.7.5, <b>P50</b></td></tr>
+      <tr><td class="k">EG4 绝对最大 VI</td><td class="nw">−0.5 ~ <b>3.75 V</b></td><td class="note">DS300 表 3-1-1, <b>P70</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="callout ok">
+    <p><b>判决余量 1.1 V</b>（2.8 ≫ 1.7），<b>安全余量 0.6 V</b>（2.8 &lt; 3.4 &lt; 3.75）⇒ <b>不加电平转换器件。</b></p>
+  </div>
+  <p><b>但两件事必做：</b></p>
+  <ul>
+    <li><b>这 2 个 ACK 输入脚要关 PCI Clamp + 关内部 Pull Up</b>，约束里显式写（TN309 表 5-1：输入且 3.63 V &gt; Vpad &gt; VCCIO 时 PCI Clamp 关闭、Pull Up 关闭）。不关箝位的话 0.3 V 压差走二极管，按 DS300 表 4-3 VD=0.3 V ⇒ <b>约 30 µA 恒定漏电</b>并把高电平往下拽。<span class="no">现役 <span class="mono">dr1v90/eg4_2260_e104/adc/e104_2260.adc:97</span> 那种 <span class="mono">PULLTYPE = PULLUP</span> 不能照抄</span></li>
+    <li><b>ACK 线串一只 100~330 Ω 源端串阻。</b>因为 2.8 V 正好压在推荐 VI 上限 2.8 V 上，<b>直流余量为零</b>；VCCIO 取 −5%(2.375 V) 时推荐上限只剩 2.675 V &lt; 2.8 V。ACK 半位宽 1~5 µs，边沿变慢完全无所谓</li>
+  </ul>
+
+  <div class="callout risk">
+    <p><b>🔴 询价单 B07 的 mux 选型要重想。</b>现在写的是「模拟开关 8:1 · 74HC4051 / SN74LV4051 类」。<b>模拟开关双向导通、不做电平再生</b>：进什么电压出什么电压，不能当电平转换用，且其 VCC 必须 ≥ 信号电压 —— 给它供 2.5 V 而输入 2.8 V 会超它自己的 VCC 走体二极管。</p>
+    <p><b>路 A（推荐）· mux 供 2.8 V</b>，与 VDDD 同轨，ACK 的 10 kΩ 上拉也接 2.8 V，靠 FPGA 侧「关箝位 + 关上拉 + 串阻」接住。<b>灯板不加新电源轨，邮票孔一个字不用改。</b>器件建议用<b>数字 8:1 数据选择器</b>（74LV151A 类）而非模拟开关——模拟开关 break-before-make，切换瞬间输出浮空，而 FPGA 输入浮空正是 08-20 那 18,245 帧/秒垃圾帧的根因。<b>mux 与所有 ACK 无源件都在灯板上，不在转接板</b>，详见《灯板改动清单》§5。</p>
+    <p><b>路 B · 改数字 8:1 选择器、供 2.5 V、输入过压耐受</b>（手册明写 overvoltage tolerant 那类）⇒ mux 本身完成 2.8→2.5 V 转换，FPGA 侧零特殊处理。<span class="no">但灯板上没有 2.5 V 轨</span>（灯板只有 3.8 V 与 2.8 V）⇒ 要么从邮票孔多引一根 2.5 V（<b>邮票孔要改，168 → 169 焊盘，而板宽已经卡在 168 mm</b>），要么灯板自己加个 LDO（与「能删就删」的方向相反）。</p>
+    <p>⇒ <b>建议走路 A。</b>选型硬指标交给硬件：8 选 1 · VCC 2.8 V 可工作 · 导通电阻不敏感（ACK 速率极低）。</p>
+  </div>
+
+  <div class="callout acc">
+    <p><b>🔴 顺带查出灯板改板冻结版的一处标注错误。</b>表 6 里「I_SYNC 输入电平 VIH ≈ 0.7 × VDDD = 1.96 V」标在<b>「手册值 V1.7」</b>栏 —— <b>手册里没有这个数</b>，datasheet V1.7 P7 全表没有任何 VIH/VIL，那是按 CMOS 惯例估的。应改标为<b>估算值</b>，并加进给集创北方的问询单。</p>
+  </div>
+
+  <h3>⇒ 灯板要改三处，邮票孔不用改</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>改动</th><th>在哪</th><th>数量</th><th>为什么</th></tr></thead>
+    <tbody>
+      <tr><td class="k">ACK_I 上拉</td><td class="nw"><b>灯板</b>，紧靠每颗 N12</td><td class="nw">12 只 100 kΩ</td><td class="note">不出板 ⇒ <span class="yes">邮票孔不变</span></td></tr>
+      <tr><td class="k">ACK 输出串阻</td><td class="nw"><b>灯板</b>，靠近 mux 输出</td><td class="nw">2 只 100~330 Ω</td><td class="note">在 ACK_D[1:0] 那 2 根线上 ⇒ <span class="yes">邮票孔焊盘数不变</span></td></tr>
+      <tr><td class="k">mux 供电域改 2.8 V</td><td class="nw"><b>灯板</b></td><td class="nw">—</td><td class="note">灯板本来就有 2.8 V ⇒ <span class="yes">不加轨、邮票孔不变</span></td></tr>
+    </tbody>
+    <caption>三处都落在灯板本体，<b>168 焊盘的脚位表一个字不用改</b>。前提是 mux 走路 A（供 2.8 V）；走路 B 则邮票孔要加一根 2.5 V 电源焊盘。</caption>
+  </table>
+  </div>
+</section>
+
+<!-- ========== §6 板上功能 ========== -->
+<section>
+  <h2><span class="sec">§6</span> 板上做的四件事</h2>
+  <p class="lead">转接板不含任何逻辑。它只做四件事：电平网络、时钟扇出、电源变换、机械转接。</p>
+
+  <h3>① 驱动端网络：3R + Rpd（13 対，每対 5 只）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>元件</th><th>值</th><th>位置</th><th>每対数量</th><th>作用</th></tr></thead>
+    <tbody>
+      <tr><td class="k">RS</td><td class="nw">150 Ω ±1 %</td><td class="note">P/N 各串一只，紧靠 FPGA 连接器</td><td class="num">2</td><td class="note">源端串阻（安路 LVDS25E 要求的 3R 之一）</td></tr>
+      <tr><td class="k">RP</td><td class="nw">140 Ω ±1 %</td><td class="note">跨接 P—N</td><td class="num">1</td><td class="note">同上</td></tr>
+      <tr><td class="k">Rpd</td><td class="nw">3.9 kΩ ±1 %</td><td class="note">P/N 各一只对地</td><td class="num">2</td><td class="note"><span class="yes">🎯 把共模从 1.25 V 拉到 1.201 V</span>；VCCIO ±5 % 时 1.141~1.261 V 全落窗内，差分只衰减 1.3 %</td></tr>
+    </tbody>
+    <caption>共 5 只 0402 / 対 × 13 対 = <b>65 只</b>。公式 <span class="mono">VCM = (VCCIO/2) × Rpd/(Rpd + 10 + RS)</span>，Rout = 10 Ω。⚠ 接收端 100 Ω 端接在<b>灯板侧</b>，不在这块板上。</caption>
+  </table>
+  </div>
+  <div class="callout ok">
+    <p><b>为什么是 3R 不是 5R。</b>E104 那块板只有 bank1 可调，bank0/2 焊死 3.3 V，所以要用 5R 网络把共模从 1.65 V 拉到 1.2 V。这块板上 Bank0 改成了 2.5 V ⇒ 用 3R 就够，<b>不照抄 E104 的 5R</b>。</p>
+    <p>但<b>建议加 Rpd</b>：纯 3R 时 VCCIO ±5 % 会让共模摸到 1.313 V <span class="no">出窗</span>（2260 的 VIC 上限 1.3 V），加 Rpd 后全落窗内。</p>
+  </div>
+
+  <h3>② 时钟扇出：1 対进，12 対出</h3>
+  <ul>
+    <li>器件 <b>CDCLVD1212</b>（VQFN-40 6×6，LCSC C701730）</li>
+    <li>IN0 输入共模要求 1 V ~ VCC−0.3 V，3R 给的 1.20 V <span class="yes">✅ 落在窗内</span></li>
+    <li>供电 2.5 V，与 VCCIO0 共用 LDO2</li>
+    <li><span class="no">🔴 输出 Voc 上限 1.375 V，超出 2260 的 1.3 V</span> —— 超窗只能在接收端补救，所以<b>灯板上留了 12 対的共模逃生位</b>（分裂端接 2 × 49.9 Ω + CM 测试点 + AC 耦合位 + VBIAS 网，约 60 个 0402，基线全贴 0 Ω 直通）</li>
+  </ul>
+  <div class="callout acc">
+    <p><b>🎯 为什么邮票孔上过的是 12 対时钟而不是 1 対。</b>因为 12 対在连接器上，子板上放扇出 IC（EG4）还是 FPGA 引脚直出（GW5A），<b>灯板一个字都不用改</b>。若当初把扇出放灯板侧，换 FPGA 就要动灯板。</p>
+    <p>⇒ 若换 GW5A 核心板，这块转接板可以<b>不贴 CDCLVD1212</b>，12 対时钟由 FPGA 直出。扇出 IC、2.5 V LDO、AC 耦合网络、第三方芯片的共模不确定性、600 ps 的 tsk(pp)，全部消失。建议<b>留扇出 IC 的位置不贴、用 0 Ω 跳线切换</b>，两种拓扑同板对照。</p>
+  </div>
+
+  <h3>③ 电源树</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>轨</th><th>来源</th><th>去处</th><th>电流</th><th>器件</th></tr></thead>
+    <tbody>
+      <tr class="pwr"><td class="k">V3V8_FPGA</td><td class="nw">邮票孔 ×2 并联</td><td class="note">转接板总输入</td><td class="nw">—</td><td class="nw">—</td></tr>
+      <tr class="pwr"><td class="k">3.3 V</td><td class="nw">3.8 V → LDO1</td><td class="note">ACA420 主供电（P1 的 A1~A4，共 4 脚）</td><td class="nw">≥ 500 mA</td><td class="note"><span class="warn">压差仅 500 mV</span>，选 dropout &lt; 300 mV 的型号</td></tr>
+      <tr class="pwr"><td class="k">2.5 V</td><td class="nw">3.8 V → LDO2</td><td class="note">① ACA420 的 VCCIO0（P1 的 A9/A10）② CDCLVD1212</td><td class="nw">≥ 300 mA</td><td class="note">TLV75725 类</td></tr>
+      <tr class="pwr"><td class="k">V2V8_FPGA</td><td class="nw">邮票孔</td><td class="note">备用（也可改由它降 2.5 V，压差更小）</td><td class="nw">—</td><td class="nw">—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>④ 机械转接</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>区段</th><th>深度</th></tr></thead>
+    <tbody>
+      <tr><td class="k">邮票孔焊盘排 + 换层过孔区</td><td class="nw">~8 mm</td></tr>
+      <tr><td class="k">3R/Rpd 网络 + 扇出 IC + 2 颗 LDO</td><td class="nw">~10 mm</td></tr>
+      <tr><td class="k">ACA420 核心板（封装库实测）</td><td class="nw">35.3 mm</td></tr>
+      <tr><td class="k"><b>合计</b></td><td class="nw"><b>≈ 53 mm</b></td></tr>
+    </tbody>
+    <caption>✅ 已定案：延长 <b>50 mm</b>，转接板焊在正面（LED 面）。只差 3 mm，两种收法都行：① 让核心板末端悬出灯板边缘 6 mm；② 把邮票孔排贴着延长区上沿放，转接板整体向外挪 6 mm。<br>⚠ 转接板本体仍需 <b>≥168 mm 宽</b>（由邮票孔排决定），比核心板宽得多，两侧是空的——可以把网络电阻和 LDO 摊在两侧，把深度压到 50 mm 以内。</caption>
+  </table>
+  </div>
+  <div class="callout risk">
+    <p><b>🔴 真正的硬约束是宽度，而且它跟延长多少无关。</b>168 焊盘 @1.0 mm = 168 mm 长的一排，而灯板只有 160 mm 宽 ⇒ 单边放不下。<b>推荐方案 (d)：把延长区做成 ≥175 mm 的凸台，LED 区仍 160 mm。</b>延长区没有 LED，可以比本体宽；且它在旋转内径侧，加宽对转动惯量影响小。这条不定，转接板和灯板都画不了。</p>
+  </div>
+</section>
+
+<!-- ========== §6 BOM ========== -->
+<section>
+  <h2><span class="sec">§7</span> BOM</h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th>位号</th><th>器件</th><th>规格</th><th>封装</th><th>数量</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr><td class="k">U1</td><td class="nw">LVDS 时钟扇出</td><td class="nw">CDCLVD1212</td><td class="nw">VQFN-40 6×6</td><td class="num">1</td><td class="note">LCSC C701730。换 GW5A 核心板时可不贴</td></tr>
+      <tr><td class="k">U2</td><td class="nw">3.3 V LDO</td><td class="nw">≥500 mA, dropout &lt; 300 mV</td><td class="nw">SOT-223 / DFN</td><td class="num">1</td><td class="note">供 ACA420</td></tr>
+      <tr><td class="k">U3</td><td class="nw">2.5 V LDO</td><td class="nw">≥300 mA</td><td class="nw">SOT-23-5</td><td class="num">1</td><td class="note">供 VCCIO0 + U1</td></tr>
+      <tr><td class="k">RS*</td><td class="nw">串阻</td><td class="nw">150 Ω ±1 %</td><td class="nw">0402</td><td class="num">26</td><td class="note">13 対 × 2</td></tr>
+      <tr><td class="k">RP*</td><td class="nw">跨接</td><td class="nw">140 Ω ±1 %</td><td class="nw">0402</td><td class="num">13</td><td class="note">—</td></tr>
+      <tr><td class="k">Rpd*</td><td class="nw">共模下拉</td><td class="nw">3.9 kΩ ±1 %</td><td class="nw">0402</td><td class="num">26</td><td class="note">13 対 × 2</td></tr>
+      <tr><td class="k">P1 / P2</td><td class="nw">ACA420 配对连接器</td><td class="nw">2 × 50 @0.5 mm</td><td class="nw">排间距 3.8 mm</td><td class="num">2</td><td class="note"><span class="no">🔴 料号未公布</span>，封装用官方 PcbLib</td></tr>
+      <tr><td class="k">J1</td><td class="nw">FPC ZIF 连接器</td><td class="nw">≈43 位 @0.5 mm</td><td class="nw">待定</td><td class="num">1</td><td class="note"><span class="pill tbd">未选型</span> 要能点胶或加压条</td></tr>
+      <tr><td class="k">去耦</td><td class="nw">—</td><td class="nw">每电源脚 100 nF + 每轨 10 µF</td><td class="nw">0402 / 0805</td><td class="num">~20</td><td class="note">—</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ========== §7 待决 ========== -->
+<section>
+  <h2><span class="sec">§8</span> 画板之前要关掉的六条</h2>
+  <p class="lead">按「不关就画不了」到「可以边画边定」排序。</p>
+  <ol class="act">
+    <li><span class="no">🔴 灯板宽度四选一。</span>推荐 (d) 延长区 ≥175 mm 凸台。<b>这一条决定灯板与转接板两块板的外形，其余都等它</b></li>
+    <li><span class="no">🔴 ACA420 的连接器有没有引出 Bank1/3 的差分対、引了几対。</span>决定上行 14 対能不能落地。<b>没引够就要退到「点亮阶段不接上行、用内部测试图案」</b>——那会改变这块板的定义。在 Altium 里打开原理图查，或问小梅哥要引脚表</li>
+    <li><span class="no">🔴 补齐 Bank0 的第 13 対。</span>表 12.3 只解出 12 対，点亮要 13 対。用资料包 SchLib 在 Altium 里复核全表，<b>不要照抄那张表就投板</b></li>
+    <li><b>板对板连接器料号。</b>「山谷道」品牌，立创与搜索引擎均无收录 ⇒ 量实物或问小梅哥。封装本身有官方 PcbLib 可直接用，所以这条<b>不卡画板，只卡下单</b></li>
+    <li><b>FPC 连接器选型与脚序。</b>含翻转方向、G-S-S-G 排布、走不走电源（建议不走）</li>
+    <li><b>mux 选型（询价单 B07）。</b>现在写的「模拟开关 74HC4051 类」不做电平再生 ⇒ 必须供 2.8 V，不能供 2.5 V。硬指标：8 选 1 · VCC 2.8 V 可工作。<b>这条不卡画板，但卡 BOM 定稿</b></li>
+    <li><b>发给集创北方的两条新问询</b>（并进表 13）：① 12 颗 ACK_I 全不接、ACK_O 各自独立引出时每颗能否正常回包　② ACK_I 有无片内上下拉、VIH/VIL 门限是多少（手册全表没有 VIH/VIL）</li>
+    <li><b>点亮阶段上行接不接。</b>若第 2 条查下来 Bank1/3 够用就接；不够就先用 FPGA 内部测试图案点亮，把上行验证推到正式子板。<b>这个决定要在画 FPC 连接器之前做</b></li>
+  </ol>
+</section>
+
+<footer>
+  <p>POV-3D · 转接板接口与拓扑 v1 · 2026-09-10。本文是灯板改板冻结版（2026-09-09）的配套件，只覆盖转接板；灯板侧的 7 类改动与 168 焊盘完整脚位见那一份。</p>
+  <p>依据：<span class="mono">灯板改板_邮票孔FPGA接口_2026-09-09.html</span> 表 1 / 表 8 / 表 12 · RTL <span class="mono">dr1v90/eg4_bridge/rtl/eg4_bridge_top.v:82-105</span>（信号名与端口一一对应，按本文画完 FPGA 代码不用改一行）· ACA420 机械数据从官方 Altium 封装库逐个焊盘量出 · bank 结构出自 DS301 引脚表与 DS300 表 2-7-1 · 记忆库 <span class="mono">reference_eg4s20_bank_voltage_and_lvds33</span> / <span class="mono">project_dr1_uplink_tx_probe</span>。</p>
+  <p>2026-09-10 追加 §5（ACK 回读三问结案），并据此确认：<b>灯板要改三处、邮票孔 168 焊盘脚位表不用改</b>。</p>
+  <p>⚠ 凡标 🔴 的是待决或有风险项。<b>§2 的 bank 分配（上行走 Bank1/3）是本文新增的推导，不在 09-09 冻结版里</b>，依据是 DS301 与 DS300 的原文，但<b>未经上板验证</b>，且前提是第 2 条查证通过。</p>
+</footer>
+
+</div>

@@ -1,0 +1,106 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICND2260 技术问询单</title>
+<style>
+:root{--paper:#F4F5F2;--surface:#FFFFFF;--surface2:#EDEFE9;--ink:#15191B;--muted:#68726E;--rule:#D6DAD2;--rule2:#BCC3B7;--accent:#0F5C8C;--accent-soft:#E3EEF6;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#121513;--surface:#191D1B;--surface2:#222724;--ink:#E8ECE7;--muted:#8D958F;--rule:#2E3532;--rule2:#414945;--accent:#6FB3DC;--accent-soft:#12293A;}}
+:root[data-theme="dark"]{--paper:#121513;--surface:#191D1B;--surface2:#222724;--ink:#E8ECE7;--muted:#8D958F;--rule:#2E3532;--rule2:#414945;--accent:#6FB3DC;--accent-soft:#12293A;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;font-size:15px;line-height:1.75}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em;background:var(--surface2);padding:1px 4px;border-radius:3px}
+.wrap{max-width:940px;margin:0 auto;padding:0 18px 70px;background:var(--surface);min-height:100vh;box-shadow:0 0 0 1px var(--rule)}
+header{border-bottom:3px double var(--rule2);padding:40px 0 16px;margin-bottom:6px}
+h1{font-size:26px;margin:0 0 14px;letter-spacing:.01em}
+.meta{color:var(--muted);font-size:13.5px;margin:0}
+.meta b{color:var(--ink);font-weight:600}
+h2{font-size:18.5px;margin:34px 0 8px;padding:7px 12px;background:var(--surface2);border-left:4px solid var(--accent);border-radius:0 3px 3px 0}
+p{margin:9px 0}
+ol{counter-reset:none;padding-left:0;list-style:none;margin:10px 0}
+ol>li{position:relative;padding:9px 12px 9px 44px;margin:6px 0;background:var(--paper);border:1px solid var(--rule);border-radius:4px;counter-increment:q}
+ol>li::before{content:counter(q);position:absolute;left:12px;top:9px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+ol{counter-reset:q}
+ul{margin:8px 0;padding-left:22px}
+ul.sub{margin:6px 0 0;padding-left:18px;color:var(--muted)}
+ul.sub li{margin:3px 0}
+li{margin:4px 0}
+pre{background:var(--surface2);border:1px solid var(--rule);border-radius:4px;padding:10px 12px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.5}
+.note{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;padding:9px 13px;margin:10px 0;font-size:14px}
+b{font-weight:600}
+@media print{body{background:#fff}.wrap{box-shadow:none;max-width:none}ol>li{break-inside:avoid}}
+</style></head><body><div class="wrap">
+<header>
+<h1>ICND2260 技术问询单</h1>
+<p class="meta"><b>致：</b>集创北方（代理：深圳映己鸿鹄）　·　<b>日期：</b>2026-09-20<br>
+<b>参考资料：</b><span class="mono">ICND2260 数据手册 CN V1.7 (2023/07)</span>、<span class="mono">ICND2260 编程指导 CN V2.8 (2025/12)</span>、贵司提供的 <span class="mono">2260lvds.xlsx</span>（238 条，45 扫单颗样板配置）</p>
+</header>
+<ul>
+<li>致：集创北方（代理：深圳映己鸿鹄）</li>
+<li>日期：2026-09-20</li>
+<li>参考资料：<span class="mono">ICND2260 数据手册 CN V1.7 (2023/07)</span>、<span class="mono">ICND2260 编程指导 CN V2.8 (2025/12)</span>、贵司提供的 <span class="mono">2260lvds.xlsx</span>（238 条，45 扫单颗样板配置）</li>
+</ul>
+<h2>我们的应用背景</h2>
+<p>旋转 POV 立体显示。验证板一块：沿用贵司参考板 <span class="mono">ICN-P0.9375(BGA)-160×180-60S-V1.0-LVDS</span> 的 LED 阵列与 2260 布局（160×180 点，0.9375 mm 间距，12 颗 2260，3 行 × 4 列，每 2 颗拼一个 80×60 块、行列共用），<b>但把原来&quot;12 颗串一条 mini-LVDS 链&quot;改成&quot;每颗一条独立的 mini-LVDS 链路&quot;</b>（每颗 1 对时钟 + 3 对数据，由 FPGA 直接点对点驱动）。</p>
+<p>改独立链路的原因：我们此前在 9 颗级联的样板上遇到&quot;从第 k 跳起往下全部不显示&quot;的前缀型失效，改成一颗一链后每颗都是链路第一跳。</p>
+<p>下面问题按对我们的阻塞程度排序，<b>第 1、2 两组会直接决定 PCB 要不要改版</b>，恳请优先答复。</p>
+<h2>一、60 扫配对模式（最紧急，卡住 PCB 定版）</h2>
+<p>编程指导 V2.8 §2「级联模式」写明：两颗 ICND2260 可以行列共用驱动 80×96，芯片 A 的行驱动控制第 1–48 行、芯片 B 控制第 49–96 行；§8-16 给了 <span class="mono">reg0x04[13:8]</span>=芯片一扫数、<span class="mono">reg0x04[5:0]</span>=芯片二扫数、总扫描数为两者之和，§8-17 给了 <span class="mono">reg0x08[0]</span> 扫描扩展模式使能。我们的板子是同样的结构，只是 30 + 30 = 60 扫。</p>
+<p><b>我们真正需要的能力只有一条</b>：让一颗芯片在指定的扫描时隙里<b>只输出列电流、完全不开行管</b>。只要两颗芯片在同一时刻只有一颗的行驱动在工作，这个屏就能正常扫描——至于芯片内部叫不叫&quot;芯片一/芯片二&quot;并不重要。所以问题按这个顺序：</p>
+<ol>
+<li><b>能不能让 ICND2260 在某些扫描时隙完全不开行驱动（行管全关），同时照常输出列电流？</b> 如果能，是哪个寄存器？</li>
+<li>如果能：<b>这些&quot;不开行管&quot;的时隙位置可以指定吗</b>（例如放在一帧的前 30 个时隙，而不是最后）？§8-16 写的是&quot;扫描数用不满的情况<b>空行必须排布在每颗芯片的最后</b>&quot;——如果这是硬限制，那配对里的第二颗（需要空在前半）该怎么配？</li>
+<li>数据手册首页列了&quot;<b>可编程扫描顺序</b>&quot;这条特性，但编程指导全本没有这组寄存器的说明。<b>能否逐个扫描时隙指定用哪个行管、或指定本时隙不开行管？</b> 请给寄存器位定义与示例。（顺带：§11 默认表里 <span class="mono">0xa6</span>~<span class="mono">0xad</span> 是 a5a5 / 1842 / 5a5a / 2184 / a5a5 / 4218 / 5a5a / 8421 这样一组位模式，请问这是不是扫描顺序相关的映射表？）</li>
+<li><b>这两颗必须级联在同一条 mini-LVDS 链上吗？</b> 如果每颗接独立链路（每颗都是&quot;第 1 级联设备&quot;，帧头 <span class="mono">VHEAD[19:16]</span> 级联芯片数 = 0 表示 1 颗），配对扫描还能不能工作？</li>
+<li>如果必须靠级联顺序来分工：<b>芯片靠什么知道自己是&quot;芯片一&quot;还是&quot;芯片二&quot;</b>（即驱动前 30 扫还是后 30 扫）？手册里没有查到相应的寄存器位；<span class="mono">DEVICE[3:0]</span> 的定义是级联序号，独立链路时两颗都是 0。</li>
+<li>退一步：如果空行只能排在最后，我们能否<b>把两颗的扫描相位错开半帧</b>来实现&quot;同一时刻只有一颗行驱动在工作&quot;（两颗都配 30 实 + 30 空，第二颗的 I_SYNC 延后 30 个扫描周期）？<b>I_SYNC 是不是内部扫描计数的起点</b>？帧内相位会不会漂移？</li>
+<li>配对模式下，<b>每颗芯片需要接收的显示数据是&quot;自己的 40 列 × 全部 60 扫&quot;吗</b>？<span class="mono">VHEAD[31:24]</span>（扫描行数）与 <span class="mono">VHEAD[19:16]</span>（级联芯片数）在独立链路的配对场景下应该怎么填？</li>
+<li><b>配对的两颗靠什么保持扫描同步</b>？只靠 I_SYNC 每帧对齐是否足够（两颗各自从自己的 DCLK 生成 GCLK，频率相同但由 FPGA 不同引脚输出）？帧内会不会累积偏差？</li>
+<li>编程指导 §11 的默认寄存器表里，<span class="mono">0x04 = 0x2d2d</span>（芯片一 45 扫 + 芯片二 45 扫 = 90 扫）、<span class="mono">0x08 = 0x5105</span>（bit0 = 1，扫描扩展模式<b>默认启用</b>）——也就是说<b>芯片出厂默认就是配对模式</b>。那么在这个默认状态下，两颗芯片是靠什么分工的？（与上面第 5 问是同一件事）</li>
+<li>我们手上的 <span class="mono">2260lvds.xlsx</span> 是 45 扫单颗样板的配置（<span class="mono">0x04 = 0x2d00</span>、<span class="mono">0x08</span> bit0 = 0），不含配对模式。<b>能否提供一份 60 扫配对模式的完整寄存器配置示例</b>（最好就是贵司点亮 <span class="mono">ICN-P0.9375-160×180-60S-V1.0-LVDS</span> 参考板时用的那份）？</li>
+<li>确认一下我们对数据量的理解：配对模式下每颗芯片接收的行数 = 总扫描数（例如 60 行 × 自己的 40 个像素），而不是自己驱动的那 30 行——因为按 §2 的图，每颗芯片的列驱动要覆盖全部 96（我们是 60）行。对吗？</li>
+</ol>
+<div class="note">如果答复是&quot;必须级联&quot;，我们需要在灯板上把配对的两颗用 SDO→SDI 连起来（现在 SDO 全部悬空），这是改版动作，所以请尽早答复。</div>
+<h2>二、差分端接 RBD / RDC（决定灯板 BOM 与布局）</h2>
+<p>数据手册 V1.7 P8「mini-LVDS 电气特性」表里有两行：</p>
+<pre>Module chain 差分匹配电阻   RBD   80 / 100 / 120  Ω
+Data chain   差分匹配电阻   RDC  160 / 200 / 240  Ω</pre>
+<ol>
+<li>这两个电阻是<b>芯片片内集成</b>的，还是要求客户在<b>外部</b>并接？</li>
+<li>&quot;Module chain&quot; 与 &quot;Data chain&quot; 分别对应哪些引脚？（<span class="mono">SDI_R1/R2</span>、<span class="mono">SDI_G1/G2</span>、<span class="mono">SDI_B1/B2</span>、<span class="mono">L_CKIP/L_CKIN</span> 各属于哪一类？）</li>
+<li>如果是片内：是否可通过寄存器开关？上电默认是否使能？</li>
+<li>如果要求外接：贵司参考板（RJ45 电缆直接进第一颗芯片）上我们没有看到任何外部端接电阻，这种接法是怎么保证的？</li>
+</ol>
+<div class="note">背景：我们按&quot;需要外接 100 Ω&quot;给灯板预留了 48 组端接位，但贵司参考板和我们此前的调试板都没有外接电阻且工作正常，所以需要确认到底加不加。</div>
+<h2>三、ACK 回读（我们至今一帧合法 ACK 都没收到过）</h2>
+<p>编程指导 V2.8 P6 引脚表写：<span class="mono">ACK_O</span>「级联情况下需接入上一颗芯片的 ACK_I，第一颗 ACK_O 输出所有芯片回传数据」；<span class="mono">ACK_I</span>「…最后一颗 ACK_I 可浮空」。</p>
+<ol>
+<li><b>12 颗都不级联时</b>（每颗 ACK_I 悬空、每颗 ACK_O 各自独立引出），<b>每颗能否正常输出自己的回包</b>？</li>
+<li><span class="mono">ACK_I</span> 有无<b>片内上下拉</b>？不使用时建议悬空、上拉还是下拉？（我们打算 100 kΩ 上拉到 VDDD，因为 N12 紧邻 N11(SEL_O)，悬空的 CMOS 输入曾让我们收到大量噪声触发的假帧）</li>
+<li><span class="mono">ACK_I</span> / <span class="mono">ACK_O</span> 的 <b>VIH / VIL / VOH / VOL</b> 分别是多少？数据手册 P7 的电气特性表里只有 SDO/CLKO 的 VOH/VOL 与 SDI/CLKI 的 IIH/IIL，没有这几个脚的数据。</li>
+</ol>
+<h2>四、时序与电平参数（决定我们的时钟拓扑与验收判据）</h2>
+<ol>
+<li><b>VIC = 1.1 ~ 1.3 V 是绝对最大额定还是推荐工作范围？</b> 超出上限会出现什么现象（不工作 / 误码 / 损坏）？<ul class="sub"><li>我们用的 FPGA（高云 GW5A）差分输出共模典型范围是 1.125 ~ 1.375 V，上限高于 1.3 V。这条决定 12 对时钟是可以直流直连，还是必须加交流耦合 + 共模偏置。</li></ul></li>
+<li><b>tSTU / tHLD = ¼ tLVCP 的容差是多少？</b> 数据手册 P9 那两行只填了典型值栏，min / max 都是空的。我们需要一个&quot;数据相对时钟的相位允许偏离多少&quot;的数，否则所有走线等长与 skew 预算都没有验收线。</li>
+<li>数据手册 P9 注释 1：「对于 mini-LVDS 驱动端，传输延时可设置为 1/8 tLVCP、1/4 tLVCP 或 3/8 tLVCP」。<ul class="sub"><li>这个设置<b>是否同时移动接收端的采样点</b>？（手册只写了&quot;驱动端&quot;）</li><li>是哪个寄存器的哪几位？上电默认值是多少？</li></ul></li>
+<li>数字输入脚（<span class="mono">I_SYNC</span>、<span class="mono">RSTN</span>、<span class="mono">LVDS_EN</span>、<span class="mono">SCL</span>、<span class="mono">SDA</span>、<span class="mono">DFT_EN</span>）的 <b>VIH / VIL</b> 分别是多少？数据手册 P7 全表没有这类参数，我们目前只能按 CMOS 惯例估算 0.7 × VDDD / 0.3 × VDDD，无法作为设计判据。</li>
+<li><b>VDDD 推荐工作值</b>：电气特性表是最小 2.8 V / 典型 2.8 V / 最大 3.8 V，而绝对最大额定也是 3.8 V；贵司参考板实际用的是 3.8 V。请问官方建议取哪个值？3.8 V 长期工作是否有可靠性余量？</li>
+<li><span class="mono">L_CKOP / L_CKON</span>（mini-LVDS 时钟输出）四问：<ul class="sub"><li>不做数据级联、只用它做时钟中继时，是否照常工作？</li><li>它的 Voc / Vod 的 min / typ / max 是多少？</li><li>每跳的传输延时 tPD 与抖动累积是多少？170 MHz 下最大可串几级？</li><li>用它做级联时，下一颗的接收端是否仍需外接端接电阻？</li></ul></li>
+</ol>
+<h2>五、使用方式与标定</h2>
+<ol>
+<li><b>SCL / SDA（IIC）</b>：数据手册引脚表写 E3 = IIC 时钟端、F3 = IIC 数据端，但数据手册与编程指导全文都没有 IIC 章节（无器件地址、无寄存器映射、无时序图）。<ul class="sub"><li>这两个脚的实际用途是什么？是否面向客户开放？</li><li>不使用时的建议接法？（贵司参考板是每脚各接一只 4.7 kΩ 上拉到 VDDD）</li></ul></li>
+<li><b>每色标定值</b>：<span class="mono">0x20 / 0x30 / 0x40</span> 三个颜色块里，偏移 <span class="mono">+9</span>、<span class="mono">+a</span>、<span class="mono">+c</span>、<span class="mono">+d</span> 四个寄存器在贵司给的配置里三色各不相同，看起来是与本板 LED 正向压降绑定的标定值。<b>这些值是怎么由实测得到的？</b> 有没有标定流程或上位机工具？换一批 LED 后要不要重标？</li>
+<li><span class="mono">DFT_EN</span>、<span class="mono">ATEST</span>、<span class="mono">GPIO0</span>、<span class="mono">GPIO1</span>、<span class="mono">SEL_I</span>、<span class="mono">SEL_O</span> 这几个&quot;测试用&quot;引脚，<b>不使用时的建议接法</b>是什么？（贵司参考板是全部悬空）</li>
+<li><span class="mono">DCLK (D3)</span> 在纯 mini-LVDS 模式下不使用时，建议悬空还是下拉到地？</li>
+</ol>
+<h2>我们已确认、无需回答的（供参考，避免重复沟通）</h2>
+<ul>
+<li><span class="mono">0x06[9] = 1</span> / <span class="mono">0x1a[9] = 1</span> 是 mini-LVDS 使能、<span class="mono">0xb4[5:4] = 10</span> 是三通道 —— 已由贵司 <span class="mono">2260lvds.xlsx</span> 验证</li>
+<li>寄存器表长度 238 条（0x00~0xED）—— 与贵司一致</li>
+<li>帧频 = GCLK /（灰度等级 × 扫描数），GCLK = DCLK × R —— 已在单颗样板上实测验证（多个工作点与模型偏差 &lt; 0.1 %）</li>
+<li>线上像素位宽固定 16 bit（<span class="mono">VHEAD[23:20] = 0x3</span>），不存在 8 bit 模式 —— 已实测确认芯片不接受</li>
+<li><span class="mono">VPP (D14)</span> 应用时接地 —— 已按手册执行</li>
+</ul>
+<h2>联系方式</h2>
+<p>（请填写：姓名 / 电话 / 邮箱 / 公司）</p>
+</div></body></html>

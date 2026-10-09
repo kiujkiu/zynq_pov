@@ -1,0 +1,358 @@
+<title>灯板改动清单</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --paper:#F1F2EE; --surface:#FBFCFA; --surface-2:#E9EBE5; --surface-3:#E1E4DC;
+  --ink:#15191B; --ink-2:#3A4245; --muted:#69736F; --rule:#D2D6CE; --rule-2:#BAC1B5;
+  --accent:#A8531C; --accent-soft:#F5E6DA;
+  --ok:#1F6F5C; --ok-soft:#E0EEE8;
+  --risk:#A32418; --risk-soft:#F7E2DE;
+  --add:#1F6F5C; --mod:#A8531C; --del:#A32418; --keep:#6A7A72;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#121513; --surface:#191D1B; --surface-2:#222724; --surface-3:#2A302C;
+    --ink:#E8ECE7; --ink-2:#C2C9C3; --muted:#8D958F; --rule:#2E3532; --rule-2:#414945;
+    --accent:#E39154; --accent-soft:#3A2618;
+    --ok:#5FC0A3; --ok-soft:#16302A;
+    --risk:#F0897C; --risk-soft:#361A17;
+    --add:#5FC0A3; --mod:#E39154; --del:#F0897C; --keep:#8D958F;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121513; --surface:#191D1B; --surface-2:#222724; --surface-3:#2A302C;
+  --ink:#E8ECE7; --ink-2:#C2C9C3; --muted:#8D958F; --rule:#2E3532; --rule-2:#414945;
+  --accent:#E39154; --accent-soft:#3A2618;
+  --ok:#5FC0A3; --ok-soft:#16302A;
+  --risk:#F0897C; --risk-soft:#361A17;
+  --add:#5FC0A3; --mod:#E39154; --del:#F0897C; --keep:#8D958F;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-size:14.5px;line-height:1.6}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.93em}
+.wrap{max-width:1160px;margin:0 auto;padding:0 26px 80px}
+
+header.mast{border-bottom:2px solid var(--ink);margin-bottom:28px;padding:40px 0 16px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 9px}
+h1{font-size:31px;line-height:1.24;margin:0 0 8px;font-weight:700;letter-spacing:-.012em;text-wrap:balance}
+.sub{margin:0 0 20px;color:var(--muted);font-size:13.5px;max-width:78ch}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:1px;border:1px solid var(--rule);border-radius:3px;overflow:hidden;background:var(--rule)}
+.meta div{background:var(--surface);padding:10px 13px;display:flex;flex-direction:column;gap:1px}
+.meta .k{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.meta .v{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums}
+
+section{margin:0 0 44px}
+h2{font-size:19px;font-weight:600;margin:0 0 4px;padding-bottom:7px;border-bottom:1px solid var(--rule-2);display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+h2 .sec{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--accent);font-weight:500;flex:none}
+h3{font-size:13px;font-weight:600;margin:22px 0 6px;color:var(--ink-2);font-family:"IBM Plex Mono",monospace;letter-spacing:.03em}
+.lead{margin:9px 0 14px;color:var(--muted);font-size:13px;max-width:82ch}
+p{margin:8px 0;max-width:82ch}
+ul{margin:8px 0;padding-left:20px;max-width:82ch}
+li{margin:3px 0}
+
+.tw{overflow-x:auto;margin:12px 0;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;
+   padding:8px 11px;border-bottom:1px solid var(--rule-2);background:var(--surface-2);white-space:nowrap}
+td{padding:7px 11px;border-bottom:1px solid var(--rule);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.k{background:var(--surface-2);font-weight:600;white-space:nowrap;width:1%}
+td.note{color:var(--ink-2);font-size:12.5px}
+td.nw{white-space:nowrap}
+td.qty{font-family:"IBM Plex Mono",monospace;text-align:right;white-space:nowrap;width:64px}
+caption{caption-side:bottom;text-align:left;padding:8px 11px;color:var(--muted);font-size:12px;border-top:1px solid var(--rule)}
+td.a{border-left:3px solid var(--add)} td.m{border-left:3px solid var(--mod)}
+td.d{border-left:3px solid var(--del)} td.p{border-left:3px solid var(--keep)}
+
+.tag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;
+     padding:1px 6px;border-radius:2px;border:1px solid currentColor;white-space:nowrap;font-weight:600}
+.tag.a{color:var(--add)} .tag.m{color:var(--mod)} .tag.d{color:var(--del)} .tag.p{color:var(--keep)}
+.tag.new{color:var(--accent)}
+.yes{color:var(--ok);font-weight:600} .no{color:var(--risk);font-weight:600} .warn{color:var(--accent);font-weight:600}
+
+.callout{border:1px solid var(--rule);border-left:3px solid var(--rule-2);border-radius:3px;padding:10px 14px;margin:13px 0;font-size:13px;color:var(--ink-2);background:var(--surface)}
+.callout.risk{border-left-color:var(--risk);background:var(--risk-soft)} .callout.risk b{color:var(--risk)}
+.callout.ok{border-left-color:var(--ok);background:var(--ok-soft)} .callout.ok b{color:var(--ok)}
+.callout.acc{border-left-color:var(--accent);background:var(--accent-soft)} .callout.acc b{color:var(--accent)}
+.callout p{max-width:none;margin:5px 0}
+.callout p:first-child{margin-top:0} .callout p:last-child{margin-bottom:0}
+
+.tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden;margin:16px 0}
+.tally div{background:var(--surface);padding:13px 15px;display:flex;flex-direction:column;gap:3px}
+.tally .n{font-family:"IBM Plex Mono",monospace;font-size:23px;font-weight:600;line-height:1}
+.tally .l{font-size:12px;color:var(--muted)}
+.tally .add .n{color:var(--add)} .tally .mod .n{color:var(--mod)}
+.tally .del .n{color:var(--del)} .tally .keep .n{color:var(--keep)}
+
+.act{counter-reset:actstep;list-style:none;padding:0;margin:12px 0;display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden;max-width:none}
+.act li{counter-increment:actstep;background:var(--surface);padding:11px 14px 11px 46px;position:relative;font-size:13.5px;margin:0}
+.act li::before{content:counter(actstep);position:absolute;left:14px;top:11px;font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;color:var(--accent);border:1px solid var(--accent);border-radius:50%;width:19px;height:19px;display:flex;align-items:center;justify-content:center}
+
+footer{border-top:1px solid var(--rule-2);margin-top:48px;padding-top:14px;color:var(--muted);font-size:12px}
+footer p{max-width:82ch}
+::selection{background:var(--accent-soft);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media print{body{background:#fff;color:#000;font-size:9.5pt}.tw{overflow:visible}tr{break-inside:avoid}h2{break-after:avoid}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">POV-3D · 验证板 · 灯板改动清单 v1</p>
+  <h1>灯板要改的全部</h1>
+  <p class="sub">从客户参考板（ICN 160×180 60S）改到验证板灯板：12 颗 ICND2260、一颗一组、邮票孔出板。本文只讲<b>灯板本体</b>——转接板与 FPGA 子板见配套的《转接板接口与拓扑》。</p>
+  <div class="meta">
+    <div><span class="k">底板</span><span class="v">ICN 160×180</span></div>
+    <div><span class="k">驱动 IC</span><span class="v">2260 × 12</span></div>
+    <div><span class="k">扫数</span><span class="v">60 扫</span></div>
+    <div><span class="k">出板</span><span class="v">168 焊盘</span></div>
+    <div><span class="k">新增有源</span><span class="v">3 颗</span></div>
+    <div><span class="k">日期</span><span class="v">2026-09-10</span></div>
+  </div>
+</header>
+
+<!-- ===== §0 ===== -->
+<section>
+  <h2><span class="sec">§0</span> 一页速查</h2>
+  <div class="tally">
+    <div class="add"><span class="n">10</span><span class="l">要加的</span></div>
+    <div class="mod"><span class="n">5</span><span class="l">要改的</span></div>
+    <div class="del"><span class="n">4</span><span class="l">要删的</span></div>
+    <div class="keep"><span class="n">5</span><span class="l">明确不动的</span></div>
+  </div>
+  <p>灯板上<b>新增三颗有源器件</b>：I_SYNC 缓冲 ×1、ACK mux ×2。除此之外全是无源件与走线。</p>
+  <div class="callout acc">
+    <p><b>一句话概括这次改板：</b>把「12 颗串一条链、4 対进板」改成「一颗一组、48 対分别直驱」，代价是灯板上多了 <b>168 个邮票孔焊盘</b>、<b>约 190 只无源件</b>和<b>一层全新的背面 LVDS 布线</b>；LED 阵列与 2260 的位置<b>一个都不动</b>。</p>
+  </div>
+</section>
+
+<!-- ===== §1 要加 ===== -->
+<section>
+  <h2><span class="sec">§1</span> 要加的 <span class="tag a">ADD</span></h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>项</th><th>数量</th><th>要点</th></tr></thead>
+    <tbody>
+      <tr><td class="k a">1</td><td class="nw">邮票孔本体</td><td class="qty">168 焊盘</td>
+        <td class="note"><span class="warn">🎯 09-10 改为四边半孔</span>：1.0 mm · <b>四边分配，每边约 42 焊盘 ≈ 42 mm</b> · 按<b>每颗一束</b>（1 clk + 3 data = 12 焊盘）排布 · <b>対间夹地</b><br>构成不变：48 対差分（36 数据 + 12 时钟）+ 9 单端 + 3 电源 + 60 地<br>🔴 <b>差分対必须同边相邻、不能跨角</b>；按方向分配（靠 FPC 那边上行、靠 2260 阵列那边下行数据、另两边时钟与单端电源）</td></tr>
+      <tr><td class="k a">2</td><td class="nw">差分端接</td><td class="qty">48 只</td>
+        <td class="note">36 数据 + 12 时钟，全部<b>紧贴 2260</b> 的 G1/G2、D1/D2、E1/E2、F1/F2。<span class="warn">参考板走级联、原本没有独立端接，这是新增</span><br>⚠ 分裂端接的具体只数（100 Ω 单只 vs 2 × 49.9 Ω）按原理图定，冻结版两处写法不一致</td></tr>
+      <tr><td class="k a">3</td><td class="nw">时钟共模逃生位</td><td class="qty">~60 只</td>
+        <td class="note">12 対时钟各留：分裂端接 2 × 49.9 Ω + 中心抽头 <b>CM 测试点</b> + <b>AC 耦合位</b> + 共享 VBIAS 网<br><b>基线全贴 0 Ω 直通。</b><span class="no">🔴 必须留在灯板上</span>——扇出 IC 的 Voc 上限 1.375 V 超出 2260 的 1.3 V，超窗只能在接收端补救，而接收端就是灯板</td></tr>
+      <tr><td class="k a">4</td><td class="nw">I_SYNC 缓冲</td><td class="qty">1 颗</td>
+        <td class="note"><b>74LVC244 @ 2.8 V</b>，1 转 3，每路驱 4 颗。<span class="no">不能照抄参考板的 74HC245 @3.8 V</span>——详见 §5</td></tr>
+      <tr><td class="k a">5</td><td class="nw">ACK mux</td><td class="qty">2 颗</td>
+        <td class="note"><b>数字 8:1 数据选择器 @ 2.8 V</b>（74LV151A 类）。mux#0 收链 0–7、mux#1 收链 8–11<br><span class="no">🔴 供电必须 2.8 V，不可接 3.8 V</span>——详见 §5</td></tr>
+      <tr><td class="k a">6</td><td class="nw">mux 未用输入接高</td><td class="qty">4 路</td>
+        <td class="note">mux#1 余下 4 路<b>接高（VDDD 2.8 V）</b>。<span class="no">不能接地</span>——ACK 空闲态是高，接地会让解调器持续看到「start = 低」</td></tr>
+      <tr><td class="k a">7</td><td class="nw">ACK 上拉</td><td class="qty">12 只</td>
+        <td class="note">每颗 ACK_O(B4) 经 <b>10 kΩ 上拉到 VDDD</b>。芯片未上电或 mux 切换间隙线会浮空</td></tr>
+      <tr><td class="k a">8</td><td class="nw"><span class="tag new">09-10 新增</span> ACK_I 上拉</td><td class="qty">12 只</td>
+        <td class="note">每颗 ACK_I(N12) 经 <b>100 kΩ 上拉到 VDDD</b>，<b>不悬空、绝不下拉</b>。手册说「可浮空」，但 N12 紧邻 N11(SEL_O)，而悬空 CMOS 输入本项目已吃过 18,245 帧/秒垃圾帧的亏——详见 §4</td></tr>
+      <tr><td class="k a">9</td><td class="nw"><span class="tag new">09-10 新增</span> ACK 输出串阻</td><td class="qty">2 只</td>
+        <td class="note"><b>100~330 Ω</b>，靠近 mux 输出。因为 2.8 V 正好压在 FPGA 推荐输入上限 2.8 V 上、直流余量为零——详见 §4</td></tr>
+      <tr><td class="k a">10</td><td class="nw">PANEL_RSTN 下拉</td><td class="qty">1 只</td>
+        <td class="note">10 kΩ 下拉。当年头号嫌疑就是「转接板上根本没有 RSTN，屏一直在复位里」</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ===== §2 要改 ===== -->
+<section>
+  <h2><span class="sec">§2</span> 要改的 <span class="tag m">MOD</span></h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>项</th><th>参考板</th><th>改成</th><th>为什么</th></tr></thead>
+    <tbody>
+      <tr><td class="k m">1</td><td class="nw">VDDD</td><td class="nw">3.8 V</td><td class="nw"><b>2.8 V</b></td>
+        <td class="note">规格 2.8~3.8 V。M2 的 VIH 从 2.66 V 降到 1.96 V，<b>这是 I_SYNC 缓冲能用 2.8 V 器件的前提</b>。<span class="no">连带：LVDS_EN / SCL / SDA 的上拉要一起改接 2.8 V</span></td></tr>
+      <tr><td class="k m">2</td><td class="nw">LVDS 拓扑</td><td class="nw">12 颗串一条链<br>4 対进板</td><td class="nw"><b>一颗一组</b><br>48 対直驱</td>
+        <td class="note">每颗 3 対数据由 FPGA 直驱 + 1 対时钟点对点。<span class="no">🔴 背面的 LVDS 走线是全新的</span>——LED 阵列与 2260 位置不变，但走线要重来</td></tr>
+      <tr><td class="k m">3</td><td class="nw">进板接口</td><td class="nw">RJ45 ×2</td><td class="nw"><b>邮票孔 168 焊盘</b></td>
+        <td class="note">见 §1-1</td></tr>
+      <tr><td class="k m">4</td><td class="nw">外形</td><td class="nw">160 × 180</td><td class="nw"><b>下端延长 50 mm</b><br><span class="yes">板宽不用加</span></td>
+        <td class="note"><span class="yes">✅ 09-10 已解除。</span>原问题是「168 焊盘 @1.0 mm = 168 mm &gt; 灯板 160 mm」，需要做 ≥175 mm 凸台。<b>改四边半孔后每边只有约 42 mm ⇒ 160 mm 板宽绰绰有余，凸台方案（a/b/c/d 四选一）整个取消</b>，也不用把间距降到 0.8 mm 去凑</td></tr>
+      <tr><td class="k m">5</td><td class="nw">层间过孔</td><td class="nw">—</td><td class="nw"><b>168 根换层</b></td>
+        <td class="note">2260 在背面、邮票孔焊盘在正面 ⇒ 168 根信号要过孔换层。差分対在过孔处切参考平面、回流会断，<b>这是 340 Mbps 上会真实劣化的一条</b>。靠那 60 个地焊盘的伴地过孔缝合——<span class="no">这些地不能删</span><br><span class="no">🔴 改四边后这 168 根换层过孔分成四圈，伴地缝合要逐边重核</span>——原来算的是单排一列的缝合</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ===== §3 删与留 ===== -->
+<section>
+  <h2><span class="sec">§3</span> 要删的 <span class="tag d">DEL</span> 与不动的 <span class="tag p">KEEP</span></h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>要删</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td class="k d">1</td><td class="nw">芯片间 36 対 SDO→SDI 级联</td><td class="note">改成一颗一组后不再级联</td></tr>
+      <tr><td class="k d">2</td><td class="nw">RJIN / ROUT 两个 RJ45</td><td class="note">进板接口改邮票孔</td></tr>
+      <tr><td class="k d">3</td><td class="nw">DCLK 整条 + 74HC245 的 DCLK 那一半</td><td class="note">D3 是 <b>TTL 模式专用</b>；纯 LVDS 走 G1/G2</td></tr>
+      <tr><td class="k d">4</td><td class="nw">JIN 排针</td><td class="note">不用</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout risk">
+    <p><b>🔴 一条建议改判：<span class="mono">L_CKOP / L_CKON</span> 级联别删干净，留位 DNP。</b></p>
+    <p>冻结版把它列在「要删的」。但<b>目标板想省掉时钟扇出 IC，唯一的路就是方案 D（芯片自带 L_CKO 时钟中继）</b>——那是零 BOM，而且共模是唯一保证合规的（芯片自己的 LVDS 发送器，不用担心 1.375 V 超窗）。</p>
+    <p>方案 D 现在在 EG4 和 GW5A 上都不成立（ns 级累积延迟补不了），<b>但翻案的钥匙在集创北方手上</b>——表 13 的 #12：手册注释 1 说「驱动端传输延时可设 1/8 / 1/4 / 3/8 tLVCP」，若它同时移动接收采样点，方案 D 直接成立。冻结版原话是「这条能翻转整个架构选择」。</p>
+    <p><b>代价：几个 0402 焊盘 + 一点走线面积。买的是「问询回来还有得选」。</b>删干净了，将来就算答复能翻案，也要重做一块灯板才能验。</p>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>明确不动</th><th>备注</th></tr></thead>
+    <tbody>
+      <tr><td class="k p">1</td><td class="nw">LED 阵列 160×180 · 60 扫</td><td class="note">28,800 px。12 颗按 3 行 × 4 列，每 2 颗拼一个 80×60 块（60 扫 &gt; 单颗 48 行管上限，<b>必须配对</b>）</td></tr>
+      <tr><td class="k p">2</td><td class="nw">2260 位置</td><td class="note"><b>背面，位置基本不变</b>（09-09 已确认）。改板只是「把板子做大一点放下 FPGA」</td></tr>
+      <tr><td class="k p">3</td><td class="nw">LVDS_EN 每颗一个电阻硬拉</td><td class="note">🎯 结掉了 08-20「向供应商问 LVDS_EN 接法」的悬案：图上就是硬拉。<span class="warn">但上拉电压要跟 VDDD 一起改到 2.8 V</span></td></tr>
+      <tr><td class="k p">4</td><td class="nw">SEL_I / SEL_O 两端悬空</td><td class="note">原样</td></tr>
+      <tr><td class="k p">5</td><td class="nw">每颗去耦 · ROW CAP (B10/N7) · VCORE (E14)</td><td class="note">原样</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ===== §4 ACK ===== -->
+<section>
+  <h2><span class="sec">§4</span> ACK：09-10 结案的三条 <span class="tag new">本轮新增</span></h2>
+  <p class="lead">ACK 是「芯片到底活没活」唯一的自动判据，而<b>全项目至今一帧都没成功收到过</b>。验证板要一次把 12 路做起来，等于第一次让这个功能真正工作。</p>
+
+  <h3>① 只接 ACK_O 到 mux —— 够</h3>
+  <p>编程指导 V2.8 P6：<span class="mono">ACK_I</span>(N12)「…级联情况下需接入下一颗芯片的 ACK_O，<b>最后一颗 ACK_I 可浮空</b>」。链尾那颗没有下游、ACK_I 悬空，但它的数据必须能从自己的 ACK_O 出去 ⇒ <b>12 颗各自不级联 = 12 个「最后一颗」</b>，成立。</p>
+  <p><span class="no">🔴 手册没有一句明写「非级联单颗也能回包」，这是推的。</span>已加进给集创北方的问询单。</p>
+
+  <h3>② ACK_I 建议 100 kΩ 上拉，绝不下拉</h3>
+  <p>手册只说「可浮空」，<b>两份手册全文都查不到</b> ACK_I 有无片内上下拉、也查不到 VIH/VIL——datasheet V1.7 P7 电气特性表全表没有任何一条 VIH/VIL。三条理由见 §1-8。</p>
+
+  <h3>③ 电平：不加电平转换器件，但两件必做</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>项</th><th>值</th><th>出处</th></tr></thead>
+    <tbody>
+      <tr><td class="k">2260 VOH @VDDD 2.8 V</td><td class="nw">≥2.4 V，轻载 ≈2.8 V</td><td class="note">DS V1.7 P7</td></tr>
+      <tr><td class="k">EG4 LVCMOS25 VIH min</td><td class="nw"><b>1.7 V</b></td><td class="note">DS300 表 3-1-13, P77</td></tr>
+      <tr><td class="k">EG4 最大容限 VIMAX</td><td class="nw"><b>3.4 V</b>（VCCIO+0.9）</td><td class="note">DS300 §2.7.5, P50</td></tr>
+      <tr><td class="k">EG4 绝对最大 VI</td><td class="nw">3.75 V</td><td class="note">DS300 表 3-1-1, P70</td></tr>
+    </tbody>
+    <caption>判决余量 1.1 V、安全余量 0.6 V ⇒ 不加电平转换器件。</caption>
+  </table>
+  </div>
+  <p><b>两件必做</b>（前一件在 FPGA 侧，后一件在灯板上）：</p>
+  <ul>
+    <li><b>FPGA 侧</b>：这 2 个 ACK 输入脚<b>关 PCI Clamp + 关内部 Pull Up</b>，adc 约束显式写。不关箝位 ⇒ 约 30 µA 恒定漏电并把高电平往下拽。<span class="no">现役 <span class="mono">e104_2260.adc:97</span> 的 <span class="mono">PULLTYPE = PULLUP</span> 不能照抄</span></li>
+    <li><b>灯板侧</b>：ACK 输出串 100~330 Ω（§1-9）</li>
+  </ul>
+</section>
+
+<!-- ===== §5 两颗芯片 ===== -->
+<section>
+  <h2><span class="sec">§5</span> 新增两种有源器件：为什么必须换、必须供 2.8 V</h2>
+
+  <h3>I_SYNC 缓冲：拓扑保持，器件必须换</h3>
+  <p>参考板 UA1 那颗 <b>74HC245 @3.8 V</b> 现在干三件事：DCLK 1→3、I_SYNC 1→3、ACK 两路直通（DIR 拉高、/OE 接地，当普通单向缓冲用）。新板上 <b>DCLK 整条删、ACK 改走 mux</b> ⇒ <b>只剩 I_SYNC 3 路</b>。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>74HC245 @3.8 V</th><th>74LVC244 @2.8 V</th></tr></thead>
+    <tbody>
+      <tr><td class="k">输入门限</td><td class="nw">CMOS，VIH = 0.7×3.8 = <b>2.66 V</b></td><td class="nw">TTL，VIH = <b>2.0 V</b>（与 VCC 无关）</td></tr>
+      <tr><td class="k">FPGA @2.5 V 驱得动吗</td><td class="nw"><span class="no">❌ VOH 2.4 V &lt; 2.66 V</span></td><td class="nw"><span class="yes">✅ 2.4 V &gt; 2.0 V，余量 0.4 V</span></td></tr>
+      <tr><td class="k">边沿（每支 4 颗 ≈40 pF）</td><td class="nw">≈ 19 ns</td><td class="nw">≈ 7 ns</td></tr>
+      <tr><td class="k">器件类型</td><td class="nw">双向收发器（DIR 焊死不用）</td><td class="nw">单向八缓冲，语义正确</td></tr>
+    </tbody>
+    <caption><b>降 VCC 救不了 HC</b>：74HC245 若改供 2.8 V，门限降到 1.96 V 判决过了，但 HC 在低 VCC 下驱动更弱、边沿更慢，反而更糟。</caption>
+  </table>
+  </div>
+  <div class="callout acc">
+    <p><b>降 VDDD 和换 LVC244 是配套的，不能只做一半。</b>若 VDDD 保持 3.8 V，2260 的 M2 输入 VIH = 2.66 V，而 2.8 V 缓冲的 VOH ≈ 2.7 V ⇒ <b>余量只剩 0.04 V</b>，不可接受。VDDD 降到 2.8 V 后 M2 的 VIH = 1.96 V，余量 0.7 V。</p>
+    <p>⚠ 但这笔账里的 <b>VIH ≈ 0.7 × VDDD 手册里没有</b>，是按 CMOS 惯例估的。已列入问询单。</p>
+  </div>
+
+  <h3>ACK mux：用数字 8:1，不是模拟开关</h3>
+  <p>询价单 B07 现在写的是「模拟开关 74HC4051 / SN74LV4051 类」，<b>建议改成数字 8:1 数据选择器</b>（74x151 家族，3 根 select + /E 使能）。</p>
+  <ul>
+    <li><b>主要理由：模拟开关是 break-before-make，切换瞬间输出浮空。</b>而 FPGA 输入浮空正是 08-20 那 18,245 帧/秒垃圾帧的根因。数字选择器输出<b>始终被驱动</b></li>
+    <li>次要：输出是再生的推挽 ⇒ 边沿不受 12 根板内走线长度和源端影响；单向，语义清楚</li>
+    <li>候选：<b>74LV151A</b>（VCC 2.0~5.5 V，优先）/ 74HC151（VCC 2~6 V，够用）。<span class="warn">若有 LVC 版本的 8:1 更省心，但型号是否存在要在立创上查，别按本文下单</span></li>
+    <li>退路：数字 151 若货源有问题，退回 74HC4051 @2.8 V，但要接受切换浮空，并在 RTL 侧靠 <span class="mono">ack_rd_window</span> 门控兜住（那行门控本来就要加）</li>
+  </ul>
+  <div class="callout risk">
+    <p><b>🔴 mux 供电必须 2.8 V —— 不只是为了 ACK 电平，更是为了 select 脚。</b></p>
+    <p><span class="mono">ACK_S[2:0]</span> 是 FPGA @2.5 V 驱的（VOH 2.4 V），而 mux 的 select 是 CMOS 门限：</p>
+    <p class="mono">供 2.8 V ⇒ VIH 1.96 V ⇒ 余量 0.44 V ✅　｜　供 3.3 V ⇒ VIH 2.31 V ⇒ 余量 0.09 V ⚠　｜　供 3.8 V ⇒ VIH 2.66 V ⇒ <b>❌ 驱不动</b></p>
+    <p>灯板上有 3.8 V 轨，<b>画的时候顺手接过去就哑了</b>，而现象是「ACK 读出来永远是同一颗」，非常难查。<b>建议在原理图上那两颗 mux 的 VCC 旁直接标注「⚠ 必须 2.8 V，不可接 3.8 V」。</b></p>
+  </div>
+</section>
+
+<!-- ===== §6 无源件汇总 ===== -->
+<section>
+  <h2><span class="sec">§6</span> 新增器件汇总（灯板本体）</h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th>器件</th><th>规格</th><th>封装</th><th>数量</th><th>位置</th></tr></thead>
+    <tbody>
+      <tr><td class="k">I_SYNC 缓冲</td><td class="nw">74LVC244 @2.8 V</td><td class="nw">TSSOP-20 类</td><td class="qty">1</td><td class="note">背面</td></tr>
+      <tr><td class="k">ACK mux</td><td class="nw">数字 8:1 @2.8 V（74LV151A 类）</td><td class="nw">SOIC/TSSOP-16</td><td class="qty">2</td><td class="note">背面</td></tr>
+      <tr><td class="k">差分端接</td><td class="nw">100 Ω / 2×49.9 Ω ±1 %</td><td class="nw">0402</td><td class="qty">48+</td><td class="note">背面，紧贴 2260 的 G1/G2 D1/D2 E1/E2 F1/F2</td></tr>
+      <tr><td class="k">时钟共模逃生位</td><td class="nw">49.9 Ω / 0 Ω / AC 耦合位 / VBIAS</td><td class="nw">0402</td><td class="qty">~60</td><td class="note">背面，基线全贴 0 Ω 直通</td></tr>
+      <tr><td class="k">ACK_O 上拉</td><td class="nw">10 kΩ → VDDD</td><td class="nw">0402</td><td class="qty">12</td><td class="note">背面</td></tr>
+      <tr><td class="k">ACK_I 上拉</td><td class="nw">100 kΩ → VDDD</td><td class="nw">0402</td><td class="qty">12</td><td class="note">背面，紧靠每颗 N12</td></tr>
+      <tr><td class="k">ACK 输出串阻</td><td class="nw">100~330 Ω</td><td class="nw">0402</td><td class="qty">2</td><td class="note">背面，靠近 mux 输出</td></tr>
+      <tr><td class="k">PANEL_RSTN 下拉</td><td class="nw">10 kΩ</td><td class="nw">0402</td><td class="qty">1</td><td class="note">背面</td></tr>
+      <tr><td class="k">缓冲/mux 去耦</td><td class="nw">100 nF + 10 µF</td><td class="nw">0402 / 0805</td><td class="qty">~6</td><td class="note">背面</td></tr>
+    </tbody>
+    <caption>合计 <b>3 颗有源 + 约 190 只无源</b>。全部在背面，且都是 0402 低矮件——两块灯板背靠背时背面只需容纳 2 × 芯片高度 + 贴合层。<br>⚠ 询价单 B06 的端接数量是按「时钟走级联」算的 72 只/板，要改成 <b>48 只（验证板）/ 96 只（目标板）</b>；B07 mux 数量 <b>验证板 2 颗 / 目标板 3 颗</b>，且描述要从模拟开关改成数字选择器。</caption>
+  </table>
+  </div>
+</section>
+
+<!-- ===== §7 元件面 ===== -->
+<section>
+  <h2><span class="sec">§7</span> 元件面约束：两块灯板背靠背</h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th>件</th><th>放哪一面</th><th>理由</th></tr></thead>
+    <tbody>
+      <tr><td class="k">转接板 + ACA420 核心板</td><td class="nw"><b>正面（LED 面）</b>，延长区</td><td class="note">核心板 35.3 mm 深、连接器叠高，背面放不下；两块板背靠背时它们各自朝外，互不干涉</td></tr>
+      <tr><td class="k">邮票孔 168 焊盘</td><td class="nw"><b>正面</b>，延长区，<b>四边环形</b></td><td class="note">转接板焊在正面，焊盘必须同面。<span class="yes">焊盘围成一圈后圈内区域仍可用</span>（走线或放件），不再是死区</td></tr>
+      <tr><td class="k">ICND2260 × 12</td><td class="nw"><b>背面</b>，位置不变</td><td class="note">BGA225 低矮</td></tr>
+      <tr><td class="k">端接 · I_SYNC 缓冲 · ACK mux · 逃生位</td><td class="nw"><b>背面</b>，紧贴 2260</td><td class="note">0402 低矮；<b>端接必须靠近接收端，不能挪到正面</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="callout risk">
+    <p><b>🔴 由此产生的必办事项：168 根信号要从背面过孔换层到正面。</b>差分対在过孔处切换参考平面、回流路径会断——这是 340 Mbps 上会真实劣化的一条。</p>
+    <p>好消息是<b>邮票孔的地密度正好救了它</b>：焊盘排是「每対夹一根地」，那 60 个地焊盘的过孔天然就是伴地过孔，每対差分过孔两侧各有一个地过孔把回流缝合过去。<b>⇒ 这 60 个地不能为了缩短焊盘排而删掉。</b></p>
+  </div>
+</section>
+
+<!-- ===== §8 待决 ===== -->
+<section>
+  <h2><span class="sec">§8</span> 画板之前要关掉的</h2>
+  <ol class="act">
+    <li><span class="warn">邮票孔四边分配表。</span><span class="yes">板宽问题已因改四边而解除</span>，现在要定的是「哪些信号放哪一边」——差分対同边相邻不跨角，按方向分配。<b>这一条决定外形与布线，其余都等它</b></li>
+    <li><span class="no">🔴 换层过孔与伴地缝合重核。</span>四圈过孔的缝合要逐边核过，原方案算的是单排一列</li>
+    <li><b>L_CKOP/L_CKON 留不留位。</b>建议留位 DNP（§3）。删干净了，将来集创北方答复若能翻案，要重做灯板</li>
+    <li><b>mux 型号定下来。</b>硬指标：8 选 1 · <b>VCC 2.8 V 可工作</b> · 数字选择器优先。这条不卡画板，但卡 BOM 定稿</li>
+    <li><b>分裂端接的只数。</b>冻结版「48 只端接」与「12 対分裂端接 2×49.9 Ω」两处写法不一致，原理图阶段要统一</li>
+    <li><b>发给集创北方的问询</b>（并进表 13）：① 12 颗 ACK_I 全不接时每颗能否正常回包　② ACK_I 有无片内上下拉、VIH/VIL 门限　③ 表 13 原有的 #2/#5/#11/#12</li>
+  </ol>
+  <div class="callout acc">
+    <p><b>⚠ 一处要跟着改的文档错误：</b>灯板改板冻结版<b>表 6</b> 里「I_SYNC 输入电平 VIH ≈ 0.7 × VDDD = 1.96 V」标在<b>「手册值 V1.7」</b>栏——手册里没有这个数，P7 全表没有 VIH/VIL，那是按 CMOS 惯例估的。<b>应改标为估算值。</b>结论大概率仍成立（74LVC244 @2.8 V 的 VOH ≈ 2.7 V，对 1.96 V 有 0.7 V 余量），但判据里不能有假的手册引用。</p>
+  </div>
+</section>
+
+<footer>
+  <p>POV-3D · 灯板改动清单 v1 · 2026-09-10。本文只覆盖<b>灯板本体</b>；转接板、ACA420 核心板与 FPC 见配套的《转接板接口与拓扑》（2026-09-10）。168 焊盘的完整脚位表见《灯板改板与邮票孔 FPGA 接口定义》（2026-09-09 冻结版）表 7。</p>
+  <p>依据：<span class="mono">灯板改板_邮票孔FPGA接口_2026-09-09.html</span> §1 责任划分 / 表 1 / 表 2 / 表 5 / 表 6 · ICND2260 datasheet V1.7 与编程指导 V2.8 · 安路 DS300 与 TN309 · 参考板网表由 <span class="mono">zynq_pov/icnd2260/tools/schdoc_netlist.py</span> 实读 · 记忆库 <span class="mono">reference_icnd2260_ack_wiring_and_levels</span> / <span class="mono">project_icnd2260_ack_never_received</span>。</p>
+  <p>⚠ 标 <span class="tag new">09-10 新增</span> 的三条（ACK_I 上拉、ACK 串阻、mux 改数字型）与 09-09 冻结版<b>不同</b>，是本轮查证后的更新；标 🔴 的是待决或有风险项。</p>
+</footer>
+
+</div>

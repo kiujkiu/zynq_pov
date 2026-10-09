@@ -427,8 +427,41 @@ VCCIO 3.3V + 5R  ⇒  481 mV   ← E104 的实际情况, 幅值大 1.25× (= 481
   </div>
 
   <div class="note danger">
-    <span class="hd">第一通道是 D0 = B 対，不是 R</span>
+    <span class="hd">第一通道是 D0，不是 R</span>
     手册传输模式表：TTL 走 <code>SDI_R1</code>，<b>mini-LVDS 一律走 D0IP/N</b>。而 D0 同时兼发配置包与 VHEAD——接错这一対，屏不会亮而且没有任何提示。这条踩过。
+    <br><b>⚠ 原标题写的是「D0 = B 対」，「= B」已删</b>，理由见下一条。
+  </div>
+
+  <div class="note danger">
+    <span class="hd">🔴🔴 2026-09-14 上板订正：上面那张接线表是<u>最初方案</u>，与实际焊好的板子有三处不同</span>
+    <b>表里的行没有改动</b>（它记录的是最初方案，工程 README 的正文引用了它）；三处差异列在这里，
+    <b>以本框为准</b>。出处：<code>dr1v90/eg4_2260_e104/README.md</code> §4「适配实际接线」/ §6.25 / §6.40，
+    以及 <code>adc/e104_2260.adc</code>（球位以 <code>.adc</code> 为唯一真值）。
+    <div class="list">
+      <div class="row"><span class="k">① 信号名里的颜色<br>（<b>这条会传给桥片板</b>）</span><span class="txt">
+        <b>一律只叫 <code>D0 / D1 / D2</code>，不要再叫「蓝/绿/红」。</b>
+        实测（<code>slice0</code> 只给 <code>D0</code> 送数据 ⇒ 屏上亮起来的是<b>红</b>）：
+        <b><code>D0</code> 在本样板上显示为红</b>，<code>D1</code> 绿，<code>D2</code> 蓝 ——
+        与手册名 <code>SDI_B1/G1/R1</code> 的字面颜色<b>相反</b>。
+        屏侧 <code>SDI_B1</code> 是否本来就驱红、还是<b>本样板的 LED 焊反了</b>，<b>FPGA 这侧分辨不了</b>。
+        <br>🔴 <b>名字里带颜色而颜色是错的，比不带颜色糟得多</b>：前者会主动误导，而且会被下一块板照抄。
+        <br>📌 <b>桥片板（24 条链）定稿前请确认一次</b>：是这块屏的 <code>SDI_B1</code> 本来就驱红 LED，还是这块样板焊反。
+        对固件没有影响（换三行字序即可），<b>但对丝印/接线单有影响</b>。
+      </span></div>
+      <div class="row"><span class="k">② <code>D0</code> 与 <code>D2</code> 的<br>球位对调了</span><span class="txt">
+        用户实际焊的 5R 小板把 <b><code>D0</code> 接到了 <code>BE19</code>(B14/A14)</b>，<code>D2</code> 接到 <code>BE16</code>(B12/A12)
+        —— 与上表<b>相反</b>。<code>.adc</code> 里已按实物分配（<code>b_p→B14</code> / <code>r_p→B12</code>）。
+        <br>🔴 <b>这个球位是对的，不要"改回"上表</b>：配置包与 VHEAD <b>只从 <code>D0</code> 发</b>，而屏配置成功、ACK 回得来
+        ⇒ 证明 <code>D0</code> 确实落在屏的第一通道上。改回去会让整块屏<b>彻底不亮</b>。
+      </span></div>
+      <div class="row"><span class="k">③ 四対全部 P/N 交叉<br>· <code>ACK_O</code> 换脚</span><span class="txt">
+        四対的 P/N 相对上表<b>全部交叉</b>（FPGA 的 P 接屏的 N）⇒ 补偿在 RTL：
+        数据取反 <code>DAT_PN_SWAP=1</code> + 时钟 ODDR 的 <code>d0/d1</code> 对调 <code>CK_PN_SWAP=1</code>。
+        <br><code>ACK_O</code> 已从 <code>B16</code> 换到 <b><code>D16</code></b>（2026-09-09）。
+        <br>⚠ 将来若改回最初接线表，<b>球位 + 两个 SWAP 参数必须一起改回</b>；只改一半的症状是「屏不亮」，
+        而且<b>与相位没扫对分不出来</b>。
+      </span></div>
+    </div>
   </div>
 
   <h3>5R 电阻网络 · 每対 5 只</h3>

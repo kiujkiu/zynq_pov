@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>验证板改板结论</title>
+<style>
+:root{--paper:#F1F2EE;--surface:#FBFCFA;--surface2:#E9EBE5;--ink:#15191B;--muted:#69736F;--rule:#D2D6CE;--rule2:#BAC1B5;--accent:#A8531C;--accent-soft:#F5E6DA;--risk:#A32418;--risk-soft:#F7E2DE;--warn:#8A6A12;--warn-soft:#F6EDD6;--ok:#1F6F5C;--ok-soft:#E0EEE8;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#121513;--surface:#191D1B;--surface2:#222724;--ink:#E8ECE7;--muted:#8D958F;--rule:#2E3532;--rule2:#414945;--accent:#E39154;--accent-soft:#3A2618;--risk:#F0897C;--risk-soft:#361A17;--warn:#E0BE6A;--warn-soft:#332A14;--ok:#5FC0A3;--ok-soft:#16302A;}}
+:root[data-theme="dark"]{--paper:#121513;--surface:#191D1B;--surface2:#222724;--ink:#E8ECE7;--muted:#8D958F;--rule:#2E3532;--rule2:#414945;--accent:#E39154;--accent-soft:#3A2618;--risk:#F0897C;--risk-soft:#361A17;--warn:#E0BE6A;--warn-soft:#332A14;--ok:#5FC0A3;--ok-soft:#16302A;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;font-size:15px;line-height:1.7}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.93em}
+.wrap{max-width:1000px;margin:0 auto;padding:0 16px 80px}
+header{border-bottom:2px solid var(--ink);margin-bottom:8px;padding:38px 0 14px}
+.eyebrow{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.16em;color:var(--accent);margin:0 0 8px}
+h1{font-size:27px;margin:0 0 10px}
+.sub{margin:0;color:var(--muted);font-size:13.5px}
+h2{font-size:19px;margin:34px 0 4px;padding-bottom:7px;border-bottom:1px solid var(--rule2);display:flex;gap:10px;align-items:baseline}
+h2 .n{font-family:ui-monospace,monospace;font-size:12px;color:var(--accent)}
+h2 .cnt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
+ul.items{list-style:none;margin:10px 0;padding:0}
+li.item{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:10px 13px;margin:7px 0}
+.badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;margin-top:3px}
+.sev-r{background:var(--risk-soft);color:var(--risk)}
+.sev-o{background:var(--warn-soft);color:var(--warn)}
+.sev-g{background:var(--ok-soft);color:var(--ok)}
+.sev-x{background:var(--ok-soft);color:var(--ok)}
+ul.plain{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:12px 12px 12px 32px;margin:10px 0}
+ul.plain li{margin:5px 0}
+.note{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;padding:11px 14px;margin:16px 0}
+.hot{background:var(--risk-soft);border-left:3px solid var(--risk);border-radius:0 4px 4px 0;padding:11px 14px;margin:16px 0}
+footer{margin-top:44px;padding-top:14px;border-top:1px solid var(--rule);color:var(--muted);font-size:12.5px}
+</style></head><body><div class="wrap">
+<header>
+<p class="eyebrow">POV-3D · 验证板 · 2026-09-18 晚版复核</p>
+<h1>改板结论</h1>
+<p class="sub">只写结论。对象：灯板原理图 <span class="mono">SCH_…_2026-09-18</span>（18:48）、灯板 PCB <span class="mono">ICN2260_LED_V01</span>（03:32）、转接板 <span class="mono">高云转接板_2026-09-18</span>（18:56）。依据与实测见配套 md。</p>
+</header>
+
+<div class="hot"><b>上电之前必须先改两处（转接板）：</b>① 2.8 V 实际输出是 <b>3.73 V</b>（反馈电阻没跟着换芯片改）；② TPS54560 <b>缺续流二极管</b>，电路不成立。这两条不改，这版不能通电。</div>
+
+<div class="note"><b>已经好了的：</b>两块板的连接器脚位<b>完全对上了</b>（124 个信号脚 0 处不符），FPGA 球位一个没动。<b>顺序提醒：</b>灯板的连接器封装重画和差分对改同排还会再动一次脚位——那两条要么现在一起做，要么明确放弃。</div>
+
+<h2><span class="n">§1</span> 灯板<span class="cnt">14 条</span></h2>
+<ul class="items"><li class="item"><span class="badge sev-r">必改</span><div><b>LVDS_EN 上拉补回阻值</b>：12 只 RA1~RL1 在 09-18 版图上没有值（旧版是 4.7 kΩ），BOM 会漏料。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>PCB 跟进 SYNC1 改动</b>：原理图已把 SYNC1 从 CN4.90 挪到 CN3.63，PCB（03:32 那版）还是旧的，要改这一根。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>连接器封装重画</b>：按松下 P5K Socket 推荐图——50 触点/排 @0.5 mm、两排中心距 5.00 mm、焊盘 0.25 × 1.80 mm，端部固定脚单独画成不编号焊盘。现封装每排只有 48 个触点、中心距 4.445 mm，两端各一个触点偏出半个节距。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>差分对改到同排相邻触点</b>：一对 P/N 放脚号 n 与 n+2（同一排），地放在两侧。现在每对 P/N 跨两排、相距 4.4 mm，同排相邻的反而是不同对且中间无地。48 对全部重排（两块板同步）。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>要阻抗叠层，按 100 Ω 重布 48 对</b>：现走线 2.5 mil 线宽 / 5 mil 中心距，估算差分 ≈ 130 Ω。向板厂要阻抗叠层表反算；同时在工程里定义差分对、把差分规则改成实际值。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>灯板自设电源入口</b>：大电流端子 + 输入端大容量低 ESR 电容，板对板只走信号。现在 10.7 A 全过 AXK（0.5 A/针、整只 ≤10 A）。EN_3V8 / EN_2V8 一并恢复。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>ACK_I 就近上拉</b>：每颗 N12 加 100 kΩ 上拉到 VDDD；连接器上空出的 12 针改接地。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>时钟共模逃生位</b>：12 对时钟留分裂端接 + 中心抽头测试点 + 交流耦合位，紧贴 2260，默认贴 0 Ω；焊盘要能兼做 100 Ω 端接。</div></li><li class="item"><span class="badge sev-o">待定</span><div><b>VDDD 改 2.8 V</b>：3.8 V 经小 LDO 单独降（约 180 mA），不要挂到 2.8 V 的 LED 电源上。连带 LVDS_EN 上拉改接 VDDD、转接板灯板侧转换电源跟着改。</div></li><li class="item"><span class="badge sev-o">待定</span><div><b>补上下拉</b>：SCL/SDA 各 4.7 kΩ 上拉 VDDD（24 只）、RSTN 10 kΩ 下拉、ACK_O 10 kΩ 上拉、DCLK 留 10 kΩ 下拉位。</div></li><li class="item"><span class="badge sev-o">待定</span><div><b>参考层 / 铺铜 / DRC / 基准点 / 丝印</b>：LVDS 下方约 13 % 长度没有完整地参考；Mid4 与 Bottom 铺铜没灌；49 条间距冲突（孔到孔规则只写 0.03 mm）；底面缺基准点；顶层 8 块 9×9 mm 无网络铜皮；丝印仍是参考板的。</div></li><li class="item"><span class="badge sev-o">待定</span><div><b>HDI 工艺送板厂确认</b>：无通孔，0.07 mm 孔 6.1 k、0.1 mm 孔 45.9 k，Top→Mid2 与 Mid3→Bottom 是跨层盲孔，54 % 到底层的孔落在 LED 焊盘内。</div></li><li class="item"><span class="badge sev-o">待定</span><div><b>位号重编后同步文档</b>：U1–U12 → U19–U30、CN1/CN2 → CN3/CN4、RA3–RL3 → RA1–RL1、C1–C124 → C125 起；标题栏整块被删了，要补回（型号/版本/日期/绘制）。</div></li><li class="item"><span class="badge sev-x">撤销</span><div><b>差分端接不加</b>：2260 的 RBD/RDC 应为片内，厂家样板与我们的调试板都没有外部端接。</div></li></ul>
+
+<h2><span class="n">§2</span> 转接板<span class="cnt">16 条</span></h2>
+<ul class="items"><li class="item"><span class="badge sev-r">必改</span><div><b>2.8 V 输出实际是 3.73 V —— 改反馈电阻</b>：U9 换成 TPS54560（Vref <b>0.8 V</b>），但反馈电阻照抄了旧的 STI3411A（Vref 0.6 V）那组：R161 110 kΩ / R162 30 kΩ ⇒ 0.8 × (1+110/30) = <b>3.73 V</b>。改 R161 → <b>75 kΩ</b>（或 R162 → 44.2 kΩ）。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>TPS54560 缺续流二极管</b>：它是非同步 buck，TI 手册 §8.2.2.5 明文要求 SW 与 GND 之间外接续流二极管。现在全图没有任何二极管位号，SW 上只有 BOOT 电容和电感 —— 电路不成立。SW→GND 补 ≥5 A / 40 V 肖特基，紧贴 SW 与 PGND。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>加一路 3.3 V 喂 VCC3P3</b>：全板只有 2.5 V / 3.8 V / 2.8 V 三个稳压器，VCC3P3 仍没有来源。现在 VCCIO45 也改成由它供电，所以核心板辅助电源、JTAG bank10、片内端接、bank4/5 会一起没电。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>链 5 的 D0 和 4 根边带挪出 bank4/5</b>：仍在 B4_B50_P/N、B4_B29_N、B4_B52_N、B4_B39_P/N，只加了一个「sw LVDS25 3.3V」注释。VCCIO45 改 3.3 V 后方向反过来了：现在是 3.3 V 打进 DR1V90 的 2.5 V bank。边带回 B7_T5_N / B6_L7_N / B3_B71，链 5 的 D0 回 2.5 V 组。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>UL_CLK 换回 B4_B33</b>：仍落在 B5_B6（无 GCLK/PLL），B4_B33 被 UL_D[17] 占着。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>FPC 尾部 64~72 按契约重排</b>：逐脚与上一版相同，UART 与 JTAG 仍有四根被短到地。座子型号未变，还要核 XW0525512-702R-001 是 70 还是 72 导体。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>补 JTAG 电平转换 + 本地下载座</b>：仍是 CN3.94/96/98/100 直连 FPC，无转换器；CN5 仍是 5 V 电源座，全板无下载口。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>RSTN / SYNC 换单向带 OE 的推挽器件</b>：新加的 R171 10 kΩ 下拉解决不了——TXS0108E 两侧有内部 4 kΩ 上拉，RSTN 高电平只剩 2.71 V，对 2260 的 VIH（估 2.66 V）余量 50 mV。换 74LVC2T45 / 74LVC244 @VDDD。</div></li><li class="item"><span class="badge sev-r">必改</span><div><b>核心板座电源脚补去耦</b>：CN3/CN4 整个区域仍然一只电容都没有。每条 bank 电源脚旁加 10~22 µF + 2~4 只 100 nF；VCC3P3 加 22 µF + 多只 100 nF。</div></li><li class="item"><span class="badge sev-o">待定</span><div><b>三颗 TXS 的 OE 改贴下拉位</b>：U3/U4 的下拉位仍不贴，新加的 U8 连下拉位都没留。TI 要求 OE 经下拉接地、等电源稳定后再使能。</div></li><li class="item"><span class="badge sev-o">待定</span><div><b>2.8 V 输出电容与电感</b>：44 µF 带 5 A 偏小；L4 的封装标注在新版消失了（旧版 SWPA4018S，4×4 mm，2.2 µH 带 5 A 大概率饱和），确认实物型号与饱和电流。</div></li><li class="item"><span class="badge sev-o">待定</span><div><b>其它未改项</b>：U3 的 VCCA 仍是 1.5 V（贴器件下限）；ACK_I 仍 4.7 kΩ 远端上拉（定案 100 kΩ 紧靠灯板 N12）；ACK_O 仍无 330 Ω 串阻；上行 40 根仍各串一只 0402 0 Ω；无电源使能；5 V 输入无保险丝/防反接/TVS；B5_B8、B5_B12（flash SO / SSPI_WPN）仍被当上行 lane；SYNC 三路仍并成一根；U3/U4/U8 的 VCCB 仍是 3.8 V；标题栏逐字未改（拼写、版本、图幅 A4 vs 实际 A2、绘制审阅空白）。</div></li><li class="item"><span class="badge sev-g">已改</span><div><b>连接器脚位已与灯板对齐</b>：124 个信号脚全对、0 处不符，电源地位置上也没有信号窜入。链 1/2 与链 6/11 的换座做对了。<b>FPGA 球位一个没动</b>，09-16 的 .cst 在球位层面仍有效。</div></li><li class="item"><span class="badge sev-g">已改</span><div><b>VCCIO45 改由 VCC3P3 供</b>：`VCC3P3 → L3 → VCCIO45`（旧版是 PWR2V5）。方向对了，但 VCC3P3 本身还没有源。</div></li><li class="item"><span class="badge sev-g">已改</span><div><b>U4 拆开了</b>：新增 U8 = TXS0102（VCCA = VCCIO45 3.3 V）接管 bank5 的 11/12ACK_O，U4 的 VCCA 改成 PWR2V5，A 侧只剩 2.5 V 组，自洽了。</div></li><li class="item"><span class="badge sev-g">已改</span><div><b>磁珠下游补了 100 nF</b>：L2/L3 下游各加 C33/C34 100 nF（但还缺 10~22 µF 体电容，见上）。</div></li></ul>
+
+<h2><span class="n">§3</span> 待确认（详见《问询单_集创北方_ICND2260_2026-09-20.md》）<span class="cnt">7 条</span></h2>
+<ul class="plain"><li><b>60 扫配对模式能否用独立 LVDS 链路</b>（可能是板级阻塞项）：手册 §2 的行列共用是写在<b>级联</b>模式下的，芯片身份的唯一来源是级联序号。若答复是「必须级联」，灯板要把配对的两颗用 SDO→SDI 连起来（现在 SDO 全部悬空）= 改版。</li><li><b>端接验证</b>：断电量任一 2260 的 D1–D2 / E1–E2 / F1–F2 / G1–G2 直流电阻，80~120 Ω 即确认片内自带；并向集创北方确认 RBD/RDC 是片内还是外挂。</li><li><b>连接器触点编号</b>：向松下/代理确认 AXK500137YG 是「奇偶两排」还是「1–50 / 51–100」。</li><li><b>HDI 工艺与板价</b>：把过孔表发板厂确认能不能做、多少钱、多久。</li><li><b>FPC 座导体数</b>：XW0525512-702R-001 是 70 还是 72 导体。</li><li><b>GW5A 的 3.3 V bank 能否出 LVDS25</b>：决定链 5 的 D0 能不能留在 bank4（我们的判断是不能，需查 DS1103 的 I/O standard vs VCCIO 表）。</li><li><b>ACK 编号口径</b>：灯板 ACK 按位号、数据按链号，U23=链6、U24=链7、U25=链8、U26=链4、U27=链5 对不上。改 RTL 索引前先定。</li><li><b>灯板大电流走不走板对板连接器</b>：决定灯板要不要加电源入口。</li></ul>
+
+<footer>配套详版：<span class="mono">灯板原理图审查_SCH-0.9375-2260-60S-LVDS_2026-09-17.md</span> · <span class="mono">灯板PCB审查_ICN2260_LED_V01_2026-09-18.md</span> · <span class="mono">转接板原理图审查_ACG525-LED-V01_2026-09-18.md</span> · <span class="mono">复核记录_2026-09-18晚版.md</span>。09-18 早先那份「转接板脚位改表」已作废——对插已修好。</footer>
+</div></body></html>

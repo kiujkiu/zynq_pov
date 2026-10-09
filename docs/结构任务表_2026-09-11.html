@@ -1,0 +1,252 @@
+<title>POV-3D 结构任务表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{--paper:#F1F2EE;--surface:#FBFCFA;--surface-2:#E9EBE5;--ink:#15191B;--ink-2:#3A4245;--muted:#69736F;
+ --rule:#D2D6CE;--rule-2:#BAC1B5;--accent:#A8531C;--accent-soft:#F5E6DA;--ok:#1F6F5C;--ok-soft:#E0EEE8;
+ --risk:#A32418;--risk-soft:#F7E2DE;--crit:#A32418;--par:#2F7A45;--late:#69736F;--fill:#FFF0C2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --paper:#121513;--surface:#191D1B;--surface-2:#222724;--ink:#E8ECE7;--ink-2:#C2C9C3;--muted:#8D958F;
+ --rule:#2E3532;--rule-2:#414945;--accent:#E39154;--accent-soft:#3A2618;--ok:#5FC0A3;--ok-soft:#16302A;
+ --risk:#F0897C;--risk-soft:#361A17;--crit:#F0897C;--par:#5FBE7C;--late:#8D958F;--fill:#3A2E12}}
+:root[data-theme="dark"]{--paper:#121513;--surface:#191D1B;--surface-2:#222724;--ink:#E8ECE7;--ink-2:#C2C9C3;
+ --muted:#8D958F;--rule:#2E3532;--rule-2:#414945;--accent:#E39154;--accent-soft:#3A2618;--ok:#5FC0A3;
+ --ok-soft:#16302A;--risk:#F0897C;--risk-soft:#361A17;--crit:#F0897C;--par:#5FBE7C;--late:#8D958F;--fill:#3A2E12}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;font-size:14.5px;line-height:1.6}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.93em}
+.wrap{max-width:1400px;margin:0 auto;padding:0 26px 80px}
+header.mast{border-bottom:2px solid var(--ink);margin-bottom:26px;padding:40px 0 16px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 9px}
+h1{font-size:31px;line-height:1.23;margin:0 0 8px;font-weight:700;letter-spacing:-.012em;text-wrap:balance}
+.sub{margin:0 0 20px;color:var(--muted);font-size:13.5px;max-width:80ch}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:1px;border:1px solid var(--rule);border-radius:3px;overflow:hidden;background:var(--rule)}
+.meta div{background:var(--surface);padding:10px 13px;display:flex;flex-direction:column;gap:1px}
+.meta .k{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.meta .v{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums}
+section{margin:0 0 40px}
+h2{font-size:19px;font-weight:600;margin:0 0 4px;padding-bottom:7px;border-bottom:1px solid var(--rule-2);display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+h2 .sec{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--accent);font-weight:500}
+h3{font-size:14px;font-weight:600;margin:26px 0 6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h3 .lid{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:700;color:#fff;background:var(--late);
+  border-radius:3px;padding:0 7px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+h3.crit .lid{background:var(--crit)} h3.par .lid{background:var(--par)}
+.lead{margin:9px 0 14px;color:var(--muted);font-size:13px;max-width:84ch}
+p{margin:8px 0;max-width:84ch}
+.tw{overflow-x:auto;margin:10px 0 4px;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--rule-2);background:var(--surface-2);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.id{font-family:"IBM Plex Mono",monospace;font-weight:600;white-space:nowrap;width:44px;color:var(--accent)}
+td.tk{font-weight:600;min-width:150px}
+td.dl{min-width:130px}
+td.ac{min-width:200px;color:var(--ink-2)}
+td.pre{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--muted);min-width:96px}
+td.rm{color:var(--ink-2);font-size:12px;min-width:240px}
+td.num{font-variant-numeric:tabular-nums}
+.callout{border:1px solid var(--rule);border-left:3px solid var(--rule-2);border-radius:3px;padding:10px 14px;margin:13px 0;font-size:13px;color:var(--ink-2);background:var(--surface)}
+.callout.risk{border-left-color:var(--risk);background:var(--risk-soft)} .callout.risk b{color:var(--risk)}
+.callout.ok{border-left-color:var(--ok);background:var(--ok-soft)} .callout.ok b{color:var(--ok)}
+.callout.acc{border-left-color:var(--accent);background:var(--accent-soft)} .callout.acc b{color:var(--accent)}
+.callout p{max-width:none;margin:5px 0}.callout p:first-child{margin-top:0}.callout p:last-child{margin-bottom:0}
+footer{border-top:1px solid var(--rule-2);margin-top:44px;padding-top:14px;color:var(--muted);font-size:12px}
+footer p{max-width:84ch}
+::selection{background:var(--accent-soft);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media print{body{background:#fff;color:#000;font-size:8.5pt}.tw{overflow:visible}tr{break-inside:avoid}h2,h3{break-after:avoid}}
+@media (max-width:520px){.wrap{padding:0 16px 60px}h1{font-size:24px}}
+
+.sgw{overflow-x:auto;margin:12px 0 6px;border:1px solid var(--rule);border-radius:3px;background:var(--paper)}
+.sg{display:block;width:100%;min-width:880px;height:auto;font-family:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.sg .lane{fill:var(--muted);font-size:11px;font-weight:600}
+.sg .n rect{fill:var(--surface);stroke:var(--rule-2);stroke-width:1.5}
+.sg .n.crit rect{stroke:var(--crit)} .sg .n.par rect{stroke:var(--par)} .sg .n.gate rect{stroke:var(--crit);stroke-width:3.2}
+.sg .n.ext rect{fill:var(--surface-2);stroke:var(--rule-2);stroke-dasharray:4 3}
+.sg .n .id{font:700 13px "IBM Plex Mono",ui-monospace,Consolas,monospace;fill:var(--ink)}
+.sg .n.ext .id{fill:var(--muted);font-size:12px}
+.sg .n .nm{font-size:12px;fill:var(--ink-2)}
+.sg .n.ext .nm{fill:var(--muted)}
+.sg .e{fill:none;stroke:var(--ink-2);stroke-width:1.4}
+.sg .d{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:6 4}
+.sg .j{fill:none;stroke:var(--ok);stroke-width:4}
+.sg .ahp{fill:var(--ink-2)} .sg .ahd{fill:var(--accent)}
+.sg .lb{font-size:11px;fill:var(--ink-2);paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round}
+.sg .lb.dl{fill:var(--accent)} .sg .lb.jl{fill:var(--ok);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--ink-2);margin:6px 0 4px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:26px;height:0;border-top:1.6px solid var(--ink-2)}
+.legend i.dash{border-top:1.6px dashed var(--accent)}
+.legend i.join{border-top:4px solid var(--ok)}
+.legend b.box{display:inline-block;width:16px;height:11px;border:1.6px solid var(--rule-2);border-radius:2px;background:var(--surface)}
+.legend b.box.crit{border-color:var(--crit)} .legend b.box.gate{border:3px solid var(--crit)} .legend b.box.par{border-color:var(--par)}
+.legend b.box.ext{border-style:dashed;background:var(--surface-2)}
+</style>
+<div class="wrap">
+<header class="mast">
+  <p class="eyebrow">POV-3D · 结构任务表 · 2026-09-11 (rev.2 草案，加光学)</p>
+  <h1>结构任务表：两个版本，结构和光学逐层拆到交付物</h1>
+  <p class="sub">结构任务也是<b>两个版本</b>：先把<b>现役转子</b>做到达标，再做<b>目标整机结构</b>。从现役转子起步，一是让你在现成的结构上尽快熟悉环境，二是让团队马上有一台能稳定跑到 900 RPM、在亮环境下也看得清的样机。光学（反光、可视角、盲区、外罩）也归这张表。<br>每个版本拆成几个小目标，每个小目标都有明确的交付物和验收判据，并标出<b>它等什么（前置）</b>和<b>它支撑谁（交付给谁、交付什么）</b>。子任务怎么拆、方案怎么选、时间怎么排，由你自己定。</p>
+  <div class="meta">
+    <div><span class="k">版本</span><span class="v">2 个</span></div>
+    <div><span class="k">版本一小目标</span><span class="v">3 个</span></div>
+    <div><span class="k">版本二小目标</span><span class="v">2 条线 · 6 个</span></div>
+    <div><span class="k">目标转速</span><span class="v">900 RPM</span></div>
+    <div><span class="k">现状限速</span><span class="v">≤ 850 RPM</span></div>
+    <div><span class="k">转子供电</span><span class="v">无线 48 W</span></div>
+  </div>
+</header>
+
+<section><h2><span class="sec">§0</span> 全貌</h2>
+<div class="tw"><table><thead><tr><th>对象</th><th>版本一：现役转子</th><th>版本二：目标整机结构</th><th>怎么过渡</th></tr></thead><tbody>
+<tr><td class="tk">转子</td><td class="dl">现役 <b>macha v4</b> 转子：3D 打印件、电机 C4110、顶部 2 × 688 轴承定心，装 v3.1 偏心双面屏（模组整体偏 6.7 mm，一面贴轴）。现状限速 ≤ 850 RPM</td><td class="dl">承载 <b>T1 LED 板 × 2</b>（转子两面各一块）+ <b>T2 SOC 板</b> + 无线供电接收模块 + WiFi + 光电索引。材料、工艺、布局由你定</td><td class="rm">版本一实测的质量、模态、不平衡量，是版本二的设计输入</td></tr>
+<tr><td class="tk">光学</td><td class="dl">在现役样机上量出反光和可视角的现状，列出盲区，先做低成本改善</td><td class="dl">外罩、屏体表面要求、放置方式跟着目标结构一起定，用样件验证</td><td class="rm">现役样机就是光学样件的试验台，不用等目标转子</td></tr>
+<tr><td class="tk">与硬件的边界</td><td class="dl">现役灯板和现役主控，按现状固定</td><td class="dl"><b>机械接口契约</b>（2-2）：板框、安装孔、每块板的质量和质心上限、大件固定方式</td><td class="rm">契约冻结后，结构和硬件各自出图，互不等待</td></tr>
+</tbody></table></div>
+<div class="callout ok"><p><b>结构和硬件之间的机械接口是永久契约</b>，和硬件表里"模组间接口"是同一个思路：契约冻结后，两边各自出图。而且<b>目标转子不用等真板回来</b>：按契约里的质量和质心做假负载，先把转子单独转到 900 RPM（见 2-3）。</p></div>
+<div class="callout acc"><p><b>为什么先做现役转子：</b>900 RPM 是整机指标的前提。每面每圈 603 片，900 RPM 下是 603 × 15 = <b>9,045 片/秒</b>；850 RPM 下只有 <b>8,545</b>，差 5.5%。现在的 850 是保守限速，原因是偏心屏的配平没做完，一阶固有频率也只有估算。</p>
+<p><b>为什么光学先压反光：</b>显示器都要能在亮环境下看。我们的转子供电只有 48 W，亮度已经按内容设了上限，<b>不能靠加亮去对抗环境光</b>。对比度只能从压低反光里拿：屏体、转子上的零件、外罩反射的环境光，都会把整个显示体积的黑底抬成一层灰。</p></div>
+</section>
+
+<section><h2><span class="sec">§1</span> 支撑关系图</h2>
+<div class="sgw">
+<svg class="sg" viewBox="0 0 1000 425" role="img" aria-label="结构小目标支撑关系图：版本一 1-1 到 1-3，版本二光学线 2-4、2-5，结构线 2-1 到 2-3，整机 2-6，以及与硬件、软件的交接">
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="ahp"/></marker>
+<marker id="ahd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="ahd"/></marker>
+</defs>
+<text class="lane" x="48" y="38">版本一 现役转子</text>
+<text class="lane" x="48" y="143">版本二 · 光学线</text>
+<text class="lane" x="48" y="243">版本二 · 结构线</text>
+<text class="lane" x="48" y="353">硬件（另表）</text>
+
+<!-- 实线：前置 -->
+<path class="e" d="M172,70 L197,70" marker-end="url(#ah)"/>
+<path class="e" d="M410,95 L410,149" marker-end="url(#ah)"/>
+<path class="e" d="M472,175 L517,175" marker-end="url(#ah)"/>
+<path class="e" d="M172,275 L197,275" marker-end="url(#ah)"/>
+<path class="e" d="M322,275 L517,275" marker-end="url(#ah)"/>
+<path class="e" d="M642,175 C745,175 780,212 837,212" marker-end="url(#ah)"/>
+<path class="e" d="M642,275 C745,275 780,238 837,238" marker-end="url(#ah)"/>
+<path class="e" d="M740,359 L740,330 L870,330 L870,251" marker-end="url(#ah)"/>
+<path class="e" d="M802,385 L837,385" marker-end="url(#ah)"/>
+<text class="lb" x="418" y="126">光学基线 / 判据</text>
+<text class="lb" x="420" y="269" text-anchor="middle">板框与质量上限冻结</text>
+
+<!-- 虚线：提供输入或样机 -->
+<path class="d" d="M110,45 L110,24 L900,24 L900,44" marker-end="url(#ahd)"/>
+<path class="d" d="M260,45 L260,24"/>
+<path class="d" d="M150,95 L150,249" marker-end="url(#ahd)"/>
+<path class="d" d="M150,359 L150,301" marker-end="url(#ahd)"/>
+<path class="d" d="M305,301 L305,342 L420,342 L420,359" marker-end="url(#ahd)"/>
+<path class="d" d="M580,201 L580,249" marker-end="url(#ahd)"/>
+<text class="lb dl" x="620" y="18" text-anchor="middle">实测垂距 · 900 RPM 样机</text>
+<text class="lb dl" x="158" y="126">实测质量 / 模态</text>
+<text class="lb dl" x="158" y="335">屏体形式 / SOC 板尺寸</text>
+<text class="lb dl" x="364" y="337" text-anchor="middle">板框 / 孔位 / 质量上限</text>
+<text class="lb dl" x="588" y="230">外罩 / 表面处理定稿</text>
+
+<!-- 联合验收 -->
+<path class="j" d="M900,251 L900,359"/>
+<text class="lb jl" x="908" y="300">同一次验收</text>
+
+<!-- 节点 -->
+<g class="n crit"><rect x="48" y="45" width="124" height="50" rx="4"/><text class="id" x="110" y="66" text-anchor="middle">1-1</text><text class="nm" x="110" y="84" text-anchor="middle">现状实测与判据</text></g>
+<g class="n crit"><rect x="198" y="45" width="124" height="50" rx="4"/><text class="id" x="260" y="66" text-anchor="middle">1-2</text><text class="nm" x="260" y="84" text-anchor="middle">现役转子 900 RPM</text></g>
+<g class="n par"><rect x="348" y="45" width="124" height="50" rx="4"/><text class="id" x="410" y="66" text-anchor="middle">1-3</text><text class="nm" x="410" y="84" text-anchor="middle">光学现状实测</text></g>
+<g class="n ext"><rect x="838" y="45" width="124" height="50" rx="4"/><text class="id" x="900" y="66" text-anchor="middle">软件侧</text><text class="nm" x="900" y="84" text-anchor="middle">渲染几何 / 目标口径</text></g>
+
+<g class="n par"><rect x="348" y="150" width="124" height="50" rx="4"/><text class="id" x="410" y="171" text-anchor="middle">2-4</text><text class="nm" x="410" y="189" text-anchor="middle">光学方案定案</text></g>
+<g class="n"><rect x="518" y="150" width="124" height="50" rx="4"/><text class="id" x="580" y="171" text-anchor="middle">2-5</text><text class="nm" x="580" y="189" text-anchor="middle">光学样件验证</text></g>
+
+<g class="n par"><rect x="48" y="250" width="124" height="50" rx="4"/><text class="id" x="110" y="271" text-anchor="middle">2-1</text><text class="nm" x="110" y="289" text-anchor="middle">目标结构定案</text></g>
+<g class="n par"><rect x="198" y="250" width="124" height="50" rx="4"/><text class="id" x="260" y="271" text-anchor="middle">2-2</text><text class="nm" x="260" y="289" text-anchor="middle">机械接口契约</text></g>
+<g class="n gate"><rect x="518" y="250" width="124" height="50" rx="4"/><text class="id" x="580" y="271" text-anchor="middle">2-3 · 硬门槛</text><text class="nm" x="580" y="289" text-anchor="middle">假负载试转</text></g>
+
+<g class="n"><rect x="838" y="200" width="124" height="50" rx="4"/><text class="id" x="900" y="221" text-anchor="middle">2-6</text><text class="nm" x="900" y="239" text-anchor="middle">整机达标</text></g>
+
+<g class="n ext"><rect x="48" y="360" width="124" height="50" rx="4"/><text class="id" x="110" y="381" text-anchor="middle">硬件 2A-1 · 2B-1</text><text class="nm" x="110" y="399" text-anchor="middle">LED 板 / SOC 板定案</text></g>
+<g class="n ext"><rect x="358" y="360" width="124" height="50" rx="4"/><text class="id" x="420" y="381" text-anchor="middle">硬件 2A-2 · 2B-2</text><text class="nm" x="420" y="399" text-anchor="middle">两块目标板开画</text></g>
+<g class="n ext"><rect x="678" y="360" width="124" height="50" rx="4"/><text class="id" x="740" y="381" text-anchor="middle">硬件 2C-1</text><text class="nm" x="740" y="399" text-anchor="middle">双面联调</text></g>
+<g class="n ext"><rect x="838" y="360" width="124" height="50" rx="4"/><text class="id" x="900" y="381" text-anchor="middle">硬件 2C-2</text><text class="nm" x="900" y="399" text-anchor="middle">上转子达标</text></g>
+</svg>
+</div>
+<div class="legend">
+<span><i></i>前置：做完才能开始</span>
+<span><i class="dash"></i>支撑：提供输入或样机</span>
+<span><i class="join"></i>与硬件同一次验收</span>
+<span><b class="box crit"></b>版本一关键路径</span>
+<span><b class="box gate"></b>硬门槛</span>
+<span><b class="box par"></b>现在就能开始，版本一期间并行</span>
+<span><b class="box ext"></b>别的表里的节点</span>
+</div>
+<p class="lead">图里只画主要关系，完整的前置和支撑见 §2、§3 表格的最后两列。另外三条没画进图：1-3 的屏体光学要求交给硬件 2A-1（→ 屏体路线比较）；2-5 定稿的屏体表面工艺进 T1 设计（→ 硬件 2A-2）；2-1 和 2-4 要一起定外罩尺寸和顶部支撑形式。</p>
+<div class="callout acc"><p><b>结构主线：1-1 → 1-2；2-1 → 2-2 → 2-3 → 2-6。光学主线：1-3 → 2-4 → 2-5 → 2-6。</b><br>2-1、2-2、2-4 <b>在版本一期间并行做</b>：硬件的两块目标板要等 2-2 的板框和孔位才能开画，所以 2-2 必须在硬件 1-3 过门之前冻结，不然结构会拖住硬件。<br>节点之间怎么排、留多少缓冲由你定；<b>判据不能改</b>。2-3 是结构这边唯一一个"不过就不能往下走"的节点：假负载转不到 900 RPM，就不能装真板。</p></div>
+</section>
+
+<section><h2><span class="sec">§2</span> 版本一：现役转子</h2>
+<p class="lead"><b>目标：</b>让现役样机稳定跑到 900 RPM，把反光和可视角的现状量出来，同时拿到目标结构需要的实测数据。从现成的 macha v4 结构起步，边做边熟悉环境。<b>直接支撑这个目标的是 1-2（样机达标）和 1-3（光学基线），1-1 是 1-2 的前提，也给版本二提供输入。</b></p>
+<div class="tw"><table><thead><tr><th>编号</th><th>小目标</th><th>交付物</th><th>验收判据</th><th>前置</th><th>支撑谁 · 提供什么</th></tr></thead><tbody>
+<tr><td class="id">1-1</td><td class="tk">现状实测与转子判据</td><td class="dl">① 现役转子实测报告：各件称重和质心、静 / 动不平衡量、300 → 900 RPM 的振动-转速曲线、实测一阶固有频率、屏面到转轴的实测垂距<br>② <b>转子判据 v1</b>：振动限值、连续运转时长、测量方法（仪器、测点、转速档）</td><td class="ac">固有频率和临界转速是<b>实测值</b>，不是估算。转子判据 v1 每一条都能当场用仪器读数判断，我们确认后冻结，1-2、2-3、2-6 都按它验收</td><td class="pre">无，<b>现在就能开始</b></td><td class="rm">→ <b>1-2</b>：改之前的基线<br>→ <b>2-1</b>：质量、模态、不平衡量作为设计输入<br>→ <b>软件侧</b>：屏面到转轴的垂距是渲染切片的几何参数，结构一改，软件要跟着改</td></tr>
+<tr><td class="id">1-2</td><td class="tk">现役转子 900 RPM 达标</td><td class="dl">改进件的模型和图纸（提交到 macha 仓）、配平记录、达标运转记录</td><td class="ac">按转子判据 v1，现行偏心装法下 900 RPM 连续运转达标；屏面在 900 RPM 下的变形和摆动有实测值</td><td class="pre">1-1</td><td class="rm">→ <b>软件侧</b>：样机达标后，软件马上能按 9,045 片/秒的目标口径跑<br>→ <b>2-1</b>：哪些改法有效、哪些无效，直接带进目标结构<br>→ <b>2-5</b>：光学样件的试验台</td></tr>
+<tr><td class="id">1-3</td><td class="tk">光学现状实测与光学判据</td><td class="dl">① 现役样机光学实测报告：几档环境照度下的对比度；不同俯仰角和方位角看到的亮度（可视角）；盲区清单，每一处写明位置和大小；亮环境下光电索引有没有误触发<br>② <b>光学判据 v1</b>：照度档、对比度限值、可视角范围、测量方法<br>③ <b>屏体光学要求 v1</b>：表面颜色与哑光、出光角<br>④ 低成本改善（黑化、哑光、挡光）前后的对比数据</td><td class="ac">每个数字都有照度计或亮度计读数，并附同机位照片；每个数据点重复测 ≥ 5 次，报读数列表、中位数和最小值。光学判据 v1 我们确认后冻结，2-5、2-6 都按它验收</td><td class="pre">无，<b>现在就能开始</b>（850 RPM 下也能测）</td><td class="rm">→ <b>2-4</b>：光学方案的基线<br>→ <b>硬件 2A-1</b>：屏体光学要求。自制灯珠和 COB 的表面反光、出光角差别很大，要放进屏体路线比较<br>→ <b>软件侧</b>：盲区位置，内容可以避开</td></tr>
+</tbody></table></div>
+</section>
+
+<section><h2><span class="sec">§3</span> 版本二：目标整机结构</h2>
+<p class="lead"><b>目标：</b>目标转子装上 T1 × 2 + T2 后达标：900 RPM 连续运转、体帧率 30 Hz、亮环境下看得清，与硬件的 2C-2 同一次验收。内容多，分成<b>结构线</b>和<b>光学线</b>两条，最后 <b>2-6 整机达标</b>。<b>2-3 先用假负载把转子单独验证掉，2-5 先用现役样机把光学样件验证掉，2-6 直接支撑版本目标。</b></p>
+
+<h3 class="par"><span class="lid">结构线</span>目标转子</h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>小目标</th><th>交付物</th><th>验收判据</th><th>前置</th><th>支撑谁 · 提供什么</th></tr></thead><tbody>
+<tr><td class="id">2-1</td><td class="tk">目标结构定案</td><td class="dl">方案报告：① 布局：两块 T1 怎么装，T2 放在哪（轴心还是别处），无线供电接收模块、储能电容、WiFi 天线、光电索引放在哪；② 材料与工艺；③ 平衡方案：配重放哪、容量多大；④ 外罩的安装与安全防护（选型见 2-4）；⑤ 电机是否沿用 C4110</td><td class="ac">① 质量预算和一阶固有频率估算都有数字，固有频率离 900 RPM（转频 15 Hz）留多远，写明取值理由；② 配重容量能覆盖最坏的不平衡量；③ 外购和外协件（机加件、电机、轴承等）附<b>采购确认的价格、货期和供货</b></td><td class="pre">方案<b>现在就能开始</b>，版本一期间并行；质量和模态等 1-1；屏体形式等硬件 2A-1，SOC 板尺寸等硬件 2B-1</td><td class="rm">→ <b>2-2</b>：布局定了才能出板框<br>→ <b>2-3</b>：按这个方案出图<br>与 <b>2-4</b> 一起定外罩尺寸和顶部支撑形式。偏心还是居中会改渲染几何，现行口径是偏心双面（一面贴轴），要改请先和软件确认</td></tr>
+<tr><td class="id">2-2</td><td class="tk">机械接口契约 v1</td><td class="dl">接口文档加 3D 包络模型：① T1、T2 的板框和安装孔；② 每块板的质量和质心上限；③ 连接器、排线、储能电容、无线供电接收模块、WiFi 模块和天线等大件的固定方式；④ 各半径处的离心加速度；⑤ 禁布区（线圈环带、光电索引、轴心）</td><td class="ac">硬件确认签字；板框、孔位、质量和质心上限冻结；覆盖 T1 × 2 + T2</td><td class="pre">2-1 的布局<br>（屏体参数来自硬件 2A-1）</td><td class="rm">→ <b>硬件 2A-2 / 2B-2</b>：板框和孔位是两块目标板 layout 开画的前提，<b>要在硬件 1-3 过门之前冻结</b><br>→ <b>2-3</b>：假负载按这里的质量和质心做</td></tr>
+<tr><td class="id">2-3</td><td class="tk">目标转子出图并假负载试转</td><td class="dl">3D 模型和 2D 图纸、校核报告（离心强度、模态、动平衡）、首件实物、假负载试转报告</td><td class="ac">装上按契约质量和质心做的假负载（代替 T1 × 2 + T2），900 RPM 连续运转按转子判据 v1 达标；实测一阶固有频率与 2-1 的估算对得上，偏差写明原因</td><td class="pre">2-1、2-2<br>（外罩定稿来自 2-5）</td><td class="rm">→ <b>2-6</b>：真板回来之前，转子已经单独验证过，整机联调只剩电气问题。<b>不用等 T1 / T2 回板</b><br>🔴 结构这边的硬门槛：不过就不能装真板</td></tr>
+</tbody></table></div>
+
+<h3 class="par"><span class="lid">光学线</span>反光、可视角、外罩</h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>小目标</th><th>交付物</th><th>验收判据</th><th>前置</th><th>支撑谁 · 提供什么</th></tr></thead><tbody>
+<tr><td class="id">2-4</td><td class="tk">光学方案定案</td><td class="dl">方案报告：① 反光：屏体表面、转子上的非发光件、背景（底座和罩内）各怎么处理；② 外罩：材质、形状、镀膜，同时满足安全防护和散热；③ 放置与可视角：观看高度、屏体在罩内的位置、顶部支撑形式，给出可视角最大的布置；④ 盲区：每一处是消掉、减小还是接受</td><td class="ac">每项方案都用 1-3 的实测基线估算改善量，并对照光学判据 v1；外罩等外购件附<b>采购确认的价格、货期和供货</b></td><td class="pre">1-3<br>版本一期间并行</td><td class="rm">→ <b>2-5</b>：要做样件的方案<br>→ <b>2-1</b>：外罩尺寸、观看高度、顶部支撑形式。顶部支撑是刚度和遮挡的权衡：立柱撤掉，视线就干净了，但固有频率会降</td></tr>
+<tr><td class="id">2-5</td><td class="tk">光学样件验证</td><td class="dl">外罩样品和屏体表面样品（墨色、面罩、哑光处理）装到现役样机上的实测报告；定稿的外罩规格和屏体表面工艺要求</td><td class="ac">装上样件后，对比度和可视角按光学判据 v1 达标；装罩连续运转，屏体温升在限值内</td><td class="pre">2-4<br>（试验台用 1-2 的现役样机）</td><td class="rm">→ <b>2-3</b>：外罩和表面处理定稿后出图<br>→ <b>硬件 2A-2</b>：屏体表面工艺进 T1 设计<br>现役样机当试验台，<b>不用等目标转子</b></td></tr>
+</tbody></table></div>
+
+<h3><span class="lid">整机</span>结构线和光学线在这里汇合</h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>小目标</th><th>交付物</th><th>验收判据</th><th>前置</th><th>支撑谁 · 提供什么</th></tr></thead><tbody>
+<tr><td class="id">2-6</td><td class="tk">整机上转子达标</td><td class="dl">整机验收报告（结构和光学部分）、装真板后的配平记录、屏面几何实测值</td><td class="ac">装上外罩，900 RPM 连续运转，振动按转子判据 v1 达标；对比度和可视角按光学判据 v1 达标；体帧率 30 Hz；两面屏到转轴的垂距实测值交给软件</td><td class="pre">2-3、2-5、硬件 2C-1</td><td class="rm">→ <b>版本二目标</b>：整机达标。和硬件 2C-2 是同一次验收，结构管转子、动平衡和光学，硬件管电气</td></tr>
+</tbody></table></div>
+<div class="callout ok"><p><b>2-3 和 2-5 为什么这样设：</b>转子不平衡、共振、离心变形跟板上有没有电无关，用假负载就能转出来；反光和外罩的效果，在现役样机上就能量出来。两条线都不等真板，问题在整机联调前各自暴露。这和硬件表里"每块目标板拿验证版的另一半当台架"是同一个思路。</p></div>
+</section>
+
+<section><h2><span class="sec">§4</span> 输入与参考值</h2>
+<p class="lead">这里只给输入和我们的参考值，<b>判据里的具体数字（振动限值、运转时长、固有频率留多少距离、照度档、对比度限值、可视角范围）由你给结论</b>。</p>
+<h3>结构</h3>
+<div class="tw"><table><thead><tr><th>输入</th><th>取值</th><th>来源 / 说明</th></tr></thead><tbody>
+<tr><td class="tk">目标转速</td><td class="ac num"><b>900 RPM</b> = 15 转/秒，转频 15 Hz</td><td class="rm">已定，再高振动太大。体帧率 = 2 × 转速 ⇒ 30 Hz</td></tr>
+<tr><td class="tk">离心加速度</td><td class="ac num">a = ω²r，900 RPM 下约 <b>0.906 g / mm</b>：r = 75 mm（LED 面外缘）<b>68 g</b> · r = 115 mm（现役转子最大半径）<b>104 g</b></td><td class="rm">所有上转子的东西都按这个校核，写进 2-2</td></tr>
+<tr><td class="tk">精度参照</td><td class="ac">像素间距 <b>0.78 mm</b>；每片 0.597°，在 r = 75 mm 处弧长也是 0.78 mm</td><td class="rm">屏面变形、摆动、索引抖动都拿这个尺度比</td></tr>
+<tr><td class="tk">屏体</td><td class="ac">LED 区 150 × 168.75 mm（192 × 216 像素）。T1 的板框、厚度、质量由硬件给；屏体用自制灯珠还是 COB 还没定（硬件 2A-1）</td><td class="rm">COB 和自制的质量、厚度、表面反光可能差很多，2-1 和 2-4 两种都要能接住</td></tr>
+<tr><td class="tk">转子供电</td><td class="ac">无线供电，24 V 2 A = <b>48 W</b>，已在用。线圈在 flange_disc_v4 的 Φ80 ~ Φ145 环形槽里，两盘轴向间隙 8.7 mm，轴心 Φ65 是通的</td><td class="rm">整机没有滑环，跨旋转界面全是非接触（供电、WiFi、光电索引）</td></tr>
+<tr><td class="tk">现役模态（估算）</td><td class="ac">一阶固有频率 <b>15 ~ 27 Hz</b>，<b>未实测</b>；850 RPM 是按"转频 ≤ 0.7 × f₁"取的保守限速</td><td class="rm"><span class="mono">macha/pov3d/v3/rotor_analysis_20260713.md</span>，薄弱环节是电机与 hub 的连接和顶部定心支路</td></tr>
+<tr><td class="tk">现役屏离心鼓包（估算）</td><td class="ac num">600 RPM 0.27 mm · 1000 RPM 0.75 mm，与转速平方成正比 ⇒ 900 RPM 约 <b>0.6 mm</b></td><td class="rm">同一份分析。已接近一个像素，1-2 要实测</td></tr>
+<tr><td class="tk">现役不平衡</td><td class="ac num">偏心屏的不平衡量 ≈ 屏质量 × 6.7 mm（500 g 屏约 3,350 g·mm）。现有配重臂 counterweight_arm 设计容量约 6,700 g·mm</td><td class="rm">配重臂装上后实转验证过没有、够不够，1-1 实测回答</td></tr>
+</tbody></table></div>
+<h3>光学</h3>
+<div class="tw"><table><thead><tr><th>输入</th><th>现状</th><th>来源 / 说明</th></tr></thead><tbody>
+<tr><td class="tk">亮度上限</td><td class="ac">转子供电 48 W，满白规格上限约 145 W，亮度按内容口径封顶，不按满白设计</td><td class="rm">亮环境下的对比度只能靠压反光，不能靠加亮。亮度和电流本身归硬件 2A-1</td></tr>
+<tr><td class="tk">反光来源</td><td class="ac">屏体表面（PCB 阻焊、灯珠封装）扫过整个显示体积；转子上的打印件、转子罩、顶部压条；外罩的镜面反射；背景（底座、罩内）</td><td class="rm">屏体表面这一项跟自制还是 COB 绑定，1-3 的屏体光学要求要赶在硬件 2A-1 定路线之前给</td></tr>
+<tr><td class="tk">现役已知盲区</td><td class="ac">① 中心盲柱：居中装法两个 LED 面在 ±6.7 mm，中心 Φ13.4 永远扫不到，偏心装法（一面贴轴）已消掉；② 屏面转到和视线平行时，LED 是侧着被看到的；③ 转子罩、顶部压条和轴承架挡住俯视和仰视；④ 顶部定心的 4 根 Φ8 立柱在视线里</td><td class="rm">1-3 要把每一处量出位置和大小，并补上这张表没列到的</td></tr>
+<tr><td class="tk">外罩</td><td class="ac">现役整机高 307.95 mm、最大半径 115.07 mm，按现有尺寸只有 Φ300 级别的罩子放得下；之前看过的手工高硼硅罩，厂家自己注明有误差</td><td class="rm">外罩要同时管安全、反光、畸变和散热</td></tr>
+<tr><td class="tk">散热</td><td class="ac">现役屏的生产亮度是按旋转风冷调的，静止点屏会过热重启</td><td class="rm">罩子一封，空气跟着转子一起转，风冷可能变差，2-5 要实测温升</td></tr>
+</tbody></table></div>
+<div class="callout risk"><p><b>要你给结论的几件事：</b>① 振动限值和连续运转时长取多少，用什么测；② 屏体在 900 RPM 下变形多少可以接受（参照 0.78 mm 像素间距）；③ 板对板连接器、USB WiFi 网卡、FPC 排线、储能电容这些靠摩擦或焊点固定的东西，在 68 ~ 104 g 下怎么固定；④ 目标转子用打印件还是换材料和工艺，现役分析的结论是 PLA 不会断，问题在刚度和蠕变；⑤ 光学判据的照度档和对比度限值，建议至少覆盖暗室、普通室内、明亮室内三档；⑥ 每个盲区是消掉、减小还是接受；⑦ 外罩的安全、反光、散热三件事怎么一起满足。</p></div>
+<div class="callout acc"><p><b>现有资料：</b>结构模型在 <span class="mono">D:\claude_workspace\macha\pov3d\</span>，每个版本一个目录，<span class="mono">v4</span> 是现役版，偏心装法用 <span class="mono">assembly_v4.py --ecc</span>（偏心件在 <span class="mono">v3.1/models/</span>）。现有模型是 Python 参数化脚本，生成 STL 和 A3 图纸；你之后用什么 CAD，自己定。打印机是拓竹 X2D，成型尺寸 256 × 256 × 260 mm。</p></div>
+</section>
+
+<section><h2><span class="sec">§5</span> 分工与口径</h2>
+<div class="callout acc"><p><b>分工：</b>结构负责转子和定子的结构件、动平衡、屏体和各块板的机械固定、外罩、电机安装，以及光学里的反光、可视角和盲区。硬件负责板子电气和器件选型（器件按 2-2 给的加速度选），屏体发光本身（亮度、电流）也归硬件。我们负责渲染几何，跟着结构的实测值走；盲区能不能在内容上避开，也由我们处理。整机达标（2-6）和硬件 2C-2 是同一次验收。</p></div>
+<div class="callout acc"><p><b>判据要能当场判断真假。</b>"振动达标""看得清""评审通过"都不算判据，要写成"用什么仪器、在什么条件下、在哪个测点、读数不超过多少"。你自己拆子任务时也按这个标准。</p><p><b>单次读数不算数。</b>振动、固有频率、对比度、温升，每个数据点都重复测 ≥ 5 次，报读数列表、中位数和最小值，判据看分布。项目里已经吃过亏：同一个条件测 5 次，读数散满了整个量程，之前两周的单次数据全部作废。</p></div>
+<div class="callout ok"><p><b>本表不写日期，排期你自己定。</b>结构件大概率不止做一版，排期时给 1-2 和 2-3 各留至少一轮改版的余量。2-2 例外：它有硬件在等，冻结时间要和硬件对齐。</p></div>
+</section>
+<footer>
+<p>POV-3D 结构任务表 · 2026-09-11 rev.2 草案（加光学）。配套：<span class="mono">硬件任务表 rev.4</span>（硬件交付包 03，2-2 的对面是那张表的 2A-2 / 2B-2，1-3 的屏体光学要求交给那张表的 2A-1）· 现役结构 <span class="mono">macha/pov3d/v4</span> · 转子分析 <span class="mono">macha/pov3d/v3/rotor_analysis_20260713.md</span>。</p>
+</footer></div>

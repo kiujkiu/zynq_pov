@@ -123,7 +123,7 @@ metadata:
 - 综合 6 变体全 0 违例; 13 lane 800M LUT 6.7k, WNS +2.34 ns。
 - 🔴 坑: **IODELAY 动态模式要 SDTAP/VALUE 跳变才装载 DLYSTEP** (模型 `always @(SDTAP or VALUE) if(!SDTAP) delay_data<=DLYSTEP`), 接常 0 则扫眼形同虚设 ⇒ DLYSTEP 变就打 4 拍 SDTAP 脉冲 (硅上语义待板测);
   STA 把 DLYSTEP→DO 当数据弧 (−1.75 ns) ⇒ `set_false_path -from [get_regs {u/u_scan/dly_*}]`; 复位组合或门高扇出 (+0.48→寄存后 +2.34); 扫眼步长须 ≪1 UI (仿真 32 档失败, 8 档过)。
-- 未验: SDTAP 装载在硅上是否生效 / LED 极性 / 排针+杜邦线 800M 眼宽 / 同源时钟≠真上行的转发时钟。
+- ✅ **09-23 上机** ([[project_gw5a_loop_sit_0923]]): 4lane@400M `K=1 A=000F E=0`; 800M 帽子 lane 有眼、跨电源脚杜邦线 lane2 没眼; **SDTAP 硅上生效**; LED 高有效见 [[feedback_acg525_led_active_high]]。同源时钟仍 ≠ 真上行转发时钟。
 
 ## 🔴 1.6 Gbps/対上行评估 (09-11, `dr1v90/uplink_rx/README_1g6.md`, 提交 `9ad16c5`; 协调者核过 DS1200 表 3-22/3-16、DS1103 表 3-38 原文)
 - **结论: 以 DR1V90 为发送端, 1.6G 做不了, 卡在 DR1**: DS1200 表 3-22 **LVDS25/LVDS18 输出上限 1250 Mbps** (注: 能否到最高以 Timing Report 为准);

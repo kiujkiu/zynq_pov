@@ -1,0 +1,242 @@
+<title>POV-3D 硬件任务表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{--paper:#F1F2EE;--surface:#FBFCFA;--surface-2:#E9EBE5;--ink:#15191B;--ink-2:#3A4245;--muted:#69736F;
+ --rule:#D2D6CE;--rule-2:#BAC1B5;--accent:#A8531C;--accent-soft:#F5E6DA;--ok:#1F6F5C;--ok-soft:#E0EEE8;
+ --risk:#A32418;--risk-soft:#F7E2DE;--crit:#A32418;--par:#2F7A45;--late:#69736F;--fill:#FFF0C2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --paper:#121513;--surface:#191D1B;--surface-2:#222724;--ink:#E8ECE7;--ink-2:#C2C9C3;--muted:#8D958F;
+ --rule:#2E3532;--rule-2:#414945;--accent:#E39154;--accent-soft:#3A2618;--ok:#5FC0A3;--ok-soft:#16302A;
+ --risk:#F0897C;--risk-soft:#361A17;--crit:#F0897C;--par:#5FBE7C;--late:#8D958F;--fill:#3A2E12}}
+:root[data-theme="dark"]{--paper:#121513;--surface:#191D1B;--surface-2:#222724;--ink:#E8ECE7;--ink-2:#C2C9C3;
+ --muted:#8D958F;--rule:#2E3532;--rule-2:#414945;--accent:#E39154;--accent-soft:#3A2618;--ok:#5FC0A3;
+ --ok-soft:#16302A;--risk:#F0897C;--risk-soft:#361A17;--crit:#F0897C;--par:#5FBE7C;--late:#8D958F;--fill:#3A2E12}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;font-size:14.5px;line-height:1.6}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.93em}
+.wrap{max-width:1400px;margin:0 auto;padding:0 26px 80px}
+header.mast{border-bottom:2px solid var(--ink);margin-bottom:26px;padding:40px 0 16px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 9px}
+h1{font-size:31px;line-height:1.23;margin:0 0 8px;font-weight:700;letter-spacing:-.012em}
+.sub{margin:0 0 20px;color:var(--muted);font-size:13.5px;max-width:80ch}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:1px;border:1px solid var(--rule);border-radius:3px;overflow:hidden;background:var(--rule)}
+.meta div{background:var(--surface);padding:10px 13px;display:flex;flex-direction:column;gap:1px}
+.meta .k{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.meta .v{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums}
+section{margin:0 0 40px}
+h2{font-size:19px;font-weight:600;margin:0 0 4px;padding-bottom:7px;border-bottom:1px solid var(--rule-2);display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+h2 .sec{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--accent);font-weight:500}
+h3{font-size:14px;font-weight:600;margin:26px 0 6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h3 .lid{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:700;color:#fff;background:var(--late);
+  border-radius:3px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+h3.crit .lid{background:var(--crit)} h3.par .lid{background:var(--par)}
+.ltag{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;padding:1px 7px;border-radius:2px;border:1px solid currentColor;font-weight:600}
+.ltag.crit{color:var(--crit)} .ltag.par{color:var(--par)} .ltag.late{color:var(--late)}
+.lead{margin:9px 0 14px;color:var(--muted);font-size:13px;max-width:84ch}
+p{margin:8px 0;max-width:84ch}
+.tw{overflow-x:auto;margin:10px 0 4px;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--rule-2);background:var(--surface-2);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.id{font-family:"IBM Plex Mono",monospace;font-weight:600;white-space:nowrap;width:44px;color:var(--accent)}
+td.tk{font-weight:600;min-width:150px}
+td.dl{min-width:130px}
+td.ac{min-width:200px;color:var(--ink-2)}
+td.pre{font-family:"IBM Plex Mono",monospace;font-size:11.5px;white-space:nowrap;color:var(--muted);width:64px}
+td.du{font-family:"IBM Plex Mono",monospace;font-size:11.5px;white-space:nowrap;color:var(--muted);width:64px}
+td.rm{color:var(--ink-2);font-size:12px;min-width:240px}
+td.fill{background:var(--fill);width:70px}
+.callout{border:1px solid var(--rule);border-left:3px solid var(--rule-2);border-radius:3px;padding:10px 14px;margin:13px 0;font-size:13px;color:var(--ink-2);background:var(--surface)}
+.callout.risk{border-left-color:var(--risk);background:var(--risk-soft)} .callout.risk b{color:var(--risk)}
+.callout.ok{border-left-color:var(--ok);background:var(--ok-soft)} .callout.ok b{color:var(--ok)}
+.callout.acc{border-left-color:var(--accent);background:var(--accent-soft)} .callout.acc b{color:var(--accent)}
+.callout p{max-width:none;margin:5px 0}.callout p:first-child{margin-top:0}.callout p:last-child{margin-bottom:0}
+footer{border-top:1px solid var(--rule-2);margin-top:44px;padding-top:14px;color:var(--muted);font-size:12px}
+footer p{max-width:84ch}
+::selection{background:var(--accent-soft);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media print{body{background:#fff;color:#000;font-size:8.5pt}.tw{overflow:visible}tr{break-inside:avoid}h2,h3{break-after:avoid}}
+</style>
+
+
+
+
+
+<div class="wrap">
+<header class="mast">
+  <p class="eyebrow">POV-3D · 硬件任务表 · 2026-09-10 (rev.2)</p>
+  <h1>硬件任务表：交付物与关键节点</h1>
+  <p class="sub"><b>本表不含日期。</b>只定义「要交付什么」和「怎么算做完了」，<b>时间规划由硬件自己排</b>。<br>分<b>验证</b>与<b>生产</b>两阶段：验证出三块板，生产收敛成 <b>LED 板 + SOC 板</b> 两款。见 §0。</p>
+  <div class="meta">
+    <div><span class="k">任务</span><span class="v">48 条</span></div>
+    <div><span class="k">闭环</span><span class="v">11 组</span></div>
+    <div><span class="k">关键节点</span><span class="v">8 个</span></div>
+    <div><span class="k">验证阶段板</span><span class="v">3 块</span></div>
+    <div><span class="k">生产阶段板</span><span class="v">2 款</span></div>
+    <div><span class="k">可立刻并行</span><span class="v">7 条</span></div>
+  </div>
+</header>
+<section><h2><span class="sec">§0</span> 两阶段 · 两模组 · 一个永久契约</h2>
+<div class="tw"><table><thead><tr><th>模组</th><th>验证形态</th><th>生产形态</th><th>怎么过渡</th></tr></thead><tbody>
+<tr><td class="k">LED 模组</td><td class="dl">板① 灯板（12 颗 2260）<br>+ 板② 桥转接板（核心板插件）</td>
+<td class="dl"><b>LED 板</b><br>FPGA 直贴 · 24 颗 2260 · 无邮票孔</td>
+<td class="rm">板①+板② <b>合并成一块</b></td></tr>
+<tr><td class="k">SOC 模组</td><td class="dl">FS03 开发板<br>+ 板③ CEP→FPC 转接</td>
+<td class="dl"><b>SOC 板</b><br>自研 FPSoC · 直接出接口</td>
+<td class="rm">FS03+板③ <b>合并成一块</b></td></tr>
+</tbody></table></div>
+<div class="callout ok"><p><b>🎯 两个冻结接口，性质不同：邮票孔 = 临时</b>（生产阶段随合并消失）<b>· 模组间接口 = 永久契约</b>（验证与生产都在）。只要契约冻结，两侧可各自异步升级，对方一个字不用改。</p></div>
+<div class="callout risk">
+<p><b>🔴 契约两条现在就对不上：</b>① <b>対数按 8-bit 口径</b>（14 対；12-bit 要 20~23，叠 8b/10b 要 29）② <b>共模没覆盖两种 SOC</b>（FS03 只能 LVDS18 VOCM 0.6，自研可 LVDS25 VOCM 1.25，<b>差近 1 V</b>）。见任务 A6。</p>
+</div>
+</section>
+
+<section><h2><span class="sec">§1</span> 近期三块板 <span class="ltag crit">桥片选型：待评估，不锁定</span></h2>
+<div class="tw"><table><thead><tr><th>板</th><th>是什么</th><th>对外接口</th><th>闭环</th><th>状态</th></tr></thead><tbody>
+<tr><td class="id">①</td><td class="tk">LED 灯板</td><td class="dl"><b>四边邮票孔 168 焊盘</b> → 板②</td><td class="pre" style="width:auto">B</td>
+<td class="rm">加 10 / 改 5 / 删 4。四边半孔后<b>板宽卡点已解除</b>（每边约 42 mm），凸台方案取消</td></tr>
+<tr><td class="id">②</td><td class="tk">桥转接板</td><td class="dl">四边邮票孔 → 板① · <b>LB3524 板对板</b> → 核心板 · FPC → 板③</td><td class="pre" style="width:auto">B</td>
+<td class="rm">🔴 <b>核心板用哪颗取决于 A7 的评估，现在不锁定。</b>已备资料的候选：ACG525-V2(GW5A)。<b>核心板侧不做邮票孔</b>——板对板插接即可</td></tr>
+<tr><td class="id">③</td><td class="tk">FS03 转接板</td><td class="dl">CEP1/CEP2 排针 → FS03 · FPC → 板②</td><td class="pre" style="width:auto"><b>J</b></td>
+<td class="rm"><b>🔴 不是简单机械转换。</b>CEP 各 50 脚只有 1 根 GND ⇒ <b>96 信号 : 2 根地</b>。要加地排、核共模、定 FPC</td></tr>
+</tbody></table></div>
+
+<div class="callout acc">
+<p><b>🔴 桥片 FPGA 需要评估，本表不做定案。</b>在评的候选（同一口径打分，谁都没定）：<b>EG4A20BG256</b>（现役 RTL 已跑通、0 违例，但目标板対数不足）· <b>GW5A-LV25UG324</b> · <b>PGL22G-6IMBG324</b>（紫光，真対 120 全场最多）· <b>PH1A60GEG324</b>（安路）· PG2L50H（紫光 Logos2，対数未核实，悬置）。见任务 <b>A7</b>。</p>
+<p>⚠ 门槛<b>随口径变，口径一变候选整个洗牌</b>：8-bit 87 対 / 12-bit 93~96 対 / 叠 8b-10b 102 対。所以 <b>A7 要先定色深与上行协议，再谈选哪颗</b>。</p>
+</div>
+<div class="callout ok">
+<p><b>其中一个候选的资料已备齐（仅供评估参考，不代表已选）：</b>ACG525-CORE-V2 的引脚表、两版 PCB 封装、底板工程源文件都拿到了。其连接器是 <b>LB3524-G100P-W0R</b>（连兴旺，立创 C52269550/C52269553 ¥0.94~1.53 有货）。</p>
+<p>🔴 <b>若最终走这条，必须按新版封装 <span class="mono">ACG525-CORE_NEW260310</span> 画</b>——新旧两版组间中心距差 0.636 mm、排间距差 0.5 mm、行跨距差 0.5 mm、定位销孔孔径与方位全变，<b>一处都对不上</b>；旧版还把安装孔命名为 C1–C4 而符号是 H1–H4，会报「无对应焊盘」。</p>
+</div>
+
+<div class="callout">
+<p><b>ACG525-CORE 引脚表已全解</b>（候选之一的调研成果）（SchLib + 底板 SchDoc 双向验证，200/200 一致，零未解析）：<b>204 脚 = 完整差分対 78</b>（含 MIPI 硬核 5，<b>非 MIPI 可用 73</b>）+ 8 单端 + 12 电源 + 20 地 + 4 配置 + 4 定位孔。<b>VCCIO 四组独立可配</b>（01 / 23 / 45 / 67）。</p>
+<p>验证板需求 <b>51 対</b>（下行 37 + 上行 14）⇒ <b>余 22 対</b>。⚠ SchLib 的封装链接指向不存在的 <span class="mono">ACG525-CORE-1110</span>，建工程会报缺封装，要手动关联。</p>
+</div>
+
+<div class="callout risk">
+<p><b>🔴 板③ 的三个技术要点：</b>① 地排做 <b>G-P-N-G 四排、两侧各一排</b>（单侧会引入差模↔共模转换）② <b>地条沿长度 ≥3 点接回真地</b>——63.5 mm 地条单点接回自身约 50 nH，<b>λ/4 谐振 0.96~1.18 GHz 正压在 800 Mbps 边沿谱内</b>，净改善约 9% ≈ 零；判据最长自由段 ≤21 mm、每接点 ≤5 mm ③ <b>地排做在板③ 侧，FS03 侧只焊短线</b>——虚焊的地针比没有更糟（开路残桩）。</p>
+</div>
+</section>
+<section><h2><span class="sec">§2</span> 关键节点</h2>
+<p class="lead">节点之间怎么排、留多少缓冲由你定；<b>判据不能改</b>。</p>
+<div class="tw"><table><thead><tr><th>节点</th><th>名称</th><th>触发条件</th><th>判据</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">门 0</td><td class="tk">桥片选型定案</td><td class="pre" style="width:auto">A7 闭合</td><td class="ac">色深口径 + 上行协议 + 目标板対数 三条都有答案，候选收敛到唯一</td><td class="rm">🔴 不定则转接板画不了、固件移植方向也定不了</td></tr>
+<tr><td class="id">门 1</td><td class="tk">邮票孔布局与外形冻结</td><td class="pre" style="width:auto">A 全部闭合</td><td class="ac">四边分配表出图 + 换层缝合方案核过 + 外形冻结 + 连接器可下单 + 模组间接口契约（ICD）冻结</td><td class="rm">不过则 B 一天都动不了</td></tr>
+<tr><td class="id">门 2</td><td class="tk">验证板投产</td><td class="pre" style="width:auto">B 全部闭合</td><td class="ac">原理图评审通过 + 阻抗表确认 + 投产</td><td class="rm">—</td></tr>
+<tr><td class="id">门 2b</td><td class="tk">三块板齐套</td><td class="pre" style="width:auto">B + J 全部闭合</td><td class="ac">灯板 / 桥转接板 / FS03 转接板 三块都投产，FPC 与两端接口对得上</td><td class="rm">🔴 三块板任何一块没到，验证板都点不亮</td></tr>
+<tr><td class="id">门 3</td><td class="tk">🔴 三条硬轴通过</td><td class="pre" style="width:auto">C3 + C4 + C5</td><td class="ac">共模在窗内 · 双档环回误码 0 · 相位与预算一致</td><td class="rm">🔴 不过则正式屏板不能画。时间紧就砍后面，不能砍这块</td></tr>
+<tr><td class="id">门 4</td><td class="tk">正式屏板投产</td><td class="pre" style="width:auto">G 全部闭合 + F3</td><td class="ac">SI 仿真通过 + 投产 + 屏体路线已选定</td><td class="rm">—</td></tr>
+<tr><td class="id">门 5</td><td class="tk">双面点亮</td><td class="pre" style="width:auto">H 全部闭合</td><td class="ac">两面点亮 + 主控驱两面误码 0</td><td class="rm">—</td></tr>
+<tr><td class="id">门 6</td><td class="tk">整机达标</td><td class="pre" style="width:auto">I 全部闭合</td><td class="ac">900 RPM · 30 Hz · 48 W 内</td><td class="rm">—</td></tr>
+</tbody></table></div>
+<div class="callout risk"><p><b>🔴 门 3（三条硬轴）是唯一「不过就不能往下走」的节点。</b>时间紧就砍后面，不能砍这块。<br>🎯 <b>但其中两条现在就能在 E104 上提前证</b>——见 §3 的 C 组备注。</p></div></section>
+<section><h2><span class="sec">§3</span> 任务表</h2>
+<p class="lead">按闭环分组。<b>绿色三组（D/E/F）不占 PCB 设计的手，现在就能开始。</b>新增 <b>K 组 = 桥片固件移植</b>，是软件侧的活但<b>卡着验证板点亮</b>；⚠ K 组的具体内容<b>取决于 A7 评估选哪颗</b>，现在只列框架。</p>
+<h3 class="crit"><span class="lid">A</span>灯板外形冻结<span class="ltag crit">关键路径</span></h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>任务</th><th>交付物</th><th>验收判据</th><th>前置</th><th>周期参考</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">A1</td><td class="tk">邮票孔布局定案：四边半孔</td><td class="dl">焊盘布局图 + 灯板外形图</td><td class="ac">四边分配表出图；差分対同边相邻、不跨角；灯板外形冻结</td><td class="pre">—</td><td class="du">2~3 天</td><td class="rm">🎯 改四边后板宽问题直接解除：每边约 42 mm，160 mm 板宽绰绰有余，≥175 mm 凸台方案取消。四边全是半孔 ⇒ 焊点全部可视可补焊（双排的内排是 LGA，看不见也补不了）。转接板 65×50 mm 即可，周长 230 mm 放 168 焊盘余 62 mm 给四角</td></tr>
+<tr><td class="id">A1b</td><td class="tk">168 焊盘的四边分配</td><td class="dl">分边分配表</td><td class="ac">按方向分配：靠 FPC 那边上行、靠 2260 阵列那边下行数据、另两边时钟与单端电源；差分対同边相邻</td><td class="pre">A1</td><td class="du">1~2 天</td><td class="rm">🔴 差分対不能跨角。构成不变：48 対差分(96) + 9 单端 + 3 电源 + 60 地 = 168</td></tr>
+<tr><td class="id">A1c</td><td class="tk">换层过孔与伴地缝合重核</td><td class="dl">过孔布置 + 缝合方案</td><td class="ac">四圈过孔的伴地缝合逐边核过</td><td class="pre">A1b</td><td class="du">2~3 天</td><td class="rm">🔴 原来算的是单排一列的缝合。改四边后 168 根换层过孔分成四圈，那 60 个地焊盘的伴地过孔分布跟着变，必须重新核——差分対在过孔处切参考平面、回流会断，这是 340 Mbps 上会真实劣化的一条</td></tr>
+<tr><td class="id">A6</td><td class="tk">🔴 模组间接口契约冻结（LED 模组 ↔ SOC 模组）</td><td class="dl">接口契约文档（ICD）</td><td class="ac">四条全部冻结并出文档：対数 · 电平与共模 · 阻抗与地线 · lane 映射与协议</td><td class="pre">—</td><td class="du">3~5 天</td><td class="rm">🔴 这是唯一一个要活到生产阶段的接口（邮票孔生产阶段会随板①+板② 合并而消失）。不冻结则「两个模组异步升级」不成立。四条：
+① 対数按生产口径（12-bit）定不是验证口径（8-bit）——现 14 対只够 8-bit@800M，12-bit 要 20~23 対，叠 8b/10b 要 29 対。建议定 30~32 対，验证阶段用 14 対其余悬空
+② 电平与共模要覆盖两种 SOC：FS03 无 2.5V 只能发 LVDS18（VOCM 0.3/0.6/0.8），自研 SOC 可发 LVDS25（VOCM 0.9/1.25/1.4），差近 1 V ⇒ LED 侧接收要同时覆盖两窗或留 AC 耦合位
+③ 阻抗 100 Ω ±10% + G-S-S-G 地线比例
+④ lane 映射与协议（校验 lane 位置、训练序列、对齐图案、用不用 8b/10b）——协议至今未拍板，而它直接决定 ①
+⚠ 只定契约，不定形态：连接器形态、机械方案、板形由硬件自己把握</td></tr>
+<tr><td class="id">A2</td><td class="tk">连接器与核心板下单</td><td class="dl">料号确认 + 到货</td><td class="ac">买到核心板与配对连接器</td><td class="pre">A7</td><td class="du">—</td><td class="rm">✅ 09-10 已解决：ACG525-CORE-V2 用 **LB3524-G100P-W0R**（连兴旺，立创 C52269550/C52269553 ¥0.94~1.53 有货）。🔴 买板务必指明 **V2**，并按新版封装 `ACG525-CORE_NEW260310` 画——新旧封装组间中心距差 0.636mm、排间距差 0.5mm、定位销孔全变，**一处都对不上**。原「山谷道」旧版料号问题作废</td></tr>
+<tr><td class="id">A7</td><td class="tk">🔴 桥片选型收口</td><td class="dl">选型结论 + 依据</td><td class="ac">三条都有答案后定案：色深口径 · 上行协议 · 目标板対数</td><td class="pre">—</td><td class="du">1~2 周</td><td class="rm">🔴 **门槛随口径变，门槛一变候选整个洗牌**：8-bit 87 対 / 12-bit 93~96 対 / 叠 8b-10b 102 対。
+三条必须先定：
+① **色深是不是真锁 12-bit**（这条比选芯片更上游）
+② **上行协议用不用 8b/10b**（×1.25，至今未拍板）
+③ **GW5A-25 目标板対数够不够**（表 11 记「最坏只剩 85 対」，且那 116 対没逐球复核过）——查 DS1103 引脚表
+当前候选：**GW5A-LV25UG324**（核心板 ACG525-V2，脚位/封装/底板源文件齐全，硬件可立刻开工）· **PGL22G-6IMBG324**（紫光，真対 120 全场最多、货源最成熟、PDS Lite 免费 3 年，但脚位与核心板要从零调研）
+📌 PGL22G 的「LUT 11.7k 不够」那条顾虑**已被实测证伪**：整机实测只占 4,387 LUT4 ≈ 1.9k LUT6 当量，6 倍余量</td></tr>
+<tr><td class="id">A3</td><td class="tk">发出集创北方问询单</td><td class="dl">问询单（一页）</td><td class="ac">已发出并登记</td><td class="pre">—</td><td class="du">1 天</td><td class="rm">含 ACK_I 非级联能否回包 / ACK_I 门限与内部上下拉 / L_CKO 时钟中继四问 / tSTU-tHLD 容差 / 注释1 相位可配性。后两条能翻转整个时钟架构</td></tr>
+<tr><td class="id">A4</td><td class="tk">向安路或高云问两条</td><td class="dl">答复记录</td><td class="ac">有明确答复</td><td class="pre">—</td><td class="du">1 天</td><td class="rm">EG4 一个时钟脚能否同时喂两个 PLL（决定晶振能不能删）；JTAG 四脚设 User I/O 能否回收 1 対</td></tr>
+<tr><td class="id">A5</td><td class="tk">FS03 侧三条便宜确认</td><td class="dl">测试记录</td><td class="ac">三条都有明确答复</td><td class="pre">—</td><td class="du">半天~1 天</td><td class="rm">🔴 都是半天能做完、但不做就画不了板 3 的：① ADJ_BANK33/11 跳线有没有 1.8V 档（没有则只剩仿真 LVDS 300 Mbps 硬顶，过渡台方案要重想）② CEP2.7 烧 toggle 位流看动不动（手册 Y19 疑为笔误，而那正是 GCLK 対）③ 串阻确认：某脚配 LVCMOS33 16mA 输出高、排针脚挂 100Ω 到地量电压（无串阻 ≈3.2V / 33Ω ≈2.4V，15 分钟）</td></tr>
+</tbody></table></div>
+<h3 class="crit"><span class="lid">B</span>验证板设计投产（灯板 + 桥转接板）<span class="ltag crit">关键路径</span></h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>任务</th><th>交付物</th><th>验收判据</th><th>前置</th><th>周期参考</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">B1</td><td class="tk">灯板改板原理图</td><td class="dl">原理图 + 网表</td><td class="ac">评审通过，逐条核过「加10/改5/删4/不动5」</td><td class="pre">A1</td><td class="du">1~1.5 周</td><td class="rm">见《04 灯板改动清单》。⚠ 邮票孔已改四边半孔（A1）。三处易错：VDDD 3.8→2.8V 的连带（LVDS_EN/SCL/SDA 上拉跟着改）· mux 必须供 2.8V 不可 3.8V · ACK_I 加 100kΩ 上拉</td></tr>
+<tr><td class="id">B2</td><td class="tk">桥转接板原理图</td><td class="dl">原理图 + 网表</td><td class="ac">核心板连接器脚位逐脚核过；VCCIO 分组供电确认</td><td class="pre">A1,A7</td><td class="du">3~5 天</td><td class="rm">🔴 对象已从 ACA420(EG4S20) 换成 ACG525-CORE-V2(GW5A) 或紫光核心板。ACG525 引脚表已全解：204 脚 / **完整差分対 78（含 MIPI 5，非 MIPI 可用 73）** / 8 单端 / VCCIO 四组独立可配（01/23/45/67）。⚠ SchLib 的封装链接指向不存在的 `ACG525-CORE-1110`，建工程会报缺封装，要手动关联到新版</td></tr>
+<tr><td class="id">B3</td><td class="tk">写约束文档（交 layout 外发方）</td><td class="dl">约束文档</td><td class="ac">六项齐全：叠层 / 100Ω 差分阻抗 / 等长 / 换层过孔与伴地缝合 / 元件面 / 禁布区</td><td class="pre">B1,B2</td><td class="du">3~5 天</td><td class="rm">🔴 layout 外发后这是新增交付物，以前在自己脑子里。这块板约束密度高且非标，写不清楚回来必返工</td></tr>
+<tr><td class="id">B4</td><td class="tk">layout 外发与回板评审</td><td class="dl">Gerber + 评审记录</td><td class="ac">逐条评审通过；阻抗表经板厂确认</td><td class="pre">B3</td><td class="du">2~3 周</td><td class="rm">重点核：168 根背→正换层过孔靠 60 个地焊盘伴地缝合（这些地不能删，四边布局下分成四圈要逐边核）· 🔴 四边汇聚下差分対等长比单排难，这条要在约束文档里写死· 邮票孔対间夹地 · 48 只端接紧贴 2260 的 G1/G2 D1/D2 E1/E2 F1/F2 · 背面不能有高元件</td></tr>
+<tr><td class="id">B5</td><td class="tk">核心板电压配置确认</td><td class="dl">VCCIO 供电方案</td><td class="ac">各 VCCIO 组实测到位电压</td><td class="pre">B2</td><td class="du">1 天</td><td class="rm">✅ 「拆 ACA420 磁珠 FB2 改 Bank0 VCCIO」这条**已作废**——那是 EG4S20 内嵌 SDRAM 锁死 Bank1/3 才需要的补救。GW5A 无内嵌 SDRAM，VCCIO01/23/45/67 四组本就独立可配，转接板直接供 2.5V 即可。⚠ VCCIO01 符号标注 1.5V，用前查手册确认该 bank 有无特殊用途</td></tr>
+<tr><td class="id">B6</td><td class="tk">投板 + BOM 齐套</td><td class="dl">采购单 + 投产回执</td><td class="ac">板子投产、物料齐套</td><td class="pre">B4</td><td class="du">—</td><td class="rm">邮票孔焊盘要同时兼容板对板连接器封装，保持换 FPGA 的能力</td></tr>
+</tbody></table></div>
+<h3 class="crit"><span class="lid">K</span>桥片固件移植（软件侧）<span class="ltag crit">关键路径</span></h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>任务</th><th>交付物</th><th>验收判据</th><th>前置</th><th>周期参考</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">K1</td><td class="tk">移植清单落地</td><td class="dl">逐项工单</td><td class="ac">🟢4 / 🟡5 / 🔴5 三档全部拆成可执行项</td><td class="pre">A7</td><td class="du">3~5 天</td><td class="rm">已盘清：真原语 93 个实例关在 `bridge_clk.v`(BUFG×5 + PLL×2) 与 `bridge_io.v`(IDDRx2×13 + ODDR×73)。⚠ 漏算过一份：`tools/standin/br_standin_top.v` 是**第三个含原语的文件**，要么一起改要么砍掉</td></tr>
+<tr><td class="id">K2</td><td class="tk">工具链与 license</td><td class="dl">装好并跑通无头流程</td><td class="ac">命令行能出 bit，不弹 GUI</td><td class="pre">A2</td><td class="du">2~3 天</td><td class="rm">GW5A ⇒ Gowin EDA，`gw_sh.exe x.tcl` 无头（SUG1220 §2.2.1），标准版 license 免费但**绑 MAC、一年一续**，教育版不含 GW5A-25。紫光 ⇒ PDS Lite 免费无 license 3 年，但 `pds.exe -file x.tcl` **是否真无头未确认**。🔴 版本号跟随板资料走，别挑最新（TD 那次踩过）</td></tr>
+<tr><td class="id">K3</td><td class="tk">🟢 原语机械替换</td><td class="dl">改完能综合</td><td class="ac">90 个实例替换完，综合无错</td><td class="pre">K1,K2</td><td class="du">1 周</td><td class="rm">🔴 两处必须逐个核对，接反=花屏：① **ODDR 的 d0/d1 哪个是上升沿**（EG4 与 Xilinx 正好相反）② **IDDRx2 的 q0 是不是线上最早**。另有 12 处综合属性（`dont_touch`×11 + `ram_style=bram`×1）</td></tr>
+<tr><td class="id">K4</td><td class="tk">🟡 约束与构建重写</td><td class="dl">.cst + SDC + build 脚本</td><td class="ac">能跑完整流程出 bit + 报告</td><td class="pre">K3</td><td class="du">1~2 周</td><td class="rm">`adc/mkadc_bridge.py`(280行) → 高云/紫光的约束格式；SDC 里 `derive_clocks` 与 `rename_clock` 的层次名拼法要换；`build.sh`(628行) + 三个报告解析器重写。✅ 仿真不受影响（原语全在 `ifdef SIM` 后，行为模型零厂家名）</td></tr>
+<tr><td class="id">K5</td><td class="tk">🔴 PLL 相位重做实验 E</td><td class="dl">相位实测报告</td><td class="ac">pclk↔sclk 相位落在安全区并可复核</td><td class="pre">K4,板到货</td><td class="du">1~2 周</td><td class="rm">🔴 **纸面做不完，必须上板**。EG4 那套「方案 A + CPHASE=DIV = 180°」是针对 EG4 IOL 内部结构、拿 TD 插入延迟报告标定的，**换厂商后禁区在哪、最优点在哪全部未知**。唯一能保留的是屏侧 dclk90 的 **90° 目标本身**（来自 2260 的 tSTU/tHLD=¼tLVCP，器件无关），怎么合成要重做</td></tr>
+<tr><td class="id">K6</td><td class="tk">🔴 时序收敛</td><td class="dl">综合报告 + 时序报告</td><td class="ac">SPEC §6 的 Q2/Q3/Q4 三条都有答案</td><td class="pre">K5</td><td class="du">1~2 周</td><td class="rm">Q2 装不装得下 / Q3 dclk 收不收敛 / Q4 BRAM 够不够。✅ LUT 那条已有底：4,387 LUT4 不是瓶颈。🎯 **gearing 8:1 后 fabric 从 200 掉到 100 MHz**，那三条零余量的轴会松掉</td></tr>
+</tbody></table></div>
+<h3 class="crit"><span class="lid">J</span>FS03 转接板<span class="ltag crit">关键路径</span></h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>任务</th><th>交付物</th><th>验收判据</th><th>前置</th><th>周期参考</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">J1</td><td class="tk">FS03 转接板原理图</td><td class="dl">原理图 + 网表</td><td class="ac">评审通过；CEP1/CEP2 脚位逐脚核对过</td><td class="pre">A5,A6</td><td class="du">1 周</td><td class="rm">CEP1 = Bank33 全 24 対（IO_R1..R24_33）· CEP2 = Bank11 全 24 対 · 奇数脚恒 P、偶数脚恒 N、跨列 0 対。🔴 CEP2 pin7 手册写 Y19 疑为笔误（应为 Y9），未打通前该列不得做随路时钟</td></tr>
+<tr><td class="id">J2</td><td class="tk">地线方案：G-P-N-G 四排</td><td class="dl">地排设计图</td><td class="ac">两侧各一排；地条沿长度 ≥3 点接回 FS03 真地，最长自由段 ≤21mm、每接点 ≤5mm</td><td class="pre">J1</td><td class="du">—</td><td class="rm">🔴 板 3 的设计核心。CEP 各 50 脚只有 1 根 GND ⇒ 96 信号 : 2 根地，且那 2 根在连接器最边上。加地排买到「地/信号 2:96→约 50:96」且零対数代价，共模回流从横跨 63mm 缩到就近 2.54mm（共享回流电感降 6~16×，这正是鹿小班 5 万假帧的机制）</td></tr>
+<tr><td class="id">J3</td><td class="tk">地排接地点核算</td><td class="dl">接地点布置 + 电感估算</td><td class="ac">满足 ≤21mm / ≤5mm 判据</td><td class="pre">J2</td><td class="du">—</td><td class="rm">🔴 最容易做错的一条：63.5mm 地条若只从 pin2 一点接回，自身约 50 nH，λ/4 谐振落在 0.96~1.18 GHz，正压在 800 Mbps 边沿频谱里 ⇒ 从「地」变成「带内谐振器」，净改善约 9% ≈ 零。30AWG 走 10mm 就有 8.6 nH，比它要救的针还差</td></tr>
+<tr><td class="id">J4</td><td class="tk">上行共模匹配核算</td><td class="dl">共模预算表</td><td class="ac">给出 FS03 发 → 桥片收 的共模是否落窗，不落窗则给出补救方案</td><td class="pre">A5,A6</td><td class="du">—</td><td class="rm">🔴 FS03 只有 3.3/1.8/1.35V，无 2.5V ⇒ DR1 只能发 LVDS18（VOCM 0.3/0.6/0.8）。而 ACA420 上是 EG4S20，其 Bank1/3 被内嵌 SDRAM 锁 3.3V ⇒ 输入 VICM 下限 0.6V ⇒ 典型值正好压窗口下沿、最小值出窗 300mV。⇒ 板 3 上要留 AC 耦合 + 共模再偏置位（与灯板那 60 个逃生位同思路）</td></tr>
+<tr><td class="id">J5</td><td class="tk">模组间连接的形态实现</td><td class="dl">选型结论 + 机械方案</td><td class="ac">按 A6 冻结的契约选连接器与固定方式；形态自定</td><td class="pre">A6</td><td class="du">2~3 天</td><td class="rm">🎯 形态由硬件自己把握——ZIF / 直焊 / mezzanine / 线缆都行，我们只要契约。要考虑的：装配与返修友好性 · 136 g 离心固定 · 每个连接器都是一处阻抗不连续（800 M 板级只剩 40 ps 余量，700 M 档余量 16.7% 宽松得多）· 向供应商要插入损耗与阻抗曲线，别只看脚数间距</td></tr>
+<tr><td class="id">J6</td><td class="tk">约束文档 + layout 外发 + 投板</td><td class="dl">Gerber + 评审记录 + 投产回执</td><td class="ac">阻抗表经板厂确认；地排接地点逐点核过；投产</td><td class="pre">J2,J3,J4,J5</td><td class="du">2~3 周</td><td class="rm">🔴 地排做在转接板这一侧，FS03 侧只焊几根短线——成品板上贴着现有排针焊 25 针机械对位难，且一个虚焊的地针比没有更糟（变成开路残桩）</td></tr>
+</tbody></table></div>
+<h3 class="crit"><span class="lid">C</span>验证板点亮 + 三条硬轴<span class="ltag crit">关键路径</span></h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>任务</th><th>交付物</th><th>验收判据</th><th>前置</th><th>周期参考</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">C1</td><td class="tk">上电时序 / 配置 / 时钟锁定</td><td class="dl">上电测试记录</td><td class="ac">三路电源时序正确、FPGA 能配置、PLL 锁定</td><td class="pre">B6 回板</td><td class="du">2~3 天</td><td class="rm"></td></tr>
+<tr><td class="id">C2</td><td class="tk">点亮 12 颗 2260</td><td class="dl">实拍照片 + 配置记录</td><td class="ac">12 颗全部点亮，无坏区</td><td class="pre">C1</td><td class="du">3~5 天</td><td class="rm"></td></tr>
+<tr><td class="id">C3</td><td class="tk">硬轴① IOL 内 pclk↔sclk 相位</td><td class="dl">相位实测报告</td><td class="ac">实测值与 set_annotated_check 的预算一致</td><td class="pre">C1</td><td class="du">2~3 天</td><td class="rm">工具不检查这条。现在能先算（SWUG105 §4.5.19/§4.9.11），上板只做验证。不过则调 PLL 相位 dclk/dclk90</td></tr>
+<tr><td class="id">C4</td><td class="tk">硬轴② LVDS 驱 2260 共模 + 眼图</td><td class="dl">共模实测值 + 眼图</td><td class="ac">共模落在 2260 的 1.1~1.3 V 窗内（或 AC 耦合后落在窗内）</td><td class="pre">C2</td><td class="du">3~5 天</td><td class="rm">🔴 最可能不过的一条：扇出 IC 的 Voc 上限 1.375V 超出 2260 的 1.3V。不过则把灯板上那 60 个 0402 逃生位从 0Ω 直通切成 AC 耦合，不用改版</td></tr>
+<tr><td class="id">C5</td><td class="tk">硬轴③ 上行环回误码</td><td class="dl">误码测试报告</td><td class="ac">800 M 与 700 M 两档误码均为 0</td><td class="pre">C1</td><td class="du">3~5 天</td><td class="rm">🔴 两档都要测。700M 是退路：时序余量从 2.1% 变 16.7%，代价每面多 2~3 対</td></tr>
+<tr><td class="id">C6</td><td class="tk">ACK 首次收到合法回包</td><td class="dl">ACK 帧记录 + CRC 校验</td><td class="ac">收到 CRC 正确的回包，且能定位到具体是哪一颗</td><td class="pre">C2</td><td class="du">2~3 天</td><td class="rm">🔴 全项目至今一帧合法 ACK 都没收到过。验证板要一次把 12 路做起来。注意确认 DEVICE 编号 bug 已修（第 1 颗 = 0，不是 0xF）</td></tr>
+</tbody></table></div>
+<h3 class="par"><span class="lid">D</span>亮度实测（墙⑨）<span class="ltag par">可并行 · 现在就能开始</span></h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>任务</th><th>交付物</th><th>验收判据</th><th>前置</th><th>周期参考</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">D1</td><td class="tk">2260 电流-亮度曲线实测</td><td class="dl">曲线图 + 数据表</td><td class="ac">IREF 从最低扫到最高，给出实测亮度与电流对应关系</td><td class="pre">—</td><td class="du">1 周</td><td class="rm">🟢 可立刻开始，现有单颗 2260 台架就能做，不需要整机、不需要转起来。寄存器 0x2d/0x3d/0x4d，R 0.15~9.6mA / G-B 0.1~6.4mA</td></tr>
+<tr><td class="id">D2</td><td class="tk">回答「48 W 下够不够亮」</td><td class="dl">结论 + 依据</td><td class="ac">给出在 R≈2.3mA / G-B≈1.5mA 下的实测亮度，并判定够不够</td><td class="pre">D1</td><td class="du">—</td><td class="rm">🔴 九堵墙里唯一一条从项目开始到现在没碰过的。同时决定无线供电的规格。已知红色能从 0x2d 拉 5.3×，G/B 从没试过</td></tr>
+</tbody></table></div>
+<h3 class="par"><span class="lid">E</span>动平衡<span class="ltag par">可并行 · 现在就能开始</span></h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>任务</th><th>交付物</th><th>验收判据</th><th>前置</th><th>周期参考</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">E1</td><td class="tk">macha v4 结构解偏心</td><td class="dl">结构设计 + 配重方案</td><td class="ac">偏心量降到可配平范围</td><td class="pre">—</td><td class="du">2~3 周</td><td class="rm">🟢 可立刻开始。现状 v3.1 偏心 13.4 mm、配重放不下。两面各一颗桥片只是不再恶化，解不掉偏心</td></tr>
+<tr><td class="id">E2</td><td class="tk">900 RPM 连续运转验证</td><td class="dl">振动测试报告</td><td class="ac">900 RPM 连续运转，振动达标</td><td class="pre">E1</td><td class="du">1 周</td><td class="rm">🔴 现状限速 850 RPM。850 RPM 下切片率只有 8,545，达不到 9,045 ⇒ 这条不解决，项目目标数拿不到</td></tr>
+</tbody></table></div>
+<h3 class="par"><span class="lid">F</span>屏体路线<span class="ltag par">可并行 · 现在就能开始</span></h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>任务</th><th>交付物</th><th>验收判据</th><th>前置</th><th>周期参考</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">F1</td><td class="tk">自制屏体成本与良率估算</td><td class="dl">成本表 + 良率预期</td><td class="ac">单位成本与良率都有数字</td><td class="pre">—</td><td class="du">1~2 周</td><td class="rm">🟢 可立刻开始。整机 82,944 px，是最大一笔开销。自制不等于便宜</td></tr>
+<tr><td class="id">F2</td><td class="tk">P0.78 间距自制工艺可行性</td><td class="dl">工艺方确认函</td><td class="ac">工艺方书面确认能做</td><td class="pre">—</td><td class="du">1~2 周</td><td class="rm">0.78 mm 是很密的间距</td></tr>
+<tr><td class="id">F3</td><td class="tk">自制 vs COB 对照并选定路线</td><td class="dl">对照表 + 选定结论</td><td class="ac">成本/周期/迭代次数/良率 四个维度都有数字</td><td class="pre">F1,F2</td><td class="du">—</td><td class="rm">🔴 采购已回复 COB 打样周期 3 个月。屏体规格要等 C 闭合才能定 ⇒ 最早 11 月中下单 ⇒ 2027-02 中到货撞春节。自制的理由是周期与迭代次数，不是成本</td></tr>
+</tbody></table></div>
+<h3 class="late"><span class="lid">G</span>正式屏板设计投产<span class="ltag late">后段</span></h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>任务</th><th>交付物</th><th>验收判据</th><th>前置</th><th>周期参考</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">G1</td><td class="tk">正式屏板原理图</td><td class="dl">原理图 + BOM</td><td class="ac">评审通过</td><td class="pre">C 全部闭合</td><td class="du">2~3 周</td><td class="rm">24 颗 2260、192×216、48 扫、FPGA 直接上板、无邮票孔。73 対差分 + 96 只端接 + 三路电源 0.95/1.8/2.5V</td></tr>
+<tr><td class="id">G2</td><td class="tk">正式屏板约束文档</td><td class="dl">约束文档</td><td class="ac">六项齐全（同 B3）</td><td class="pre">G1</td><td class="du">3~5 天</td><td class="rm">8 层 HDI、via-in-pad；工艺等级由 2260 的 0.5mm BGA 定死，不是 FPGA</td></tr>
+<tr><td class="id">G3</td><td class="tk">layout 外发与回板评审</td><td class="dl">Gerber + SI 仿真 + 评审记录</td><td class="ac">SI 仿真通过、逐条评审通过</td><td class="pre">G2</td><td class="du">2~3 周</td><td class="rm"></td></tr>
+<tr><td class="id">G4</td><td class="tk">投板 + BOM 齐套</td><td class="dl">采购单 + 投产回执</td><td class="ac">投产、物料齐套</td><td class="pre">G3,F3</td><td class="du">—</td><td class="rm">长货期料要提前下单，别等设计全部冻结</td></tr>
+</tbody></table></div>
+<h3 class="late"><span class="lid">H</span>正式板点亮<span class="ltag late">后段</span></h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>任务</th><th>交付物</th><th>验收判据</th><th>前置</th><th>周期参考</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">H1</td><td class="tk">屏板回板点亮</td><td class="dl">点亮记录 + 实拍</td><td class="ac">两面屏板各自静态点亮，192×216 全阵列无坏区</td><td class="pre">G4 回板</td><td class="du">2~3 周</td><td class="rm"></td></tr>
+<tr><td class="id">H2</td><td class="tk">主控 + 双屏联调</td><td class="dl">联调记录</td><td class="ac">主控经上行链路驱两面，误码为 0</td><td class="pre">H1</td><td class="du">1~2 周</td><td class="rm">基线下主控用 FS03 过渡</td></tr>
+</tbody></table></div>
+<h3 class="late"><span class="lid">I</span>整机上转子<span class="ltag late">后段</span></h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>任务</th><th>交付物</th><th>验收判据</th><th>前置</th><th>周期参考</th><th>备注</th></tr></thead><tbody>
+<tr><td class="id">I1</td><td class="tk">转子装配</td><td class="dl">装配记录</td><td class="ac">两块灯板背靠背 + 主控上转子，所有元件按 68~136 g 离心固定</td><td class="pre">H2,E2</td><td class="du">1~2 周</td><td class="rm"></td></tr>
+<tr><td class="id">I2</td><td class="tk">整机达标验证</td><td class="dl">验收报告</td><td class="ac">900 RPM 连续运转 · 体帧率 30 Hz · 603 片/圈 · 整机功耗在 48 W 内</td><td class="pre">I1,D2</td><td class="du">2~3 周</td><td class="rm"></td></tr>
+</tbody></table></div>
+</section>
+section>
+<section><h2><span class="sec">§4</span> 三条口径</h2>
+<div class="callout acc"><p><b>① 判据必须能当场判真假。</b>「原理图评审通过」不算，「13 対连接器脚位在 Altium 里补齐并复核完毕」才算。你自己拆子任务时也照这个来。</p></div>
+<div class="callout acc"><p><b>② 周期参考不是承诺。</b>那一列按「一次做对、不含改版轮次」估的。<b>验证板大概率不止做一版</b>——排期时至少给 B/C/J 留一轮改版余量。</p></div>
+<div class="callout ok"><p><b>③ 等待期不是空闲。</b>layout 外发和打样贴片期间手是空的，可以叠下一阶段设计。但<b>只叠不依赖前一个门结论的部分</b>：屏板的电源树、LED 阵列布局、BGA 扇出、叠层可以先画；<b>端接与共模那部分必须等 C4 的实测结论</b>，先画的会作废。</p></div>
+</section>
+<footer>
+<p>POV-3D 硬件任务表 · 2026-09-10。技术依据见配套文档：<span class="mono">01 任务起因与闭环下发</span> · <span class="mono">02 方案论证链</span> · <span class="mono">04 灯板改动清单</span>（板①）· <span class="mono">05 转接板接口与拓扑</span>（板②）· 附录 <span class="mono">A1</span>（168 焊盘脚位表）。<b>板③ 的依据在记忆库 <span class="mono">project_pov3d_fs03_cep_ground_and_third_row</span></b>，尚无独立文档。</p>
+<p>⚠ 本表<b>刻意不含日期</b>。排期见 <span class="mono">03 硬件工作拆解</span>（26 周参考排法），可作对照但不是要求。<b>⚠ 那份排期做于板③ 与四边邮票孔补入之前</b>。</p>
+</footer></div>

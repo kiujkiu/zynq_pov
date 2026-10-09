@@ -1,6 +1,6 @@
 ---
 name: project_gw5a_bridge_firmware
-description: 2026-09-22~23 WS4 — 把已时序收敛的 eg4_bridge(EG4A20, dclk150 整机0违例) 移植到 GW5A25 桥片; 工程 dr1v90/gw5a_bridge/; ✅时序已收敛 dclk Fmax 133.6->152.0MHz(超过目标150) 关闭CHK_EN(CRC诊断,不影响数据通路)+ false_path ack_rx的tcnt(READ_PROBE_FR=0时功能上是死路径); 综合+映射+布局布线 BIT:OK
+description: 2026-09-22~23 WS4 — eg4_bridge 移植到 GW5A25, 工程 dr1v90/gw5a_bridge/; ✅时序收敛 dclk 152.0MHz; ✅09-23 冒烟上机 PASS(ACG525-CORE-V2 丝印25B, 先烧 verA SRAM 也跑起来了): LED1~1Hz 慢闪, KEY0按下 LED0亮/LED2灭 松开相反; 板上LED是高有效(推翻低有效假设); programmer_cli 这块线是 FT2CH 要用 --cable-index 1 --location 44
 metadata:
   type: project
 ---
@@ -115,9 +115,44 @@ MHz", 166.667 只是写在旁边的**备选档**(要同时切 DCLK_FB_DIV/CD_DIV
 2. 新增独立的 `smoke/` 最小验证项目 (`gw5a_smoke_top.v` + `build_smoke.sh`):
    只用 5 个真实板载引脚(clk/rstn/led), 目的只是验证"设计→gw_sh→JTAG下载器→
    真实 GW5A-25A 芯片"这条链路通不通(PLL 锁不锁、LED 亮不亮), 完全不碰 86 対。
-   已出 `smoke_verA.fs`/`smoke_verB.fs`(芯片版本 A/B 未定先都出), 待用户用
-   Gowin Programmer 实际下载确认: LED0 常亮(锁定)/LED1 ~1.1Hz 慢闪(dclk 真跑)/
-   LED2 跟 KEY0 走(输入脚通)。
+   已出 `smoke_verA.fs`/`smoke_verB.fs`。
+
+## ✅ 2026-09-23 冒烟上机 PASS (ACG525-CORE-V2 + 高云下载器)
+
+链路: `gw_sh` 出 bit → `programmer_cli` SRAM Program → 真芯片跑起来。用户目视
+LED1 慢闪 + KEY0 翻转 LED0/LED2, 判据全过。
+
+| 读数 | 值 |
+|---|---|
+| 下载器 | `Gowin USB Cable(FT2CH)` location **44** |
+| IDCODE | `0x0001281B`(A/B 共用, 分不出版本) |
+| 丝印 | `2544BB0N` ⇒ **25B**(Date Code 第 5 字符, 09-16 已记) |
+| 实烧 | 先烧的 **`smoke_verA.fs`**(当时按 ID 试 A); SRAM 收下了, 功能也跑起来了 |
+| STATUS | `0x70026020`(无错误位, DONE 置位; 与 09-16 S3 已知好码相同) |
+| USERCODE | `0x000063FF` |
+
+**板上现象 (用户 15:40 回报, 反馈都对):**
+- **LED1 ~1 Hz 慢闪** = dclk 150 MHz 真在跑
+- **KEY0 按下: LED0 亮、LED2 灭; 松开: LED0 灭、LED2 亮**
+
+这正好是 RTL 的行为 + **LED 高有效**(FPGA 驱 1 = 灯亮), 不是原来猜的低有效:
+
+```
+led[0] = ~locked;   // 松开 KEY0 → PLL 锁 → locked=1 → 脚=0 → LED0 灭
+led[2] = rstn;      // 松开 KEY0 → rstn=1 → 脚=1 → LED2 亮
+.RESET(~rstn)       // 按下 KEY0 同时复位 PLL → locked=0 → LED0 亮
+```
+
+⇒ 空闲态 LED0 灭 = PLL **锁住**(极性与"常亮=锁定"那句反了)。KEY0 会翻 LED0
+是因为冒烟顶层把 KEY0 接到了 PLL.RESET, 不是接线错。详见
+[[feedback_acg525_led_active_high]]。
+
+🔴 **CLI 坑**: `--cable-index 0` 是 GWU2X, 这块线是 FT2CH。扫到
+`No Gowin devices found` / ID 全 F 时先换 `--cable-index 1 --location 44`
+`--frequency 2.5MHz`, 别先拆线。GUI Programmer 会自己认 FT2CH。
+
+⚠ **A 位流在 25B 上这次能跑, 只对这份最小冒烟成立**(一颗 PLL + 计数器)。
+全功能桥仍按丝印烧 `*_verB.fs`, 别外推。
 
 📌 **要真正验证 86 対桥片(与 DR1M90/ICND2260 对接), 得先知道 ACG525 教学板
 到底有没有把这些差分脚引到可焊接/可跳线的排针上** —— 这与冒烟测试用的
@@ -131,7 +166,7 @@ MHz", 166.667 只是写在旁边的**备选档**(要同时切 DCLK_FB_DIV/CD_DIV
    本轮先删掉过关, 收敛前要按真实例化层次名 (查 `bridge.rpt.txt`) 补回。
 3. 本轮 IO_LOC 只是"工具认的合法差分位点", 不是按转接板 PCB 网表排的 —— 上真板前
    要按 `POV3D_GW5A转LED转接板_逐球引脚分配` 的实际网表重排。
-4. 未上机验证 (只到布局布线, 没到实测)。
+4. ✅ ~~未上机验证~~ **冒烟 PASS**(工具链→下载器→真芯片); ✅ **gw5a_loop 4lane@400M 上机 PASS** ([[project_gw5a_loop_sit_0923]]); **桥片主设计 86 対仍未上机**。
 5. `icnd2260_regs_vendor.mem` (238 条供应商实测表, 与 eg4_bridge 共用) 未按 GW5A 特有的
    BSRAM 初始化写法核过。
 6. 上行 DR1 侧 `uplink_tx` 仍是 LFSR 探针 (见 `uplink_rx/README_x8.md` §五), 真联调前要

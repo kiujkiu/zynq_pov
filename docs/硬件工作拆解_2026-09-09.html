@@ -82,8 +82,8 @@ caption{caption-side:bottom;text-align:left;padding:8px 11px;color:var(--muted);
 
 /* ---- 排期条 ---- */
 .ganttbox{overflow-x:auto;margin:14px 0 6px;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
-.gantt{min-width:900px;padding:14px 16px 6px;position:relative}
-.grow{display:grid;grid-template-columns:150px repeat(25,1fr);align-items:center;gap:0;position:relative;min-height:26px}
+.gantt{min-width:960px;padding:14px 16px 6px;position:relative}
+.grow{display:grid;grid-template-columns:150px repeat(26,1fr);align-items:center;gap:0;position:relative;min-height:26px}
 .grow + .grow{margin-top:3px}
 .glab{font-size:12px;padding-right:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
 .glab .gm{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted);margin-right:5px}
@@ -133,29 +133,39 @@ footer p{max-width:80ch}
 <header class="mast">
   <p class="eyebrow">POV-3D · 硬件工作拆解 · 以里程碑为单位</p>
   <h1>从现在到整机上转子</h1>
-  <p class="sub">把硬件剩余工作按「目标 → 判据 → 任务」拆成六个门。每个门有可验收的硬判据，不是工时表。基线日期 2026-09-09，选型与接口已冻结的部分不再列为任务。</p>
+  <p class="sub">把硬件剩余工作按「目标 → 判据 → 任务」拆成六个门。每个门有可验收的硬判据，不是工时表。基线 2026-09-09。<b>硬件 1 人</b>、<b>主控与桥片选型均不锁定</b>、<b>芯片供货由硬件与采购另线对齐、不作为排期约束</b>。<b>PCB layout 外发</b>，硬件只做原理图、选型、约束、评审与调试。26 周的前提是主控板不自研；因为 layout 不占硬件的手，自研主控只多约 5 周（不是 11 周），见 §2。</p>
   <div class="meta">
     <div><span class="k">基线</span><span class="v">2026-09-09</span></div>
     <div><span class="k">里程碑</span><span class="v">M0 – M5</span></div>
-    <div><span class="k">参考周期</span><span class="v">25 周</span></div>
-    <div><span class="k">参考完成</span><span class="v">2027-03-03</span></div>
+    <div><span class="k">参考周期</span><span class="v">26 周</span></div>
+    <div><span class="k">参考完成</span><span class="v">2027-03-11</span></div>
     <div><span class="k">关键门</span><span class="v">M2 验证板</span></div>
-    <div><span class="k">人力假设</span><span class="v">硬件 1 人</span></div>
+    <div><span class="k">人力</span><span class="v">硬件 1 人</span></div>
+    <div><span class="k">Layout</span><span class="v">外发</span></div>
   </div>
 </header>
+
+<div class="callout risk" style="margin:0 0 34px;border-left-width:4px">
+  <p style="font-size:14.5px"><b>⚠ 本文已降级为「周期参考」，不再是下发件。</b></p>
+  <p>下发给硬件的是 <b>《硬件任务表》（2026-09-10）</b>——那份只给<b>交付物与关键节点</b>，<b>时间规划由硬件自己排</b>。本文保留的价值是一个 26 周的参考排法（硬件 1 人、layout 外发、主控板用 FS03 过渡），可以拿来对照自己的排期是否离谱，<b>但不是要求</b>。</p>
+  <p><b>而且本文做于以下三件事补入之前，M0–M5 的划分已经落后：</b></p>
+  <p>① <b>第三块板</b>——FS03 转接板（CEP1/CEP2 排针 → FPC）当时没算进去，本文只排了「一块验证板 + 一块屏板」<br>
+     ② <b>邮票孔改四边半孔</b>——板宽这个第一卡点已解除，M0 里「灯板宽度四选一」那条已作废<br>
+     ③ <b>两阶段两模组架构</b>——验证阶段三块板 / 生产阶段收敛成 LED 板 + SOC 板，以及模组间接口契约（ICD）这个新的冻结项</p>
+  <p>⇒ <b>请以《硬件任务表》为准。</b>本文的 §4 风险、§5 压缩杠杆仍然成立，可以单独读。</p>
+</div>
 
 <!-- ============ 现状 ============ -->
 <section>
   <h2><span class="sec">§0</span> 起点：已经定死的和还卡着的</h2>
   <p class="lead">排期只对「还没做的」有意义。这一节划清边界——上半是不用再讨论的，下半是现在就卡住 M1 的三条。</p>
 
-  <h3>已定案，不再列入任务</h3>
+  <h3>已定案，不再列入任务 —— 注意：全部与芯片无关</h3>
+      <p class="lead">这张表是排期能在选型开放的情况下继续推进的根本原因：下面每一条都不依赖具体选哪颗芯片。</p>
   <div class="tw">
   <table>
     <thead><tr><th>项</th><th>结论</th><th>定案日</th></tr></thead>
     <tbody>
-      <tr><td class="k">桥片 FPGA</td><td>EG4A20BG256I7（安路）。87 対 + 18 单端 / 天花板 195，余 3</td><td class="nw mono">09-07</td></tr>
-      <tr><td class="k">主控 SoC</td><td>DR1V90GEG484（安路，RISC-V + PL）</td><td class="nw mono">09-07</td></tr>
       <tr><td class="k">屏板排布</td><td>4 × 6 = 24 颗 / 面 @ 48 扫。由几何反推，不是估算</td><td class="nw mono">09-04</td></tr>
       <tr><td class="k">LVDS 拓扑</td><td>一颗一组，每颗 3 対数据由 FPGA 直驱，删掉芯片间级联</td><td class="nw mono">09-09</td></tr>
       <tr><td class="k">灯板对外接口</td><td>邮票孔 168 焊盘 @ 1.0 mm，每颗一束，対间夹地 —— 冻结版 v1</td><td class="nw mono">09-09</td></tr>
@@ -163,7 +173,7 @@ footer p{max-width:80ch}
       <tr><td class="k">转子供电</td><td>无线供电 24 V × 2 A = 48 W，<b>现役就在用</b>，不是滑环</td><td class="nw mono">09-08</td></tr>
       <tr><td class="k">询价单</td><td>46 行料已发采购，等回价与货期</td><td class="nw mono">09-09</td></tr>
     </tbody>
-    <caption>出处：<span class="mono">灯板改板_邮票孔FPGA接口_2026-09-09.html</span> · <span class="mono">HW_SPEC_2026-09-04.html</span> · 记忆库 <span class="mono">project_pov3d_eg4a20bg256_bridge_selection</span> / <span class="mono">project_pov3d_rotor_wireless_power</span></caption>
+    <caption>换任何一颗主控或桥片，上表八条一条都不用改。出处：<span class="mono">灯板改板_邮票孔FPGA接口_2026-09-09.html</span> · <span class="mono">HW_SPEC_2026-09-04.html</span> · 记忆库 <span class="mono">project_pov3d_eg4a20bg256_bridge_selection</span> / <span class="mono">project_pov3d_rotor_wireless_power</span></caption>
   </table>
   </div>
 
@@ -199,21 +209,99 @@ footer p{max-width:80ch}
   </div>
 </section>
 
+<!-- ============ 选型 ============ -->
+<section>
+  <h2><span class="sec">§1</span> 选型：两级都不锁，为什么排期还站得住</h2>
+  <p class="lead">主控 SoC 与桥片 FPGA 都保持开放。这不阻塞画板——项目已经在两个层面做了解耦：主控那层是几何巧合，桥片那层是主动设计。</p>
+
+  <h3>主控 SoC · 候选</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>候选</th><th>逻辑余量</th><th>关键事实</th><th>判</th></tr></thead>
+    <tbody>
+      <tr><td class="k">XC7Z020-CLG484</td><td class="nw">53,200 LUT<br>双 slicer IP 占 <b>22.7%</b></td>
+          <td class="note">200 PL I/O。现役台架在用（Debian / ext4 / 2.54 GiB 卡）。Vivado 工具链成熟</td><td class="nw"><span class="pill ok">在选</span></td></tr>
+      <tr><td class="k">DR1V90GEG484</td><td class="nw">RISC-V + PL<br>LVDS <b>1250 Mbps</b></td>
+          <td class="note">上行发送端已实测：SWNS +0.010 / Fmax 401.6 MHz ⇒ 800 Mbps 档成立。Linux 是 initrd 跑 RAM（14.6 MB）。FS03-DR1 开发板在手</td><td class="nw"><span class="pill ok">在选</span></td></tr>
+      <tr><td class="k">XC7Z010</td><td class="nw">17,600 LUT<br>双 slicer IP 占 <span class="no">68.5%</span></td>
+          <td class="note">100 PL I/O 下<b>只有 8-bit@800M 一种组合</b>过得了「≥1 根地/対」，而那正是桥片侧只剩 2.1% 时序余量的一档，还堵死 700M 退路</td><td class="nw"><span class="pill risk">已否决</span></td></tr>
+    </tbody>
+    <caption>出处：记忆库 <span class="mono">project_pov3d_main_soc_7z010_verdict</span>（09-04）· <span class="mono">project_dr1_uplink_tx_probe</span> · <span class="mono">reference_anlogic_dr1_fs03_eval</span></caption>
+  </table>
+  </div>
+
+  <div class="callout ok">
+    <p><b>🎯 这两颗是 pin2pin 的 —— 484 球逐球核对过。</b></p>
+    <p>方法是 <span class="mono">xc7z020_clg484.bsd</span> + Vivado <span class="mono">get_package_pins</span> 对 DR1 官方 PINLIST 全 484 球比对。结果：<b>PL IO 200 球位置全同</b>、差分极性全同（96P + 96N + 8 单端）、<b>32 个时钟脚全同</b>、PS MIO 54 个全同、PS DDR 75 球全同。bank 只是重编号（35→33 / 34→32 / 33→31 / 13→11）。</p>
+    <p><b>⇒ 主控板可以画成一块双兼容板，选型不阻塞 M3b。</b>物理差异只有四处，全在电源与 strap 上：VCCINT <b>1.0 → 0.95 V</b>（且 Zynq 的 VCCINT / VCCBRAM / VCCPINT 三轨在 DR1 合并成一条）· VCCAUX 与 VCCPAUX 合并 · CFGBVS(T13) → RSV_NC · VCCBATT / RSVDVCC1-3 / DXP / DXN → NC。</p>
+    <p>代价：VCCINT 轨做成 0.95 / 1.0 可选，几个 strap 位留跳线。这是 M3b 要吸收的<b>额外工作，不是额外周期</b>。</p>
+  </div>
+
+  <h3>桥片 FPGA · 候选</h3>
+  <p>门槛（12-bit 口径）：真差分対 <b>≥93</b>（73 出 + 20 入）· VOCM 落在 <b>1.1~1.3 V</b> · 输入 <b>≥800 Mbps</b> · gearing ≥8:1 加分 · 封装 ≤19×19。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>候选</th><th>厂</th><th>真対</th><th>入 Mbps</th><th>Gearing</th><th>供货</th><th>目标板 24 颗</th></tr></thead>
+    <tbody>
+      <tr><td class="k">EG4A20BG256</td><td class="nw">安路</td><td class="nw">39 真 + 51 仿真</td><td class="nw">800（零余量）</td><td class="nw">4:1</td><td class="note"><span class="yes">在用 · 便宜 · 已跑通</span></td><td class="note"><span class="warn">86/87 差 1 対</span></td></tr>
+      <tr><td class="k">GW5A-25 PG256S</td><td class="nw">高云</td><td class="nw">93</td><td class="nw">1600</td><td class="nw">8~16:1</td><td class="note"><span class="no">受限供货，无价无货</span></td><td class="note"><span class="warn">只余 2 pad</span></td></tr>
+      <tr><td class="k">GW5A-60 UG324S</td><td class="nw">高云</td><td class="nw"><b>110</b></td><td class="nw">1600</td><td class="nw">8~16:1</td><td class="note"><span class="no">官网只列 UG324A，无报价</span></td><td class="note"><span class="yes">余 34 pad</span></td></tr>
+      <tr><td class="k">PH1A60GEG324</td><td class="nw">安路</td><td class="nw">100</td><td class="nw">1250</td><td class="nw">待问 FAE</td><td class="note">未知</td><td class="note">对照物</td></tr>
+      <tr><td class="k">PGL22G-6IMBG324</td><td class="nw">紫光同创</td><td class="nw"><b>120</b></td><td class="nw"><span class="warn">800 零余量</span></td><td class="nw">8:1</td><td class="note"><span class="yes">货源成熟</span>（ALINX / 正点原子在用）</td><td class="note"><span class="warn">LUT 11.7k 不过 18k 口径</span></td></tr>
+      <tr><td class="k">XC7S50-CSGA324</td><td class="nw">AMD</td><td class="nw">100</td><td class="nw">950</td><td class="nw">8:1</td><td class="note"><span class="no">0 现货 / 52 周</span></td><td class="note">非国产</td></tr>
+      <tr><td class="k">Ti90G400C4</td><td class="nw">Efinix</td><td class="nw">100</td><td class="nw">1500</td><td class="nw">8:1 + DPA</td><td class="note"><span class="no">840 颗整箱 / 71 周</span></td><td class="note">非国产</td></tr>
+      <tr><td class="k">LFCPNX-100</td><td class="nw">Lattice</td><td class="nw"><span class="no">66</span></td><td class="nw">1250</td><td class="nw">8:1</td><td class="note">Radiant 付费 $5,236/年</td><td class="note"><span class="no">❌ 出局 · 66 是家族天花板</span></td></tr>
+    </tbody>
+    <caption>出处：记忆库 <span class="mono">reference_bridge_fpga_alternatives</span>（09-03 五家横向对比 + 独立复核）· 灯板改板文档表 11（09-09 引脚账）</caption>
+  </table>
+  </div>
+
+  <div class="callout ok">
+    <p><b>🎯 邮票孔 168 焊盘就是为这件事设计的。</b>09-09 冻结版的原话：「灯板接口是常量，FPGA 子板是变量。EG4 一版、GW5A 一版，都来适配同一套邮票孔。」<b>换桥片，灯板一个字都不用改</b>——连 12 対时钟从哪来（子板扇出 IC 还是 FPGA 直出）都吸收在子板侧。</p>
+  </div>
+
+  <h3>三条所有候选共同的约束 —— 换片解决不了</h3>
+  <ol class="act">
+    <li><b>目标板 24 颗只能走 B / D 拓扑。</b>A 方案（每颗一対独立时钟）要 238 pad，<b>所有 GW5A 封装都撑不住</b>，只有 GW5AT-60 PG484A 有可能——而它同样买不到。现役 EG4 的 196 IO 本来也撑不住 ⇒ 这条与选型无关</li>
+    <li><b>VOCM 超窗是全行业问题。</b>所有候选的 VOCM max 都在 1.375~1.425 V，超出 ICND2260 的 1.3 V 上限。<span class="yes">EG4 的 5R 网络反而能把共模按构造钉在 1.203 V</span> ⇒ 灯板上那 60 个 0402 逃生位<b>对每一种候选都要留</b></li>
+    <li><b>供货才是真正的杀手，不是参数。</b>够用的封装几乎全部无价无货 ⇒ 选型的收敛点在<b>询价单的货期列</b>，不在参数表</li>
+  </ol>
+
+  <h3>收敛线：选型在三个点上收口，不是一个前置门</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>收口点</th><th>从什么收敛到什么</th><th>靠什么</th></tr></thead>
+    <tbody>
+      <tr><td class="k">M0 结束</td><td>「参数够的」→「<b>买得到的</b>」</td><td class="note">询价单的货期与价格列</td></tr>
+      <tr><td class="k">M2 结束</td><td>「买得到的」→「<b>实测能用的</b>」</td><td class="note">验证板三条硬轴：共模 / gearing / 时序</td></tr>
+      <tr><td class="k">M3 开始</td><td>定版</td><td class="note">上面两条的交集。此时才需要唯一解</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout risk">
+    <p><b>不锁定的代价落在 M1，要现在就吸收。</b></p>
+    <p>邮票孔一旦焊上，那块灯板就绑定那块子板。要试两种子板，要么<b>做两块灯板</b>，要么按 09-09 文档给的折中——<b>焊盘按邮票孔画、同时兼容一个板对板连接器封装，验证期插连接器、定版后直焊</b>。</p>
+    <p><b>建议采用后者</b>：这是保持选型开放的必要成本，M1 的原理图与 PCB 都要按它画。多花的是几十个焊盘的面积，省下的是一整块灯板的打样费与三周时间。</p>
+  </div>
+</section>
+
 <!-- ============ 排期 ============ -->
 <section>
-  <h2><span class="sec">§1</span> 排期全景与关键路径</h2>
-  <p class="lead">六个门，25 周。屏板一条线走到底，主控板是可以并行、也可以推后的支线——它不在关键路径上，前提是过渡期继续用 FS03 现货。</p>
+  <h2><span class="sec">§2</span> 排期全景与关键路径 <span class="pill new">按 1 人重排</span></h2>
+  <p class="lead">只有一个硬件工程师，就没有「并行轨道」这回事——所有事串成一条线。但打样和贴片是<b>等待</b>不是<b>占用</b>，一个人在等板子的时候不该闲着。这份排期的核心就是把等待期叠上下一阶段的设计。</p>
 
   <div class="ganttbox">
     <div class="gantt">
       <div class="grow">
         <div class="glab"></div>
-        <div class="gmonth" style="grid-column:2/6">9 月</div>
-        <div class="gmonth" style="grid-column:6/10">10 月</div>
+        <div class="gmonth" style="grid-column:2/5">9 月</div>
+        <div class="gmonth" style="grid-column:5/10">10 月</div>
         <div class="gmonth" style="grid-column:10/14">11 月</div>
         <div class="gmonth" style="grid-column:14/19">12 月</div>
         <div class="gmonth" style="grid-column:19/23">1 月</div>
         <div class="gmonth" style="grid-column:23/27">2 月</div>
+        <div class="gmonth" style="grid-column:27/28">3 月</div>
       </div>
 
       <div class="grow">
@@ -222,47 +310,53 @@ footer p{max-width:80ch}
         <div class="gbar gate" style="grid-column:2/3" title="1 周"></div>
       </div>
       <div class="grow">
-        <div class="glab"><span class="gm">M1</span>验证板进厂</div>
+        <div class="glab"><span class="gm">M1</span>验证板设计投板</div>
         <div class="gband" style="grid-column:23/26"></div>
         <div class="gbar scr" style="grid-column:3/6" title="3 周 · 灯板改板 + 转接板">3 周</div>
       </div>
       <div class="grow">
-        <div class="glab"><span class="gm">M2</span>验证板点亮</div>
+        <div class="glab"><span class="gm">M2</span>验证板点亮 + 硬轴</div>
         <div class="gband" style="grid-column:23/26"></div>
-        <div class="gbar gate" style="grid-column:6/10" title="4 周 · 三条硬轴">4 周 ◆ 关键门</div>
+        <div class="gbar gate" style="grid-column:6/11" title="5 周 = 打样贴片 3 + 实测 2">5 周 ◆ 关键门</div>
       </div>
       <div class="grow">
-        <div class="glab"><span class="gm">M3a</span>正式屏板设计</div>
+        <div class="glab"><span class="gm">M3</span>正式屏板</div>
         <div class="gband" style="grid-column:23/26"></div>
-        <div class="gbar scr" style="grid-column:10/16" title="6 周 · 24 颗 · 8 层 HDI">6 周 · 24 颗 HDI</div>
+        <div class="gbar scr" style="grid-column:11/16" title="5 周 · 24 颗 · 8 层 HDI">5 周 · 24 颗 HDI</div>
       </div>
       <div class="grow">
-        <div class="glab"><span class="gm">M3b</span>主控板设计</div>
+        <div class="glab"><span class="gm">M4</span>屏板回板点亮</div>
         <div class="gband" style="grid-column:23/26"></div>
-        <div class="gbar soc" style="grid-column:10/16" title="6 周 · 并行支线 · 可推后">6 周 · 可推后</div>
-      </div>
-      <div class="grow">
-        <div class="glab"><span class="gm">M4</span>正式板点亮</div>
-        <div class="gband" style="grid-column:23/26"></div>
-        <div class="gbar scr" style="grid-column:16/21" title="5 周 · 打样 + 贴片 + 双面">5 周 · 打样贴片</div>
+        <div class="gbar scr" style="grid-column:16/22" title="6 周 = 打样贴片 3 + 点亮联调 3">6 周 · 打样 + 点亮</div>
       </div>
       <div class="grow">
         <div class="glab"><span class="gm">M5</span>整机上转子</div>
         <div class="gband" style="grid-column:23/26"></div>
-        <div class="gbar mech" style="grid-column:21/27" title="6 周 · 动平衡 + 900 RPM">6 周 · 900 RPM</div>
+        <div class="gbar mech" style="grid-column:22/28" title="6 周 · 动平衡 + 900 RPM">6 周 · 900 RPM</div>
+      </div>
+      <div class="grow">
+        <div class="glab" style="color:var(--muted)">└ 等待期叠加</div>
+        <div class="gband" style="grid-column:23/26"></div>
+        <div class="gbar soc" style="grid-column:6/9" title="验证板打样期间预热屏板原理图">屏板原理图预热</div>
+        <div class="gbar soc" style="grid-column:16/19" title="屏板打样期间做整机机械准备">机械/装配准备</div>
       </div>
       <div class="grow">
         <div class="glab"></div>
-        <div class="gbandlab" style="grid-column:23/27">▲ 春节停工窗（2027-02-06）</div>
+        <div class="gbandlab" style="grid-column:23/28">▲ 春节停工窗（2027-02-06）</div>
       </div>
     </div>
     <div class="glegend">
       <span><i style="background:var(--t-gate)"></i>决策门 / 验证门</span>
       <span><i style="background:var(--t-scr)"></i>屏板线（关键路径）</span>
-      <span><i style="background:var(--t-soc);opacity:.75"></i>主控板线（可推后）</span>
+      <span><i style="background:var(--t-soc);opacity:.75"></i>等待期叠加的设计工作</span>
       <span><i style="background:var(--t-mech)"></i>机械与整机</span>
       <span><i style="background:var(--band);border:1px dashed var(--risk)"></i>春节停工风险带</span>
     </div>
+  </div>
+
+  <div class="callout ok">
+    <p><b>🎯 一个人排期的关键：等待不是占用。</b>M2 的 5 周里有 3 周在等打样贴片，M4 的 6 周里同样有 3 周。这 6 周叠上下一阶段的设计工作，整条线就从 32 周压回 26 周。</p>
+    <p>⚠ 但<b>只叠「不依赖硬轴结论」的部分</b>：屏板的电源树、LED 阵列布局、24 颗 BGA 扇出、叠层可以先画；<b>端接网络与共模那部分必须等 M2 的实测结论</b>——硬轴②一旦超窗，端接方案要改，先画的会作废。这是「重叠开工」与「盲目提前」的分界线。</p>
   </div>
 
   <h3>关键路径</h3>
@@ -276,19 +370,67 @@ footer p{max-width:80ch}
     <span>双面装配</span><em>→</em>
     <span>动平衡 900 RPM</span>
   </div>
-  <p>链上任何一环滑动，整机日期等量后移。主控板不在链上——它有 FS03 过渡可用，可以晚起步、也可以两人并行。<b>但它周期长（10 层、BGA484、0.8 mm）</b>，推得太晚就会反过来变成关键路径。</p>
+  <p>1 个人的情况下，<b>这条链就是全部工作</b>，没有支线可以吸收延误。链上任何一环滑动，整机日期等量后移。</p>
+
+  <h3>Layout 外发怎么改变这份排期</h3>
+  <p>硬件工程师<b>不做布线</b>：他做原理图、选型、电气计算、约束、评审、调试、实测；PCB layout 外发。这带来三个后果。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>后果</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="k">1</td><td class="nw"><span class="yes">硬件的手被释放</span></td>
+        <td class="note">这是对 1 人团队最实质的收益。屏板 layout 外发的那几周，同一个人可以去画主控板原理图 ⇒ <b>两条路线的差距从 11 周缩到约 5 周</b></td></tr>
+      <tr><td class="k">2</td><td class="nw"><span class="warn">日历时间基本不变</span></td>
+        <td class="note">外发的周期 ≈ 自己画的周期，还多两次交接。<b>别指望外发能压缩关键路径</b>——它换的是「谁在忙」，不是「多久做完」</td></tr>
+      <tr><td class="k">3</td><td class="nw"><span class="no">新增两项交付物</span></td>
+        <td class="note"><b>约束文档</b>（以前在自己脑子里，现在必须写出来）+ <b>逐条评审</b>回来的板。这两项没人替，而且是外发成败的全部</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="callout risk">
+    <p><b>🔴 这块板的约束密度不适合「甩给外面自己看着办」。</b>它有一批非标要求，写不清楚回来必返工：</p>
+    <p>① <b>168 根信号背面→正面换层</b>，且必须靠那 60 个地焊盘的伴地过孔缝合回流——<b>这 60 个地不能删</b>；② 邮票孔<b>対间夹地</b>；③ 48 只端接<b>必须紧贴 2260 的 G1/G2、D1/D2、E1/E2、F1/F2</b>，不能挪；④ 两块灯板<b>背靠背 ⇒ 背面不能有高元件</b>；⑤ 100 Ω 差分受控 + 0.5 mm BGA225 via-in-pad；⑥ 转接板与 FPGA 必须在<b>正面</b>。</p>
+    <p>⇒ <b>约束文档要在 M1 原理图阶段同步产出，不是投板前补。</b>建议直接把《灯板改动清单》§7 元件面约束与《转接板接口与拓扑》的脚位表作为外发附件，别让对方从原理图里猜。</p>
+  </div>
+
+  <h3>🔴 两条路线，差约 5 周</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>路线</th><th>主控板怎么办</th><th>周期</th><th>完成</th><th>代价</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="k"><b>B · 推荐</b></td>
+        <td class="note">不自研，转子上继续用 <b>FS03 过渡</b>。两颗候选各有一块 FS03 开发板在手（Zynq 版与 DR1 版同构）</td>
+        <td class="nw"><b>26 周</b></td>
+        <td class="nw mono">2027-03-11</td>
+        <td class="note">转子上挂一块非自研板 ⇒ 机械固定、重量、不平衡量都要另算；且要先确认 FS03 的 CEP 连接器能扛 136 g</td>
+      </tr>
+      <tr>
+        <td class="k">A</td>
+        <td class="note">自研双兼容主控板（7020 / DR1V90 pin2pin，见 §1），同一个人<b>串行</b>接在屏板之后</td>
+        <td class="nw"><span class="warn">约 31 周</span></td>
+        <td class="nw mono">2027-04-15</td>
+        <td class="note">多约 5 周（不是 11 周）——<b>layout 外发后主控板的 PCB 不占硬件的手</b>，硬件只需做原理图与评审，而这些可以塞进屏板 layout 与打样的等待期。DDR3L 32 bit 等长恰恰是 layout 公司的强项，外发比自己画更稳</td>
+      </tr>
+    </tbody>
+    <caption>两条路线的 M0–M2 完全相同，分叉点在 M3 之后。⇒ <b>这个决定可以推迟到 11 月中再做</b>，不影响现在开工。<br>⚠ 31 周是粗算：假设主控板原理图能完整塞进屏板的 layout 期与打样期。若屏板评审出问题占掉那段时间，差距会回到 8~10 周。</caption>
+  </table>
+  </div>
+  <div class="callout acc">
+    <p><b>仍建议走 B，但理由变弱了。</b>layout 外发后时间差距只剩 5 周，主要理由变成<b>一个人同时背两块板的评审负荷太集中</b>——屏板（8 层 HDI、24 颗 0.5 mm BGA、73 対差分）和主控板（10 层、BGA484、DDR3L 32 bit 等长）任何一块出问题都会把另一块拖住，而没有第二个人接手。记忆库里对 FS03 的定位本来就是「只是过渡」。</p>
+  </div>
 </section>
 
 <!-- ============ M0 ============ -->
 <section>
-  <h2><span class="sec">§2</span> 六个门，逐个拆</h2>
+  <h2><span class="sec">§3</span> 六个门，逐个拆</h2>
   <p class="lead">每个门给出目标、可验收判据、任务清单和前置依赖。判据都是能当场判真假的，不写「基本完成」这类。</p>
 
   <div class="ms crit">
     <div class="ms-h">
       <span class="ms-id">M0</span>
       <span class="ms-t">卡点清零</span>
-      <span class="ms-d">1 周 · 09-09 → 09-16</span>
+      <span class="ms-d">1 周 · 09-10 → 09-17</span>
     </div>
     <div class="ms-b">
       <p class="goal">目标：<b>灯板外形能冻结、料能下单、板能开画。</b></p>
@@ -296,10 +438,11 @@ footer p{max-width:80ch}
         <li><b>定灯板宽度方案。</b>四选一，推荐 (d) 延长区 ≥175 mm 凸台。这一条决定外形，其余都等它</li>
         <li><b>拿到板对板连接器料号。</b>量实物或问小梅哥；封装直接导官方 <span class="mono">ACA420--CORE.PcbLib</span>（封装名 <span class="mono">ACG525_ACA420--CORE</span>），别按数字自己重画</li>
         <li><b>发出集创北方问询单。</b>表 13 的 #2 / #5 / #11 / #12 + IIC 若干</li>
-        <li><b>回收采购询价。</b>重点盯三行的货期：EG4A20BG256I7、DR1V90GEG484、ICND2260</li>
+        <li><b>回收采购询价。</b>重点盯货期，它是选型的第一个收敛点（§1）</li>
+        <li><span class="no">🔴 改询价单 A01 / B01 的状态。</span>两行现在标的是「已定」，与「两级选型都不锁」矛盾 —— 要改成「待选型」并列出候选，否则采购只会报一颗的价，拿不到比较</li>
       </ol>
       <div class="callout ok">
-        <p><b>判据　</b>① 灯板外形图冻结并出图　② 连接器有料号、可下单　③ 问询单已发出　④ 询价单 46 行有价、有货期</p>
+        <p><b>判据　</b>① 灯板外形图冻结并出图　② 连接器有料号、可下单　③ 问询单已发出　④ 询价单 46 行有价有货期，且 A01 / B01 按候选清单分别报价</p>
       </div>
     </div>
   </div>
@@ -309,7 +452,7 @@ footer p{max-width:80ch}
     <div class="ms-h">
       <span class="ms-id">M1</span>
       <span class="ms-t">验证板进厂</span>
-      <span class="ms-d">3 周 · 09-16 → 10-07</span>
+      <span class="ms-d">3 周 · 09-17 → 10-08</span>
     </div>
     <div class="ms-b">
       <p class="goal">目标：<b>一块能点亮 12 颗 2260 的板子投产。</b>不是 24 颗的大板——先用便宜的小板把三条硬轴证掉。</p>
@@ -340,10 +483,11 @@ footer p{max-width:80ch}
         <li><b>叠层与 100 Ω 差分阻抗表</b>，交 PCB 厂确认</li>
         <li><span class="warn">跟 PCB 厂确认 0.5 mm pitch BGA225 的工艺等级 / HDI / 报价</span>——工艺等级由 2260 定死，<b>不是 FPGA</b></li>
         <li><b>ACA420 核心板改造</b>：拆掉磁珠 FB2，Bank0 的 VCCIO 从 3.3 V 改 2.5 V，由转接板经 P1 的 A9/A10 供电。<b>FB3 / FB4 / FB5 不要动</b></li>
+        <li><span class="warn">🎯 因选型不锁而新增：焊盘按邮票孔画的同时，兼容一个板对板连接器封装。</span>验证期插连接器换子板、定版后直焊 ⇒ 试两种桥片不必重做灯板。见 §1 末</li>
       </ul>
 
       <div class="callout ok">
-        <p><b>判据　</b>① 原理图评审通过　② 13 対连接器脚位在 Altium 里复核完毕　③ 阻抗表经板厂确认　④ 板子投产、BOM 齐套</p>
+        <p><b>判据　</b>① 原理图评审通过　② 13 対连接器脚位在 Altium 里复核完毕　③ 阻抗表经板厂确认　④ 邮票孔焊盘同时兼容板对板连接器封装　⑤ 板子投产、BOM 齐套</p>
       </div>
       <div class="callout"><p><b>依赖　</b>M0 第 1 条（外形）。第 2、3 条不关也能画原理图，但下单和定稿要等。</p></div>
     </div>
@@ -354,7 +498,7 @@ footer p{max-width:80ch}
     <div class="ms-h">
       <span class="ms-id">M2</span>
       <span class="ms-t">验证板点亮 + 三条硬轴</span>
-      <span class="ms-d">4 周 · 10-07 → 11-04</span>
+      <span class="ms-d">5 周 · 10-08 → 11-12</span>
     </div>
     <div class="ms-b">
       <p class="goal">目标：<b>12 颗 2260 点亮，三条硬轴有实测结论。</b>这是全项目最关键的一道门——它的成败决定正式屏板能不能画。</p>
@@ -387,7 +531,7 @@ footer p{max-width:80ch}
 
       <h3>本阶段其余工作</h3>
       <ul>
-        <li>打样 + 贴片回板（2~3 周，串行，压不动）</li>
+        <li>打样 + 贴片回板（<b>3 周，串行，压不动</b>）—— <span class="yes">这 3 周硬件不闲着</span>：叠上 M3 屏板原理图里「不依赖硬轴结论」的部分（电源树、LED 阵列布局、24 颗 BGA 扇出、叠层）。<b>但端接与共模那部分必须等实测</b>，先画的会作废</li>
         <li>上电时序验证 / FPGA 配置通路 / 时钟锁定</li>
         <li>点亮阶段用 <b>ACA420-CORE</b>（安路 EG4S20BG256）插转接板；正式子板另画 EG4A20BG256</li>
       </ul>
@@ -405,13 +549,13 @@ footer p{max-width:80ch}
   <div class="ms">
     <div class="ms-h">
       <span class="ms-id">M3</span>
-      <span class="ms-t">正式板设计（两条并行）</span>
-      <span class="ms-d">6 周 · 11-04 → 12-16</span>
+      <span class="ms-t">正式屏板设计</span>
+      <span class="ms-d">5 周 · 11-12 → 12-17</span>
     </div>
     <div class="ms-b">
-      <p class="goal">目标：<b>正式屏板与自研主控板设计完成并投产。</b></p>
+      <p class="goal">目标：<b>正式屏板设计完成并投产。</b>基线（路线 B）下这一阶段<b>只做屏板</b>；主控板见下方附注。</p>
 
-      <h3>M3a · 正式屏板 <span class="pill new">关键路径</span></h3>
+      <h3>正式屏板 <span class="pill new">关键路径</span></h3>
       <ul>
         <li>24 颗 ICND2260、192 × 216 px / 面、48 扫、<b>FPGA 直接放灯板上，无邮票孔</b>（邮票孔是验证板的形态）</li>
         <li>73 対差分（24 链 × 3 + 1 时钟）+ 96 只端接</li>
@@ -420,11 +564,13 @@ footer p{max-width:80ch}
         <li>SI 仿真：差分对等长、参考平面完整、每対配地，逐条过评审清单</li>
       </ul>
 
-      <h3>M3b · DR1V90 自研主控板 <span class="pill tbd">可推后</span></h3>
-      <div class="callout">
-        <p><b>现状：只有交接资料包，原理图一行没画。</b><span class="mono">pcb/dr1v90_core_v1/</span> 有 62 MB / 39 个文件、6 篇设计要点 1100+ 行，但 <span class="mono">pcb/</span> 下唯一的真工程是 <span class="mono">zynq7020_dev_v1</span>（KiCad，Zynq 那块）。这块的起步成本比屏板高。</p>
+      <h3>附注 · 若走路线 A：双兼容主控板 <span class="pill tbd">不在基线内</span></h3>
+      <div class="callout acc">
+        <p><b>不是「DR1V90 自研板」，是「7020 / DR1V90 双兼容板」。</b>两颗 484 球 pin2pin（§1），所以选型不锁并不阻塞这块——一块板、两种贴法。</p>
+        <p><b>现状：只有交接资料包，原理图一行没画。</b><span class="mono">pcb/dr1v90_core_v1/</span> 有 62 MB / 39 个文件、6 篇设计要点 1100+ 行，但 <span class="mono">pcb/</span> 下唯一的真工程是 <span class="mono">zynq7020_dev_v1</span>（KiCad，Zynq 那块）。起步成本比屏板高。</p>
       </div>
       <ul>
+        <li><span class="warn">因双兼容新增：VCCINT 轨做成 0.95 V / 1.0 V 可选</span>（DR1 把 Zynq 的 VCCINT / VCCBRAM / VCCPINT 三轨合并成一条，VCCAUX 与 VCCPAUX 同理）；CFGBVS(T13) 与 VCCBATT / RSVDVCC1-3 / DXP / DXN 留跳线位，Zynq 贴法接、DR1 贴法置 NC</li>
         <li><span class="no">🔴 上行 LVDS 重排 bank</span>，避开 bank33 那 35 个上电被固定的球——其中 4 対差分被「劈开」（P 端下拉、N 端上拉），上电后约 90 ms 内对端会看到<b>稳定的假差分电平</b>。<b>要 RTL 侧先出新分配，硬件才能画</b></li>
         <li>2.5 V 新增轨的电流预算与 bank 分配（驱屏 / 上行 LVDS 的共模全靠它，FS03 没有这一路）</li>
         <li>DDR3L 32 bit / 1 GB 选型与等长约束（16 bit 已够用，32 bit 是放大余量）</li>
@@ -436,10 +582,10 @@ footer p{max-width:80ch}
       </ul>
 
       <div class="callout ok">
-        <p><b>判据　</b>① 两块板原理图 + PCB 评审通过　② SI 仿真通过　③ 投产、BOM 齐套</p>
+        <p><b>判据　</b>① 屏板原理图评审通过　② <b>约束文档交付 layout 外发方</b>（叠层/阻抗/等长/差分対/换层过孔与伴地/元件面/禁布区）　③ 外发回来的 PCB 逐条评审通过 + SI 仿真通过　④ 投产、BOM 齐套</p>
       </div>
       <div class="callout acc">
-        <p><b>人力提醒　</b>这 6 周是按<b>两条并行</b>算的，需要第二个人。若只有一名硬件工程师，两条串行 ⇒ <b>+4 周</b>，整机日期后移到 2027-03-31。</p>
+        <p><b>路线提醒　</b>基线（路线 B）<b>不做这块板</b>，转子上继续用 FS03 过渡，所以上面这 5 周只含屏板。若决定自研主控（路线 A），<b>layout 外发后它只多约 5 周</b>——硬件只需做原理图与评审，而这些能塞进屏板的 layout 期与打样期。<b>这个决定 11 月中再做，不影响现在开工。</b></p>
       </div>
     </div>
   </div>
@@ -449,7 +595,7 @@ footer p{max-width:80ch}
     <div class="ms-h">
       <span class="ms-id">M4</span>
       <span class="ms-t">正式板回板点亮</span>
-      <span class="ms-d">5 周 · 12-16 → 2027-01-20</span>
+      <span class="ms-d">6 周 · 12-17 → 2027-01-28</span>
     </div>
     <div class="ms-b">
       <p class="goal">目标：<b>两面屏板各自点亮，主控板起 Linux 并驱动两面。</b></p>
@@ -459,10 +605,10 @@ footer p{max-width:80ch}
         <li>单面点亮 → 双面点亮 → 主控 + 双屏联调</li>
       </ul>
       <div class="callout ok">
-        <p><b>判据　</b>① 两面屏板静态点亮，192 × 216 全阵列无坏区　② 主控板从 QSPI 启动 Linux　③ 主控经上行链路驱两面，误码为 0</p>
+        <p><b>判据　</b>① 两面屏板静态点亮，192 × 216 全阵列无坏区　② 主控（基线下为 FS03）经上行链路驱两面，误码为 0　③ 若走路线 A：自研主控板从 QSPI 启动 Linux</p>
       </div>
       <div class="callout risk">
-        <p><b>这里没有给改版留时间。</b>上面每块板都按「一次回板成功」算。一块含 24 颗 0.5 mm BGA 的 HDI 板做到一版即通，是乐观假设——<b>现实里至少要给验证板留 1 轮改版（+3~4 周）</b>。见 §3 风险 1。</p>
+        <p><b>这里没有给改版留时间。</b>上面每块板都按「一次回板成功」算。一块含 24 颗 0.5 mm BGA 的 HDI 板做到一版即通，是乐观假设——<b>现实里至少要给验证板留 1 轮改版（+3~4 周）</b>。见 §4 风险 1。</p>
       </div>
     </div>
   </div>
@@ -472,7 +618,7 @@ footer p{max-width:80ch}
     <div class="ms-h">
       <span class="ms-id">M5</span>
       <span class="ms-t">整机集成上转子</span>
-      <span class="ms-d">6 周 · 2027-01-20 → 03-03</span>
+      <span class="ms-d">6 周 · 2027-01-28 → 03-11</span>
     </div>
     <div class="ms-b">
       <p class="goal">目标：<b>900 RPM 连续运转，30 Hz 体帧率。</b></p>
@@ -492,12 +638,12 @@ footer p{max-width:80ch}
 
 <!-- ============ 风险 ============ -->
 <section>
-  <h2><span class="sec">§3</span> 三条会真实改变日期的风险</h2>
+  <h2><span class="sec">§4</span> 三条会真实改变日期的风险</h2>
   <p class="lead">不是「可能有风险」那种清单，是三件已经能看见、且会按周计价的事。</p>
 
   <div class="callout risk">
     <p><b>风险 1 · 全程没算改版轮次 —— 最可能失守的一条</b></p>
-    <p>25 周是按每块板「一次回板成功」排的。M2 那块验证板要证的恰恰是三条<b>没证过的</b>硬轴，其中共模那条已经能预见有超窗风险。合理做法是<b>预留 1 轮改版：+3~4 周</b>，把参考完成推到 2027-03-31。逃生位（③ 那 60 个 0402）的价值就在于把「共模超窗」从改版降级为换贴片，但它只覆盖这一条。</p>
+    <p>26 周是按每块板「一次回板成功」排的。M2 那块验证板要证的恰恰是三条<b>没证过的</b>硬轴，其中共模那条已经能预见有超窗风险。合理做法是<b>预留 1 轮改版：+3~4 周</b>，把参考完成推到 <b>2027-04-08</b>。逃生位（③ 那 60 个 0402）的价值就在于把「共模超窗」从改版降级为换贴片，但它只覆盖这一条。</p>
   </div>
 
   <div class="callout risk">
@@ -506,49 +652,58 @@ footer p{max-width:80ch}
   </div>
 
   <div class="callout risk">
-    <p><b>风险 3 · 芯片货期是最大的外部变量，现在完全未知</b></p>
-    <p>询价单的货期列还是空的。安路 EG4A20 / DR1V90 属于国产 FPGA，货期波动大；ICND2260 单机要 48 颗。<b>若任一料货期超过 8 周，下单动作必须从 M3 结束提到 M3 开始</b>——按设计中的 BOM 先订长周期料，短周期料后补。这不改设计，只改采购节奏，但不做就会在 M4 门口白等。</p>
+    <p><b>风险 3 · 供货是选型的真正约束，而货期现在完全未知</b></p>
+    <p>询价单的货期列还是空的，而<b>选型的第一个收敛点就在这一列</b>（§1）。桥片候选里参数最好的两颗——GW5A-60 UG324S（110 真対、1600 Mbps、8~16:1）与 GW5A-25 PG256S——<b>公开渠道全是「受限供货」，无价无货</b>；非国产的 XC7S50 是 0 现货 / 52 周，Ti90 要 840 颗整箱 / 71 周。参数表上过关的，采购单上未必存在。</p>
+    <p><b>两条对策：</b>① 询价单 A01 / B01 按候选清单<b>逐颗报价</b>，别只问一颗；② 若任一料货期超过 8 周，下单动作必须从 M3 结束提到 <b>M3 开始</b>——按设计中的 BOM 先订长周期料。这不改设计，只改采购节奏，但不做就会在 M4 门口白等。</p>
   </div>
 </section>
 
 <!-- ============ 压缩 ============ -->
 <section>
-  <h2><span class="sec">§4</span> 两个压缩杠杆，和一个不能拉的</h2>
+  <h2><span class="sec">§5</span> 还能压缩的，和不能拉的</h2>
+  <p class="lead">基线：<b>26 周 · 硬件 1 人 · layout 外发 · 主控板用 FS03 过渡</b>。下面是相对这条基线还能动的。</p>
 
   <div class="tw">
   <table>
-    <thead><tr><th>杠杆</th><th>省多少</th><th>代价</th><th>建议</th></tr></thead>
+    <thead><tr><th>杠杆</th><th>影响</th><th>说明</th><th>建议</th></tr></thead>
     <tbody>
       <tr>
-        <td class="k">主控板先不做<br>用 FS03 过渡</td>
-        <td class="nw"><b>约 4 周</b><br><span class="mono">→ 2027-02-03</span></td>
-        <td class="note">转子上挂一块非自研板，机械固定、重量、不平衡量都要另算。记忆库口径本来就是「FS03 只是过渡」</td>
-        <td class="note"><span class="yes">可拉。</span>M3b 推到 M4 之后，让屏板独占关键路径。前提是 FS03 的 CEP 连接器能扛 136 g</td>
+        <td class="k">打样贴片加急<br>（两轮）</td>
+        <td class="nw"><span class="yes">约 −1.5 周</span></td>
+        <td class="note">验证板与正式屏板各一轮，每轮省 3~5 天。这是唯一一条<b>纯花钱就能买到的时间</b></td>
+        <td class="note"><span class="yes">✅ 值得。</span>尤其正式屏板那一轮——它挨着春节窗口，早一周就少一分撞进停工的概率</td>
       </tr>
       <tr>
-        <td class="k">M3 两条真并行<br>（加第二个人）</td>
-        <td class="nw"><b>约 4 周</b><br><span class="mono">相对串行</span></td>
-        <td class="note">需要第二名硬件工程师。当前 25 周的排期<b>已经假设了并行</b>——若只有一人，是 +4 周而不是 −4 周</td>
-        <td class="note"><span class="warn">先确认人力。</span>这一条决定 25 周这个数成不成立</td>
+        <td class="k">加第二名硬件</td>
+        <td class="nw"><span class="warn">约 −1~2 周</span></td>
+        <td class="note"><b>在路线 B 下收益很小。</b>关键路径是单块屏板的原理图与评审，两个人画同一块板不会减半；而 layout 已经外发，本来最耗手的部分不在内部</td>
+        <td class="note"><span class="warn">⚠ 只有走路线 A 才值得加人</span>——那时是两块板并行，第二个人才有独立的活</td>
+      </tr>
+      <tr>
+        <td class="k">自研主控板<br>（路线 A）</td>
+        <td class="nw"><span class="no">+5 周</span></td>
+        <td class="note"><b>反向杠杆。</b>layout 外发后主控板 PCB 不占硬件的手，只多出原理图与评审，且能塞进屏板的 layout 期与打样期</td>
+        <td class="note">11 月中再定，不影响现在开工</td>
       </tr>
       <tr>
         <td class="k">验证板与正式屏板<br>重叠开工</td>
-        <td class="nw"><b>约 3 周</b></td>
+        <td class="nw">约 −3 周</td>
         <td class="note">硬轴没证就画大板。09-04 的计划明确反对，理由至今成立</td>
-        <td class="note"><span class="no">不建议拉。</span>硬轴 ① ③ 若提前出结论可以局部开工，但 ② 共模那条必须等实测——它直接决定端接网络怎么画</td>
+        <td class="note"><span class="no">❌ 不建议拉。</span>硬轴 ① ③ 若提前出结论可局部开工（这已经计入基线的「等待期叠加」），但 ② 共模那条<b>必须等实测</b>——它直接决定端接网络怎么画</td>
       </tr>
     </tbody>
+    <caption>基线里已经用掉的一条不再重复计入：<b>等待期叠加</b>（M2 与 M4 的 6 周打样期叠下一阶段设计）已经把 32 周压到 26 周，那是排法不是杠杆。</caption>
   </table>
   </div>
 
   <div class="callout acc">
-    <p><b>一句话版本　</b>现在唯一该做的动作是<b>定灯板宽度</b>。它卡着 M1，M1 卡着 M2，M2 卡着后面全部。其余三条卡点可以并行处理，但都不像它这样一票否决。</p>
+    <p><b>一句话版本　</b>现在唯一该做的动作是<b>定灯板宽度</b>。它卡着 M1，M1 卡着 M2，M2 卡着后面全部。选型两级都开放、layout 外发、主控板走哪条路线——这三件都不影响这一条，灯板外形与它们全都无关。</p>
   </div>
 </section>
 
 <footer>
-  <p>基线 2026-09-09。日期为参考值，按「硬件 1 人全职 + 软件侧配合 RTL / 综合 / 时序 / 工具链」、打样走常规档（未加急）、每块板一次回板成功推算；未含改版轮次与芯片货期，二者见 §3。</p>
-  <p>依据：<span class="mono">灯板改板_邮票孔FPGA接口_2026-09-09.html</span>（接口冻结版 v1）· <span class="mono">HW_SPEC_2026-09-04.html</span>（需求推导）· <span class="mono">HW_TASKS_2026-09-04.html</span>（原 12 周计划，其阶段一已被 09-07 选型定案覆盖）· <span class="mono">pcb/dr1v90_core_v1/01_设计要点/</span>（主控板 6 篇 1100+ 行）· 记忆库 <span class="mono">zynq_pov/docs/claude_memory/</span>。</p>
+  <p>基线 2026-09-09（选型口径 09-10 修订：主控与桥片两级均不锁定）。日期为参考值，按「硬件 1 人全职（<b>不含 layout，PCB 布线外发</b>）+ 软件侧配合 RTL / 综合 / 时序 / 工具链」、打样走常规档（未加急）、每块板一次回板成功推算；未含改版轮次与芯片货期，二者见 §4。</p>
+  <p>依据：<span class="mono">灯板改板_邮票孔FPGA接口_2026-09-09.html</span>（接口冻结版 v1）· <span class="mono">HW_SPEC_2026-09-04.html</span>（需求推导）· <span class="mono">HW_TASKS_2026-09-04.html</span>（原 12 周计划，其阶段一已被 09-07 选型定案覆盖）· <span class="mono">pcb/dr1v90_core_v1/01_设计要点/</span>（主控板 6 篇 1100+ 行）· 记忆库 <span class="mono">zynq_pov/docs/claude_memory/</span>（选型两表出自 <span class="mono">reference_bridge_fpga_alternatives</span> / <span class="mono">reference_anlogic_dr1_fs03_eval</span> / <span class="mono">project_pov3d_main_soc_7z010_verdict</span>）。</p>
 </footer>
 
 </div>

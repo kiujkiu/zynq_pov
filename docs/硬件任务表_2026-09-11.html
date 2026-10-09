@@ -1,0 +1,237 @@
+<title>POV-3D 硬件任务表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{--paper:#F1F2EE;--surface:#FBFCFA;--surface-2:#E9EBE5;--ink:#15191B;--ink-2:#3A4245;--muted:#69736F;
+ --rule:#D2D6CE;--rule-2:#BAC1B5;--accent:#A8531C;--accent-soft:#F5E6DA;--ok:#1F6F5C;--ok-soft:#E0EEE8;
+ --risk:#A32418;--risk-soft:#F7E2DE;--crit:#A32418;--par:#2F7A45;--late:#69736F;--fill:#FFF0C2}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --paper:#121513;--surface:#191D1B;--surface-2:#222724;--ink:#E8ECE7;--ink-2:#C2C9C3;--muted:#8D958F;
+ --rule:#2E3532;--rule-2:#414945;--accent:#E39154;--accent-soft:#3A2618;--ok:#5FC0A3;--ok-soft:#16302A;
+ --risk:#F0897C;--risk-soft:#361A17;--crit:#F0897C;--par:#5FBE7C;--late:#8D958F;--fill:#3A2E12}}
+:root[data-theme="dark"]{--paper:#121513;--surface:#191D1B;--surface-2:#222724;--ink:#E8ECE7;--ink-2:#C2C9C3;
+ --muted:#8D958F;--rule:#2E3532;--rule-2:#414945;--accent:#E39154;--accent-soft:#3A2618;--ok:#5FC0A3;
+ --ok-soft:#16302A;--risk:#F0897C;--risk-soft:#361A17;--crit:#F0897C;--par:#5FBE7C;--late:#8D958F;--fill:#3A2E12}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;font-size:14.5px;line-height:1.6}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.93em}
+.wrap{max-width:1400px;margin:0 auto;padding:0 26px 80px}
+header.mast{border-bottom:2px solid var(--ink);margin-bottom:26px;padding:40px 0 16px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 9px}
+h1{font-size:31px;line-height:1.23;margin:0 0 8px;font-weight:700;letter-spacing:-.012em}
+.sub{margin:0 0 20px;color:var(--muted);font-size:13.5px;max-width:80ch}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:1px;border:1px solid var(--rule);border-radius:3px;overflow:hidden;background:var(--rule)}
+.meta div{background:var(--surface);padding:10px 13px;display:flex;flex-direction:column;gap:1px}
+.meta .k{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.meta .v{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums}
+section{margin:0 0 40px}
+h2{font-size:19px;font-weight:600;margin:0 0 4px;padding-bottom:7px;border-bottom:1px solid var(--rule-2);display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+h2 .sec{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--accent);font-weight:500}
+h3{font-size:14px;font-weight:600;margin:26px 0 6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h3 .lid{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:700;color:#fff;background:var(--late);
+  border-radius:3px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+h3.crit .lid{background:var(--crit)} h3.par .lid{background:var(--par)}
+.ltag{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;padding:1px 7px;border-radius:2px;border:1px solid currentColor;font-weight:600}
+.ltag.crit{color:var(--crit)} .ltag.par{color:var(--par)} .ltag.late{color:var(--late)}
+.lead{margin:9px 0 14px;color:var(--muted);font-size:13px;max-width:84ch}
+p{margin:8px 0;max-width:84ch}
+.tw{overflow-x:auto;margin:10px 0 4px;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--rule-2);background:var(--surface-2);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.id{font-family:"IBM Plex Mono",monospace;font-weight:600;white-space:nowrap;width:44px;color:var(--accent)}
+td.tk{font-weight:600;min-width:150px}
+td.dl{min-width:130px}
+td.ac{min-width:200px;color:var(--ink-2)}
+td.pre{font-family:"IBM Plex Mono",monospace;font-size:11.5px;white-space:nowrap;color:var(--muted);width:64px}
+td.du{font-family:"IBM Plex Mono",monospace;font-size:11.5px;white-space:nowrap;color:var(--muted);width:64px}
+td.rm{color:var(--ink-2);font-size:12px;min-width:240px}
+td.fill{background:var(--fill);width:70px}
+.callout{border:1px solid var(--rule);border-left:3px solid var(--rule-2);border-radius:3px;padding:10px 14px;margin:13px 0;font-size:13px;color:var(--ink-2);background:var(--surface)}
+.callout.risk{border-left-color:var(--risk);background:var(--risk-soft)} .callout.risk b{color:var(--risk)}
+.callout.ok{border-left-color:var(--ok);background:var(--ok-soft)} .callout.ok b{color:var(--ok)}
+.callout.acc{border-left-color:var(--accent);background:var(--accent-soft)} .callout.acc b{color:var(--accent)}
+.callout p{max-width:none;margin:5px 0}.callout p:first-child{margin-top:0}.callout p:last-child{margin-bottom:0}
+footer{border-top:1px solid var(--rule-2);margin-top:44px;padding-top:14px;color:var(--muted);font-size:12px}
+footer p{max-width:84ch}
+::selection{background:var(--accent-soft);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media print{body{background:#fff;color:#000;font-size:8.5pt}.tw{overflow:visible}tr{break-inside:avoid}h2,h3{break-after:avoid}}
+</style>
+
+<style>
+.sgw{overflow-x:auto;margin:12px 0 6px;border:1px solid var(--rule);border-radius:3px;background:var(--paper)}
+.sg{display:block;width:100%;min-width:880px;height:auto;font-family:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+.sg .band{fill:none;stroke:var(--rule-2);stroke-dasharray:3 4}
+.sg .bandt{fill:var(--muted);font-size:11.5px}
+.sg .lane{fill:var(--muted);font-size:11px;font-weight:600}
+.sg .n rect{fill:var(--surface);stroke:var(--rule-2);stroke-width:1.5}
+.sg .n.crit rect{stroke:var(--crit)} .sg .n.par rect{stroke:var(--par)} .sg .n.gate rect{stroke:var(--crit);stroke-width:3.2}
+.sg .n .id{font:700 13px "IBM Plex Mono",ui-monospace,Consolas,monospace;fill:var(--ink)}
+.sg .n .nm{font-size:12px;fill:var(--ink-2)}
+.sg .e{fill:none;stroke:var(--ink-2);stroke-width:1.4}
+.sg .d{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:6 4}
+.sg .ahp{fill:var(--ink-2)} .sg .ahd{fill:var(--accent)}
+.sg .lb{font-size:11px;fill:var(--ink-2);paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round}
+.sg .lb.dl{fill:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--ink-2);margin:6px 0 4px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:26px;height:0;border-top:1.6px solid var(--ink-2)}
+.legend i.dash{border-top:1.6px dashed var(--accent)}
+.legend b.box{display:inline-block;width:16px;height:11px;border:1.6px solid var(--rule-2);border-radius:2px;background:var(--surface)}
+.legend b.box.crit{border-color:var(--crit)} .legend b.box.gate{border:3px solid var(--crit)} .legend b.box.par{border-color:var(--par)}
+</style>
+<div class="wrap">
+<header class="mast">
+  <p class="eyebrow">POV-3D · 硬件任务表 · 2026-09-11 (rev.4)</p>
+  <h1>硬件任务表：两个版本，逐层拆到交付物</h1>
+  <p class="sub">硬件任务就是<b>两个版本的硬件</b>：先做<b>验证板</b>，再做<b>目标板</b>。先做验证板，一是让你尽快熟悉环境，二是让团队尽快有一套能用的台架。<br>每个版本拆成几个小目标，每个小目标都有明确的交付物和验收判据，并标出<b>它等什么（前置）</b>和<b>它支撑谁（交付给谁、交付什么）</b>。子任务怎么拆、方案怎么选、时间怎么排，由你自己定。</p>
+  <div class="meta">
+    <div><span class="k">版本</span><span class="v">2 个</span></div>
+    <div><span class="k">版本一小目标</span><span class="v">3 个</span></div>
+    <div><span class="k">版本二小目标</span><span class="v">3 条线 · 8 个</span></div>
+    <div><span class="k">板</span><span class="v">验证 3 + 目标 2</span></div>
+    <div><span class="k">已锁定芯片</span><span class="v">仅 2260</span></div>
+  </div>
+</header>
+
+<section><h2><span class="sec">§0</span> 全貌</h2>
+<div class="tw"><table><thead><tr><th>模组</th><th>版本一：验证板</th><th>版本二：目标板</th><th>怎么过渡</th></tr></thead><tbody>
+<tr><td class="tk">LED 模组</td><td class="dl"><b>V1 灯板</b>：在现役灯板基础上改板，装 12 颗 2260<br><b>V2 桥板</b>：放桥接 FPGA，自研还是用核心板由你评估</td><td class="dl"><b>T1 LED 板</b>：桥接 FPGA 直接贴片，装 24 颗 2260，分辨率 192×216；屏体用自制灯珠还是 COB 按 2A-1 定；转子两面各一块</td><td class="rm">V1 + V2 合并成一块</td></tr>
+<tr><td class="tk">SOC 模组</td><td class="dl">FS03 开发板（现成）<br><b>V3 FS03 转接板</b>：把 CEP 排针转成模组间接口</td><td class="dl"><b>T2 SOC 板</b>：自研 SOC 板，直接引出模组间接口</td><td class="rm">FS03 + V3 合并成一块</td></tr>
+</tbody></table></div>
+<div class="callout ok"><p><b>两个模组之间的接口是永久契约</b>，两个版本都用它。契约冻结后，两侧可以各自升级，而且<b>每块目标板都能拿验证版的另一半当测试台架</b>（见 2A-3、2B-3）。V1 和 V2 之间的邮票孔只是临时接口，合并后就不存在了。</p></div>
+<div class="callout acc"><p><b>芯片锁定状态：目前只锁定了 LED 驱动芯片 ICND2260。</b>桥接 FPGA（1-1）和主 SOC（2B-1）都还没定。这两颗的选型结论必须附上<b>和采购确认过的价格、货期和供货情况</b>：技术上可行但买不到、或者货期太长，都不能定。询价单里对应 B01 和 A01 两行。</p></div>
+</section>
+
+<section><h2><span class="sec">§1</span> 支撑关系图</h2>
+<div class="sgw">
+<svg class="sg" viewBox="0 0 1130 392" role="img" aria-label="硬件小目标支撑关系图：版本一 1-1 到 1-3，版本二分 2A、2B、2C 三条线">
+<defs>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="ahp"/></marker>
+<marker id="ahd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="ahd"/></marker>
+</defs>
+<path class="band" d="M497,34 L497,362"/>
+<text class="bandt" x="266" y="376" text-anchor="middle">版本一期间（2A-1、2B-1 也在这段并行做）</text>
+<text class="bandt" x="812" y="376" text-anchor="middle">版本二</text>
+<text class="lane" x="48" y="40">版本一 验证板</text>
+<text class="lane" x="48" y="144">2A LED 板线</text>
+<text class="lane" x="48" y="264">2B SOC 板线</text>
+<text class="lane" x="838" y="204">2C 整机联调</text>
+
+<!-- 实线：前置 -->
+<path class="e" d="M172,70 L197,70" marker-end="url(#ah)"/>
+<path class="e" d="M322,70 L347,70" marker-end="url(#ah)"/>
+<path class="e" d="M472,66 C505,66 488,167 515,167" marker-end="url(#ah)"/>
+<path class="e" d="M472,76 C505,76 488,287 515,287" marker-end="url(#ah)"/>
+<path class="e" d="M172,183 L515,183" marker-end="url(#ah)"/>
+<path class="e" d="M172,303 L515,303" marker-end="url(#ah)"/>
+<path class="e" d="M642,175 L675,175" marker-end="url(#ah)"/>
+<path class="e" d="M642,295 L675,295" marker-end="url(#ah)"/>
+<path class="e" d="M802,175 C826,175 814,227 835,227" marker-end="url(#ah)"/>
+<path class="e" d="M802,295 C826,295 814,243 835,243" marker-end="url(#ah)"/>
+<path class="e" d="M962,235 L985,235" marker-end="url(#ah)"/>
+<text class="lb" x="566" y="126" text-anchor="middle">设计输入清单</text>
+<text class="lb" x="345" y="177" text-anchor="middle">屏体形式 / 电流 / 功耗</text>
+<text class="lb" x="345" y="297" text-anchor="middle">SOC 型号 / 板级需求</text>
+
+<!-- 虚线：提供台架或输入 -->
+<path class="d" d="M260,45 L260,24 L740,24 L740,148" marker-end="url(#ahd)"/>
+<path class="d" d="M260,95 L260,344 L740,344 L740,322" marker-end="url(#ahd)"/>
+<path class="d" d="M48,70 L22,70 L22,295 L46,295" marker-end="url(#ahd)"/>
+<text class="lb dl" x="500" y="18" text-anchor="middle">台架：FS03 + V3 当 T1 的测试台架</text>
+<text class="lb dl" x="500" y="338" text-anchor="middle">台架：V1 + V2 当 T2 的测试台架</text>
+<text class="lb dl" x="28" y="236">ICD：接口対数</text>
+
+<!-- 节点 -->
+<g class="n crit"><rect x="48" y="45" width="124" height="50" rx="4"/><text class="id" x="110" y="66" text-anchor="middle">1-1</text><text class="nm" x="110" y="84" text-anchor="middle">开画前定案</text></g>
+<g class="n crit"><rect x="198" y="45" width="124" height="50" rx="4"/><text class="id" x="260" y="66" text-anchor="middle">1-2</text><text class="nm" x="260" y="84" text-anchor="middle">三块板回板点亮</text></g>
+<g class="n gate"><rect x="348" y="45" width="124" height="50" rx="4"/><text class="id" x="410" y="66" text-anchor="middle">1-3 · 硬门槛</text><text class="nm" x="410" y="84" text-anchor="middle">三条硬轴测试</text></g>
+<g class="n par"><rect x="48" y="150" width="124" height="50" rx="4"/><text class="id" x="110" y="171" text-anchor="middle">2A-1</text><text class="nm" x="110" y="189" text-anchor="middle">LED 板定案</text></g>
+<g class="n"><rect x="518" y="150" width="124" height="50" rx="4"/><text class="id" x="580" y="171" text-anchor="middle">2A-2</text><text class="nm" x="580" y="189" text-anchor="middle">LED 板设计投产</text></g>
+<g class="n"><rect x="678" y="150" width="124" height="50" rx="4"/><text class="id" x="740" y="171" text-anchor="middle">2A-3</text><text class="nm" x="740" y="189" text-anchor="middle">LED 板单板点亮</text></g>
+<g class="n par"><rect x="48" y="270" width="124" height="50" rx="4"/><text class="id" x="110" y="291" text-anchor="middle">2B-1</text><text class="nm" x="110" y="309" text-anchor="middle">SOC 板定案</text></g>
+<g class="n"><rect x="518" y="270" width="124" height="50" rx="4"/><text class="id" x="580" y="291" text-anchor="middle">2B-2</text><text class="nm" x="580" y="309" text-anchor="middle">SOC 板设计投产</text></g>
+<g class="n"><rect x="678" y="270" width="124" height="50" rx="4"/><text class="id" x="740" y="291" text-anchor="middle">2B-3</text><text class="nm" x="740" y="309" text-anchor="middle">SOC 板 bring-up</text></g>
+<g class="n"><rect x="838" y="210" width="124" height="50" rx="4"/><text class="id" x="900" y="231" text-anchor="middle">2C-1</text><text class="nm" x="900" y="249" text-anchor="middle">双面联调</text></g>
+<g class="n"><rect x="988" y="210" width="124" height="50" rx="4"/><text class="id" x="1050" y="231" text-anchor="middle">2C-2</text><text class="nm" x="1050" y="249" text-anchor="middle">上转子达标</text></g>
+</svg>
+</div>
+<div class="legend">
+<span><i></i>前置：做完才能开始</span>
+<span><i class="dash"></i>支撑：提供台架或输入</span>
+<span><b class="box crit"></b>版本一关键路径</span>
+<span><b class="box gate"></b>硬门槛</span>
+<span><b class="box par"></b>现在就能开始，版本一期间并行</span>
+<span><b class="box"></b>版本二</span>
+</div>
+<p class="lead">图里只画主要关系。完整的前置和支撑见 §2、§3 表格的最后两列。另外两条没画进图：1-1 选定的桥片 T1 也要沿用（→ 2A-2），2A-1 的功耗和亮度是整机达标的依据（→ 2C-2）。</p>
+<div class="callout acc"><p><b>主线：1-1 → 1-2 → 1-3 →（2A-2 ∥ 2B-2）→（2A-3 ∥ 2B-3）→ 2C-1 → 2C-2</b><br>2A-1 和 2B-1 不在主线上，<b>在版本一期间并行做</b>，否则长周期料和屏体打样会拖住版本二。<br>节点之间怎么排、留多少缓冲由你定；<b>判据不能改</b>。1-3 是唯一一个"不过就不能往下走"的节点。</p></div>
+</section>
+
+<section><h2><span class="sec">§2</span> 版本一：验证板（V1 + V2 + V3）</h2>
+<p class="lead"><b>目标：</b>尽快拿到一套能用的台架，并用它把目标板最大的风险测掉。从改现役灯板起步，边做边熟悉环境。<b>直接支撑这个目标的是 1-2（能用的台架）和 1-3（风险测掉），1-1 是这两项的前提。</b></p>
+<div class="tw"><table><thead><tr><th>编号</th><th>小目标</th><th>交付物</th><th>验收判据</th><th>前置</th><th>支撑谁 · 提供什么</th></tr></thead><tbody>
+<tr><td class="id">1-1</td><td class="tk">开画前定案</td><td class="dl">① 桥片选型报告：型号，V2 自研还是用核心板，以及采购确认的价格、货期和供货（询价单 B01）<br>② 模组间接口契约 ICD v1，含通信速率结论</td><td class="ac">两份文档出齐。ICD 里四条都冻结：対数、电平与共模、阻抗与地线、lane 映射与协议，并覆盖 FS03 和自研 SOC 两种</td><td class="pre" style="width:auto">—</td><td class="rm">→ <b>1-2</b>：有了这两份，V2 / V3 才能开画<br>→ <b>2A-2</b>：T1 沿用同一颗桥片<br>→ <b>2B-1</b>：ICD 定下 SOC 板要引出多少対</td></tr>
+<tr><td class="id">1-2</td><td class="tk">三块板回板并点亮</td><td class="dl">V1 / V2 / V3 的设计文件和实物，加点亮记录</td><td class="ac">FPGA 能配置、时钟锁定；12 颗 2260 全部点亮、无坏区；收到 CRC 正确的 ACK 回包</td><td class="pre" style="width:auto">1-1</td><td class="rm">→ <b>1-3</b>：提供被测对象<br>→ <b>2A-3</b>：FS03 + V3 当 T1 的测试台架<br>→ <b>2B-3</b>：V1 + V2 当 T2 的测试台架<br>→ 软件侧：调固件用的台架</td></tr>
+<tr><td class="id">1-3</td><td class="tk">三条硬轴测试报告</td><td class="dl">测试报告，加一份<b>给目标板的设计输入清单</b>：端接方式、线速率、每面対数</td><td class="ac">① 桥片 IO 内部相位与预算一致；② LVDS 驱 2260 的共模落在 1.1~1.3 V 窗内；③ 上行环回 800M 和 700M 两档误码都为 0</td><td class="pre" style="width:auto">1-2</td><td class="rm">→ <b>2A-2 / 2B-2</b>：设计输入清单<br>🔴 <b>版本二唯一的硬门槛</b>：三条不全过，目标板就不能画。时间紧可以砍后面的，这块不能砍</td></tr>
+</tbody></table></div>
+
+<div class="callout acc">
+<p><b>1-1 里的桥板形态：自研还是直接买核心板，由你评估。</b>两种做法都可以：① 自己画 FPGA 板；② 买现成核心板，自己画底板。依据要写明周期、成本、可用差分対数，以及能不能延续到 T1。桥片型号的差分対门槛以 ICD 的速率结论为准。如果走核心板，ACG525-CORE-V2 的引脚表、封装和底板源文件已经备齐，可以直接用。</p>
+</div>
+
+<h3>1-1 的速率计算：输入与我们的纸面估算</h3>
+<p class="lead">这里只给输入和参考值，<b>最终结论由你复核后给出</b>，它会决定桥片和主 SOC 各需要多少差分対。项目里把 SOC → LED 板这个方向叫"上行"。</p>
+<div class="tw"><table><thead><tr><th>输入</th><th>取值</th><th>来源</th></tr></thead><tbody>
+<tr><td class="tk">每颗 2260 的屏侧数据率</td><td class="ac">40 × 3 × 16 bit × 48 扫 × 603 片/圈 × 15 圈/秒 = <b>833.6 Mbps</b></td><td class="rm">900 RPM、每圈 603 片为整机目标</td></tr>
+<tr><td class="tk">每面屏侧总数据率</td><td class="ac">24 颗 × 833.6 Mbps = <b>20.0 Gbps</b>（屏侧 16 bit 格式）</td><td class="rm">—</td></tr>
+<tr><td class="tk">模组间链路载荷</td><td class="ac">只传源色深，桥片再扩到 16 bit ⇒ 20.0 Gbps × 色深 / 16：<b>8-bit 10.0 Gbps · 12-bit 15.0 Gbps</b></td><td class="rm">🔴 色深 8 / 12 bit 未定，两档都要算</td></tr>
+<tr><td class="tk">协议开销</td><td class="ac">源同步，每面 1 対转发时钟，不用 8b/10b；帧头每 128 个字占 2 个字 ⇒ 开销 ×128/126 ≈ <b>×1.016</b></td><td class="rm">现役 RTL（lane_align / lane_deskew）</td></tr>
+<tr><td class="tk">算法</td><td class="ac">数据 lane = ⌈载荷 × 1.016 ÷ 线速率⌉，每面对数 = 数据 lane + 1 対时钟</td><td class="rm">开销只乘数据 lane，不乘时钟対</td></tr>
+</tbody></table></div>
+<div class="tw"><table><thead><tr><th>色深</th><th>线速率</th><th>数据 lane</th><th>每面対数</th><th>链路占用</th><th>桥片每面总対<br>（加下行 73 対）</th></tr></thead><tbody>
+<tr><td class="tk">8-bit</td><td>800 Mbps</td><td>13</td><td><b>14</b></td><td>97.7%</td><td>87</td></tr>
+<tr><td class="tk">8-bit</td><td>700 Mbps</td><td>15</td><td><b>16</b></td><td>96.8%</td><td>89</td></tr>
+<tr><td class="tk">12-bit</td><td>800 Mbps</td><td>20</td><td><b>21</b></td><td>95.3%</td><td>94</td></tr>
+<tr><td class="tk">12-bit</td><td>700 Mbps</td><td>22</td><td><b>23</b></td><td>🔴 99.0%</td><td>96</td></tr>
+</tbody></table></div>
+<div class="callout risk"><p><b>速率这块要你给结论的几件事：</b>① 线速率取多少：800M 的时序余量在现役 EG4 上实测只有 2.1%，700M 有 16.7%，换了桥片要按新芯片重算；② 链路占用 95~99%，几乎没有余量，要不要多留几対；③ 最终的每面対数，以及由此推出的桥片和主 SOC 的差分対门槛；④ 地线比例和连接器能不能撑住选定的速率。</p></div>
+</section>
+
+<section><h2><span class="sec">§3</span> 版本二：目标板（T1 ×2 + T2）</h2>
+<p class="lead"><b>目标：</b>两款目标板点亮，上转子达标（900 RPM · 体帧率 30 Hz · 整机功耗 48 W 内）。目标板要重做的内容多，按板分成 <b>2A LED 板线</b>和 <b>2B SOC 板线</b>两条线，最后 <b>2C 整机联调</b>。<b>2A、2B 各自交付一块已单独验证过的板给 2C，2C-2 直接支撑版本目标。</b></p>
+
+<h3 class="par"><span class="lid">2A</span>LED 板线（T1）</h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>小目标</th><th>交付物</th><th>验收判据</th><th>前置</th><th>支撑谁 · 提供什么</th></tr></thead><tbody>
+<tr><td class="id">2A-1</td><td class="tk">LED 板定案</td><td class="dl">① 屏体路线结论：自制还是 COB<br>② 亮度实测结论，<b>两条路线分别给</b></td><td class="ac">① 成本、周期、迭代次数、良率、亮度五项都有数字，并选定一条；② 回答"48 W 下够不够亮"：自制路线用现有单颗 2260 台架实测电流-亮度曲线；COB 路线先用厂家样品或数据，打样回来后复测。两份结论要定下电流、功耗和屏体形式</td><td class="pre" style="width:auto">无，<b>现在就能开始</b>，版本一期间并行</td><td class="rm">→ <b>2A-2</b>：屏体形式、电流、功耗<br>→ <b>2C-2</b>：功耗和亮度能不能达标的依据<br>目标板可能改用 COB，亮度跟着屏体形式走，所以两件事一起定。COB 打样要 3 个月，定晚了会拖住 2A-2</td></tr>
+<tr><td class="id">2A-2</td><td class="tk">LED 板设计投产</td><td class="dl">原理图、8 层 HDI layout、SI 仿真报告、投产回执</td><td class="ac">SI 仿真通过、评审通过、投产</td><td class="pre" style="width:auto">1-3、2A-1<br>（桥片来自 1-1）</td><td class="rm">→ <b>2A-3</b>：T1 实物</td></tr>
+<tr><td class="id">2A-3</td><td class="tk">LED 板单板点亮</td><td class="dl">点亮记录、实拍照片</td><td class="ac">接验证版的 SOC 侧（FS03 + V3）驱动，192×216 全阵列点亮、无坏区，链路误码为 0</td><td class="pre" style="width:auto">2A-2<br>（台架来自 1-2）</td><td class="rm">→ <b>2C-1</b>：一块单独验证过的 T1。不用等 T2 回板</td></tr>
+</tbody></table></div>
+
+<h3 class="par"><span class="lid">2B</span>SOC 板线（T2）</h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>小目标</th><th>交付物</th><th>验收判据</th><th>前置</th><th>支撑谁 · 提供什么</th></tr></thead><tbody>
+<tr><td class="id">2B-1</td><td class="tk">SOC 板定案</td><td class="dl">① 主 SOC 选型报告<br>② 板级需求清单</td><td class="ac">① 在候选（XC7Z020 / DR1V90，同为 484 球）中选定型号，并附采购确认的价格、货期和供货（询价单 A01）；② 电源轨（含 2.5 V）、DDR、存储、模组间接口対数（按 ICD）都列清</td><td class="pre" style="width:auto">选型<b>现在就能开始</b>，版本一期间并行；接口対数等 1-1 的 ICD</td><td class="rm">→ <b>2B-2</b>：SOC 型号和板级需求。SOC 要看货期，定晚了会拖住 2B-2</td></tr>
+<tr><td class="id">2B-2</td><td class="tk">SOC 板设计投产</td><td class="dl">原理图、layout、评审记录、投产回执。参考 FS03 完整硬件包；如果选 DR1V90，还可以参考 DR1V90 核心板交接包（另发）</td><td class="ac">评审通过、投产</td><td class="pre" style="width:auto">1-3、2B-1</td><td class="rm">→ <b>2B-3</b>：T2 实物</td></tr>
+<tr><td class="id">2B-3</td><td class="tk">SOC 板单板 bring-up</td><td class="dl">bring-up 记录</td><td class="ac">上电时序、启动、DDR 测试都通过；接验证版的 LED 侧（V1 + V2）跑通，链路误码为 0</td><td class="pre" style="width:auto">2B-2<br>（台架来自 1-2）</td><td class="rm">→ <b>2C-1</b>：一块单独验证过的 T2。不用等 T1 回板</td></tr>
+</tbody></table></div>
+
+<h3 class="late"><span class="lid">2C</span>整机联调</h3>
+<div class="tw"><table><thead><tr><th>编号</th><th>小目标</th><th>交付物</th><th>验收判据</th><th>前置</th><th>支撑谁 · 提供什么</th></tr></thead><tbody>
+<tr><td class="id">2C-1</td><td class="tk">双面联调</td><td class="dl">联调记录</td><td class="ac">T2 驱动两块 T1，双面点亮，误码为 0</td><td class="pre" style="width:auto">2A-3、2B-3</td><td class="rm">→ <b>2C-2</b>：联调通过的整套电气系统</td></tr>
+<tr><td class="id">2C-2</td><td class="tk">上转子达标</td><td class="dl">整机验收报告</td><td class="ac">900 RPM 连续运转 · 体帧率 30 Hz · 整机功耗在 48 W 内。转子结构和动平衡由结构负责，硬件负责电气部分</td><td class="pre" style="width:auto">2C-1<br>（功耗依据来自 2A-1）</td><td class="rm">→ <b>版本二目标</b>：整机达标</td></tr>
+</tbody></table></div>
+
+<div class="callout ok"><p><b>2A-3 和 2B-3 为什么这样设：</b>模组间接口是永久契约，所以每块目标板回板后，都能直接接验证版的另一半测试。T1 接 FS03 + V3，T2 接 V1 + V2。两条线互不等待，单板问题在联调前各自暴露。验证板做完也不会闲置，它会变成目标板的测试台架。</p></div>
+</section>
+
+<section><h2><span class="sec">§4</span> 分工与口径</h2>
+<div class="callout acc"><p><b>分工：</b>硬件负责板子、测量、供电、SI 和 BOM。桥片固件移植、RTL 和时序由我们负责，跟着 1-1 和 2B-1 选定的芯片走。转子结构和动平衡由结构负责。</p></div>
+<div class="callout acc"><p><b>判据要能当场判断真假。</b>"原理图评审通过"不算判据，要写成能当场核对的具体结果。你自己拆子任务时也按这个标准。</p></div>
+<div class="callout ok"><p><b>本表不写日期，排期你自己定。</b>验证板大概率不止做一版，排期时给版本一至少留一轮改版的余量。</p></div>
+</section>
+<footer>
+<p>POV-3D 硬件任务表 · 2026-09-11 rev.4。技术细节不在本表，见配套文档：<span class="mono">02 方案论证链</span> · <span class="mono">04 灯板改动清单</span>（V1）· <span class="mono">05 转接板接口与拓扑</span>（V2 / V3）· 附录 <span class="mono">A1</span>（168 焊盘脚位表）。附录 <span class="mono">A4</span> 的 26 周排期仅供对照，做于本版之前。</p>
+</footer></div>

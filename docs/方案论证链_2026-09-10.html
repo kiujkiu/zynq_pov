@@ -1,0 +1,482 @@
+<title>POV-3D 方案论证链</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  --paper:#F1F2EE; --surface:#FBFCFA; --surface-2:#E9EBE5; --surface-3:#E1E4DC;
+  --ink:#15191B; --ink-2:#3A4245; --muted:#69736F; --rule:#D2D6CE; --rule-2:#BAC1B5;
+  --accent:#A8531C; --accent-soft:#F5E6DA;
+  --ok:#1F6F5C; --ok-soft:#E0EEE8;
+  --risk:#A32418; --risk-soft:#F7E2DE;
+  --step:#2A5B9E; --gap:#7A3E8F;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#121513; --surface:#191D1B; --surface-2:#222724; --surface-3:#2A302C;
+    --ink:#E8ECE7; --ink-2:#C2C9C3; --muted:#8D958F; --rule:#2E3532; --rule-2:#414945;
+    --accent:#E39154; --accent-soft:#3A2618;
+    --ok:#5FC0A3; --ok-soft:#16302A;
+    --risk:#F0897C; --risk-soft:#361A17;
+    --step:#6DA2E0; --gap:#C89AD8;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#121513; --surface:#191D1B; --surface-2:#222724; --surface-3:#2A302C;
+  --ink:#E8ECE7; --ink-2:#C2C9C3; --muted:#8D958F; --rule:#2E3532; --rule-2:#414945;
+  --accent:#E39154; --accent-soft:#3A2618;
+  --ok:#5FC0A3; --ok-soft:#16302A;
+  --risk:#F0897C; --risk-soft:#361A17;
+  --step:#6DA2E0; --gap:#C89AD8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  font-size:14.5px;line-height:1.6}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.93em}
+.wrap{max-width:1150px;margin:0 auto;padding:0 26px 80px}
+
+header.mast{border-bottom:2px solid var(--ink);margin-bottom:28px;padding:40px 0 16px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 9px}
+h1{font-size:32px;line-height:1.22;margin:0 0 8px;font-weight:700;letter-spacing:-.012em;text-wrap:balance}
+.sub{margin:0 0 20px;color:var(--muted);font-size:13.5px;max-width:78ch}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;border:1px solid var(--rule);border-radius:3px;overflow:hidden;background:var(--rule)}
+.meta div{background:var(--surface);padding:10px 13px;display:flex;flex-direction:column;gap:1px}
+.meta .k{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.meta .v{font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums}
+
+section{margin:0 0 44px}
+h2{font-size:19px;font-weight:600;margin:0 0 4px;padding-bottom:7px;border-bottom:1px solid var(--rule-2);display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+h2 .sec{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--accent);font-weight:500;flex:none}
+h3{font-size:13px;font-weight:600;margin:22px 0 6px;color:var(--ink-2);font-family:"IBM Plex Mono",monospace;letter-spacing:.03em}
+.lead{margin:9px 0 14px;color:var(--muted);font-size:13px;max-width:82ch}
+p{margin:8px 0;max-width:82ch}
+ul{margin:8px 0;padding-left:20px;max-width:82ch}
+li{margin:3px 0}
+
+.tw{overflow-x:auto;margin:12px 0;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;
+   padding:8px 11px;border-bottom:1px solid var(--rule-2);background:var(--surface-2);white-space:nowrap}
+td{padding:7px 11px;border-bottom:1px solid var(--rule);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.k{background:var(--surface-2);font-weight:600;white-space:nowrap;width:1%}
+td.note{color:var(--ink-2);font-size:12.5px}
+td.nw{white-space:nowrap}
+td.win{background:color-mix(in srgb,var(--ok-soft) 55%,transparent)}
+caption{caption-side:bottom;text-align:left;padding:8px 11px;color:var(--muted);font-size:12px;border-top:1px solid var(--rule)}
+
+.pill{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;
+      padding:1px 6px;border-radius:2px;border:1px solid currentColor;white-space:nowrap;font-weight:600}
+.pill.ok{color:var(--ok)} .pill.risk{color:var(--risk)} .pill.new{color:var(--accent)} .pill.tbd{color:var(--muted)}
+.yes{color:var(--ok);font-weight:600} .no{color:var(--risk);font-weight:600} .warn{color:var(--accent);font-weight:600}
+
+.callout{border:1px solid var(--rule);border-left:3px solid var(--rule-2);border-radius:3px;padding:10px 14px;margin:13px 0;font-size:13px;color:var(--ink-2);background:var(--surface)}
+.callout.risk{border-left-color:var(--risk);background:var(--risk-soft)} .callout.risk b{color:var(--risk)}
+.callout.ok{border-left-color:var(--ok);background:var(--ok-soft)} .callout.ok b{color:var(--ok)}
+.callout.acc{border-left-color:var(--accent);background:var(--accent-soft)} .callout.acc b{color:var(--accent)}
+.callout.gap{border-left-color:var(--gap);background:color-mix(in srgb,var(--gap) 10%,transparent)} .callout.gap b{color:var(--gap)}
+.callout p{max-width:none;margin:5px 0}
+.callout p:first-child{margin-top:0} .callout p:last-child{margin-bottom:0}
+
+.calc{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:var(--surface-2);border:1px solid var(--rule);
+      border-radius:3px;padding:12px 15px;margin:12px 0;overflow-x:auto;line-height:1.75;white-space:pre}
+
+.chain{display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden;margin:16px 0}
+.chain .cl{background:var(--surface);padding:12px 15px 12px 52px;position:relative}
+.chain .cl .cn{position:absolute;left:15px;top:12px;font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;
+   color:#fff;background:var(--step);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.chain .cl.g .cn{background:var(--gap)}
+.chain .cl .ct{font-weight:600;font-size:14px;margin-bottom:2px}
+.chain .cl .cb{font-size:12.5px;color:var(--ink-2)}
+.chain .cl .cb b{color:var(--ink)}
+
+footer{border-top:1px solid var(--rule-2);margin-top:48px;padding-top:14px;color:var(--muted);font-size:12px}
+footer p{max-width:82ch}
+::selection{background:var(--accent-soft);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media print{body{background:#fff;color:#000;font-size:9.5pt}.tw{overflow:visible}tr{break-inside:avoid}h2{break-after:avoid}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">POV-3D · 方案论证链与验证清单 · 2026-09-10</p>
+  <h1>为什么是现在这套方案</h1>
+  <p class="sub">从「9,045 切片/秒的双面 POV 3D 显示器」这一个目标往下推，每一步为什么只能这么选。所有数字都标了出处；<b>实测的、纸面推的、还没验的，分开标</b>。</p>
+  <div class="meta">
+    <div><span class="k">目标切片率</span><span class="v">9,045 /s</span></div>
+    <div><span class="k">体帧率</span><span class="v">30 Hz</span></div>
+    <div><span class="k">分辨率/面</span><span class="v">192 × 216</span></div>
+    <div><span class="k">色深</span><span class="v">12 bit</span></div>
+    <div><span class="k">转速</span><span class="v">900 RPM</span></div>
+    <div><span class="k">功率上限</span><span class="v">48 W</span></div>
+  </div>
+</header>
+
+<!-- ===== §0 ===== -->
+<section>
+  <h2><span class="sec">§0</span> 链条总览</h2>
+  <p class="lead">六步推导 + 两条链上没写、但同样能卡死整机的约束。</p>
+  <div class="chain">
+    <div class="cl"><span class="cn">1</span>
+      <div class="ct">目标 → 9,045 切片/秒</div>
+      <div class="cb">由<b>最外圈像素间距</b>反推角分辨率，再乘转速。不是拍脑袋定的数</div></div>
+    <div class="cl"><span class="cn">2</span>
+      <div class="ct">数据要上转子 → WiFi</div>
+      <div class="cb">转子上拉不了网线。实测载荷 26.4 Mbps vs USB2 天花板 110~125 Mbps，<b>余量 4.2×</b></div></div>
+    <div class="cl"><span class="cn">3</span>
+      <div class="ct">两大功能 → ARM + FPGA</div>
+      <div class="cb">「数据传输解析」要操作系统，「显示推送」要确定性时序。<b>一颗芯片同时干这两件事 = FPSoC</b></div></div>
+    <div class="cl"><span class="cn">4</span>
+      <div class="ct">驱动芯片 → ICND2260</div>
+      <div class="cb">对比 ICND2047：<b>帧率 2.3× · 色深 512×</b>，且余量从 &lt;1% 变成 17~21%</div></div>
+    <div class="cl"><span class="cn">5</span>
+      <div class="ct">引脚与连接器 → 桥接 FPGA</div>
+      <div class="cb">🔴 真正的瓶颈<b>不是芯片引脚，是转子界面的连接器</b>。桥接把 146 対变成板内走线</div></div>
+    <div class="cl"><span class="cn">6</span>
+      <div class="ct">屏体 → 自制打样</div>
+      <div class="cb"><b>COB 打样 3 个月</b>（采购 09-10 回复）⇒ 落在关键路径上且撞春节。理由不是成本，是<b>周期与迭代次数</b></div></div>
+    <div class="cl g"><span class="cn">7</span>
+      <div class="ct">链上没写的第一条：转子供电只有 48 W</div>
+      <div class="cb">满白<b>规格上限</b> 145 W（已含扫描）。出路是<b>调低电流设定 + 内容不是满白</b>，不是电容。墙⑨<b>至今未动</b></div></div>
+    <div class="cl g"><span class="cn">8</span>
+      <div class="ct">链上没写的第二条：动平衡限速 850 RPM</div>
+      <div class="cb">🔴 而目标是 900 RPM。<b>850 RPM 下切片率只有 8,545，达不到 9,045</b> ⇒ 这条不解决，第 1 步的目标就不成立</div></div>
+  </div>
+</section>
+
+<!-- ===== §1 ===== -->
+<section>
+  <h2><span class="sec">§1</span> 9,045 是怎么算出来的</h2>
+  <p>这个数不是选的，是<b>由最外圈的像素间距反推出来的</b>——POV 显示器的角分辨率必须让最外圈相邻两个切片的弧长等于像素间距，否则外圈会出现可见的角向拉伸或重叠。</p>
+  <div class="calc">像素间距      p = 0.78125 mm
+最外圈半径    R = 96 px × 0.78125 mm = 75 mm
+角分辨率      N = 2πR / p = 2π × 96 = 603.19  ⇒  <b>603 片/圈</b>
+转速          900 RPM = 15 rev/s
+────────────────────────────────────────────────
+切片率        603 × 15 = <b>9,045 切片/秒/面</b>
+体帧率        2 × 15 = <b>30 Hz</b>（双面，每半圈成一帧）
+内容帧率      ≤ 15 fps（一圈只能翻一次页）</div>
+
+  <div class="callout acc">
+    <p><b>⚠ 一处口径要分清：「9k 帧率」不是体帧率。</b></p>
+    <p><b>9,045 是屏侧的刷新率要求</b>（每秒要显示 9,045 个不同的切片）；<b>体帧率是 30 Hz</b>（人眼看到的立体画面每秒刷新 30 次）；<b>内容帧率 ≤ 15 fps</b>（画面内容每秒能换 15 次）。三个数差了两个数量级，对外说明时最好写全，否则「9k 帧率的显示器」容易被误解成体帧率。</p>
+  </div>
+
+  <h3>屏侧能不能跟上 —— 已实测</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>项</th><th>值</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td class="k">需求</td><td class="nw">9,045 fps</td><td class="note">上面推出来的</td></tr>
+      <tr><td class="k win">单颗 2260 实测</td><td class="nw"><b>11,000 fps</b> @ DCLK 166.67 MHz</td><td class="note"><span class="yes">✅ 实测</span>（40×45、CASCADE=1、GCLK 500 MHz、16 分组）</td></tr>
+      <tr><td class="k">45 扫余量</td><td class="nw">21.6 %</td><td class="note">链路上限 11,296 fps</td></tr>
+      <tr><td class="k">48 扫余量（定案）</td><td class="nw"><b>17.3 %</b></td><td class="note">帧内容 15,715 拍 ⇒ 链路上限 10,606 fps</td></tr>
+      <tr><td class="k">54 扫</td><td class="nw"><span class="no">4.5 %</span></td><td class="note">9,451 fps，已否</td></tr>
+    </tbody>
+    <caption>🔴 余量绑在扫数上，<b>扫数一改就要重算</b>。这是「墙①」，2026-09-02 实测倒了。</caption>
+  </table>
+  </div>
+</section>
+
+<!-- ===== §2 ===== -->
+<section>
+  <h2><span class="sec">§2</span> 数据怎么上转子：WiFi 够不够</h2>
+  <p><b>转子上拉不了网线</b>——这是整套系统用 WiFi 的根本原因，不是因为 WiFi 更好。有线只能用于台架验证。</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>项</th><th>值</th><th>依据</th></tr></thead>
+    <tbody>
+      <tr><td class="k">需求</td><td class="nw">最重载荷</td><td class="nw"><b>26.4 Mbps</b> @15 fps</td>
+        <td class="note">8 个真实 glb 填满 192×216×192 + lz4-HC12（生产口径），最重 bonsai <b>220 KB/帧</b>。<span class="yes">✅ 实测</span></td></tr>
+      <tr><td class="k">需求</td><td class="nw">病态上界</td><td class="nw">58.5 Mbps</td><td class="note">压缩率最差的情况</td></tr>
+      <tr><td class="k win">能力</td><td class="nw">USB2 天花板</td><td class="nw"><b>110~125 Mbps</b></td><td class="note"><span class="yes">✅ 实测</span></td></tr>
+      <tr><td class="k">结论</td><td class="nw">余量</td><td class="nw"><b>4.2 ×</b></td><td class="note">对病态上界仍有 1.9~2.1×</td></tr>
+    </tbody>
+    <caption>这是「墙⑤」，2026-09-03 载荷实测后纸面倒了。</caption>
+  </table>
+  </div>
+  <div class="callout risk">
+    <p><b>🔴 但有两条限制要写进方案，否则日后会被误判成「加带宽就行」：</b></p>
+    <p><b>① 换 dongle 买不到带宽。</b>WiFi 6E/7 的 dongle 全是 USB3 器件，插在 USB2 口上会退回 High-Speed ⇒ 天花板仍是 110~125 Mbps。要突破只能上<b>板载千兆以太网（RGMII）</b>——而转子上正好用不了。</p>
+    <p><b>② 现在验的是「单帧载荷」，不是「持续吞吐」。</b>26.4 Mbps 是把最重的一帧压出来量的字节数除以帧周期，<b>没有验过连续 15 fps 跑几分钟不掉</b>。剩余动作：专用 AP + iperf 复测持续吞吐。WiFi 会掉且不自愈，这个已经吃过亏。</p>
+  </div>
+</section>
+
+<!-- ===== §3 ===== -->
+<section>
+  <h2><span class="sec">§3</span> 两大功能 ⇒ 为什么必须是 ARM + FPGA</h2>
+  <p>把系统拆开，转子上要干的事恰好落在两类完全不同的计算上：</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>功能</th><th>要什么</th><th>为什么不能用另一边做</th></tr></thead>
+    <tbody>
+      <tr><td class="k">数据传输解析</td>
+        <td class="note">WiFi 协议栈 · TCP/IP · lz4 解压 · 体素表管理 · 文件系统</td>
+        <td class="note"><b>要操作系统。</b>纯 FPGA 上做 WiFi 栈不现实 ⇒ 这条直接排除了「只用 FPGA」的方案</td></tr>
+      <tr><td class="k">显示推送</td>
+        <td class="note">9,045 切片/秒 × 41,472 px × 双面的<b>确定性时序</b>；72 対 mini-LVDS 同步输出</td>
+        <td class="note"><b>要硬件流水。</b>CPU 跑不了这个抖动要求 ⇒ 排除了「只用 CPU/SoC」</td></tr>
+    </tbody>
+    <caption>⇒ 必须同时具备 CPU 与可编程逻辑 ⇒ <b>FPSoC</b>（XC7Z020 或 DR1V90，两者 484 球 pin2pin）。</caption>
+  </table>
+  </div>
+  <h3>逻辑量够不够 —— 已实测</h3>
+  <div class="calc">单个 slicer 渲染 IP【csynth 实测 @xc7z020clg484-1 150MHz】
+    LUT 6,027 · BRAM18 10 · DSP 5  ⇒  14,472 片/s
+
+双面不折叠需求 = 2 × 9,045 = 18,090 片/s  ⇒  <b>要 2 个 IP</b>
+
+XC7Z020（53,200 LUT）：2 IP 占 <b>22.7%</b>，余 41,146 LUT（77%）  ✅
+XC7Z010（17,600 LUT）：2 IP 占 <b>68.5%</b>，余 5,546 LUT（32%）  ❌ 已否决</div>
+  <div class="callout ok">
+    <p><b>🎯 渲染被 DDR 封顶，不是被算力封顶。</b>两个 IP 同时跑需要 2.4 GB/s，而 DDR3L 16-bit 峰值 2.133 GB/s。<b>2026-09-03 实测 η = 0.950</b>，双路并发 2,026 MB/s，真实负载 1.50 GB/s = 峰值 70%，余 633 MB/s ⇒ 过。这是「墙③」，实测倒了。</p>
+    <p>⇒ 32-bit DDR 是<b>放大余量，不是过墙条件</b>。⚠ 该实测在 Zynq 上做的，DR1 侧只有 2 个 HP 口，未复测。</p>
+  </div>
+</section>
+
+<!-- ===== §4 ===== -->
+<section>
+  <h2><span class="sec">§4</span> 驱动芯片：ICND2047 vs ICND2260</h2>
+  <p>项目前期做过完整的 ICND2047 共阳双屏设计（2026-07-13，四份子文档：列驱引擎 / 双屏架构 / 时序 SI 预算 / 软件推流）。两套方案的账放在一起看：</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>项</th><th>ICND2047 方案（07-13）</th><th>ICND2260 方案（现行）</th><th>倍数</th></tr></thead>
+    <tbody>
+      <tr><td class="k">转速</td><td class="nw">13 rps</td><td class="nw win">15 rps</td><td class="nw">1.15×</td></tr>
+      <tr><td class="k">片/圈</td><td class="nw">360</td><td class="nw win"><b>603</b></td><td class="nw">1.68×</td></tr>
+      <tr><td class="k">切片率/面</td><td class="nw">4,680 /s</td><td class="nw win"><b>9,045 /s</b></td><td class="nw"><b>1.93×</b></td></tr>
+      <tr><td class="k">体帧率</td><td class="nw">26 fps</td><td class="nw win">30 Hz</td><td class="nw">1.15×</td></tr>
+      <tr><td class="k">屏刷新能力</td><td class="nw">~4.72 kHz（推算）</td><td class="nw win"><b>11,000 fps（实测）</b></td><td class="nw">2.3×</td></tr>
+      <tr><td class="k">余量</td><td class="nw"><span class="no">&lt; 1 %</span>（零浪费设计）</td><td class="nw win"><b>17~21 %</b></td><td class="nw">—</td></tr>
+      <tr><td class="k">色深</td><td class="nw"><span class="no">3-bit BCM</span>（8 级）</td><td class="nw win"><b>12-bit</b>（4,096 级）</td><td class="nw"><b>512×</b></td></tr>
+      <tr><td class="k">单 lane 速率</td><td class="nw">50 Mbps 双沿</td><td class="nw win">340 Mbps mini-LVDS</td><td class="nw">6.8×</td></tr>
+    </tbody>
+    <caption>2047 那套的原文口径是「预算 213.7 µs/片，<b>余量 &lt;1%，零浪费设计</b>」——任何一处滑动就崩，而且第一瓶颈还不在 WiFi，在板端串行路径。</caption>
+  </table>
+  </div>
+  <div class="callout ok">
+    <p><b>结论成立，而且理由比「更高帧率和色深」更强：</b>2047 方案不是慢一点，是<b>没有余量</b>。零余量设计在这个项目上已经被证明是危险的——2260 方案的 17~21% 余量才让「48 扫」「700M 退路」这些后续决策有腾挪空间。</p>
+  </div>
+</section>
+
+<!-- ===== §5 ===== -->
+<section>
+  <h2><span class="sec">§5</span> 引脚与连接器 ⇒ 桥接 FPGA <span class="pill new">这一步的表述要改</span></h2>
+  <p class="lead">原链条写的是「2260 需要的引脚数量，单一 zynq 或 dr1v 都无法满足」。这句话方向对，但<b>把瓶颈放错了地方</b>——真正的证据比它更硬。</p>
+
+  <h3>先看芯片这一层</h3>
+  <div class="calc">每面下行 = 24 链 × 3 対数据 + 1 対时钟 = <b>73 対</b>
+双面        = 146 対  （再加上行与配置）
+
+XC7Z020-CLG484 的 PL I/O = 200 根 = <b>100 対</b>   ⇒  装不下 146 対  ❌</div>
+  <p>到这一步，用户原来的说法是对的。<b>但真正卡死的是下一层。</b></p>
+
+  <div class="callout risk">
+    <p><b>🔴 瓶颈在转子界面的连接器，不在芯片引脚。</b></p>
+    <p>米联客 FS03（Zynq 版与 DR1 版同构）通过 CEP1+CEP2 <b>只引出 96 个信号 / 48 対差分</b>（逐脚回查 CLG484 球号验证，0 处失配）。而不用桥接的方案需要 <b>165 根单端</b>。</p>
+    <p>反推：96 根最多支撑 3 颗/链 ⇒ <b>片/圈上限只有 210，不是 603</b>。</p>
+    <p><b>⇒ 换 FPGA 一根线都不多给你。</b>这是「换板子而不是换芯片」的直接证据，也是 08-27 判决「该投的钱依次是：架构决策 → 自制板 → 器件档次，器件排最后」的由来。</p>
+  </div>
+
+  <h3>桥接方案真正买到了什么</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>段</th><th>対数</th><th>形态</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td class="k">桥片 → 每面 24 颗 2260</td><td class="nw"><b>73 対</b></td><td class="nw win"><b>板内走线 · 零连接器</b></td>
+        <td class="note">🎯 <b>这是桥架构最大的价值</b>——146 対全部不过转子界面</td></tr>
+      <tr><td class="k">主控 → 每面桥片</td><td class="nw">14~23 対</td><td class="nw">过转子界面</td>
+        <td class="note">12-bit@800M 为 20 対；<b>700M 是甜点</b>：每面只多 2~3 対，换来时序余量从 2.1% 变 <b>16.7%</b>（8 倍）</td></tr>
+    </tbody>
+    <caption>桥片把「146 対过界」变成「28~46 対过界」。<b>省的不是芯片引脚，是连接器与线束。</b></caption>
+  </table>
+  </div>
+  <div class="callout acc">
+    <p><b>建议把第 5 步的表述改成：</b>「2260 的驱动需要每面 73 対差分，双面 146 対。<b>单一 SoC 的引脚装不下，而更硬的约束是转子界面的连接器只能过 48 対</b>——即使换更大的 FPGA 也不多给一根线。因此把串化逻辑下沉到每面一颗桥片，让 146 対变成板内走线，只有 14~23 対过界。」</p>
+  </div>
+</section>
+
+<!-- ===== §6 ===== -->
+<section>
+  <h2><span class="sec">§6</span> 屏体：自制打样 <span class="pill ok">09-10 已坐实</span></h2>
+  <p>原链条：「基于现状以及 COB 屏幕打样周期长的问题，选用自己打样 LED 屏幕的方法」。</p>
+  <div class="callout ok">
+    <p><b>✅ 采购已回复：COB 打样周期 3 个月。</b>这个数把这一步从「口径」变成了「算得出来的决定」。</p>
+  </div>
+  <div class="calc">硬件排期（26 周基线）
+  M1 验证板投板   09-17 → 10-08
+  M2 验证板点亮   10-08 → 11-12
+  M3 正式屏板     11-12 → 12-17
+  M4 屏板回板点亮 12-17 → 2027-01-28   ← 屏体必须在这之前到位
+
+若走 COB：今天下单 ⇒ 3 个月 ⇒ <b>2026-12-10 前后到货</b>，看似赶得上——
+但 <b>今天下不了单</b>：屏体规格要等 M2 的硬轴结论（尤其共模与端接方案）
+⇒ 实际最早 11 月中下单 ⇒ <b>2027-02 中到货，撞进春节停工窗</b>  ❌</div>
+  <div class="callout risk">
+    <p><b>🔴 3 个月周期让 COB 直接落在关键路径上，而且撞春节。</b>这不是「贵一点慢一点」，是<b>把屏体变成整机的第一约束</b>——排期里所有其它环节加起来的机动空间都不到 3 个月。</p>
+    <p>⇒ <b>自制打样的理由成立</b>，而且理由不是成本，是<b>周期与迭代次数</b>：验证板阶段大概率不止做一版，COB 一版 3 个月意味着一次改版就吃掉一个季度。</p>
+    <p>⚠ 仍要补两个数：<b>自制的单位成本与良率</b>，以及 <b>P0.78 间距下自制的工艺可行性</b>（0.78 mm 是很密的间距）。询价单 B03 整机 82,944 px 仍是最大一笔开销，自制不等于便宜。</p>
+  </div>
+</section>
+
+<!-- ===== §7 ===== -->
+<section>
+  <h2><span class="sec">§7</span> 链上没写、但同样能卡死整机的两条</h2>
+  <p class="lead">这两条不在推导链上，但它们是<b>第 1 步那个目标能否成立的必要条件</b>。任何一条不解决，9,045 都拿不到。</p>
+
+  <h3>① 转子供电只有 48 W，而满白要 145 W</h3>
+  <div class="calc">2260 满白每颗瞬时（规格上限）
+  = 40×9.6mA(R) + 40×6.4mA(G) + 40×6.4mA(B) = <b>0.896 A</b>
+  （芯片只有 120 个恒流源 ⇒ 该值不随扫数变，只随颗数线性变）
+
+24 颗/面 × 2 面 = 48 颗 ⇒ <b>43.0 A</b>
+  R 轨 18.4 A @2.8V + G/B 轨 24.6 A @3.8V ≈ <b>145 W</b>
+
+转子供电（无线供电，现役在用） = 24 V × 2 A = <b>48 W</b>
+────────────────────────────────────────────────
+缺口 3 倍  ⇒  <b>亮度必须按内容口径设计，不能按满白</b></div>
+  <div class="callout acc">
+    <p><b>⚠ 三条常见的误解，逐条澄清（09-10 补）：</b></p>
+    <p><b>①「我们是扫描的，不会这么多灯同时亮」—— 对，但这已经算进去了。</b>2260 有 <b>120 个恒流通道</b>（= 40 RGB 像素）和 48 个行管，<b>任一时刻只有一个行管导通</b> ⇒ 只有 120 个 LED 在亮，不是 40×48×3 = 5,760 个。上面那 0.896 A <b>算的就是这 120 个通道</b>。不扫描的话要 48 倍电流，那才是荒谬的数。</p>
+    <p><b>②「瞬时靠电容，持续靠供电」—— 分法对，但 145 W 落在「持续」那一边。</b>扫描是<b>连续轮转、占空比 100%</b>（每个时刻都有一行在亮，只是轮流换行）⇒ <b>瞬时电流 = 平均电流</b>。电容处理的是行切换瞬间 120 通道同时开关的 di/dt、以及 GCLK 500 MHz 下 PWM 灰度调制的高频尖峰，那是 ns~µs 级的活。<b>145 W 是持续值，电容救不了。</b></p>
+    <p><b>③「软件可以调亮度」—— 对，而且这是唯一的设计手段。</b>ICND2260 <b>无需外接电阻</b>（DS V1.7 原文「可直接通过寄存器配置分别调节 RGB 输出电流」），由 <span class="mono">0x2d / 0x3d / 0x4d</span> 的 IREF（0.1~0.4 mA）× (igain+1) 决定。规格范围 R <b>0.15~9.6 mA</b>、G/B <b>0.1~6.4 mA</b> ⇒ <b>最低档只有最高档的 1.6%</b>，调节范围极大。</p>
+  </div>
+  <div class="callout ok">
+    <p><b>⇒ 让 48 W 够用的是两件事，都不是电容：</b></p>
+    <p><b>a. 把电流设定调低。</b>假设屏体分到 ~35 W（扣掉 3 颗 FPGA、主控、无线供电效率损失），35/145 = <b>24%</b> ⇒ R 设 2.3 mA、G/B 设 1.5 mA per 通道，<b>都落在规格范围内</b>。</p>
+    <p><b>b. 内容不是满白。</b>POV 体素内容大部分是黑的，实际平均占空比远低于 100%。145 W 是「规格上限 × 满白」的双重最坏值。</p>
+  </div>
+  <div class="callout risk">
+    <p><b>🔴 所以墙⑨的问题要重新表述：不是「48 W 装不装得下 145 W」，而是「电流压到 48 W 能供的水平后，亮度还够不够看」。</b></p>
+    <p>已知：2260 的 G/B 电流只有现役 ICND1069 的 <b>0.356×</b>；红色可靠地能从 0x2d 拉 5.3×，<b>G/B 没试过</b>。<b>这条从项目开始到现在一次都没碰过</b>，而它同时决定无线供电的规格。</p>
+    <p>验证方法很轻：<b>不需要整机、不需要转起来</b>——现有单颗 2260 台架上把 IREF 从最低扫到最高，测实际亮度与电流曲线，就能回答「2 mA/通道够不够」。这是可以和 M1/M2 完全并行的一条。</p>
+  </div>
+
+  <h3>② 动平衡限速 850 RPM，而目标是 900</h3>
+  <div class="calc">目标转速 900 RPM = 15 rev/s  ⇒  603 × 15 = <b>9,045 切片/秒</b>  ✅
+现状限速 850 RPM = 14.17 rev/s ⇒ 603 × 14.17 = <b>8,545 切片/秒</b>  ❌ 差 5.5%</div>
+  <div class="callout risk">
+    <p><b>🔴 850 RPM 是临时限速，根因是 v3.1 结构偏心 13.4 mm、配重放不下。</b>一阶固有频率 20~27 Hz ⇒ 临界转速 1200~1600 RPM，850 = f₁ × 0.7 的保守取值。</p>
+    <p><b>两面各一颗桥片只是不再恶化，解不掉偏心</b>——要靠 macha v4 结构解。<b>这条不解决，§1 的目标数就拿不到</b>，而它在推导链里完全没出现。</p>
+  </div>
+</section>
+
+<!-- ===== §8 ===== -->
+<section>
+  <h2><span class="sec">§8</span> 于是：现有方案原型</h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th>层</th><th>选择</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td class="k">固定侧</td><td class="note">渲染主机 → 体素表 lz4 → WiFi 26.4 Mbps</td><td class="nw"><span class="pill ok">已验</span></td></tr>
+      <tr><td class="k">转子供电</td><td class="note">24~32 V 直流 → 无线供电 → 24 V 2 A = 48 W</td><td class="nw"><span class="pill ok">现役在用</span></td></tr>
+      <tr><td class="k">主控板 ×1</td><td class="note"><b>XC7Z020 或 DR1V90</b>（484 球 pin2pin，未锁定）+ DDR3L + USB WiFi dongle</td><td class="nw"><span class="pill tbd">选型开放</span></td></tr>
+      <tr><td class="k">上行链路</td><td class="note">每面 13~23 対 LVDS @700~800 Mbps + 1 対转发时钟，过转子界面</td><td class="nw"><span class="pill new">700M 待实测</span></td></tr>
+      <tr><td class="k">桥片 ×2</td><td class="note">每面一颗（EG4A20 / GW5A / PGL22G… 未锁定），做串化与分发</td><td class="nw"><span class="pill tbd">选型开放</span></td></tr>
+      <tr><td class="k">下行</td><td class="note">每面 73 対 mini-LVDS @340 Mbps，<b>板内走线零连接器</b></td><td class="nw"><span class="pill ok">已定</span></td></tr>
+      <tr><td class="k">驱动 ×48</td><td class="note">ICND2260，4×6 = 24 颗/面 @48 扫，每颗 40 px × 48 扫</td><td class="nw"><span class="pill ok">已定</span></td></tr>
+      <tr><td class="k">屏体</td><td class="note">192 × 216 px/面 · P0.78 · 41,472 px/面</td><td class="nw"><span class="pill risk">自制 vs COB 待定</span></td></tr>
+      <tr><td class="k">机械</td><td class="note">macha v4 转子 · 900 RPM · 68~136 g</td><td class="nw"><span class="pill risk">动平衡未解</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ===== §9 ===== -->
+<section>
+  <h2><span class="sec">§9</span> 如何实现 —— 三份文档分工</h2>
+  <div class="tw">
+  <table>
+    <thead><tr><th>文档</th><th>覆盖什么</th><th>给谁</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><span class="mono">硬件工作拆解_2026-09-09</span></td><td class="note">M0–M5 六个验收门、26 周排期、关键路径、风险与压缩杠杆</td><td class="nw">硬件负责人 / 管理</td></tr>
+      <tr><td class="k"><span class="mono">灯板改动清单_2026-09-10</span></td><td class="note">灯板本体：加 10 / 改 5 / 删 4 / 不动 5，新增器件汇总，元件面约束</td><td class="nw">硬件 + layout 外发方</td></tr>
+      <tr><td class="k"><span class="mono">转接板接口与拓扑_2026-09-10</span></td><td class="note">三个接口定义、板上四件事、ACK 三问结案</td><td class="nw">硬件</td></tr>
+      <tr><td class="k"><span class="mono">灯板改板_邮票孔FPGA接口_2026-09-09</span></td><td class="note">168 焊盘完整脚位表、表 1~13 的推导过程</td><td class="nw">画板时逐表对照</td></tr>
+      <tr><td class="k"><span class="mono">HW_SPEC_2026-09-04</span></td><td class="note">从目标反推出的全套板级需求</td><td class="nw">选型与评审依据</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ===== §10 ===== -->
+<section>
+  <h2><span class="sec">§10</span> 如何验证 —— 哪些还没有答案</h2>
+  <p class="lead">项目用「九堵墙」跟踪风险。<b>实测倒的、纸面过的、没验的，必须分开看</b>——纸面过的墙不算过。</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>#</th><th>墙</th><th>状态</th><th>依据 / 缺什么</th></tr></thead>
+    <tbody>
+      <tr><td class="k">①</td><td class="nw">屏侧物理层 / DCLK</td><td class="nw"><span class="yes">✅ 实测倒</span></td><td class="note">166.67 MHz、11,000 fps ≥ 9,045，余 21.6%</td></tr>
+      <tr><td class="k">②</td><td class="nw">板级引出 IO</td><td class="nw"><span class="warn">⚠ 纸面过</span></td><td class="note">桥架构 36~46 対 ≤ 48。<b>板还没建</b></td></tr>
+      <tr><td class="k">③</td><td class="nw">DDR 带宽</td><td class="nw"><span class="yes">✅ 实测倒</span></td><td class="note">η = 0.950，双路并发 2,026 MB/s。⚠ 在 Zynq 上测的，DR1 未复测</td></tr>
+      <tr><td class="k">④</td><td class="nw">差分对</td><td class="nw"><span class="warn">⚠ 随 ② 解</span></td><td class="note">同上</td></tr>
+      <tr><td class="k">⑤</td><td class="nw">无线链路</td><td class="nw"><span class="warn">🟢 纸面倒</span></td><td class="note">载荷实测 26.4 Mbps 余量 4.2×。<b>缺：专用 AP + iperf 持续吞吐复测</b></td></tr>
+      <tr><td class="k">⑥</td><td class="nw">DDR 容量</td><td class="nw"><span class="yes">✅ 随直供解</span></td><td class="note">体素 32 MB &lt; CMA 96 MB</td></tr>
+      <tr><td class="k">⑦</td><td class="nw">色深余量</td><td class="nw"><span class="warn">⚠ 变好待验</span></td><td class="note">模型算 9,045 fps 下 28 分组 ≈ 12.8 位。<b>灰度公式未验完</b></td></tr>
+      <tr><td class="k">⑧</td><td class="nw">渲染 IP</td><td class="nw"><span class="yes">✅ 随 ③</span></td><td class="note">渲染被 DDR 封顶不是算力；<b>原版不预取会超线，必改</b></td></tr>
+      <tr><td class="k">⑨</td><td class="nw"><b>亮度</b></td><td class="nw"><span class="no">🔴 未动</span></td><td class="note">2260 的 G/B 电流只有 1069 的 0.356×；红色能拉 5.3×，<b>G/B 没试过</b>。这是唯一一条从头到尾没碰过的</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>验证板要证的三条硬轴（M2 门）</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th></th><th>测什么</th><th>为什么只能上板</th><th>不过怎么办</th></tr></thead>
+    <tbody>
+      <tr><td class="k">①</td><td class="nw">IOL 内 pclk ↔ sclk 相位</td>
+        <td class="note">工具不检查。<span class="yes">好消息</span>：现在能先算（<span class="mono">set_annotated_check</span>），上板只做验证</td>
+        <td class="note">调 PLL 相位 dclk / dclk90</td></tr>
+      <tr><td class="k">②</td><td class="nw">LVDS 驱 2260 实际共模 + 眼图</td>
+        <td class="note"><span class="no">最可能不过</span>：扇出 IC 的 Voc 上限 1.375 V 超出 2260 的 1.3 V，两条路（EG4/GW5A）都可能超窗</td>
+        <td class="note">灯板上那 60 个 0402 逃生位切 AC 耦合，<b>不用改版</b></td></tr>
+      <tr><td class="k">③</td><td class="nw">上行环回误码</td>
+        <td class="note">800 M 与 700 M <b>两档都要测</b></td>
+        <td class="note">退 700 M，屏板对数加 2~3 対</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>还没有答案的问题，按「谁能答」分组</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>问谁</th><th>问什么</th><th>卡什么</th></tr></thead>
+    <tbody>
+      <tr><td class="k">自己实测</td>
+        <td class="note">墙⑨ 亮度（G/B 电流能拉多少）· 墙⑤ WiFi 持续吞吐 · 墙⑦ 灰度公式 · 动平衡 850→900</td>
+        <td class="note"><b>墙⑨ 与动平衡直接卡整机指标</b>，其余卡余量</td></tr>
+      <tr><td class="k">集创北方</td>
+        <td class="note">ACK_I 非级联能否回包 · ACK_I 门限与内部上下拉 · L_CKO 时钟中继四问 · tSTU/tHLD 容差 · 注释 1 的相位可配性</td>
+        <td class="note">最后两条<b>能翻转整个时钟架构</b>（决定扇出 IC 能不能删）</td></tr>
+      <tr><td class="k">安路 / 高云</td>
+        <td class="note">EG4 一个时钟脚能否喂两个 PLL（决定晶振能不能删）· JTAG 四脚设 User I/O（回收 1 対）</td>
+        <td class="note">卡「灯板只留一颗 FPGA」这个目标</td></tr>
+      <tr><td class="k">采购 / 供应链</td>
+        <td class="note">COB 打样报价与周期 vs 自制 · 各候选桥片货期</td>
+        <td class="note"><b>§6 那一步现在没有数字</b></td></tr>
+      <tr><td class="k">自己拍板</td>
+        <td class="note">灯板宽度四选一 · 上行协议开销（8b/10b 会让对数 ×1.25）· 主控自研还是用 FS03</td>
+        <td class="note">第一条卡外形，第二条<b>不定则选型建在浮沙上</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout risk">
+    <p><b>🔴 验证清单里最该先动的两条，都不在硬件排期的关键路径上：</b></p>
+    <p><b>墙⑨（亮度）</b>——它决定无线供电的规格，而供电又决定整机能不能在 48 W 内跑起来。现在只知道 2260 的 G/B 电流是 1069 的 0.356×，够不够完全没测。<b>这条从项目开始到现在一次都没碰过。</b></p>
+    <p><b>动平衡（850 → 900 RPM）</b>——它直接决定 9,045 这个目标数拿不拿得到。现在的限速是保守取值，但根因（v3.1 偏心 13.4 mm）是实测的。</p>
+    <p>两条都是<b>机械与电气侧的活，不占 PCB 设计的手</b>，可以和 M1/M2 完全并行推进。<b>建议现在就排。</b></p>
+  </div>
+</section>
+
+<footer>
+  <p>POV-3D 方案论证链与验证清单 · 2026-09-10。本文回答「为什么是这套方案」与「还有什么没验」；「怎么做」见 §9 的三份实施文档。</p>
+  <p>数字出处：切片率与分辨率 <span class="mono">HW_SPEC_2026-09-04.html</span> §0 · 屏侧实测 <span class="mono">project_icnd2260_working_config_2026_09_02</span> · WiFi 载荷 <span class="mono">project_pov3d_voxel_table_payload_measured</span> · DDR η <span class="mono">project_pov3d_ddr_eta_measured_0950</span> · 渲染 IP 与 7Z010 判决 <span class="mono">project_pov3d_main_soc_7z010_verdict</span> · 连接器瓶颈 <span class="mono">project_pov3d_final_target_chip_verdict</span> · 引脚与速率账 <span class="mono">project_pov3d_uplink_rate_pin_budget</span> · 九堵墙 <span class="mono">project_pov3d_walls_status_2026_09_03</span> · 2047 方案 <span class="mono">mlkpai_fs03/docs/design_icnd2047/00_overview.md</span>。</p>
+  <p>⚠ 六步现在都有数字支撑（§6 的 COB 3 个月由采购 09-10 回复补上）。标 🔴 的是未解或有风险项；<b>§7 的电流账 09-10 重写过</b>，澄清了「扫描已计入」与「电容救不了持续功率」两点。</p>
+</footer>
+
+</div>

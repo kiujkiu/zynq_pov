@@ -1,0 +1,141 @@
+=== FINAL LIST (need shift/isolation)
+ + 【验证板 V2】只要还插 ACG525-CORE-V2，JTAG 4 根的 2.5↔3.3V 固定方向、带 Ioff 的双电源转换器就去不掉。核心板上 VCCX = VCCIO10 = VCC3P3 是硬接的。「去掉转换器」只适用于自画的桥板或目标板。｜情景：X/Y 都是｜确定：核心板原理图 p3；[脚本] L2429、L2435-2448；[mem]/reference_bridge_fpga_jtag_voltage.md:15,55
+ + 【桥板】去掉转换器后，SoC→桥方向 TCK/TMS/TDI 在桥片未上电时的隔离：
+- GW5A/GW2A：JTAG 脚 IHS ≤120µA，可直连，不加器件。
+- PG2L50H：专用配置 IO 明文不支持热插拔，必须在桥侧加单电源、输入带 Ioff 的缓冲，VCC 取桥片 JTAG bank 的 2.5V。
+- PH1P100/PH1A60：JTAG 专用脚热插拔未查到，拿到 FAE 书面答复前按同样方式加缓冲。
+PH1x 要求的 TCK 4.7k 上拉放在缓冲器 FPGA 侧。｜情景：Y（X 不需要）｜确定性：GW5A/GW2A 与 PG2L 依据手册；PH1x 为推断。DS1103 表3-8 p50；DS102 表3-4；DS04001 表2-8 注3；DS1300 表3-16 p57
+ + 【桥板加 SoC 岛】JTAG 上下拉的反灌预算要重算。外部上拉与桥片片内上拉会直接挂到契约线上：
+- 两面共用 TMS：193µA + 2×片内上拉。GW5A 按 Medium 150µA、PH1P 按 125µA 算，都超过 350µA。
+- PH1x 的 TCK 4.7kΩ 上拉：单面约 449µA，超标。
+做法：去掉 TMS/TDI 的 22kΩ（或加大到 ≥100kΩ 后再核）；PH1x 的 TCK 上拉放到缓冲器后面。PH1x 的 TCK 静止为高，与 v3「TCK 静止低」约定相反，两面共用 TCK 时不能混插不同桥片。｜情景：X/Y 都是｜推断（片内上拉档位未查到）：[脚本] L728-734；DS1103 表3-16；DS1300 表2-6、表4-2
+ + 【SoC 侧（目标板）/ 验证期 V3】JTAG_TDO：2.5V 直连在电平上没问题，但有四件事要处理：
+① 访问进行中 SoC 岛掉电时，TDO 正在驱高，mA 级注入，原计划的 D29 转换器 OE 无处落地。目标板要在 SoC 侧加单电源、带 Ioff 的缓冲（74LVC1G34/1G125 一类），VCC 取 DR1 该 bank 的 2.5V，输入加约 100kΩ 下拉；验证期接受残余风险。
+② 10kΩ 下拉与 DR1 PULLUP 的组合要重定，定之前先确认片内上拉档位。
+③ TP_TDO_A 闸门判据作废，改以 SENSE33 为主。
+④ ADC 复用球的摆率要求（>3.3V/ns）与 ±3.3% 公差转移到桥片 JTAG 那条 2.5V 轨上。
+｜情景：X/Y 都是｜推断：[脚本] L739-745、L2978-2983、L2958-2969、L2535-2541；[FS03mod]/V3_design_inputs.md:83,181
+ + 【桥板选型】情景 Y 的契约单端脚与 LVDS 接收脚要落在支持热插拔的 bank：
+- PH1P100 只有 HR（300µA），满足。
+- PH1A 只能放 HR；HP 不支持热插拔，且禁止 PAD 早于电源上电，与「FS03 先上电」冲突。
+- PG2L 用户 IO 为 IDK(DC) ≤1mA。
+800Mbps LVDS 不能加缓冲，放在不支持热插拔的 bank 上就只能改上电顺序。｜情景：Y｜确定：DS1300 §2.7 p25、表3-16 p57；[DS900]:2150-2160、2196-2222；DS04001 表2-8
+ + 【桥板选型】情景 Y 的上行 LVDS 收端输入窗：
+- PH1A HR：VICM 0.9~1.4、VIP/VIN 0.7~1.6，与 DR1 输出窗两端都是零余量。
+- PH1P：上沿零余量。
+- GW2A-55、GW5A：宽裕。
+- PG2L50H：未查到。
+数据 lane 非直流平衡、不能 AC 耦合，所以只能靠选型解决。｜情景：Y｜手册原文加推断：DS1200 表3-14 p43；[DS900]:2383-2410；DS1300 表3-24 p63；DS102 表3-12
+ + 【V2 驱动端 + V1 接收端】下行 36 对数据 mini-LVDS 用「3R + Rpd」电阻网络同时定共模、压摆幅（RS 150 / RP 140 / Rpd 3.9k，共模约 1.20V，VCCIO ±5% 时为 1.141~1.261V），直流耦合，不用有源器件。GW5A ELVDS 的 VOS = VCCIO/2、VOD 最大 2000mV，TLVDS 的 VOS 最大 1.375V，都不能直连 2260（VIC 1.1~1.3、VID ≤600mV）。接收端取 100Ω 还是 200Ω 待问集创。｜情景：X/Y 都是（Y 的各候选同样按伪差分设计）｜手册原文加计算：DS1103 表3-27/3-28 p66；ICND2260 p8；[A1] 表6
+ + 【V2 + V1】下行 12 对时钟走扇出器件时：CDCLVD1212 只能 2.5V 供电（VCC 绝对最大 2.8V），要单独 LDO；输出 Voc 最大 1.375V 超出 VIC，灯板 12 对保留分裂端接加 AC 耦合与 VBIAS 共模逃生位。A1 的 VBIAS 分压值自相矛盾（正文 200/150Ω = 1.2V，BOM 行 4.7k/2.7k ≈ 1.02V），下单前必须统一。｜情景：X/Y 都是｜项目文档明写（器件手册本地没有）：[A1] 表10；[脚本] L2918-2919
+ + 【V2】ACK_D[1:0]：2260 ACK_O 与 mux 在 VDDD 2.8V，另有 10kΩ 上拉到 VDDD，进桥片 2.5V bank，超出 LVCMOS25 推荐上限 VCCIO+0.3；GW5A、PH1A、PH1P 都没有 EG4 那样的 VIMAX 或可关的钳位。做法是在 V2 上加单电源、输入耐压、带 Ioff 的缓冲（如 74LVC2G34，VCC = 桥片 2.5V），灯板串阻与 RTL 的 ack_rd_window 门控保留。分压方案与上拉冲突；V2 上没有空闲的 3.3V 脚。｜情景：X/Y 都是｜推断（GW5A 没有 I/O 输入绝对最大值条目）：DS1103 表3-23 p62-63、表3-3 p45；ICND2260 p4/p7；[A1] 表1
+ + 【V1】I_SYNC 一根进板后，经 74LVC244（VCC = VDDD 2.8V）三路各驱 4 颗 M2。参考板的 74HC245 @3.8V，2.5V 驱不动。前提是 VDDD 正式降到 2.8V。余量按 GW5A 手册的 VOH 最坏值只有约 0.175V。｜情景：与 X/Y 无关｜项目文档加推断（2260 与 LVC 的门限本地都没有手册）：[A1] 表6b；ICND2260 p7；DS1103 表3-23
+ + 【V1】ACK_S[2:0] 进 8:1 mux（CMOS 门限 0.7×VCC）：按 VOH 最坏值余量只有 0.1~0.2V，mux 的 VCC 一旦接错轨就读不到。改走 74LVC244 的空余通道，或选 TTL 门限的选择器；mux VCC 旁标注「必须 2.8V」。｜情景：与 X/Y 无关｜推断：[05] §5③ 路A；DS1103 表3-23
+ + 【V1 + V2】PANEL_RSTN：2260 手册把 RSTN 标在 VDDR 域（2.8~5V），不是 VDDD。10kΩ 下拉抵不过 GW5A 配置期 ≤150µA 的弱上拉（最坏约 1.5V）。做法：走 74LVC244 空余通道，输入端下拉 ≤2.2kΩ；VDDR 高于 2.8V 时，缓冲器 VCC 改接 VDDR 或改开漏；RTL 保持电源稳定前为 0。｜情景：X/Y 都是｜域为手册原文，门限推断：ICND2260 p4/p5/p7；DS1103 表3-16；UG985 p5 PUDC_B
+ + 【V1 + V2】EN_3V8/EN_2V8：稳压器 EN 门限未查到；GW5A 配置期弱上拉会把 100kΩ 下拉的 EN 顶高、提前开灯板电源。下拉改 ≤2.2kΩ；自画 GW5A 板也可把 PUDC_B 接高。V3V8_FPGA 与 V2V8_FPGA 都不能是被 EN 控制的那路轨，否则自锁。｜情景：X/Y 都是｜推断：[A1] 表1/表9；[mem]/project_lxb_icnd2260_bringup.md:27-30；UG985 p5；UG714-1.0.6 p10
+ + 【V2 + V1】灯板轨被 EN 关断（soft_rst 真断电 2000ms）期间，FPGA 与扇出器件仍在工作，会经 2260 输入钳位二极管反灌：
+- 下行数据对用 ELVDS_TBUF，在两路电源 PG 到齐前三态。
+- CDCLVD1212 的 LDO 使能或输出使能跟随灯板 PG。
+- 灯板上的 74LVC244 与 mux 选带 Ioff 的型号。
+- I_SYNC、ACK_S、PANEL_RSTN 在电源稳定前保持 0。
+｜情景：X/Y 都是｜推断：ICND2260 p7；UG304 表3-7 p17；[mem]/feedback_lightboard_dcdc_needs_power_cycle.md:27-29
+ + 【V1】灯板内所有上拉都接本颗芯片的 VDDD（2.8V），不沿用参考板的 3.8V：SCL/SDA 4.7kΩ、LVDS_EN、ACK_I 100kΩ、mux 空闲输入接高、ACK_D 10kΩ。VDDD = 2.8V 时 VIN 绝对最大值只有 3.2V。｜情景：与 X/Y 无关｜项目文档明写，手册原文：[A1] 表6c；ICND2260 p7
+ + 【情景 X 自画桥板】VCCX = VCCIO10 = VDDXM 降到 2.5V 的连带要求：
+① 片内 ODT 只有 Vccx=3.3V 的规格，上行 20 对在板上外加 100Ω，或取得 FAE 书面确认。
+② VCCX 2.5V 按 −5% 正好等于下限 2.375V，这条轨同时驱动 TDO，要按 ≤±3.3% 含纹波设计。
+③ VCCX（2.5V）与 VCCIO45（3.3V，flash、配置上拉、晶振仍在 3.3V）拆成两路后要定上电顺序；高云三份文档说法冲突。
+④ VCCIO（3.3V）高于 VCCX（2.5V）是否允许，未查到。
+｜情景：X｜手册原文加推断：DS1103 表3-6 p49、表3-26 p65、表3-5 注[1] p48；UG987-1.2.1 p4；UG304-1.3 §3.3
+ + 【X/Y 自画桥板】下载器插座的 VREF/VCC 脚和 ESD 阵列电源都接桥片 JTAG bank 的 2.5V，不能照抄 CB-V2 的 3.3V。下载线自带电平转换，不必另加。插座与 SoC JTAG 要物理二选一（0Ω 或跳线）。｜情景：X/Y 都是｜手册原文：UG987 图4-1 注；UG112-1.4.3 表2-4 p8；UG009 表2-1 注1 p2；[脚本] L2203-2206、L2270
+ + 【情景 Y 自画桥板】配置 flash 与配置脚跟着 JTAG 电压走 2.5V：
+- GW5A-25 UG256C/PG256C：VCCIO10 与 VCCIO4 共球，bank4 上的 MSPI、RECONFIG_N、READY 为 2.5V，flash 选 2.5V 规格。
+- PH1A60：bank0 与 bank12 取 2.5V。
+- PH1P100：bank12 取 2.5V。
+- PG2L50H：VCCIOCFG 与 VCCIOL5 取 2.5V，SCBV 接 VCCIOCFG。
+- GW2A-55：JTAG 在 bank2，flash 在 bank3，可保持 3.3V。
+一律不在 MSPI 线上加转换器。｜情景：Y｜GW5A/PH1P 为手册原文，PH1A/PG2L 为推断：UG985-1.7.2 p80/p89；DS1300 表3-6~3-9 注；UG905 §3.4；UG040005 表2-2
+ + 【FS03（CEP 外）】光电索引 → K18（bank32 固定 3.3V，R172 2.2kΩ 上拉）：
+- 开集电极：直接接。
+- 推挽 3.3V：串 100Ω。
+- 推挽 5V：加 74LVC1G17 @3.3V。
+- 12~24V 或 PNP 输出：分压加施密特，或光耦。
+建议拆 C245。目标 SoC 板要把它落在 3.3V bank 或 PS MIO，否则也要转换。｜情景：与 X/Y 无关｜FS03 为项目文档明写，传感器类型未知；目标板为推断：[脚本] L1026-1033、L2527-2534；[FS03mod]/README.md:137、449-453
+ + 【FS03 台架】CEP1 上的 CB-V2 JTAG 飞线（GW5A 3.3V TDO → 2.5V bank 的 F21，注入约 6mA）与改板互斥：先做完加载测试再物理拆除。若改板后还要用这个台架，线上要加 2.5↔3.3V 带 Ioff 的转换器，或把 J2 回退到 3.3V。｜情景：与 X/Y 无关｜项目文档明写：[脚本] L2471-2478；[FS03mod]/README.md:218、717
+ + 【V2 验证板，非电平转换】V2 底板给 VCCIO45 供电必须与 VCC3P3 同源（照 CB-V2 的 FB4 做法），不能用独立或晚上电的 3.3V。否则核心板上 3.3V 的晶振和上拉会灌进未上电的 bank4/5。｜情景：与 X/Y 无关｜推断：核心板原理图 p1/p3/p4；CB-V2 SchDoc FB4；[脚本] L2335
+ + 【桥板可选外设】PC 调试串口若选 CH340（没有 VIO 脚，只能 3.3V/5V）接 2.5V bank，要加双电源转换或二极管方案；改用 CH9102F 或 CH342/CH343（VIO 接 2.5V）就不用转换。｜情景：与 X/Y 无关｜依据外部手册，本地未复核：CH340DS1 §5/§6.3；CH9102DS1 p1/§6.2
+=== FINAL NOT NEEDED
+ - 每面 20 对 LVDS25 上行（GW5A 接收）：DR1 VOCM 0.9~1.4V、VOD 200~400mV；GW5A-25 的 VICM 0.3~2.35V，差分输入对 bank VCCIO 不设限，直流直连即可。情景 X 下接收 bank 仍为 3.3V 也可以，但要外加端接（见清单）。Y 的收端窗口另见清单。出处：DS1200 表3-14 p43；DS1103 表2-7、表3-26 p65；[脚本] L2291-2294、L2326-2329
+ - SB_ALIGNED / SB_UART_B2S（桥→SoC）：两端都是 2.5V，VOH ≥2.1V > VIH 1.7V，且 ≤2.8V，可直连。反灌由 V3 串 8.2kΩ 限流（≤282µA）。前提：桥侧必须放 2.5V bank，不能落 VCCIO45。X/Y 都不变。出处：[脚本] L1466-1475、L2403-2425；DS1200 表3-11；DS1103 表3-23
+ - SB_RSTN / SB_UART_S2B（SoC→桥）：2.5V 直连。桥片未上电时，GW5A 靠 IHS ≤150µA；Y 的候选 PH1P HR 为 300µA、PG2L 用户 IO 为 ≤1mA。串阻反而有害（SB_RSTN 与 2.2kΩ 下拉分压，Rs 须 ≤518Ω）。出处：DS1103 表3-8 p50；DS1300 表3-16 p57；DS04001 表2-8；[FS03mod]/V3_design_inputs.md:112
+ - JTAG 4 根去掉转换器后的「电平」本身：DR1 LVCMOS25 与桥片 2.5V JTAG bank 直连，VOH ≥2.1V > VIH 1.7V，驱动端 ≤2.625V < 2.8V。需要处理的只有隔离、上下拉和 TDO 保护（见清单），电平转换器本身不再需要。高云「JTAG 门限跟随 bank VCCIO」只是定性说明，没有数值 VIH。出处：DS1200 表3-11；DS1103 表3-23；[mem]/reference_bridge_fpga_jtag_voltage.md:29
+ - 情景 X 与 Y 中 GW5A-25 UG256C/PG256C、GW2A-55 的 TCK/TMS/TDI 未上电隔离：DS1103 与 DS102 对 JTAG 脚单列 IHS ≤120µA，可以直连、不加器件。前提是 VCCIO=0 时 VIH(MAX) 的定义待 FAE 确认。出处：DS1103 表3-8 p50；[scratch]/gowin/web/DS102.txt:1739-1749
+ - FS03 两个 CEP bank 改 2.5V 后，板上不留 3.3V 负载：ADJ_BANK11/33 两个网络上只有去耦电容；LDO 插座第 3 位没有触点，不碰 VCC_1V8 上的 GD25LB256E、USB3320、TXS02612 等器件。旧屏链的回退办法是插回跳帽，不是加转换器。出处：[FS03mod]/README.md:107、85、208、700
+ - 模组间连接器上没有电源脚、没有专用在位检测脚（在位靠 IDCODE），不存在电源域跨接；FS03 CEP pin1 不接。出处：[脚本] L749-755、L2495-2497；[FS03mod]/README.md 表 2.1 #4 与 E7
+ - 2260 的其它脚：SDO、L_CKO 级联已删；SCL/SDA、LVDS_EN 只上拉到 VDDD、不接 FPGA；SEL_I/O、GPIO0/1、DFT_EN、ATEST 悬空，VPP 接地。这些脚与 FPGA 之间都没有电平关系。出处：ICND2260 p3-p5；[A1] 表2、表6c
+ - VDDD 从 3.8V 降到 2.8V 不影响 mini-LVDS 输入：L_D*/L_CK* 输入范围 0~VDDD，3R+Rpd 网络下两条腿约 1.0~1.45V（推断）。出处：ICND2260 p4、p8
+ - LED 功率域 VDDR/VDDGB 与 VLED[0:47] 行管脚是芯片内部功率通路，不与 FPGA 交互。例外是 RSTN 标在 VDDR 域，已列入清单。出处：ICND2260 p4-p5、p7
+ - 情景 X 对灯板一侧没有影响：ELVDS 的 VOS = VCCIO/2，与 VCCX 无关；LVCMOS 门限只看 VCCIO；下行 300~340Mbps 低于 60K 那条「>600Mbps 要求 VCCX ≥2.5V」的门槛。出处：DS1103 表3-28 p66、表3-5 注[1] p48
+ - 情景 X 的配置 flash、MODE、READY、DONE、RECONFIG_N、CCLK 都在 bank4/5，保持 3.3V，不需要转换。POR 的 VCCX 门限 1.5V 远低于 2.5V。VDDX_MIPI 跟到 2.5V 在范围内（MIPI 不用）。Bank11 的 R16 由 VCCX 供电，悬空即可。PUDC_B 在 bank0，不受影响。出处：UG985-1.7.2 p5、p7 注[4]、p32-34、p40-41；DS1103 表3-11 p51
+ - 下载器本身：高云 USB Cable 支持 1.2~3.3V（2.5V 档 2.375~2.625V），安路 AL-LINK-FT 的 VREF 为 1.5~3.3V，内部都带电平转换。只要 VREF 接对，插座上不用加转换器。出处：[scratch]/gowin/UG112-1.4.3_Gowin USB编程下载线用户指南.txt:421、550-566；UG009_1.3 表1-1 注、表2-1 注1/2 p1-2
+ - 带 VIO 的 USB 转串口（CH9102F / CH342 / CH343），VIO 接该 bank 电压即可。出处：CH9102DS1 V1.4 p1/§6.2（外部，本地未复核）；[资料包]/01_DR1V90主控SoC_安路/05_外围器件手册/07_UART/CH342K 手册 p1/p3
+ - 晶振、本地按键、LED 按所在 bank 电压接（LED 用晶体管低边驱动），不需要转换。出处：核心板原理图 p4；CB-V2 GPIO_LED_KEY.SchDoc；UG714-1.0.1 p11
+ - 情景 Y 选 GW2A-55 时，JTAG 在 bank2 取 2.5V，配置 flash 在 bank3 可保持 3.3V。出处：UG113-1.5.6 p17-19、p34（本会话副本）
+ - V3 闸门测点（J_TP11 两只 10kΩ、SENSE33 10kΩ、TP_TDO_A 47kΩ）只是隔离电阻加万用表读数，不需要转换。但去掉转换器后 TP_TDO_A 的判据要重定（见清单）。出处：[FS03mod]/V3_design_inputs.md:83、181
+ - SoC 模组内部的 USB WiFi dongle、eMMC/SD（FS03 已有 TXS02612）、QSPI、UART、以太网都不跨模组，不受 X/Y 影响。转子侧没查到电机、霍尔或编码器的电气接口：跨转子的只有无线供电 24V（不走模组接口）、WiFi 与光电索引，三条都是非接触。出处：[FS03mod]/README.md 表 2.1 #9；/mnt/d/claude_workspace/pov3d/pcb/00_目标电路总览.md §2.1；[mem]/project_pov3d_rotor_wireless_power.md:16
+=== MISSED (challenger additions)
+ * ACK_D 线上灯板侧那只 10 kΩ 上拉接的是 VDDD 2.8V，它本身就是一条 2.8V→桥片 2.5V bank 的跨域通路（两种情景都有） | A1 表 1 的 ACK 行明写「└ 上拉 10 kΩ → VDDD」，05 §5③ 路 A 也写「ACK 的 10 kΩ 上拉也接 2.8 V」。ledside 的 ACK_D 条只算了 mux 推挽输出的 VOH，没有把这只上拉算进去，后果有三：
+① mux 高阻、掉电或切换间隙时，上拉照样把 2.8V 静态压到 GW5A LVCMOS25 输入上，而该输入推荐上限是 VCCIO+0.3。
+② 如果改用分压方案，这只上拉会把空闲电平拉进不定区。
+③ 选 V2 侧缓冲器时，要求输入耐压且带 Ioff（缓冲器 VCC 为 0 时输入端仍挂着 2.8V）。
+修法：上拉仍接 VDDD，但必须落在缓冲器输入侧；若不用缓冲器，就挪到桥片侧并接本地 2.5V。另外 A1 表 12 脚位表写「mux#1 余 4 路接地」，与表 5 的更正「接高」不一致，也会影响 ACK 空闲电平。以上为推断。
+ * 12 对时钟走 CDCLVD1212 扇出时，灯板电源轨被 EN_3V8/EN_2V8 关断后，扇出器件仍在给 2260 灌电流（两种情景，只要用扇出 IC） | CDCLVD1212 由 V2 上的 2.5V LDO 供电，这颗 LDO 取电自 V3V8_FPGA，与 VCCIO 共用。soc_rst 会真断电 2000 ms，此时 FPGA 与扇出器件仍在运行。ICND2260 的 CLKI 输入对 VDD 和 GND 各有一只钳位二极管，VIN 绝对最大值为 VDD+0.4。ledside 提出「48 对改 ELVDS_TBUF 三态」，但只管得住 FPGA 到扇出器件输入这一段，扇出器件的 12 对输出照样驱动未上电的 2260。需要让扇出器件的 LDO 使能或输出使能跟随灯板轨的 PG，或者核实 CDCLVD1212 禁用时的输出状态。本地没有 CDCLVD1212 手册，EN 行为未查到。以上为推断。
+ * 情景 X：VCCX 降到 2.5V 后，按 −5% 算正好压在 GW5A-25 的下限 2.375V 上，零余量 | DS1103 表 3-6 给出 VCCX 与 VDDXM 的推荐范围都是 2.375~3.465V。UG324 上 VDDX_MIPI、VCCIO10、VCCX 共用 12 个电源球，按手册要求取范围交集。2.5V 轨按 ±5%（含纹波，手册允许纹波 5%）算，下沿正好等于下限。同一条轨在情景 X 里还要驱动 JTAG_TDO 进 DR1，e:dr1_vi 要求 ≤±3.3%。所以这条轨要选高精度稳压器，按 ≤±3.3% 含纹波设计，不能照搬普通 ±5% 的 2.5V LDO。这是 X 对 VCCX 的连带影响，三路都没提。范围出自手册原文，公差处理为推断。
+ * 情景 Y：候选桥片的上行 LVDS 收端输入窗能不能覆盖 DR1 的 LVDS25 输出。数据 lane 不能 AC 耦合，所以这是选型硬约束 | DR1 LVDS25 @2.5V 的 VOCM 为 0.9/1.25/1.4V，单端 VOL ≥0.7V、VOH ≤1.5V。各候选：
+- PH1A60 HR：VICM 0.9~1.4V，VIP/VIN 0.7~1.6V，两端都是零余量，还没扣 33Ω 与 FPC 损耗。
+- PH1P HR：VICM 0.5~1.4V，上沿零余量。
+- GW2A-55：VCM 0.05~2.35V，没问题。
+- GW5A：VICM 0.3~2.35V，没问题。
+- PG2L50H：未查到。
+上行是 8-bit 直传、非直流平衡码（e:adapt），不能靠 AC 耦合加偏置补救，只能挑窗口宽的桥片或做有损的电阻移位网络。contract 只核了 PH1P。以上为推断。
+ * 目标 SoC 板上光电索引输入的落点。contract 的 SPIN 条只覆盖了 FS03 的 K18（bank32 3.3V） | 契约与 D7 要求 DR1 的上行 bank 用 2.5V。目标 SoC 板自画时，光电传感器（Zynq 时代是 3.3V 供电、开集电极）必须落在 3.3V 的 PL bank 或 PS MIO 上，否则就要加转换（开集电极上拉到 2.5V，或加 74LVC1G17 一类）。验证期 FS03 的 K18 恰好是固定 3.3V，所以这个问题被掩盖了。与情景 X/Y 无关。以上为推断。
+ * V2 从灯板 V2V8_FPGA 取 2.8V 降压做 2.5V VCCIO 时，若这路 2.8V 就是 EN_2V8 控制的轨，会形成自锁（两种情景） | A1 表 1 焊盘 165 写「V2V8_FPGA 可选，供 2.5 V VCCIO」，05 写「转接板从灯板取电（3.8 V ×2 + 2.8 V）」，而 EN_2V8 由 FPGA 输出。若 V2 的 VCCIO23/VCCIO67（边带、下行 ELVDS）依赖这路轨，FPGA 配置完成、拉高 EN_2V8 之前，这些 bank 没电。边带 SB_ALIGNED/SB_UART_B2S 也会随之悬空或反灌。ledside 只对 V3V8_FPGA 与 EN_3V8 提了同类问题，漏了 2.8V。结论：V2 的 2.5V 必须取自不受 EN 控制的常电。以上为推断。
+ * 「GW5A 配置期所有 GPIO 弱上拉」是有条件的（PUDC_B 为低）。所有下拉阻值预算都建立在这句话上 | UG985 p5 写：PUDC_B 低电平时除自身外所有 GPIO 弱上拉，高电平时所有 GPIO 高阻，配置过程中不允许悬空。UG714-1.0.6 p10 写 25K 的弱上拉为 Medium 档。三路给出的下拉值（EN_3V8/EN_2V8/PANEL_RSTN ≤2.2kΩ、SB_ALIGNED 2.2kΩ、TDO 10kΩ）都按「配置期弱上拉 ≤150µA」算。
+- 自画 GW5A 桥板（情景 X，以及 Y 中的 GW5A-25 UG256C/PG256C）可以把 PUDC_B 硬拉高，配置期直接变高阻，下拉就能放宽。
+- ACG525-CORE-V2 上 D4（IOT29A/PUDC_B）看起来接的是 DDR3 地址线（p4 bbox 读图：同行网名 DDR3_A8），配置期状态不确定，验证板只能继续用强下拉兜底。
+另有文档冲突：UG714-1.0.4 把 PUDC_B 列在 bank 3/4，UG985 的 UG324 脚表把它放在 bank0 D4。以上为推断。
+ * A1 里共模逃生位 VBIAS 分压值前后矛盾（直接决定 AC 耦合后的共模电平） | A1 表 10 正文给的是 2.8V 经 R_top 200Ω / R_bot 150Ω 分压，得 VBIAS = 1.200V。同表 BOM 行却写 R_D1/2 = 4.7k / 2.7k + 1µF：从 2.8V 分压得 1.02V（或 1.78V），都落在 2260 VIC 1.1~1.3V 窗外。而且戴维南内阻约 1.7kΩ，带 240µA 负载会再掉约 0.4V。ledside 引用的是正文值，没发现 BOM 行不一致。按 BOM 下单，启用 AC 耦合时共模必出窗。以上为计算。
+ * 情景 Y：边带默认电平下拉（SB_ALIGNED 2.2kΩ，经 V3 串 8.2kΩ）要按候选桥片的配置期弱上拉电流复核 | 原核算按 GW5A Medium ≤150µA 加 DR1 漏电 30µA，焊盘电压 0.643V，比 VIL 0.7V 只余 57mV。候选桥片：
+- PH1A HR：IPU @2.5V 为 83~153µA，焊盘约 0.65V，余约 50mV，勉强满足。
+- PH1P100（仅 HR）：≤125µA，满足。
+- GW2A-55：≤150µA，满足。
+- PG2L50H：未查到。
+如果某颗候选的该 bank 弱上拉大于约 160µA（例如 PH1P35 的 HD bank 最大 300µA），就要减小下拉或改用 PUDC_B 类的高阻配置。以上为推断。
+=== WRONG (corrections)
+ ! contract / bridgeboard 引用 reference_ph1p_jtag_2v5.md:86、:87（bridgeboard 写 L85-86、L87） -> 该文件只有 33 行。PH1P 的 TCK 需 4.7k 上拉、跨 bank 配置电压一致、JTAG 专用脚热插拔未查到这几条，实际在 L27-L29。
+ ! contract 引用 WIRING_MTR_V01.md:45-46 为「光电 3.3V 供电、FPGA 内部上拉」 -> 实际在 :49（SPIN_SYNC，V14，FPGA 内部上拉）和 :50（光电开关电源 3.3V）。改板 README:451 引的也是 :49。另外该文档是鹿小班 Zynq 加 MTR_BOARD 的接线表，只能当旁证。
+ ! bridgeboard：手册只在 Vccx=3.3V 条件下给 RODT 100Ω（出处写 DS1103 表3-16 p54、表3-26 p65-66） -> 结论成立，但表 3-16（GW5A-25，印刷页 54-55）里没有 RODT 这一项。RODT @Vccx=3.3V 出现在表 3-15（GW5A-60，p53）和表 3-26（GW5A-25/60，p65）。25K 的表 3-6 确实没有「ODT 需 Vccx≥3V」这条注，60K 的表 3-5 注[1]（p48）才有。
+ ! contract：Logos2 PG2L50H 的边带 bank 热插拔「未查到」，JTAG 专用脚热插拔「未查到」 -> 本会话副本 DS04001 V2.1 §2.7.1 表 2-8（p23）有明文：用户 I/O 的 IDK(DC) ≤1mA/IO、IDK(AC) ≤1mA；注 3 写专用配置 I/O 不支持热插拔，复用配置 I/O 与 ADC 复用 I/O 只满足 DC 不满足 AC。所以 Y 选 PG2L50H 时，JTAG 在桥侧的 Ioff 缓冲是确定需要的（依据手册），不再是「未查到」。边带放普通用户 I/O 可以直连，但要按推荐上下电顺序。
+ ! bridgeboard：去掉转换器后「TMS/TDI 的 22kΩ 上拉保留」，TCK 两只下拉合并成 2.2kΩ -> TCK 合并可以，但 22kΩ 上拉不能原样保留。转换器去掉后，桥片 JTAG 片内上拉与外部上拉并联挂在契约线上。验证板两面共用 TMS 时，DR1 未上电的注入为 193µA 加 2 × 片内上拉：GW5A 按 Medium ≤150µA 算是 493µA，PH1P 按 HR ≤125µA 算是 443µA，都超过 DS1200 表 3-8 的 350µA（contract 已算出）。应去掉外部上拉，或加大到 ≥100kΩ 后再核。片内上拉档位未查到，以上为推断。
+ ! bridgeboard：TDO 片内上拉按 Weak ≤50µA 算，静止电平 0.83~2.03V；建议 DR1 TDO 改 NONE 或 PULLDOWN 并保留 10kΩ 下拉。contract 的建议则是去掉 10kΩ（或改 ≥100kΩ）、保留 DR1 PULLUP。两者互相矛盾 -> 脚本 L2406 与 UG714-1.0.6 注[1] 都写 25K 弱上拉为 Medium（≤150µA）。按 Medium 算，10kΩ 上静止电平最高可到 VCCIO，两种上下拉组合都给不出确定电平。TDO 只在 Shift 态被采样，静止电平只影响「不在位」提示和 TP_TDO_A 闸门，两种配置任选其一都行，但要先确认 GW5A/PH1x JTAG 脚的上拉档位再定。直流保护不能靠上下拉：访问中 SoC 岛掉电时 TDO 正驱高，是 mA 级注入。串阻也不行，限到 ≤350µA 要 kΩ 级，TCK 10MHz 与 ADC 球摆率都不允许。目标板要靠 SoC 侧的单电源 Ioff 缓冲（contract 方案）。以上为推断。
+ ! ledside：GW2A-55 在 Bank0/1/2/7 的 TLVDS VOS 为 1.375/1.5/1.625V，是「项目文档转引 DS102，原手册不在本地」 -> DS102-2.7.8 原文在本会话 scratchpad 里（contract 也引了另一个会话的副本）。表 3-12 注[1]：GW2A-18 全部 bank 与 GW2A-55 的 Bank3/4/5/6 为 1.125/1.2/1.375V；注[2]：GW2A-55 的 Bank0/1/2/7 为 1.375/1.5/1.625V，并建议选 Bank3/4/5/6。最大值 1.375V 仍超过 VIC 上限 1.3V，所以「真差分一律出窗，走伪差分加网络」的结论不变，只是描述不完整。
+ ! ledside ACK_D 的次选与备选：V2 上串 1kΩ、对地 10kΩ 分压（标称 2.55V）；或者放进桥片空闲的 3.3V bank，不用转换 -> ① 分压没算灯板侧 ACK 的 10kΩ 上拉到 VDDD：mux 高阻、掉电或切换时节点约为 2.8×10/(10+1+10) ≈ 1.33V，落在 VIL 0.7 与 VIH 1.7 之间，ACK 的「空闲高」失效。要用分压，就得把上拉挪到分压之后、接 2.5V。② V2 上没有空闲的 3.3V 单端脚：VCCIO45 22 对里上行用了 20 对，剩下的 B5_B8/B5_B12 带配置复用、规定不接（B5_B8 须悬空），夹在上行之间的半对也规定不接。所以在 V2 上只剩「单电源 Ioff 缓冲」这一条路（器件型号的输入耐压与 Ioff 本地没有手册，属推断）。
+ ! ledside 反灌条：「下行 48 对改用 ELVDS_TBUF，en_2v8 与 en_3v8 未都拉高时整体三态」即可消除 FPGA→2260 反灌 -> 只对 FPGA 直出的数据对（以及选 12 对直出时的时钟）成立。按脚本 d:down_clk 的建议走 CDCLVD1212 扇出时，TBUF 三态管不到扇出器件的 12 对输出，这些输出照样驱动未上电 2260 的 CLKI 钳位二极管。还需要让扇出器件 LDO 的 EN 或输出使能跟随灯板轨 PG（见 missed 第 2 条）。以上为推断。
+ ! contract（情景 Y，JTAG 的 Ioff 替代条）：「串阻也替代不了：TCK 桥侧有 2.2kΩ 下拉，要过 VIH 需串阻 ≲518Ω」 -> 结论（串阻限不住直流、PH1x 需要缓冲器或 FAE 确认）成立，但理由套用的是 GW5A 的约定。PH1x 的 TCK 是 4.7kΩ 上拉（DS1300 表 4-2、DS900）。约束变成 DR1 驱低时节点须 ≤VIL：0.4 + 2.225·Rs/(Rs+4.7k) ≤ 0.7 ⇒ Rs ≲ 0.73kΩ，对应注入仍是 mA 级。另外脚本 L2464 写「分压要求串阻 ≲0.8 kΩ」，与 V3_design_inputs C9 的「Rs ≤518 Ω（VOH 2.1 V）」不一致，C9 的算法正确。
+ ! contract（不需要清单·LVDS 条）：「DR1 单端最高 1.4 + 0.2 = 1.6V」 -> DS1200 表 3-14 直接给出 VCCIO=2.5 时 VOH ≤1.5V、VOL ≥0.7V。对 PH1P（VIP/VIN 0.45~1.725V）结论不变，但对 PH1A（VIP/VIN 0.7~1.6V）下沿是零余量（见 missed 第 4 条）。
+ ! bridgeboard：「2.5V（VCCX）先于或同时于 3.3V 上电……两版 UG987 都能满足」 -> VCCX 先于 VCCIO 这一点两版都能满足。但两版对 VCC 与 VCCX 的先后是矛盾的：UG987-1.2.1 §2.4 写 VCC → VCC_LDO → VCCX → VCCIO，新版 §2.3 写「推荐 VCCX 在 VCC 之前上电」；UG304-1.3 §3.3 又写「无上下电顺序要求」。自画的 X 板必须选定一种顺序，还不能说「都满足」，需 FAE 定。
+=== OPEN
+ ? （路径约定，不是问题）[脚本]=/mnt/d/claude_workspace/pov3d/zynq_pov/docs/DR1V90_GW5A对接关系表_mkxlsx.py；[资料包]=/mnt/d/claude_workspace/pov3d/POV3D_硬件资料包_DR1V90主控与GW5A桥接模块_2026-09-15；[A1]=/mnt/d/claude_workspace/pov3d/POV3D_硬件交付包_2026-09-11/附录_原始依据/A1_灯板改板冻结版_168焊盘完整脚位表.html；[05]=/mnt/d/claude_workspace/pov3d/POV3D_硬件
+ ? DS1103 表 3-8 的 IHS 条件是「0<VIN<VIH(MAX)」，VCCIO=0 或 VCCX=0 时 VIH(MAX) 怎么取？X 的 JTAG 直连、SB_RSTN/S2B 直连都依赖这一条，需高云 FAE 书面确认。
+ ? GW5A-25 的 JTAG 脚片内上拉：TCK 到底有没有（UG714-1.0.1 表 3-5 写 TCK 为输入、无上拉；UG985-1.7.2 p5 与 UG987-1.2.1 表 4-2 写四根都是内部弱上拉），档位是 Medium 150µA 还是 Strong？PH1P 专用 JTAG 脚的 IPU 该按 HR（60~125µA）还是 HD（60~300µA）算？这决定两面共用 TMS 的反灌预算和 TDO 的上下拉取法。
+ ? PH1P100 / PH1A60 的 JTAG 专用脚有没有热插拔 DC 限值（本地手册未查到）？PH1x 的 TCK 4.7kΩ 上拉能否放大？没拿到书面答复前，情景 Y 不能省掉桥侧的 Ioff 缓冲。
+ ? GW5A-25 在 VCCX=2.5V 下：片内 RODT 是否仍可用？800Mbps 接收 fmax 是否受限？是否允许 VCCIO4/5（3.3V）高于 VCCX（2.5V）？上电顺序以 UG987-1.2.1、UG987 新版、UG304-1.3 哪份为准？
+ ? 目标板 TDO 保护：SoC 侧单电源 Ioff 缓冲的具体型号（Ioff、VCC=2.5V 时的 VIH、tpd 本地都没有手册）；桥片 TDO 焊盘摆率能否满足 DS1200 §4.2 注 3（>3.3V/ns）；验证期 TP_TDO_A 判据是删掉还是改为只在拔 FPC 时读。
+ ? ICND2260：RSTN 的真实供电域（手册标 VDDR）与门限；手册全表没有任何单端 VIH/VIL（M2、G13、N12）；VIC 1.1~1.3V 是推荐值还是硬限，测试条件 VDD=3.8V 以外是否成立；接收端端接取 100Ω（RBD）还是 200Ω（RDC）。需问集创北方 FAE。
+ ? V1 的 VDDD 是否正式定为 2.8V？VDDR 定多少？灯板 3.8V、2.8V 轨与 V3V8_FPGA、V2V8_FPGA 是不是同一张受 EN 控制的网？（是的话会自锁。）v3 架构下 V1 与 V2 是否仍用 A1 的 168 焊盘邮票孔？
+ ? 本地没有手册的器件：74LVC244 / 74LVC2G34 / 74LV151A 在 VCC 2.66~2.94V 时的 VIH 与 Ioff（A1 表 6b「74LVC 是 TTL 门限，VIH=2.0V，与 VCC 无关」的说法可能不严谨：LVC 家族门限通常随 VCC 分档，推断）；CDCLVD1212 的 EN 与禁用态输出、输入 Ioff；GD25Q128E、OT2JI 晶振的供电范围。
+ ? GW5A-25 I/O 在 VIN > VCCIO+0.3 时的耐受值（DS1103 表 3-3 只列电源轨），以及表 2-7 列出的 LVCMOS33OD25 输入标准有没有注入规格。这决定 ACK_D 以及任何 3.3V→2.5V 单端输入能否省掉器件。
+ ? 情景 Y 候选的收端数据：PG2L50H 的 LVDS 输入 VICM、配置期 IPU、MBG324 封装里 VCCIOL5 的球位；PH1A/PH1P 的 LVDS25 能否调共模；PH1A 伪差分 300Mbps、PH1P 332Mbps 对下行 340Mbps 怎么取舍。
+ ? A1 文档内部冲突需要改正：VBIAS 分压值（正文 200/150Ω，BOM 行 4.7k/2.7k）；mux#1 余下 4 路输入是接地（表 12）还是接高（表 5 更正）。
+ ? PUDC_B：ACG525-CORE-V2 上 D4 连的是否确为 DDR3 线（p4 bbox 读图推断为 DDR3_A8）？若是，验证板上 GW5A 配置期 GPIO 到底是弱上拉还是高阻就不确定。自画 GW5A 板是否把 PUDC_B 接高来简化 EN、RSTN、SB_ALIGNED 的下拉？另有文档冲突：UG714-1.0.4 列在 bank 3/4，UG985 的 UG324 脚表为 bank0。
+ ? 光电传感器的型号、输出类型与供电电压（d:spin_sensor）仍然未知；目标 SoC 板把光电输入放在哪个 bank 也未定。
+ ? 下载器在「USB 已插、目标板未上电」时 JTAG 输出是否高阻或带 Ioff，未查到；10 针插座脚序在 UG112、UG987、CB-V2 实物三处互相冲突，需按实物下载线核对。

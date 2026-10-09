@@ -376,6 +376,13 @@ footer{border-top:1px solid var(--rule-2);margin-top:48px;padding-top:14px;color
 
 <section>
   <h2 id="sec-t-2"><span class="sec">表 2</span>参考板 → 改板：逐项对照</h2>
+  <div class="callout ok"><b class="yes">🎯 改板最强的理由，来自我们自己的实测失效模式。</b><br>
+  记忆库 <span class="mono">reference_icnd2260_startup_writes_table_66_times</span> 事实三：<b>失效永远不在第 1 跳</b> ——
+  第 1 跳直接吃 FPGA 出口眼图（全链<b>唯一由我们控制、也是最差控</b>的一只眼，实测 Clock Path Skew 1.652 ns），<b>它从不失败</b>；
+  坏的是芯片自己再生转发的第 2~9 跳，呈「<b>从第 k 跳起往下全死</b>」的前缀形状。<br>
+  ⇒ 纯 FPGA 侧时序（相位/偏斜）<b>解释不了失效位置</b>，只有沿链累积的量（地弹、共模漂移、抖动累积）才天然给出这个形状。<br>
+  ⇒ <b>改成「一颗一组」后，每颗都变成第 1 跳</b>——那个从不失败的位置，<b>级联累积效应整个消失</b>。<br>
+  这比下面任何一条（带宽、skew、共模）都更直接地打在<b>实测到的</b>失效模式上。</div>
   <p class="lead">参考板一列全部来自网表实读（<span class="mono">schdoc_netlist.py</span> 直接读 <span class="mono">.SchDoc</span>）。</p>
   <div class="tw"><table>
     <thead><tr><th>项目</th><th class="old">参考板现状</th><th class="new">改板后</th><th>处置</th><th>说明</th></tr></thead>
@@ -1026,8 +1033,12 @@ footer{border-top:1px solid var(--rule-2);margin-top:48px;padding-top:14px;color
       <tr><td class="k new">GW5A-60 <b>UG324S</b></td><td class="new">0.8 mm 15×15<br>换封装，footprint 重画</td><td class="new">226</td><td class="new"><b>110</b></td><td class="new"><b class="yes">✅</b></td><td class="new"><b class="yes">✅ 余 34</b></td><td><b class="no">❌ 差 12 pad</b></td></tr>
       <tr><td class="k">GW5A-25 UG324S</td><td>0.8 mm 15×15</td><td>239</td><td>116</td><td><b class="yes">✅</b></td><td><b class="warn">⚠ 取决于 Bank2/6 速率注记，最坏只剩 85 対 ⇒ 不通过</b></td><td><b class="no">❌</b></td></tr>
       <tr><td class="k">GW5AT-60 PG484A</td><td>—</td><td>297</td><td>143</td><td><b class="yes">✅</b></td><td><b class="yes">✅</b></td><td><b class="warn">⚠ 唯一可能撑住 238 pad 的；但同样无供货</b></td></tr>
+      <tr><td class="k new">GW2A-18 <b>UG324</b></td><td class="new">0.8 mm 15×15</td><td class="new">240</td><td class="new"><b>90 真対</b>（可用 ~87）</td><td class="new"><b class="yes">✅</b></td><td class="new"><b class="yes">✅ 余 14 対</b>，pad 192/240 = 80 %</td><td><b class="no">❌</b></td></tr>
+      <tr><td class="k">GW2A-18 PG484C</td><td>1.0 mm 23×23</td><td>356</td><td>89 真対（~87）</td><td><b class="yes">✅</b></td><td><b class="yes">✅ 余 14 対</b></td><td><b class="no">❌</b></td></tr>
+      <tr><td class="k">GW2A-18 <b>PG256</b></td><td>1.0 mm 17×17<br><b>与 EG4 同外形</b></td><td>207</td><td>73 真対（~70）</td><td><b class="yes">✅ 宽裕</b></td><td><b class="warn">⚠ 差 3 対</b>；改走 ELVDS 则扣配置脚后 pad 只余 0~1</td><td><b class="no">❌</b></td></tr>
     </tbody>
-    <caption>⚠ <b>判定口径更正</b>：手册的「最大用户 I/O 总数」是<b>含 JTAG bank 与配置脚的毛数</b>，不能直接对比 pad 需求；应按 <b>GPIO bank 单端脚数</b>判（如 PG256S 毛数 194、GPIO 单端脚 <b>189</b>）。<br>🔴 <b>目标板走 A 方案（每颗一対独立时钟）需要 238 pad，所有 GW5A 封装都撑不住</b>，只有 GW5AT-60 PG484A 有可能——而它同样买不到。<b>顺带确认：现役 EG4A20BG256 的 196 IO 本来也撑不住 ⇒ 目标板从来就只能走 B 或 D。</b></caption>
+    <caption>⚠ <b>判定口径更正之一</b>：手册的「最大用户 I/O 总数」是<b>含 JTAG bank 与配置脚的毛数</b>，不能直接对比 pad 需求；应按 <b>GPIO bank 单端脚数</b>判（如 PG256S 毛数 194、GPIO 单端脚 <b>189</b>）。<br>
+    🎯 <b>判定口径更正之二（2026-09-10，会放宽不少型号）</b>：官方 pinout 的 IO Buffer 表显示，<b>True LVDS 対数只约束「输出」、不约束「输入」</b>——LVDS 列 = NONE 的対，<span class="mono">TLVDS_OBUF/TBUF</span> = No 但 <b><span class="mono">TLVDS_IBUF</span> = Yes</b>。⇒ <b>上行 14 対不占真対配额，目标板的真差分输出需求是 73 対（72 数据 + 1 时钟），不是 87 対</b>。此前几轮筛选一律按 87 対判，<b>口径偏严，可能误杀过型号</b>。<br>🔴 <b>目标板走 A 方案（每颗一対独立时钟）需要 238 pad，所有 GW5A 封装都撑不住</b>，只有 GW5AT-60 PG484A 有可能——而它同样买不到。<b>顺带确认：现役 EG4A20BG256 的 196 IO 本来也撑不住 ⇒ 目标板从来就只能走 B 或 D。</b></caption>
   </table></div>
 
   <div class="callout ok"><b>🎯 若换 GW5A，验证板有一个更干净的走法：FPGA 直出 12 対时钟（A 方案）。</b><br>
@@ -1053,12 +1064,83 @@ footer{border-top:1px solid var(--rule-2);margin-top:48px;padding-top:14px;color
 
   <div class="callout risk"><b>⚠ 外形兼容 ≠ pin2pin。</b>GW5A-25 PG256x 与 EG4A20BG256 都是 1.0 mm / 17×17 / 16×16 网格，<b>land pattern、扇出过孔结构、层叠可以复用</b>；但球数账就对不上（194 IO/62 非 IO vs 196/60），电源体系也不同（GW5A 多一条 <span class="mono">VCCX</span> 辅助轨、多 Bank10 JTAG / Bank11 Reserved）⇒ <b>网表要全部重连，信号走线等于重画</b>。旁证：同为安路、同一颗 die、同一个 BG256 的 EG4X20 与 EG4A20，256 球尚且无一同名且晶粒方向翻转。</div>
 
+  <div class="callout ok"><b class="yes">🎯 2026-09-10 复核：GW2A-18 重新入围，而且有两处比 EG4A20 强。</b><br>
+  它当初被淘汰的唯一理由是「9.0k LUT6 当量不够 18k」，<b>而那条门槛已被实测作废</b>（整机只用 4387 LUT4 ≈ 1.9k LUT6 当量）。<br>
+  🔴 <b>而且我先前引用的两条不利线索是误用，一并更正：</b><br>
+  ① 「GW2A-55 Bank0/1/2/7 的 VOS 1.375/1.5/1.625 出窗」——DS102-2.7.8 表 3-12 <b>脚注[2] 明确写那组数只属 GW2A-55</b>；<b>脚注[1] 写「这些值适用于 GW2A-18 的所有 Bank」，即 1.125 / 1.2 / 1.375 V</b>。<br>
+  ② 「GW2AR-18 真対 ≤45」——GW2AR 是带内嵌 SDRAM 的<b>独立器件系列</b>（DS226/UG229），不能拿来推 GW2A-18。<br>
+  <b>复核后实为</b>：裸 die 8 bank × 12 = <b>96 真対 / 384 IO</b>；<b>IDES8 / IDES10 = 1200 Mbps</b>（DS102 表 3-17，器件栏「GW2A-18/55」无降额脚注）⇒ <b>比 EG4 的 4:1 顶死 800 Mbps 强一档</b>；共模走 ELVDS 官方网络 <span class="mono">RS 158 / RP 140 / RT 100</span>，与我们 EG4 的 3R（RS150/RP140）<b>同拓扑，RS 只差 8 Ω</b>，且高云是 <b>2.5 V</b> 供电 ⇒ 天然共模 ≈ 1.25 V，离 1.20 V 只差 50 mV，<b>Rpd 负担比 EG4 的 3.3 V 方案轻得多</b>。<br>
+  ⚠ <b>避开的封装</b>：<span class="mono">PG256SF</span>（已 EOL）、<span class="mono">PG256C/CF</span>（VCCX 与 VCCIO7 内部短接）、<span class="mono">UG484</span>（VCCX 与 VCCIO2 内部短接 ⇒ Bank2 出不了 2.5 V 真差分）。<br>
+  ⚠ <b>片内 100 Ω 差分端接仅 Bank0/1 支持</b> ⇒ 上行 14 対要整块塞进 Bank0+Bank1（UG324 的 B0/B1 各 14 対，够）。<br>
+  🔴 <b>唯一卡点是供货</b>：対数够的 UG324 / PG484C / UG484 在立创、华秋、云汉<b>三家都查不到可下单 SKU</b>。</div>
   <div class="callout risk"><b>🔴 2026-09-09 核实结论：GW5A 不解决共模、买不到、也救不了 multidrop 与级联。</b><br>
   ① <b>共模</b>：原生 MINILVDS 的 VOS 上限同样是 1.375 V，不保证落进 2260 的 1.1~1.3 V ⇒ 换过去<b>问题原样存在</b>，而 EG4 的 5R 网络反而能把共模按构造钉在 1.203 V。<br>
   ② <b>IODELAY</b>：确认可用于输出路径（四重证据），<b>但快角量程 2.76 ns 连一个 UI（2.94 ns）都盖不满</b> ⇒ 方案 C（multidrop 1.42~2.35 UI）与方案 D（ns 级累积）在 GW5A 上<b>同样不成立</b>。<br>
   ③ <b>供货</b>：够用的封装全部无价无货。<br>
   ⇒ <b>本表作为备选记录归档。现役 EG4 + 扇出 IC + 两路 PLL 相位（表 4）是当前定案，不因 GW5A 而改。</b><br>
   <span style="color:var(--muted)">若日后 EG4 撞墙需要重启评估，还剩三个未证实项：<span class="mono">IODELAY.DO → TLVDS_OBUF</span> 能否布通（连接规则只点名 OBUF/IOBUF/TBUF，需跑最小工程实测）；IODELAY 无 PVT 校准基准，绝对延时不可信；GAO 抓不到 IOLOGIC 输出，只能示波器 + 回环调。</span></div>
+  <h3>11.x 统一口径重排（2026-09-10/14）</h3>
+  <div class="callout risk"><b>🔴 判据变了，此前几轮的筛选口径偏严，误杀过型号。</b><br>
+  <b>① 原生真差分直连，在整个高云产品线上全部关闭。</b>逐份核对 <b>13 份数据手册</b>的差分 IO 输出 DC 表，<b>没有任何一张的 VOS max ≤ 1.3 V</b>——最好一档 1.125 / 1.25 / <b>1.375</b>，最差 1.000 / 1.250 / <b>1.425</b>。<b>这不是某一颗的缺陷，是全线特性</b> ⇒「换高云能解掉共模」这个念头可以彻底放下。<br>
+  <b>② 既然下行必须走 ELVDS + 外部 3R 网络（与现役 EG4 同拓扑），「True LVDS 対数」就不再是判据。</b>ELVDS_OBUF = 互补 LVCMOS 输出 + 外部电阻网络，<b>任何物理成対的 GPIO 都能用</b>（UG318 §3.2「所有分区支持模拟 LVDS 差分输出」）。<br>
+  <b>③ 上行 TLVDS_IBUF 不占真対配额</b>（官方 pinout 的 IO Buffer 表：LVDS 列 = NONE 的対，<span class="mono">TLVDS_OBUF/TBUF</span> = No 但 <span class="mono">TLVDS_IBUF</span> = Yes）。<br>
+  ⇒ <b>正确判据 = 净 IO ≥ pad 需求</b>（净 IO = 毛 IO − 配置/JTAG 复用脚）。<br>
+  ⇒ <b>gearing 这一关筛不掉任何人</b>：全部在产系列的 IDES8 额定都 ≥ 900 Mbps。</div>
+
+  <h3>🎯 先把 pad 需求砍下来 —— 这一步让好几颗原本差几个 pad 的型号活了</h3>
+  <div class="tw"><table>
+    <thead><tr><th>单端信号（<span class="mono">eg4_bridge_top.v</span> 端口表逐条数）</th><th>根数</th><th>量产板要不要</th></tr></thead>
+    <tbody>
+      <tr><td class="k mono">clk_ref · rstn_pin · i_sync · panel_rstn · en_3v8 · en_2v8</td><td>6</td><td><b class="yes">要</b></td></tr>
+      <tr><td class="k mono">ack_d[2:0] + ack_s[2:0]</td><td>6</td><td><b class="yes">要</b>（菊花链方案则只要 1 根）</td></tr>
+      <tr><td class="k old mono">led[2:0] + dbg_st</td><td class="old">4</td><td class="old"><b class="no">砍</b>——调试用</td></tr>
+      <tr><td class="k old mono">scl + sda</td><td class="old">2</td><td class="old"><b class="no">砍</b>——已确认不接 FPGA（表 6c）</td></tr>
+    </tbody>
+    <caption><b>单端 18 → 12</b> ⇒ 目标板 pad 需求 <b>192 → 186</b>（= 87 対 × 2 + 12）。<br>若 ACK 再改回菊花链（<span class="mono">ack_d</span> 1 根、无 <span class="mono">ack_s</span>）⇒ 单端 8 ⇒ <b>182 pad</b>。<br>🔴 <b>建议把这条固化进接口定义</b>：调试脚与 I2C 不进邮票孔、不占 FPGA 引脚。</caption>
+  </table></div>
+
+  <h3>GW5A 全封装（数据取自 DS1103-1.0.9 表 1-2 / 1-3 / 1-4）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>订购型号</th><th>封装 / 间距 / 尺寸</th><th>毛 IO（真対）</th><th>验证板 120</th><th>目标板 192</th><th>目标板 186（砍调试）</th></tr></thead>
+    <tbody>
+      <tr><td class="k new mono">GW5A-LV25UG324SC2/I1</td><td class="new">UG324S · 0.8 · 15×15</td><td class="new"><b>239 (116)</b></td><td><b class="yes">✅</b></td><td class="new"><b class="yes">✅ 余 42</b></td><td><b class="yes">✅</b></td></tr>
+      <tr><td class="k mono">GW5A-LV60UG324SC2/I1</td><td>UG324S · 0.8 · 15×15</td><td>226 (110)</td><td><b class="yes">✅</b></td><td><b class="yes">✅ 余 29</b></td><td><b class="yes">✅</b></td></tr>
+      <tr><td class="k mono">GW5A-LV25UG324C2/I1</td><td>UG324 · 0.8 · 15×15</td><td>222 (104)</td><td><b class="yes">✅</b></td><td><b class="yes">✅ 余 25</b></td><td><b class="yes">✅</b></td></tr>
+      <tr><td class="k mono">GW5A-LV60UG324AC2/I1</td><td>UG324A · 0.8 · 15×15</td><td>222 (106)</td><td><b class="yes">✅</b></td><td><b class="yes">✅ 余 25</b></td><td><b class="yes">✅</b></td></tr>
+      <tr><td class="k mono">GW5A-LV138UG324AC2/I1</td><td>UG324A · 0.8 · 15×15</td><td>221 (106)</td><td><b class="yes">✅</b></td><td><b class="yes">✅ 余 24</b></td><td><b class="yes">✅</b></td></tr>
+      <tr><td class="k mono">GW5A-LV60PG324CC2/I1</td><td>PG324C · 1.0 · 19×19</td><td>205 (97)</td><td><b class="yes">✅</b></td><td><b class="warn">⚠ 余 8</b></td><td><b class="yes">✅</b></td></tr>
+      <tr><td class="k new mono">GW5A-LV25PG256SC2/I1</td><td class="new">PG256S · 1.0 · <b>17×17</b><br><b>与 EG4 同外形</b></td><td class="new">194 (93)</td><td><b class="yes">✅</b></td><td class="old"><b class="no">❌ 差 3</b></td><td class="new"><b class="yes">✅ 余 3</b></td></tr>
+      <tr><td class="k mono">GW5A-LV25UG256CC2/I1</td><td>UG256C · 0.8 · 14×14</td><td>191 (90)</td><td><b class="yes">✅</b></td><td><b class="no">❌ 差 6</b></td><td><b class="warn">⚠ 余 0</b></td></tr>
+      <tr><td class="k mono">GW5A-LV25PG256CC2/I1</td><td>PG256C · 1.0 · 17×17</td><td>191 (90)</td><td><b class="yes">✅</b></td><td><b class="no">❌ 差 6</b></td><td><b class="warn">⚠ 余 0</b></td></tr>
+      <tr><td class="k mono">GW5A-LV25PG256C2/I1</td><td>PG256 · 1.0 · 17×17</td><td>184 (88)</td><td><b class="yes">✅</b></td><td><b class="no">❌</b></td><td><b class="no">❌</b></td></tr>
+      <tr><td class="k">LQ100 / LQ144 / MG121N / MG196S / PG196S</td><td>0.5~1.0</td><td>≤ 114</td><td><b class="no">❌</b></td><td><b class="no">❌</b></td><td><b class="no">❌</b></td></tr>
+    </tbody>
+    <caption>⚠ 净 IO 按<b>毛 IO − 5</b> 估（依据 PG256S 194 → GPIO 单端脚 189 的实测比例）。<b>这个折扣各封装未必相同，下单前必须按官方 pinout 逐封装复核。</b><br>
+    🎯 <b>PG256S 的独特价值</b>：1.0 mm / 17×17，<b>与现役 EG4A20BG256 同外形同间距</b> ⇒ land pattern、扇出过孔结构、层叠可复用（⚠ 只是外形复用，<b>不是 pin2pin</b>，网表要全部重连）。是所有 GW5A 里换板代价最小的一颗。</caption>
+  </table></div>
+
+  <h3>GW2A / GW2AN —— 供货与价格更实在的一支</h3>
+  <div class="tw"><table>
+    <thead><tr><th>订购型号</th><th>封装</th><th>毛 IO（净 / 差分対 / 真対）</th><th>目标板</th><th>供货与价格</th></tr></thead>
+    <tbody>
+      <tr><td class="k new mono">GW2AN-UV18XPG256C7/I6</td><td class="new">PBGA256 · 1.0 · <b>17×17</b></td><td class="new">208（净 195 / 104 対 / 86 真対，干净 84）</td><td class="new"><b class="yes">✅ 保守口径也过</b></td><td class="new">立创 <span class="mono">C5799581</span> 有正规 SKU 与阶梯价但<b>库存 0</b>；官网「暂无第三方销售」⇒ <b>须走代理</b></td></tr>
+      <tr><td class="k new mono">GW2A-LV55PG484C8/I7</td><td class="new">FBGA484 · 1.0 · 23×23</td><td class="new">320（~300 / <b>160 対</b> / 76 真対）</td><td class="new"><b class="yes">✅</b>（160 対 ≫ 87）</td><td class="new">立创 <span class="mono">C5250297</span> 缺货但有完整量产阶梯：<b>$72.48/1 → $28.05/200+ → $26.58/1000+</b></td></tr>
+      <tr><td class="k mono">GW2A-LV18PG484CC8/I7</td><td>FBGA484 · 1.0 · 23×23</td><td>356（净 338 / 175 対 / 89 真対，干净 87）</td><td><b class="yes">✅</b></td><td>立创/华秋无条目 ⇒ 仅代理</td></tr>
+      <tr><td class="k mono">GW2A-LV18UG324C8/I7</td><td>UBGA324 · 0.8 · 15×15</td><td>240（净 218 / 119 対 / 90 真対，干净 86）</td><td><b class="yes">✅</b></td><td>立创 API <span class="mono">total=0</span>、华秋无结果 ⇒ 仅代理</td></tr>
+      <tr><td class="k mono">GW2A-LV18PG256C8/I7</td><td>PBGA256 · 1.0 · 17×17</td><td>207（99 対 / 73 真対）</td><td><b class="warn">⚠ 砍调试后余 ~1</b></td><td>—</td></tr>
+    </tbody>
+    <caption>⚠ 避开 <span class="mono">PG256SF</span>（已 EOL）、<span class="mono">PG256C/CF</span>（VCCX 与 VCCIO7 内部短接）、<span class="mono">UG484</span>（VCCX 与 VCCIO2 内部短接 ⇒ Bank2 出不了 2.5 V 真差分）。<b>片内 100 Ω 差分端接仅 Bank0/1 支持</b> ⇒ 上行 14 対要整块塞进 Bank0+Bank1。<br>
+    ⚠ 立创阶梯价的<b>币种存疑</b>（同一 API 对另一料号返回 40.0754 而页面显示 $40.44，疑为 USD），报价回来要核。</caption>
+  </table></div>
+
+  <div class="callout risk"><b>🔴 GW3A（Arora III）：存在，但出局。</b><br>
+  官网 <span class="mono">product/list/17</span> = Arora III「晨熙 3 系列」，<b>2026-03 才发布的新族</b>（命名只跳过 IV 不跳过 III；站内搜 <span class="mono">GW4A</span>/<span class="mono">Arora IV</span> 三次全空，正负对照成立）。三条出局理由：<br>
+  ① <b>真対全灭</b>：UG324S 只有 <b>28 対</b>（仅 Bank2/6）、PG256S 27 対、MG196 14 対——六个封装全不够；<br>
+  ② <b>买不到</b>：官网 GW3A / GW3AR 两个产品页的「第三方销售平台」栏均为<b>「暂无第三方销售」</b>；<br>
+  ③ <b>还没定型</b>：只有 GW3A-20 一颗（35K/90K 标 TBD），DS1351-1.0 是 <b>Preliminary</b>，正文里还在给 <b>ES 工程样片</b>的命名式样。<br>
+  ⚠ <b>顺带纠一个手册错误</b>：DS1351 表 1-2 写 <span class="mono">MG196 = 114(53)</span> <b>是错的</b>，真対实际 <b>14 対</b>——它把「差分対总数 53」误填进了「True LVDS Pair」列；UG1354 表 2-1 照抄了这个错，但被它自己的表 2-3 与官方 pinout 推翻。<br>
+  🎯 <b>值得留档的优点</b>：集成 <b>LED 接收卡专用硬核（UBM / GMT / RNG）</b>；gearing 比 GW2A-18 高一档（IDES8/10/14/16/32 = <b>1600 Mbps</b>，OSER = 2000）；ELVDS 网络与 GW2A-18 逐字相同。<b>等 35K/90K 出来、供货铺开，值得回头再看。</b></div>
+
   <div class="callout acc"><b>移植不是零成本：</b>封装换 ⇒ 子板重画；原语全换（<span class="mono">EG_LOGIC_ODDR / ODDRx2 / IDDRx2 / EG_PHY_CLKDIV / EG4 PLL</span> → <span class="mono">OSER8 / IDES8 / CLKDIV / rPLL</span>）；TD → 云源，SDC、引脚约束、<span class="mono">build.sh</span> 全重写；电源按 <b>VCCX ≥ 2.5 V</b>（&gt;600 Mbps IO）/ <b>≥ 3 V</b>（用片上 ODT）重新规划。<br>RTL 本体（<span class="mono">ul_dispatch / tx_array / icnd2260_seq</span>）是通用 Verilog，可以直接搬。</div>
 </section>
 

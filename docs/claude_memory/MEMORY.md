@@ -321,4 +321,6 @@
 - [🖥 主机侧验证板口径 vb358 (2026-10-10, 1.4.2)](project_host_validation_profile_358.md) — povstream `--profile vb358` 发 VXT1 体素表 (2047 逐字节不变); 板端 C scatter+pov_slice_v2 358×2 面对浮点参考 PASS (最大 0.85 px, 0 不可解释); 🔴 VOXTAB 挪 bit8 (撞 3BIT); CPU 切片 DDR 83% ⇒ 推荐 PL 直供; 切片器列中心差 gas 半像素待定
 - [🔗 跨板上行接收 GW5A (2026-10-10, 1.3.12)](project_gw5a_xboard_rx.md) — PLL 参考=DR1 转发时钟(线速/8, >87MHz IDIV=2)+IODELAY 扫眼; 仿真正例 800M/1.0G +100ppm 100k beat 0 错, 反例本地参考起不来(2ppm 也 74k 错); 🔴 prim_sim PLLA 开环+1ps 取整表示不出 ppm 跟踪; 板上 D13 未做
 - [📋 远程升级方案 X4 (2026-10-10)](project_remote_upgrade_x4.md) — SD 卡 A/B 槽位 + 热切换自检回滚; GW5A 每次上电由 DR1 灌不写 Flash; 内核第一期不做; ≈2.5 天
-- [🔧 转接板改板单四项 (2026-10-10)](reference_adapter_change_order_1010.md) — UL_CLK→B4_B33 / JTAG 转换+下载座 / FPC 尾部重排 (桥侧+SoC 侧); 本地 docs/转接板改板单_四项_2026-10-10.html
+- [🔧 转接板改板单七项 (2026-10-10 晚, 按 SCH 10-10)](reference_adapter_change_order_1010.md) — CN3/CN6 改回公座 / VCCIO45 回 3.3V / JTAG+边带 2×SN74AVC4T774 放桥板+下载座 / FPC 尾部 / UL_CLK 留 B5_B26 / 灯板侧 / SoC 侧; 本地 docs/转接板改板单_七项_2026-10-10.html+pdf
+- [🔴 桥转接板原理图 10-10 版审查](project_adapter_sch_1010_review.md) — CN3/CN6 改 AXK500137YG 与核心板同为母座插不上; UL_CLK 09-23 已到 B5_B26 (改板单①过时); JTAG/FPC 尾部未改; 链号↔球位组整组换名; 上行板上 100Ω 端接 ⇒ .cst DIFF_RESISTOR=OFF
+- [⚠ FS03 点 2047 屏前查 Bank11 跳帽 3.3V (2026-10-10)](feedback_fs03_bank11_jumper_3v3.md) — DR1M90-02 首亮屏无反应 = CEP2 Bank11 在 1.8V; 换板先核启动拨码 OFF-OFF / Bank11 3.3V / J2 1.8V(仅上行)

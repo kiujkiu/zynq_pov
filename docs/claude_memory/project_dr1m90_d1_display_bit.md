@@ -75,7 +75,8 @@ D10 若要 PL lz4 提速再议 100M; 现在 3 引擎@50M ≈ 0.987 B/clk × 50M 
 - 点屏要 **pov_en=0** 的静态 fb (pov_en=1 时 fb 窗写入被 RTL 丢弃, 显示取帧引擎从 slice_base 读的 DDR); 脚本已修 (dr1v90 8e3c715)。
 - ✅ s1 (只红 + 像素级 checker, OE=8): 用户 "A 红, 有间隔的红不是全红, B 黑"。
 - ✅ **三色循环** (整面 R/G/B 各 4 s, OE=8): 用户 "3 色没问题"。
-- ⏳ **数字棋盘格** (`povctl fb-file chess_obs_fb.bin 0`, 全彩 OE=8) 已上屏 15:43, 等用户看数字方向/映射。
+- ✅ **数字棋盘格** (`povctl fb-file chess_obs_fb.bin 0`, 全彩 OE=8): 用户 "棋盘格没问题" ⇒ **D4 单面通过**。
+- 双面 (两面写棋盘格, 0x1C=180, 0x10=0x01680004): 电气通过 (dual_en=1 engB_busy=1, 10 s 不掉电), 已关屏; 用户外出, 目视待回来。
 - 用户定的验证流程 = 三色循环 + 数字棋盘格, 低亮度起 → 双面 → 再逐步调亮; 脚本 `dr1v90/td_pov/m90/m90_screencheck.sh`。
 - 期间一次内核硬挂 (agent 用 devmem 读内核线性映射 RAM 后), SysRq 无响应需断电; 之后开机先 `echo 1 > /proc/sys/kernel/sysrq` + panic 15 s 自启。
   板上有 `/dev/watchdog` (dw_wdt, 报 "No valid TOPs array"), busybox watchdog -T 30 开后疑似反而复位过一次, **未坐实, 暂不开**。

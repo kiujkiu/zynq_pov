@@ -21,3 +21,8 @@ metadata:
 
 **How to apply:** 任何要靠仿真证明"跨时钟域/ppm"的场合都别信厂商 PLL 模型做频率跟踪; 1ps 精度下检查时钟半周期是否被取整。
 板上 D13: FS03 换 0Ω 排阻 + J2=1.8V, 接线表 `dr1v90/uplink_tx/m90/README.md`, 转发时钟进 P11-20/19 (L15 GCLK)。
+
+## 10-10 落到文档
+- 规格书 v3 (`POV3D_模组间接口规格书_v3_2026-09-15.html`) 页首加 10-10 修订: **UL_CLK 频率 = 线速/8** (800M 100 MHz / 1.0G 125 MHz, 原 400 MHz 备选, 只改协议); UL_CLK 桥侧必须进 B4_B33 (GCLKT_9A / BPLL_T_IN1)。
+- 改板结论 09-18: "UL_CLK 换回 B4_B33" 补注**上行前提**, "补 JTAG 电平转换 + 下载座" 补注**远程升级前提**。任务表新增 1.5.6 转接板改版前提。
+- SoC↔桥之间**不需要加 pin**: 契约 20 対 + 边带 4 (SB_ALIGNED 握手兼重训练 / SB_RSTN / UART×2) + JTAG 4 已覆盖握手、复位、状态回读、远程升级; GW5A READY/RECONFIG_N 引给 DR1 属可选 (JTAG 可替代)。

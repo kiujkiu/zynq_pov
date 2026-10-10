@@ -1,0 +1,6 @@
+vox_bench
+vox_slice_check
+*.o
+__pycache__/
+vb_slice_all
+vb_slice_all_a64

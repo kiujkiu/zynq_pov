@@ -3,7 +3,9 @@
 #define POV_SLICE_V2_LUT_H
 #include "pov_slice_v2.h"
 
-#if PV2_LUT_N == 360
+#if PV2_LUT_N == 358
+#  include "pov_slice_v2_lut_358.h"
+#elif PV2_LUT_N == 360
 #  include "pov_slice_v2_lut_360.h"
 #elif PV2_LUT_N == 603
 #  include "pov_slice_v2_lut_603.h"

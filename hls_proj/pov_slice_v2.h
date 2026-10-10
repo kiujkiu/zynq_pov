@@ -39,10 +39,19 @@
  *
  *   目标 (默认)   192×216 / 603 档  — 150 × 168.75 mm, 像素间距 0.78125 mm
  *   验证 (1BIT)   160×180 / 360 档  — 现有 ICND2049 屏
+ *   验证板 (VB358) 160×180 / 358 档 — 2260 验证板 (-DPV2_CFG_VB358, 2026-10-10)
  *
  * ⚠ PV2_PANEL_H 必须能被 4 整除 (64 位端口一拍 4 个 RGB565)。216/4=54, 180/4=45 ✓
  */
-#ifdef PV2_CFG_1BIT
+#if defined(PV2_CFG_VB358)
+/* 验证板 (2026-10-10 用户定): ICND2260 0.9375mm 160×180, 60 扫 1串2,
+ * 24 Hz 体帧率 = 720 RPM = 12 rev/s, **358 片/圈** ⇒ 4,296 slice/s/面。
+ * 面 B 的 PHASE_B = 358/2 = 179 (见 feedback_phase_b_must_follow_n_slices)。
+ * 主机侧 profile 'vb358' 见 mlkpai_fs03/tools/pov_profile.py。 */
+#  define PV2_PANEL_W    160
+#  define PV2_PANEL_H    180
+#  define PV2_LUT_N      358
+#elif defined(PV2_CFG_1BIT)
 #  define PV2_PANEL_W    160
 #  define PV2_PANEL_H    180
 #  define PV2_LUT_N      360

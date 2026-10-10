@@ -318,3 +318,4 @@
 - [📡 DR1M90 上行发送位流 + aarch64 打包 (2026-10-10, 离线)](project_dr1m90_uplink_tx_m90.md) — `dr1v90/uplink_tx/m90` 800M/1.0G DDRX2 14/14 HWNS 正, pclk 真余量 +46%/+26%, 对拍 rtl_x8 全对; X2 接线 CEP1→ACG525 P6/P11 (clk→P11-20 GCLK); 🔴 GW5A 收端 FCLK 仍是本地 PLL; 打包脚本 `tools/pov_arch.sh` 选 riscv64/aarch64
 - [并行 agent 按 5h 限额自动调 (2026-10-10)](feedback_agent_parallelism_by_quota.md) — 用量%>时间% 减, 远低于加; tools/quota.py
 - [🎯 GW5A 桥验证板 profile (2026-10-10)](project_gw5a_validation_profile.md) — 6 链 1串2 60 扫 4800 槽/帧 dclk 166.67: 仿真逐像素 PASS @4,296 fps, 166.87 MHz 0 违例, 目标板逐位不变; 新修 3 个验证板才暴露的桥问题 (空闲判丢帧/NPH=1 帧头槽/迟到帧截断); dr1v90 f088f31
+- [🖥 主机侧验证板口径 vb358 (2026-10-10, 1.4.2)](project_host_validation_profile_358.md) — povstream `--profile vb358` 发 VXT1 体素表 (2047 逐字节不变); 板端 C scatter+pov_slice_v2 358×2 面对浮点参考 PASS (最大 0.85 px, 0 不可解释); 🔴 VOXTAB 挪 bit8 (撞 3BIT); CPU 切片 DDR 83% ⇒ 推荐 PL 直供; 切片器列中心差 gas 半像素待定

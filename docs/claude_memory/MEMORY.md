@@ -316,3 +316,4 @@
 - [🎯 DR1M90 D1 显示位流 (2026-10-10, 离线)](project_dr1m90_d1_display_bit.md) — td_pov 换 DR1M90GEG484 一次过, SWNS +7.219/HWNS +0.022 与 V90 **逐位相同**(只差 IDCODE); `pov_m90.bin` md5 2ac42cbb; 板上判据 **0x80004010=0x4C5A3400**(0x80000000 是 STATUS); 只用 p2f_clk0 50M, 不需 p2f_clk1; 上板脚本 `dr1v90/td_pov/m90/load_pov_m90.sh` 待跑; povmem arm64 零改动编过
 - [📋 验证板 4 级任务分解表 (2026-10-10)](project_validation_board_task_tree.md) — docs/验证板任务分解_2026-10-10.xlsx, 改 _mkxlsx.py 重出; 🔴 60 扫 1串2 每面 4,300 fps ⇒ **用户定 24 Hz/720 RPM/358 片** (4,296 slice/s/面)
 - [📡 DR1M90 上行发送位流 + aarch64 打包 (2026-10-10, 离线)](project_dr1m90_uplink_tx_m90.md) — `dr1v90/uplink_tx/m90` 800M/1.0G DDRX2 14/14 HWNS 正, pclk 真余量 +46%/+26%, 对拍 rtl_x8 全对; X2 接线 CEP1→ACG525 P6/P11 (clk→P11-20 GCLK); 🔴 GW5A 收端 FCLK 仍是本地 PLL; 打包脚本 `tools/pov_arch.sh` 选 riscv64/aarch64
+- [并行 agent 按 5h 限额自动调 (2026-10-10)](feedback_agent_parallelism_by_quota.md) — 用量%>时间% 减, 远低于加; tools/quota.py

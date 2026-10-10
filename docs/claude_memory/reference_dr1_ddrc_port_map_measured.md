@@ -69,3 +69,7 @@ XMON 不只挂 HP_S0/HP_S1, **还挂 DDR_S0..S3**, 每实例 stride `0x400`:
 
 相关: [[project_dr1_hp_port_shortage]] [[project_dr1_hp0_fetch_measured_ok]]
 [[reference_dr1_hp_backpressure_and_ot]]
+
+## 🔴 2026-10-10 更正 (X1, DR1M90 实测, 见 [[project_dr1m90_ddr_eta_x1]])
+HP0 与 HP1 **同时**满载读时, PSTAT `0xF84213FC` 只有 **bit2** 亮、bit3 不亮 ⇒ **HP1 也落在 port 2**, 两个 HP 共用一个 DDRC 端口。
+⇒ 上面"按 master 分口"只对"HP vs APU"成立; **两个 HP 口之间不分口**。这是 M90 双口 η=0.837 (7020 0.950) 的直接原因。

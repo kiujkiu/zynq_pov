@@ -67,7 +67,7 @@ ul{margin:0;padding-left:1.2em}
 <section class="item">
   <div class="itemhead"><span class="no">1</span><h2>上行转发时钟改接 GCLK/PLL 脚</h2><span class="tag">必改 · 上行前提</span></div>
   <dl class="grid">
-    <dt>现状</dt><dd>FPC2.29/30 = <code>DR1V_TXCLKP/N</code> → GW5A <code>B5_B6_P/N</code>。B5_B6 在对接表 v3 里没有 GCLK/PLL 能力。<code>B4_B33</code> 被拿去做了 <code>UL_D[17]</code>。</dd>
+    <dt>现状</dt><dd>FPC2.29/30 = <code>DR1V_TXCLKP/N</code> → GW5A <code>B5_B6_P/N</code>（IOB6，球 R7/T7，经核心板座 CN4）。B5_B6 在对接表 v3 里没有 GCLK/PLL 能力。<code>B4_B33</code>（IOB33，球 U10/V10，经核心板座 CN3）被拿去做了 <code>UL_D[17]</code>。<br><b>只改本转接板上 GW5A 一侧的走线；DR1M90 / SoC 侧不动</b>，转发时钟仍从 FPC2.29/30 进来。</dd>
     <dt>改法</dt><dd>
       <ul>
         <li><code>DR1V_TXCLKP/N</code> 改接 <code>B4_B33_P/N</code>（GCLKT_9A / BPLL_T_IN1），即对接表 v3 与 09-16 逐球分配表原定的位置。</li>

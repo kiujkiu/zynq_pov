@@ -1,6 +1,6 @@
 ---
 name: project_pov3d_dr1v90_board_inventory
-description: 板子台账 — 2 块 DR1V90 + 2026-09-17 到货 3 块 DR1M90(第一块 DR1M90_01); DR1V90-1 = 现在接 COM5 串口的那块 = 记忆里一直叫 "dr1a" 的那块(BOARD_ID pov-5d23750da9c1d32a), 它就是 JTAG 台架板; 两块同镜像 hostname 都是 dr1a, 只能按 BOARD_ID/MAC/SD CID 区分
+description: 板子台账 — 10-10 统一命名 DR1V90-01/02 + DR1M90-01/02 (共 3 块 M90); MAC 相同不能认板, 靠物理标签; DR1M90-02 = COM28, 拨码错导致蓝灯不亮; DR1V90-1 = 现在接 COM5 串口的那块 = 记忆里一直叫 "dr1a" 的那块(BOARD_ID pov-5d23750da9c1d32a), 它就是 JTAG 台架板; 两块同镜像 hostname 都是 dr1a, 只能按 BOARD_ID/MAC/SD CID 区分
 metadata:
   type: project
 ---
@@ -92,3 +92,20 @@ hostname 不可靠(DR1V90-1 是 `dr1a`, DR1V90-2 卡上配 `dr1v90-2` 但没开 
 
 **Why:** 09-15 整整一段返工来自"板子身份没核对"; 现在两块同时在场, 不按指纹认板必然再错一次。
 **How to apply:** 动任何一块板之前先跑一条 `uname -m; cat /mnt/mmcblk0p1/pov/BOARD_ID; cat /sys/block/mmcblk0/device/cid`, 对上台账再干活; 写记忆/文档时用 **DR1V90-1 / DR1V90-2 / DR1M90_01**(用户定名, DR1M90 用下划线+两位), 别再写 "dr1a" 或 "dr1m90_1"。
+
+## 🔴 2026-10-10 统一命名 (用户定): DR1V90-01/02, DR1M90-01/02 (两位编号, 芯片型号写全)
+旧名对应: "DR1V90-1" = **DR1V90-01** (dr1a, JTAG 台架), "DR1V90-2" = **DR1V90-02**, "DR1M90_01" = **DR1M90-01**。
+
+## DR1M90-02 (2026-10-10 下午首次上电)
+| 项 | 值 |
+|---|---|
+| 串口 | **COM28** (CH342 A, 控制台; B = COM27), PnP `7&2423DF91` —— 🔴 PnP/COM 跟 USB 口走, 不跟板 |
+| 启动 | 第一次上电蓝灯 (启动灯) 不亮、串口全静 = **启动拨码错**; 改 PIN1/PIN2 = OFF-OFF (SD) 后正常 |
+| eth0 MAC | `e0:78:a3:01:02:03` —— 🔴 **与 DR1M90-01 相同, 不能认板** |
+| WiFi | MT7921AU dongle wlan0 MAC **`90:de:80:35:19:41`** (跟网卡走); `wifi_up.sh` RESULT: WIFI UP, 无掉电 |
+| SD 卡 | CID `ad4c534d5353443020000003d1018800`; **就是 DR1M90-01 上午用的那张** (卡上有 01 时放的 cpybench/up.sh), 内核 = 我们 9-17 编的 6.1.111-rt42 ⇒ povmem_dr1_a64.ko 直接能用; `/pov/m90/` D4 全套文件已齐 (md5 对) |
+| hostname | 出厂 `buildroot`, 10-10 手动设 `dr1m90-02` (ramdisk, 重启丢) |
+| 台架 IP | 约定 **192.168.77.3** (DR1M90-01 保留 .2) |
+| ⚠ | 一次传文件中途 USB 掉线 (COM28 消失) 后自行重启, 原因未定 (疑 USB 口供电) |
+
+⇒ 认板只能靠**物理标签** (已建议用户贴 M90-01/M90-02/V90-01/V90-02) + 串口号 + WiFi MAC 辅助; MAC/BOARD_ID/卡都不可靠 (卡会在板间挪)。

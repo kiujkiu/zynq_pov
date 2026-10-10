@@ -55,3 +55,17 @@ D10 若要 PL lz4 提速再议 100M; 现在 3 引擎@50M ≈ 0.987 B/clk × 50M 
   arm64 下新增 `wc=1` (默认) 写合并映射 + cached=0。帧区 phys **0x14500000** 48 MB, 落在出厂 128 MB CMA 里 ⇒ **不用改 dtb**。
   **cpy (8.4 MB 整帧) = 11.0 ms 写合并 / 12.0 ms 可缓存+FLUSH** (7020 20-26, V90 162) ⇒ V90 那堵墙在 A35 上不存在。
 - 下一步 D4 (`povctl fb solid` 单面全白) 起要接 2047 屏。
+
+## D4/D5 上板 (DR1M90-02, COM28, 2026-10-10 14:3x) — 未过, 停在 s1
+- 前置 OK: up.sh → LOAD_POV_M90: PASS, MAGIC 0x4C5A3400, povmem phys 0x14500000; 板上 m90_firstlight.sh/povctl md5 与本地一致。
+- s1 (红 0x049 + checker + OE=8, dual_en=0): STATUS 0x379 (auto_en/use_fb/locked/pov_en), frame_period 10530 (=54×195, 1-bit),
+  OE edges 407161/s duty 0.041, idx 在走 → PL 侧一切正常; **用户: 面A 无任何反应** (两面屏都接着)。
+- 🔴 **脚本 bug (已改本地 dr1v90/td_pov/m90/m90_firstlight.sh, 未推上板未提交)**: cfg() 调 `povctl fake` 开 pov_en=1 后再 `povctl fb`。
+  RTL `pov_dual_top.v:637 fbw_we = pov_en ? df_fb_we : fb_we` ⇒ **pov_en=1 时 AXI fb 窗写全被丢**, fb 由取帧引擎从
+  slice_base(复位 0x10000000 = M90 内核 RAM, 实测非零垃圾) 灌; 0x34 FETCH_LIVE=0x54080001 (done 0x5408 片, 无错) 证实取帧在跑。
+  ⇒ 屏上应是"红色随机噪点"而不是棋盘。静态 fb 测试必须 pov_en=0 (同 08-28 BRINGUP_TOMORROW T7)。修法: 0x10 = n_slices|dual_en<<2, 不开 pov_en/fake_en。
+- ⚠ 但垃圾内容也应可见 ⇒ "完全没反应"另有原因: OE=8 屋里有光可能看不见 ([[feedback_oe_window_too_low_invisible]]) / 屏或接口板没电 /
+  排线不在 CEP2 (面板全部 33 脚都在 CEP2=Bank11, .adc M90/V90 逐字相同) / CEP2 的 ADJ_BANK11 跳帽在 1.8V (位流按 LVCMOS33)。
+- 🔴 推修好的脚本被权限拦 (远程写文件), 改走串口直接 devmem 重放 → **发现板子已挂死**: COM28 在, 但无回显、Ctrl-C 无反应。
+  无回显 ⇒ 挂在发命令之前 (最后一次正常是 devmem 读 0x10000000 内核 RAM 后约 2-3 min, 期间 pov_en=1 取帧在跑, auto_en=0)。
+  原因未定: 疑 devmem 以非缓存属性读内核线性映射 RAM (arm64 属性冲突) 或 HP 取帧长跑; 需断电重启 (K6)。

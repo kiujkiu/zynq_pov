@@ -1,6 +1,6 @@
 ---
 name: project_dr1m90_d1_display_bit
-description: 2026-10-10 D1 完成(离线) — 生产显示位流 td_pov(pov_dr1_top) 换 DR1M90GEG484 一次过, SWNS +7.219/HWNS +0.022 与 V90 逐位相同(bit 只差 IDCODE 5 字节); bootgen -arch dr1m90 出 pov_m90.bin md5 2ac42cbb…; 板上判显示位流看 0x80004010=0x4C5A3400(不是 0x80000000); 全设计只用 p2f_clk0 50MHz(A50), 不依赖 p2f_clk1; 上板检查脚本 td_pov/m90/load_pov_m90.sh 待板子空出
+description: 2026-10-10 D1 完成(离线) — 生产显示位流 td_pov(pov_dr1_top) 换 DR1M90GEG484 一次过, SWNS +7.219/HWNS +0.022 与 V90 逐位相同(bit 只差 IDCODE 5 字节); bootgen -arch dr1m90 出 pov_m90.bin md5 2ac42cbb…; 板上判显示位流看 0x80004010=0x4C5A3400(不是 0x80000000); 全设计只用 p2f_clk0 50MHz(A50), 不依赖 p2f_clk1; 上板检查脚本 td_pov/m90/load_pov_m90.sh 待板子空出; 10-10 晚 D6/D7 无人值守过 (本机/WiFi 推流 CPU+PL 零回退, PL 2000 帧连推, A35 CPU lz4 比 PL 快 7×), D8 寄存器级过 (frame_period 待亮屏)
 metadata:
   type: project
 ---
@@ -80,3 +80,39 @@ D10 若要 PL lz4 提速再议 100M; 现在 3 引擎@50M ≈ 0.987 B/clk × 50M 
 - 用户定的验证流程 = 三色循环 + 数字棋盘格, 低亮度起 → 双面 → 再逐步调亮; 脚本 `dr1v90/td_pov/m90/m90_screencheck.sh`。
 - 期间一次内核硬挂 (agent 用 devmem 读内核线性映射 RAM 后), SysRq 无响应需断电; 之后开机先 `echo 1 > /proc/sys/kernel/sysrq` + panic 15 s 自启。
   板上有 `/dev/watchdog` (dw_wdt, 报 "No valid TOPs array"), busybox watchdog -T 30 开后疑似反而复位过一次, **未坐实, 暂不开**。
+
+## D6/D7 无人值守 (2026-10-10 晚, DR1M90-02, 只走 WiFi, 屏全程黑: auto_en=0)
+用户不在场; 板上跑看门狗脚本 `/tmp/guard.sh` 每秒查 STATUS bit4, 亮了就写 0xC1000000 (全程 `/tmp/guard.log` 为空 = 从没亮过)。
+pov_rxd 本身**从不写 auto_en** (只写 0x0C sub01 色深/权重, `--ring-bcm` 时写 sub10), 所以 pov_en=1 取帧 + 解码翻页可以在黑屏下跑满。
+工具 + 脚本: `dr1v90/board/pvsplay/` (pvscap.py 录 povstream 真字节 / pvsplay.c 板上回放给 127.0.0.1:9500 / d6run.sh / d7start.sh / d7stop.sh / d8.sh / guard.sh);
+原始日志 `dr1v90/measure/08_m90_stream/results/2026-10-10/`。内容 = frames_helix 36 帧 3-bit 双面 284 片 (10.47 MB raw → ~187 KB, lz4 L12, `--stream-split even` 3 流, flags 0xe8)。
+引擎假转 `--fake 16.15 --fake-slices 142` (=969 RPM 现役)。
+
+| 跑次 | 帧源 | 解码 | 结果 |
+|---|---|---|---|
+| D6 cpu | 本机回放 400 帧 @12 fps | CPU 2 核 `3str/par` | rx=flip=400, drop 0, **dec 9.9 ms**, cpy 14.5 ms (写合并, flush 0) |
+| D6 pl | 本机回放 400 帧 @12 fps | `--pl-lz4 --pl-engines 3 --no-pipeline` | 自检 3/3 OK, 400/400 `3str/PL`, **71.7 ms = 0.98 B/clk**, 回退 CPU 0 |
+| D6 pl_long | 本机回放 **2000 帧不限速** | 同上 | 2000/2000 PL, eng=3/3, 回退 0, 引擎无超时/无 E_OFF0; flip 1998 drop 2 (发得比翻页窗快, 正常); 13.7 fps 端到端 |
+| D7 pl | **PC 经办公网 WiFi** (SSID undef, 5745 HE80, -50 dBm) 600 帧 @12 fps | PL | 600/600 PL, rx=flip 12/s, 发送端 11.86 fps / 18 Mbps; **idle-anim 让位**: 接入时 `idle-anim 暂停`, 断开后回到 8 fps 空闲动画 |
+| D7 cpu | WiFi 600 帧 @12 fps | CPU | 600 rx / 599 flip / drop 1, dec 10.2 ms |
+
+- 🎯 **V90 的 "37 帧卡死" 在 M90 上不存在**: PL 路径累计 3000 帧 (含 2000 帧连推) 0 回退、0 超时; CPU 路径 1400 帧。
+  V90 那次根因是 RISC-V CCM 回写不关中断 ([[project_dr1_pl_decode_parity]]); arm64 povmem 是写合并映射 (`cache=hw-non-cacheable`, flush 0.0 ms), 这条路根本不经过。
+- 🎯 **A35 CPU lz4 已比 PL 快 7×** (双核 9.9 ms vs PL 3 引擎@50M 71.7 ms) ⇒ D10 "PL lz4 能上就上" 的前提反了:
+  M90 上 CPU 解码 + 写合并拷贝 (~25 ms/帧) 才是快路径; PL 的价值只剩省 CPU。别再为 PL 提速去做 100 MHz。
+- 取帧计数 (全程): 0x30 err_cnt=0、wd_trip=0, 单片取最长 0x2B92=11154 拍 (223 µs, 片周期 436 µs 内); 0x34 done_cnt 在走 (8 rps 下 ≈2272/s = 8×142×2 面)。
+  ⚠ **pair_miss (0x1C[15:0]) 只在 pov_rxd 启动那一下涨** (pov_en 0→1 写 POV_CTRL 时, 每次 +0~7, 累计 0→19), 推流稳态 4000+ 帧 **0 增长**。是启动瞬态, 未深究。
+  pair_miss 只有 0x2C[16] 能清, 但那个写同时改 wd_thresh[15:0] (默认值不知道), 没敢写。
+- 0x14 读 = rev_period = **0xFFFFFFFF** (复位值, 没有霍尔脉冲; 假转不经测速, 正常)。
+
+## D8 寄存器级 (auto_en=0, OE 不加)
+`d8.sh` 按 `cmds_3bit_working.txt` 顺序写, 只把 OE 换小: sub10 `0x98360801` (oe_w0=8) / sub01 `0x40010204` (oe_w1=4 oe_w2=2 bpp3=1 half_scan=0, 仍 4:2:1) /
+PHASE_B 71 / 0x18=povmem bank A 0x14500000 / 0x28=A+142×0x9000=0x149FE000 / 0x14=44014 / 0x10=0x008E0007。回读:
+STATUS 0x00010B48 (base_b_act/dual_en/pov_en/at_locked=1, **auto_en=0**); 0x24=0x008E0007; 0x18 R slice_max=141; done_cnt 走;
+**慢转 (fake_period×1000, 片周期 0.88 s) 下 idx_B = idx_A+71 mod 142 五次全对** (121→50 … 125→54)。
+🔴 **验不了的**: 0x28 R frame_period 仍是 D4 留下的 0x2922=10530 (1-bit 54×195) —— 引擎不扫 (auto_en=0) 就不更新;
+3-bit 应为 31590 (54×3×195), 要 auto_en=1 才能读到 ⇒ 等用户在场。sub01/sub10 是只写的, 无回读。
+收尾: pov_en=0 (0x10=0x008E0004), 其余 3-bit 配置留着; guard.sh **仍在跑** (PID 884; 板上没有 pkill, 要点屏先 `kill $(ps | grep '[g]uard.sh' | awk '{print $1}')`, 否则它每秒把 auto_en 关掉; 板子重启它也就没了)。
+
+## 还要用户眼睛的
+双面同时亮 (D5 目视) / 3-bit 棋盘+ramp 上屏 (D8 目视, 先在 auto_en=1 下读 0x28=31590) / 电机转起来体像方向 (D9)。

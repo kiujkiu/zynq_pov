@@ -109,3 +109,6 @@ hostname 不可靠(DR1V90-1 是 `dr1a`, DR1V90-2 卡上配 `dr1v90-2` 但没开 
 | ⚠ | 一次传文件中途 USB 掉线 (COM28 消失) 后自行重启, 原因未定 (疑 USB 口供电) |
 
 ⇒ 认板只能靠**物理标签** (已建议用户贴 M90-01/M90-02/V90-01/V90-02) + 串口号 + WiFi MAC 辅助; MAC/BOARD_ID/卡都不可靠 (卡会在板间挪)。
+- **DR1M90-02 走办公 WiFi (10-10 15:36)**: `wifi_up.sh` → `wpa_supplicant` 连 `undef` (5745 MHz; 凭据见 [[feedback_office_ap_blocks_esp32c5_tcp]]) → `udhcpc -i wlan0` 拿到 **10.10.20.104** (DHCP, 会变)。
+  WSL 直接可达: `sshpass -p root ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@10.10.20.104 '<cmd>'` —— 用户嫌串口线短, 之后改走这条。
+  🔴 全在 ramdisk, **重启即丢**, 板子重启后要临时插串口重做 (开机自连属 D18)。台架热点 `pov3d-p2p` 能扫到但认证超时, 当前 WSL 里没有 hostapd, 不是我们的 AP。

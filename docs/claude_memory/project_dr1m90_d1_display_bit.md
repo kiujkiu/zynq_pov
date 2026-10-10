@@ -47,3 +47,11 @@ D10 若要 PL lz4 提速再议 100M; 现在 3 引擎@50M ≈ 0.987 B/clk × 50M 
 - povboot.sh 本身无 `_riscv64`; 写死在打包侧: stage_to_card.sh / make_card_image_dr1.sh (含 `mkimage -A riscv`) / stage_plan.sh / deploy_step5.sh / check_card_payload.sh / povsh_build.sh。povboot 的 stage_enable 要改成加载后 0x33 + bit4 回读。
 
 相关: [[project_dr1m90_parity_2047_gap]] [[project_dr1m90_gp0_first_light]] [[feedback_dr1_load_bit_without_jtag]] [[feedback_dr1_pl_probe_must_be_hang_proof]]
+
+## 2026-10-10 上板: D2 / D3 通过
+- D2: `load_pov_m90.sh` 上板 **LOAD_POV_M90: PASS** —— MAGIC 0x80004010=0x4C5A3400, NENG=3, 几何寄存器读写对,
+  高地址镜像不挂死, SRST_CTRL2=0x1133, FCLK_DIV=0x07070707。传文件走 `host/serial_send.ps1 -Port COM24` (3.4 MB bin 约 4 min)。
+- D3: povmem 对 `~/dr1m90_kernel` 编 (板上内核就是这棵树 9-17 编的, gcc 15.2), vermagic 一致直接 insmod;
+  arm64 下新增 `wc=1` (默认) 写合并映射 + cached=0。帧区 phys **0x14500000** 48 MB, 落在出厂 128 MB CMA 里 ⇒ **不用改 dtb**。
+  **cpy (8.4 MB 整帧) = 11.0 ms 写合并 / 12.0 ms 可缓存+FLUSH** (7020 20-26, V90 162) ⇒ V90 那堵墙在 A35 上不存在。
+- 下一步 D4 (`povctl fb solid` 单面全白) 起要接 2047 屏。

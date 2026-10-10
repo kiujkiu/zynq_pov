@@ -314,3 +314,4 @@
 - [🎯 gw5a_bench 单板上机 (2026-10-09)](project_gw5a_bench_1009.md) — 出货同源桥核心逐像素全对, regs 签名=仿真, 链0 300M 过跳线 0 错; 🔴 寄存器刷新坏帧+上行 retrain 已修 (UL_DROP=1: 不反压 rx_fifo + 帧头延 2 拍), 硅上 36 万帧 0 坏 0 retrain; VID_OFS=99
 - [📏 X1 DR1M90 双 HP 并发切片读 (2026-10-10)](project_dr1m90_ddr_eta_x1.md) — η=**0.837** (1786 MB/s, 7020 是 0.950); 每片均 92.9 µs 裸过 94.8 仅余 2%, 最慢片 95–98 (长跑 133) 不过, 留 20% 不过; 两 HP 都进 DDRC 端口 2; ot≥4 饱和; 量具 `dr1v90/measure/07_eta_m90`
 - [🎯 DR1M90 D1 显示位流 (2026-10-10, 离线)](project_dr1m90_d1_display_bit.md) — td_pov 换 DR1M90GEG484 一次过, SWNS +7.219/HWNS +0.022 与 V90 **逐位相同**(只差 IDCODE); `pov_m90.bin` md5 2ac42cbb; 板上判据 **0x80004010=0x4C5A3400**(0x80000000 是 STATUS); 只用 p2f_clk0 50M, 不需 p2f_clk1; 上板脚本 `dr1v90/td_pov/m90/load_pov_m90.sh` 待跑; povmem arm64 零改动编过
+- [📋 验证板 4 级任务分解表 (2026-10-10)](project_validation_board_task_tree.md) — docs/验证板任务分解_2026-10-10.xlsx, 改 _mkxlsx.py 重出; 🔴 60 扫 1串2 每面 4,300 fps ⇒ 35Hz 与 503 片不能兼得 (A/B/C 待用户定)

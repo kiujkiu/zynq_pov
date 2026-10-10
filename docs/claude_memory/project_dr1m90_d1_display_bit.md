@@ -69,3 +69,13 @@ D10 若要 PL lz4 提速再议 100M; 现在 3 引擎@50M ≈ 0.987 B/clk × 50M 
 - 🔴 推修好的脚本被权限拦 (远程写文件), 改走串口直接 devmem 重放 → **发现板子已挂死**: COM28 在, 但无回显、Ctrl-C 无反应。
   无回显 ⇒ 挂在发命令之前 (最后一次正常是 devmem 读 0x10000000 内核 RAM 后约 2-3 min, 期间 pov_en=1 取帧在跑, auto_en=0)。
   原因未定: 疑 devmem 以非缓存属性读内核线性映射 RAM (arm64 属性冲突) 或 HP 取帧长跑; 需断电重启 (K6)。
+
+## 2026-10-10 晚 D4 进度 (DR1M90-02, 经 WiFi `host/dr1ssh.sh dr1m90-02`)
+- 屏全黑的根因 = **FS03 CEP2 Bank11 跳帽在 1.8V**, 用户拨到 3.3V 后正常 ([[feedback_fs03_bank11_jumper_3v3]])。
+- 点屏要 **pov_en=0** 的静态 fb (pov_en=1 时 fb 窗写入被 RTL 丢弃, 显示取帧引擎从 slice_base 读的 DDR); 脚本已修 (dr1v90 8e3c715)。
+- ✅ s1 (只红 + 像素级 checker, OE=8): 用户 "A 红, 有间隔的红不是全红, B 黑"。
+- ✅ **三色循环** (整面 R/G/B 各 4 s, OE=8): 用户 "3 色没问题"。
+- ⏳ **数字棋盘格** (`povctl fb-file chess_obs_fb.bin 0`, 全彩 OE=8) 已上屏 15:43, 等用户看数字方向/映射。
+- 用户定的验证流程 = 三色循环 + 数字棋盘格, 低亮度起 → 双面 → 再逐步调亮; 脚本 `dr1v90/td_pov/m90/m90_screencheck.sh`。
+- 期间一次内核硬挂 (agent 用 devmem 读内核线性映射 RAM 后), SysRq 无响应需断电; 之后开机先 `echo 1 > /proc/sys/kernel/sysrq` + panic 15 s 自启。
+  板上有 `/dev/watchdog` (dw_wdt, 报 "No valid TOPs array"), busybox watchdog -T 30 开后疑似反而复位过一次, **未坐实, 暂不开**。

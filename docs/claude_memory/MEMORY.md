@@ -324,3 +324,4 @@
 - [🔧 转接板改板单七项 (2026-10-10 晚, 按 SCH 10-10)](reference_adapter_change_order_1010.md) — CN3/CN6 改回公座 / VCCIO45 回 3.3V / JTAG+边带 2×SN74AVC4T774 放桥板+下载座 / FPC 尾部 / UL_CLK 留 B5_B26 / 灯板侧 / SoC 侧; 本地 docs/转接板改板单_七项_2026-10-10.html+pdf
 - [🔴 桥转接板原理图 10-10 版审查](project_adapter_sch_1010_review.md) — CN3/CN6 改 AXK500137YG 与核心板同为母座插不上; UL_CLK 09-23 已到 B5_B26 (改板单①过时); JTAG/FPC 尾部未改; 链号↔球位组整组换名; 上行板上 100Ω 端接 ⇒ .cst DIFF_RESISTOR=OFF
 - [⚠ FS03 点 2047 屏前查 Bank11 跳帽 3.3V (2026-10-10)](feedback_fs03_bank11_jumper_3v3.md) — DR1M90-02 首亮屏无反应 = CEP2 Bank11 在 1.8V; 换板先核启动拨码 OFF-OFF / Bank11 3.3V / J2 1.8V(仅上行)
+- [🔁 10-12 D盘 EIO 中断交接](project_handoff_2026_10_12.md) — 屏故意黑着(guard.sh); 恢复后先做 1.3.14/1.3.6 后台, 用户在场做 D5/D8/D9 目视, 读 ACG525 lane-47 浸泡计数

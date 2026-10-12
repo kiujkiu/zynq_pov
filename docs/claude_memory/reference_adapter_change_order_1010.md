@@ -1,13 +1,15 @@
 ---
 name: reference_adapter_change_order_1010
-description: 2026-10-10 给硬件同事的转接板改板单 (四项): ①UL_CLK 改接 GW5A B4_B33 ②JTAG 电平转换+下载座 ③桥转接板 FPC 尾部重排 ④SoC 转接板 FPC 尾部按契约核对; 本地独立版 docs/转接板改板单_四项_2026-10-10.html, 在线 artifact PDin6aPczGc9NR6uguDnVx
+description: 2026-10-10 晚按 SCH 10-10 版的转接板改板单 (七项): ①CN3/CN6 改回 AXK600337YG+原编号 ②VCCIO45 回 3.3V (L3 贴 L7 NC) ③JTAG+边带 8 根用 2 片 SN74AVC4T774 全放桥转接板+下载座+OE 跳线 ④FPC2 尾部重排 ⑤UL_CLK 留 B5_B26 待试综合 ⑥灯板侧 CN1/CN2 对插核对 ⑦SoC 转接板 FPC 核对; 本地 七项 html+pdf, 在线 PDin6aPczGc9NR6uguDnVx v5
 metadata:
   type: reference
 ---
 
-- **本地独立版 (浏览器直接打开)**: `zynq_pov/docs/转接板改板单_四项_2026-10-10.html` —— 由下面的 artifact 源文件包上 doctype/charset 生成。
-- **在线页 (私有, 要从 Share 菜单分享给硬件同事)**: https://claude.ai/artifact/PDin6aPczGc9NR6uguDnVx ; 源文件 `zynq_pov/docs/转接板改板单_三项必改_2026-10-10.html` (文件名沿用三项, 内容已是四项; 改它再 publish 同路径保持链接)。
-- 四项: ① 桥转接板 `DR1V_TXCLKP/N` (FPC 29/30) 从 GW5A B5_B6 (球 R7/T7, CN4) 改接 B4_B33 (球 U10/V10, CN3, GCLKT_9A/BPLL_T_IN1), UL_D[17] 换到 B5_B6 —— **只改 GW5A 侧, DR1M90 不动**; ② 桥转接板 JTAG 加方向固定的 2.5↔3.3V 转换 (不用 TXS0108E) + 本地下载座与 SoC 二选一; ③ 桥转接板 FPC 64~72 按契约 v3 重排, 核 FPC 座 72 导体; ④ **SoC 转接板** FPC 尾部同按契约 v3 核对 (两头必须同一份脚序)。
-- 这些是 09-18 改板结论第 7/8/9 条 + 10-10 跨板仿真 (转发时钟必须进 PLL) 和远程升级方案 (JTAG 灌 GW5A) 推出来的; SoC↔桥之间**不加 pin**。
+- **本地**: `zynq_pov/docs/转接板改板单_七项_2026-10-10.html` (独立版) 和 `.pdf` (Edge headless 打印, 7 页)。
+- **在线页 (私有, 要从 Share 菜单分享给硬件同事)**: https://claude.ai/artifact/PDin6aPczGc9NR6uguDnVx (v5) ; 源文件 `zynq_pov/docs/转接板改板单_七项_2026-10-10_artifact.html`, 改它后带 `url` 重新 publish 保持链接。
+- 下午那版 (四项, 源 `转接板改板单_三项必改_2026-10-10.html` / `转接板改板单_四项_2026-10-10.html`) 按 09-18 版写, **已作废**, 傍晚六项版 (`转接板改板单_六项_*`) 也已被七项版替代: 其中"UL_CLK B5_B6→B4_B33"在 09-23 版已改成 B5_B26。
+- 我们这边的跟进: Gowin 按 M10/N9 试综合 UL_CLK 作 PLL 参考; .cst 关片内端接 (板上 R182–R201 已 100Ω); 拿到新灯板图后按新链号更新 .cst/RTL。
+- 用户定的目标: 桥 FPGA 永远能起来 = flash 存保底 (本地 JTAG 下载座烧) + 每次上电 DR1 经 JTAG 灌 SRAM; 电平转换全放桥转接板 (契约 D5: FPC 单端 2.5V), SoC 转接板不加器件。
+- 依据见 [[project_adapter_sch_1010_review]]。
 
 相关: [[project_gw5a_xboard_rx]] [[project_remote_upgrade_x4]] [[project_validation_board_task_tree]]

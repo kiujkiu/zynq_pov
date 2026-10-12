@@ -334,3 +334,4 @@
 - [🛠 GW5A 桥转接板 KiCad v1 (2026-10-12 开工)](project_gw5a_adapter_kicad_v1.md) — 与同事 Altium 版并行练手, 底稿 SCH 10-12 + 七项; 板框 144x52.65 已出 (`pcb/gw5a_adapter_v1`); 约束: FPC 在 LED 面 / 高度不挡灯 / 照灯板改好的 AXK 封装 / 宽 144; 下一步 3 agent 并行出原理图
 - [🎯 目标板 35 Hz 预算复核](project_target_35hz_budget_recheck.md) — 192×216 / 605 片 / 35 Hz; 现为 PC 切片; WiFi 只需 31–62 Mbit 不是 200; 桥片 @150 MHz 可能超速
 - [汇报先讲大局](feedback_big_picture_first.md) — 汇报/规划先讲大功能和里程碑, 寄存器、签名、提交号等细节放后面或省略
+- [M90 WiFi 点对点实测 (10-12)](project_m90_wifi_p2p_1012.md) — TCP 推流方向 ≥160 Mbit/s (台架封顶, CPU 未满); 推流 CPU 45 fps/68 Mbit; 带宽对显示已不是瓶颈

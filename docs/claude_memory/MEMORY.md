@@ -325,10 +325,12 @@
 - [🔴 桥转接板原理图 10-10 版审查](project_adapter_sch_1010_review.md) — CN3/CN6 改 AXK500137YG 与核心板同为母座插不上; UL_CLK 09-23 已到 B5_B26 (改板单①过时); JTAG/FPC 尾部未改; 链号↔球位组整组换名; 上行板上 100Ω 端接 ⇒ .cst DIFF_RESISTOR=OFF
 - [🔴 桥转接板原理图 10-12 版审查](project_adapter_sch_1012_review.md) — 七项只改两项: CN3/CN6 回 AXK600337YG 但脚号 101−n (须看 PCB); JTAG 加 U18 接法对但缺上下拉/下载座/OE 上拉; 用户定 VCCIO45 回 3.3V, Gowin 实测 3.3V 下 bank4/5 LVDS 收发合法 (ELVDS 除外); 改板单在线 v6
 - [⚠ FS03 点 2047 屏前查 Bank11 跳帽 3.3V (2026-10-10)](feedback_fs03_bank11_jumper_3v3.md) — DR1M90-02 首亮屏无反应 = CEP2 Bank11 在 1.8V; 换板先核启动拨码 OFF-OFF / Bank11 3.3V / J2 1.8V(仅上行)
-- [🔁 10-12 D盘 EIO 中断交接](project_handoff_2026_10_12.md) — 屏故意黑着(guard.sh); 恢复后先做 1.3.14/1.3.6 后台, 用户在场做 D5/D8/D9 目视, 读 ACG525 lane-47 浸泡计数
+- [🔁 10-12 换 WSL 内核前交接](project_handoff_2026_10_12.md) — 三个待合并分支、D9 进度、WiFi 点对点测速
 - [✅ 1.3.9 lane-47 = 量具问题 (2026-10-12)](project_lane47_soak_verdict_1012.md) — vcpipe 47.9 h / 1.56e9 帧 / 0 错 BER<8.7e-16; V 行好帧÷9041 反推时长, 不用日志
 - [WSL D盘 EIO 用 remount 修 + 根因](feedback_wsl_d_eio_remount.md) — Windows 侧健康时 sudo umount -l /mnt/d + mount -t drvfs D: 即恢复; 根因嫌疑 = 7/17 换域账户后装的 IP-guard 透明加密 minifilter TsdEncryptMF(8/19), WSL 走 vmwp 照样过驱动; 根治=高频 IO 迁 ~/
 - [dr1v90 在 WSL, D 盘是镜像](project_dr1v90_in_wsl_d_is_mirror.md) — 10-12 起工作副本 ~/pov3d/dr1v90, D 盘 dr1v90 由 _wsl_sync/sync_to_d.sh 单向覆盖, 别在 D 上改; restore_from_d.sh 新 WSL 一键恢复
 - [POV 活放独立 agent](feedback_pov_in_subagent.md) — 并发 agent 在 ~/pov_work 克隆里跑 (origin=~/pov3d/dr1v90), 主窗口只派活和合并
 - [🔁 IP-guard WSL 兼容内核待切换 (2026-10-12)](project_ipg_wsl_kernel_switch.md) — IT 给的 6.6.114.1(root@teclink) 已就位 C:\Users\wanqi.liu\wsl_kernel\ (wslconfig.ipg/.bak); 等 agent 跑完→sync→换 .wslconfig→用户 wsl --update + --shutdown; 串口走 COM 不受影响, WSL WiFi 台架自编 mt76 模块要重编
 - [🛠 GW5A 桥转接板 KiCad v1 (2026-10-12 开工)](project_gw5a_adapter_kicad_v1.md) — 与同事 Altium 版并行练手, 底稿 SCH 10-12 + 七项; 板框 144x52.65 已出 (`pcb/gw5a_adapter_v1`); 约束: FPC 在 LED 面 / 高度不挡灯 / 照灯板改好的 AXK 封装 / 宽 144; 下一步 3 agent 并行出原理图
+- [🎯 目标板 35 Hz 预算复核](project_target_35hz_budget_recheck.md) — 192×216 / 605 片 / 35 Hz; 现为 PC 切片; WiFi 只需 31–62 Mbit 不是 200; 桥片 @150 MHz 可能超速
+- [汇报先讲大局](feedback_big_picture_first.md) — 汇报/规划先讲大功能和里程碑, 寄存器、签名、提交号等细节放后面或省略

@@ -18,3 +18,6 @@ metadata:
 - ✗ agent 曾报 "TPS56A37 VIN 4.5–16V, 24V 超压" —— 错, TI 官网 4.5–28V, 24V 合法 (余量小, 滑环场合建议 TVS)。
 
 相关: [[project_adapter_sch_1012_review]] [[reference_adapter_change_order_1010]]
+
+## 第三版 `SCH_GW5A to LED board V01_2026-10-12(1).pdf` (无空格, md5 ddf93db3, 创建 20:20)
+相对第二版只动了 U19 一块 (坐标比对 30 词全在 U19 区): ✅ A 侧接 DR1V_ACK/RST/UART_RX/UART_TX, B 侧接 B4_B29_N/B52_N/B39_P/B39_N, DIR L/H/L/H ⇒ 四路方向全对。R235/R236 挪到 FPC 侧, 均 10k 到 GND: RST 下拉 ✅; UART_TX 也是下拉 (应上拉 PWR2V5, 🟠)。仍未改: CN3/CN6 101−n、ACK (B4_B29_N) 下拉未加、灯板侧 CN1/CN2 待核。

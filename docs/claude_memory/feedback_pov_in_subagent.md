@@ -13,4 +13,4 @@ POV 项目（1.3.x 任务、仿真、综合等）的实际工作放到独立的�
 **Why:** 2026-10-12 用户明确要求"pov的项目你放在独立agent跑"。当时主会话被 D 盘 EIO 和窗口误关打断过，主窗口需要随时能响应。
 
 **How to apply:** 派 agent 时要写清楚完整背景、只在本地提交不 push、不碰开发板（上屏/烧写由主会话问过用户再做）。token 充足时用户希望多开并发 agent。
-工作地点放 WSL 本地盘: `git clone ~/pov3d/dr1v90 ~/pov_work/<任务>`, 在克隆里跑仿真/综合, 交付时 push 回 ~/pov3d/dr1v90 的 task/* 新分支, 主会话再合并 (10-12 起主仓已迁进 WSL, D 盘是镜像, 见 [[project-dr1v90-in-wsl-d-is-mirror]])。原因: 10-12 D 盘 EIO 四次, 其中一次 agent 根本没在跑重 I/O, 所以"串行跑"不解决问题（见 [[feedback-wsl-d-eio-remount]]）。多个 agent 都要综合时用 `flock ~/.gw5a_synth.lock` 串行化 Gowin。
+工作地点 (10-12 起回到 D 盘, 见 [[project-dr1v90-in-wsl-d-is-mirror]]): `git clone /mnt/d/claude_workspace/pov3d/dr1v90 /mnt/d/claude_workspace/pov3d/_work/<任务>`, 交付时 push 回 D 盘 dr1v90 的 task/* 新分支 (主仓检出着的分支推不进, 推 task/* 让主会话 ff), 主会话再合并。多个 agent 都要综合时用 `flock ~/.gw5a_synth.lock` 串行化 Gowin。

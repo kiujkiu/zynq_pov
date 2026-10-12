@@ -41,3 +41,5 @@ metadata:
 ## 10-12 15:3x 换 WSL 前 (转接板会话)
 - 新开 GW5A 桥转接板 KiCad 自画: 板框已出并提交 (pcb 仓 45dd9e5), 记忆 zynq_pov 13ff20e `project_gw5a_adapter_kicad_v1.md` (已推两远端)。
 - 恢复后: 用户已同意开 3 个 agent 并行出原理图 (见该记忆"下一步"); 工作放 ~/pcb_work。
+
+**10-12 16:5x 更新:** 三分支已合入 feature/lvds-b2b = 5b69726 (测试 76/76、67/67、tb_ides_rst 过, 四套位流重综合全正), 已推 origin; yjhh 无 dr1v90 仓。工作已回 D 盘 (见 [[project-dr1v90-in-wsl-d-is-mirror]])。遗留: probe_vccio45_33 探针没接新 ides_rst (旧复位隐患仍在, report 是旧时钟模块生成); 转接板 ck_clr_q recovery 仅 +0.099 ns。

@@ -13,3 +13,7 @@ metadata:
 **回滚:** `cp wslconfig.bak-20261012 ../.wslconfig` + `wsl --shutdown`。
 
 **影响面 (已核):** 串口全走 Windows 侧 COM 口 (host/serial_*.ps1 调 .NET SerialPort), 不受内核影响。**WSL 点对点 WiFi 台架会废**: MT7921AU usbipd 进 WSL + 针对 6.6.87.2 自编的 cfg80211/mac80211/mt76 (~/wslkernel, 5.2G, 不在 D 盘备份里) → 新内核要拿 6.6.114.1 源码 + 从 bzImage 抽出的 IKCFG 配置重编; pov3d-4b 说 WiFi 测速正考虑改用独立路由器+网线, 影响不大。新内核里 USB 串口驱动 (ch341/ftdi_sio/cp210x) 是模块且 IT 没给, cdc_acm/usbip 内建。
+
+**2026-10-12 16:19 进度:** ①②③ 已做 (pov3d-4b 全部 agent 已停, 16:18 sync_to_d, `.wslconfig` 已换成 wslconfig.ipg)。等用户 `wsl --update` + `wsl --shutdown`。重开后第一件事: `uname -r` 核 6.6.114.1 → 对 /mnt/d 并发读写压测 → 写进 IT 文档。hostapd + MT7921AU (usbipd 2-4) 会随 shutdown 停掉, 要还给 Windows 用 `usbipd detach --busid 2-4`。
+
+**2026-10-12 换完:** `uname -r` = 6.6.114.1-microsoft-standard-WSL2 ✅。首轮压测 (16 路并发 写/读/cp/cmp 各 200 个 64K–4M 文件 ≈13 GB, 外加并发 find 遍历) 173 s 零错误, dmesg 无 9p 报错。MT7921AU (2-4) 已是 Shared 未挂进 WSL。接下来: 观察一周 + 结果补进 IT 文档。

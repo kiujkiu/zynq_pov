@@ -325,3 +325,5 @@
 - [🔴 桥转接板原理图 10-10 版审查](project_adapter_sch_1010_review.md) — CN3/CN6 改 AXK500137YG 与核心板同为母座插不上; UL_CLK 09-23 已到 B5_B26 (改板单①过时); JTAG/FPC 尾部未改; 链号↔球位组整组换名; 上行板上 100Ω 端接 ⇒ .cst DIFF_RESISTOR=OFF
 - [⚠ FS03 点 2047 屏前查 Bank11 跳帽 3.3V (2026-10-10)](feedback_fs03_bank11_jumper_3v3.md) — DR1M90-02 首亮屏无反应 = CEP2 Bank11 在 1.8V; 换板先核启动拨码 OFF-OFF / Bank11 3.3V / J2 1.8V(仅上行)
 - [🔁 10-12 D盘 EIO 中断交接](project_handoff_2026_10_12.md) — 屏故意黑着(guard.sh); 恢复后先做 1.3.14/1.3.6 后台, 用户在场做 D5/D8/D9 目视, 读 ACG525 lane-47 浸泡计数
+- [✅ 1.3.9 lane-47 = 量具问题 (2026-10-12)](project_lane47_soak_verdict_1012.md) — vcpipe 47.9 h / 1.56e9 帧 / 0 错 BER<8.7e-16; V 行好帧÷9041 反推时长, 不用日志
+- [WSL D盘 EIO 用 remount 修](feedback_wsl_d_eio_remount.md) — Windows 侧健康时 sudo umount -l /mnt/d + mount -t drvfs D: 即恢复, 不用重启

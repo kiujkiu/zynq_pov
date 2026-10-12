@@ -21,3 +21,10 @@ ACG525(COM22) 在跑 lane-47 浸泡(bit 0x880F, 1.3h 时 0 错), 需读计数下
 2. 用户在场项: 先 kill guard.sh, 低亮度点亮; D5 双面目视, D8 3-bit 画面(期望 frame_period 31590, auto_en=1), D9 电机看体像。
 3. 读 ACG525 浸泡计数, 更新任务表 xlsx。
 相关: [[project_dr1m90_d1_display_bit]] [[project_validation_board_task_tree]]
+
+## 10-12 11:3x 恢复后进度
+- 已补提交 9a5954e (改板单七项记忆 + 本交接)。
+- D 盘 11:2x 在 WSL 再次 EIO → remount 修好不重启 ([[feedback_wsl_d_eio_remount]])。
+- ✅ 第 3 项: 1.3.9 结论 = 量具问题 ([[project_lane47_soak_verdict_1012]]), 任务表待改。
+- 🔄 1.3.14 (主树) / 1.3.6 (worktree dr1v90_wt_stress 分支 feature/gw5a-stress) 后台 agent 在跑, 只本地提交不推。
+- DR1M90-02 重新上电过, WiFi 未自连 (guard.sh 已随重启消失); 串口接回 COM28 (CH342-A, COM27 是 B 口), 准备串口拉 WiFi → D5/D8/D9。

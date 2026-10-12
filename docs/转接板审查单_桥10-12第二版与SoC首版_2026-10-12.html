@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>转接板审查单</title>
+<style>
+/* Layout: 单栏工程单, 页首总表按处理状态分色; 每项 = 编号块 + 现状/改法/原因/回板验收; 末尾列 09-18 遗留项 */
+:root{
+  --bg:#f6f7f5; --paper:#ffffff; --fg:#1d2420; --muted:#5d6a63; --rule:#d5dbd6;
+  --accent:#1f6f54; --accent-soft:#e2efe9; --red:#b3261e; --red-soft:#fbe9e7;
+  --amber:#8a5a00; --amber-soft:#fbf0d9; --code:#eef1ee;
+  --f-head:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono","Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141917; --paper:#1b211e; --fg:#e4ebe7; --muted:#9aa8a0; --rule:#33403a;
+  --accent:#6cc4a1; --accent-soft:#20342b; --red:#ff8a80; --red-soft:#3a1f1d;
+  --amber:#f2c46b; --amber-soft:#3a2f17; --code:#232b27; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --paper:#1b211e; --fg:#e4ebe7; --muted:#9aa8a0; --rule:#33403a;
+  --accent:#6cc4a1; --accent-soft:#20342b; --red:#ff8a80; --red-soft:#3a1f1d;
+  --amber:#f2c46b; --amber-soft:#3a2f17; --code:#232b27; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.7}
+.wrap{max-width:920px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-direction:column;gap:6px;border-bottom:2px solid var(--fg);padding-bottom:14px}
+h1{font-family:var(--f-head);font-size:1.7rem;margin:0;text-wrap:balance;letter-spacing:.02em}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted);font-size:.86rem}
+.meta b{color:var(--fg);font-weight:600}
+h2{font-family:var(--f-head);font-size:1.18rem;margin:0;text-wrap:balance}
+p{margin:0}
+.lead{background:var(--paper);border:1px solid var(--rule);border-left:4px solid var(--accent);padding:12px 16px;border-radius:4px;display:flex;flex-direction:column;gap:8px}
+.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--rule);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--rule);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+code,.mono{font-family:var(--f-mono);font-size:.86em;background:var(--code);padding:1px 5px;border-radius:3px;white-space:nowrap}
+td.mono{background:none}
+.item{background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;break-inside:avoid-page}
+.itemhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.no{font-family:var(--f-mono);font-weight:700;color:var(--accent);font-size:1.05rem}
+.tag{font-size:.75rem;letter-spacing:.06em;padding:2px 8px;border-radius:3px;font-weight:600;white-space:nowrap}
+.t-must{background:var(--red-soft);color:var(--red)}
+.t-check{background:var(--amber-soft);color:var(--amber)}
+.t-done{background:var(--accent-soft);color:var(--accent)}
+.grid{display:grid;grid-template-columns:7.5em 1fr;gap:6px 14px}
+.grid dt{color:var(--muted);font-size:.86rem;padding-top:2px}
+.grid dd{margin:0;min-width:0}
+ul{margin:0;padding-left:1.2em}
+.bad{color:var(--red);font-weight:600}
+.warn{color:var(--amber);font-weight:600}
+.okc{color:var(--accent);font-weight:600}
+.note{color:var(--muted);font-size:.86rem}
+.nw{white-space:nowrap}
+.check{list-style:none;padding:0;display:flex;flex-direction:column;gap:4px}
+.check li::before{content:"☐ ";color:var(--accent)}
+@media (max-width:560px){.grid{grid-template-columns:1fr}.grid dt{padding-top:6px}}
+@media print{body{font-size:12.5px}.wrap{max-width:none;padding-block:0}.tbl{overflow:visible}table{font-size:.82rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>转接板审查单<br><span class="nw">桥转接板 10-12 第二版</span> + <span class="nw">SoC 转接板首版</span></h1>
+  <div class="meta">
+    <span>桥转接板 <b>SCH_GW5A to LED board V01_2026-10-12 (1)</b>（17:43，对比同日 14:32 版）</span>
+    <span>SoC 转接板 <b>SCH_Schematic1_2026-10-12</b>（17:47，DR1M90/FS03 底板 → 两路 FPC）</span>
+    <span>日期 <b>2026-10-12</b></span>
+  </div>
+</header>
+
+<div class="lead">
+  <p><b>结论：两块板都还不能投板。</b>两块板之间的 FPC 对插逐脚对得上（70 导体同名，40 对 LVDS 的 P/N 全对），问题集中在电平转换接反、电源断路和 JTAG 拓扑。</p>
+  <p>桥转接板这版做对了两件大事：<b>VCCIO45 已回 3.3 V</b>；<b>JTAG 转换 U18 补了上下拉、OE 电阻和本地下载座</b>。但新加的边带转换 U19 两侧接反了。</p>
+  <p>SoC 转接板：<b>2.5 V 那路 DCDC 没有输入</b>；<b>两块桥的 JTAG 串成了菊花链</b>。整板还有一个前提：DR1 底板 bank33 / bank11 要改成 2.5 V。</p>
+</div>
+
+<h2>投板前必改汇总</h2>
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>板</th><th>改什么</th><th>不改的后果</th></tr></thead>
+<tbody>
+<tr><td class="mono">B1</td><td>桥</td><td>U19 两侧网络对调（A 侧接 FPC，B 侧接 GW5A）</td><td class="bad">边带 4 根全不通；ACK、UART_RX 与 GW5A 输出对冲；3.3 V 打进 DR1</td></tr>
+<tr><td class="mono">B2</td><td>桥</td><td>U19 上下拉挪到 FPC 一侧；删 R236</td><td class="bad">FPC 未插时复位悬空；串口持续 break</td></tr>
+<tr><td class="mono">B3</td><td>桥</td><td>CN3 / CN6 脚号仍是 101−n：恢复 n→n，或拿 PCB 截图证明焊盘对得上</td><td class="bad">座子转 180°，3.3 V 打到核心板 JTAG / IO</td></tr>
+<tr><td class="mono">S1</td><td>SoC</td><td>U5 STI3411A 的 VIN 从孤立网 <code>PWR5V</code> 改接 <code>VCC_5V</code></td><td class="bad">2.5 V 永远不出电</td></tr>
+<tr><td class="mono">S2</td><td>SoC</td><td>JTAG 拆成每面独立：TCK/TMS 共用，桥 B 单独 TDI/TDO（用空闲 <code>CEP2_8P/N</code>）</td><td class="bad">任一面桥不在位，两面都加载不了；无法按面读 IDCODE 判在位</td></tr>
+<tr><td class="mono">S3</td><td>SoC</td><td>确认 DR1 底板 bank33 / bank11 改 2.5 V 的方案（H7 / H9 是否就是飞线口）</td><td class="bad">3.3 V 下 LVDS25 出不来；1.8 V 下被桥侧 2.5 V 打高</td></tr>
+</tbody></table></div>
+
+<section class="item">
+  <div class="itemhead"><span class="no">B1</span><h2>桥：边带转换 U19 两侧接反</h2><span class="tag t-must">必改 · 本版新引入</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>U19 = SN74AVC4T774PWR。VCCA（16 脚）= PWR2V5，VCCB（15 脚）= VCC3P3，旁注写 "A接主芯片 FPC / B接桥BTB 3.3V"——器件和供电都对。但连线相反：
+      <ul>
+        <li>A1–A4（3–6 脚）经 R228–R231 接 <code>B4_B29_N</code> / <code>B4_B52_N</code> / <code>B4_B39_P</code> / <code>B4_B39_N</code>（GW5A 侧）；</li>
+        <li>B1–B4（14–11 脚）经 R224–R227 接 <code>DR1V_ACK</code> / <code>DR1V_RST</code> / <code>DR1V_UART_RX</code> / <code>DR1V_UART_TX</code>（FPC 侧）。</li>
+      </ul></dd>
+    <dt>改法</dt><dd>两侧网络对调：A1–A4 接 DR1V_ACK / RST / UART_RX / UART_TX，B1–B4 接 B4_B29_N / B52_N / B39_P / B39_N。<b>DIR 不动</b>（DIR1..4 = L / H / L / H，对调后正好是 ACK 桥→SoC、RST SoC→桥、UART_RX 桥→SoC、UART_TX SoC→桥），与 U18 画法一致。</dd>
+    <dt>原因</dt><dd>按现在连线四路方向全反：ACK、UART_RX 变成 FPC 驱动 GW5A，与 GW5A 输出对冲；3.3 V 侧输出打到 DR1 的 2.5 V 口。</dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">B2</span><h2>桥：U19 上下拉放在了 GW5A 一侧</h2><span class="tag t-must">必改 · 与 B1 一起</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>R235（10k 到 GND）挂 <code>B4_B52_N</code>，R236（10k 到 GND）挂 <code>B4_B39_N</code>，都在 GW5A 侧。</dd>
+    <dt>改法</dt><dd><code>DR1V_RST</code> 加 10k 下拉到 GND；<code>DR1V_UART_TX</code> 加 10k 上拉到 PWR2V5；R236 删除（或改上拉到 VCC3P3）。R235 可保留。</dd>
+    <dt>原因</dt><dd>FPC 未插时 U19 的输入在 FPC 侧悬空，桥收到的复位不确定；串口线被下拉到地等于持续发 break。</dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">B3</span><h2>桥：核心板座子 CN3 / CN6 脚号仍是 101−n</h2><span class="tag t-must">必改或用 PCB 证明</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>CN 区域整体下移，脚号文字逐字未变：VCC3P3 仍在 97–100，<code>FPGA_TCK</code> 在 1。</dd>
+    <dt>改法</dt><dd>恢复 09-23 的 n→n；或提供 PCB 截图：核心板 P1 第 1 脚落在本板哪个焊盘，证明 VCC3P3 对上核心板的电源脚。</dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">S1</span><h2>SoC：2.5 V DCDC 的输入脚接在孤立网上</h2><span class="tag t-must">必改</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>U5 STI3411A 的 VIN（4 脚）接 <code>PWR5V</code>，该网全图只出现 1 次，只挂 C28 / C29，没连到 <code>VCC_5V</code>；EN 经 R157 接的才是 VCC_5V。很可能是从桥板复制时网名没改。</dd>
+    <dt>改法</dt><dd>VIN 接 <code>VCC_5V</code>。</dd>
+    <dt>后果</dt><dd>PWR2V5 永远不出电，H7 / H9 两个座子没有 2.5 V。</dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">S2</span><h2>SoC：两块桥的 JTAG 串成菊花链</h2><span class="tag t-must">必改</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>
+      <ul>
+        <li>TDI：<code>CEP1_24N</code> → R2 → FPC1-68（桥 A）；</li>
+        <li>桥 A 的 TDO（FPC1-67，<code>FPGA1_TDO</code>）→ R6 → <code>FPGA2_TDI</code> → FPC2-68（桥 B）；</li>
+        <li>桥 B 的 TDO（FPC2-67）→ R5 → <code>CEP1_24P</code>；</li>
+        <li>TMS = <code>CEP1_4P</code>、TCK = <code>CEP1_4N</code>，经 R3/R7、R4/R8 同时送两边。</li>
+      </ul></dd>
+    <dt>改法</dt><dd>TCK / TMS 继续共用；桥 B 单独给 TDI2 / TDO2，用 bank11 唯一空着的一对 <code>CEP2_8P/N</code>。R6 保留成 0Ω/NC 选项，需要时可跳回菊花链。TCK / TMS 一点分两路走两根 FPC，建议 R3/R4/R7/R8 改 22–33 Ω。</dd>
+    <dt>原因</dt><dd>违反契约"每面独立 4 根 JTAG、按面读 IDCODE 判在位"。任一面桥不在位或未上电，整条链断，另一面也加载不了。</dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">S3</span><h2>SoC：DR1 底板 bank33 / bank11 必须是 2.5 V</h2><span class="tag t-check">整板前提 · 待确认方案</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>面 A 全部信号在 bank33（CEP1），面 B 在 bank11（CEP2）。LVDS25 输出要求 VCCIO = 2.5 V；边带和 JTAG 直连桥板转换芯片的 2.5 V 侧，也要求 2.5 V。FS03 原厂跳帽只有 3.3 V / 1.8 V 两档。</dd>
+    <dt>待确认</dt><dd>板上 H7 / H9（PWR2V5 + GND 两针）是否就是给 FS03 两个 VCCIO 跳帽供 2.5 V 的飞线口？图上没注释，请写明。前提是 S1 先修好。</dd>
+    <dt>连带</dt><dd>
+      <ul>
+        <li>bank11 改 2.5 V 后，2047 屏（LVCMOS33）不能再接 CEP2。</li>
+        <li>CN3 光电开关由 VCC3V3（HT7533）供电，信号进 <code>CEP2_24P</code>：推挽 3.3 V 输出超过 2.5 V bank 的 VIH max（2.8 V）。请确认传感器输出类型，改由 PWR2V5 供电或加分压；开集输出则补上拉。</li>
+      </ul></dd>
+  </dl>
+</section>
+
+<h2>建议（不阻塞投板）</h2>
+<div class="tbl"><table>
+<thead><tr><th>板</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>桥</td><td>U18 上下拉：现在 TDI / TMS / TCK（R221–R223）和 TDO（R219）全是下拉。TCK 被拉低功能上可用；按改板单应为 TMS、TDI 上拉到 PWR2V5，TDO 上拉到 VCC3P3，可顺手改。</td></tr>
+<tr><td>桥</td><td>U18 / U19 的 OE# 是 10k 下拉（R220 / R233），常使能、无跳线。下载座在 2.5 V 侧不需要靠 OE 让路，可接受；TI 建议上电期间 OE 保持高，属小风险。</td></tr>
+<tr><td>桥</td><td>下载座 H1（PZ254V-11-06P）脚序 1 GND / 2 TCK / 3 TMS / 4 TDI / 5 TDO / 6 PWR2V5，在 2.5 V 侧，与 U18 不冲突。<b>使用时须拔 FPC</b>，否则与 DR1 的 JTAG 冲突；高云下载器需做 6 针转接线（6 脚作 VREF）。</td></tr>
+<tr><td>桥</td><td>以前提过仍未改：RSTN 的 R171 + TXB0108；CN3 / CN6 旁无去耦；U1 / U2 / U8 的 OE 下拉位标 NC；5 V 入口无保险丝 / TVS；标题栏图名仍写 <code>_1010</code>。</td></tr>
+<tr><td>两板</td><td><b>FPC 尾部可以不改板，改契约。</b>两块板尾部一致：61 GND / 62 ACK / 63 RST / 64 UART_RX / 65 UART_TX / 66 GND / 67 TDO / 68 TDI / 69 TMS / 70 TCK；座子 XW0525512-702R-001 为 70 导体，71 / 72 是固定脚（接地，72 两边都请确认接地）。两端同名就不会短地，建议把接口契约改成这个实际脚序（原改板单第④项降级）。</td></tr>
+<tr><td>两板</td><td><b>FPC 线型写进图纸：必须 1↔1 导通。</b>两端是同一颗座子、脚号到网名对应相同；若买成镜像线（p ↔ 71−p），GND 1 / 4 / 7 会接到 TCK / TDO / UART_RX。同面 / 异面取决于座子上接 / 下接与两板叠放，请明确。</td></tr>
+<tr><td>SoC</td><td>发送端 100 Ω/NC 位（R182–R201、R53–R72）<b>必须 NC</b>：接收端桥板已有 100 Ω，再贴是双端接，摆幅减半。</td></tr>
+<tr><td>SoC</td><td>契约要求 SoC 侧 SB_ALIGNED（ACK）2.2k 下拉，图上没有。但中间隔着桥板转换芯片推挽输出，SoC 侧下拉盖不住；下拉实际应做在桥板 GW5A 侧（B 侧）。</td></tr>
+<tr><td>SoC</td><td>24 V 入口（H5 / H6 单针排针）建议加保险丝、TVS、防反接。U1 TPS56A37 输入范围 4.5–28 V（TI 官网），24 V 合法但余量只有 4 V，滑环场合尤其需要 TVS。</td></tr>
+<tr><td>SoC</td><td>TPS56A37 的 MODE 电阻 R73 另一端网络看图不清，按 TI 用法应接 AGND，请确认。CN1 / CN2（B2P-VH）各给一块桥板送 5 V，脚序（2 = 5 V、1 = GND）请与桥板 5 V 入口核对。</td></tr>
+<tr><td>SoC</td><td>FS03 底板 CEP 每根线上有 33 Ω 排阻（R187–R210），40 对都用的话整排换 0 Ω。bank33 上电到加载前的强制上下拉（DS1200 表 2-6），要核 RST（<code>CEP1_23N</code>）在这段时间会不会被拉高、提前放开桥片复位。</td></tr>
+<tr><td>SoC</td><td>网名统一：第二面 <code>DRV2_*</code> 建议改 <code>DR1V2_*</code>；JTAG 的 <code>FPGA_*</code> / <code>FPGA1_*</code> / <code>FPGA2_*</code> 混用，建议统一成 FPGA1_ / FPGA2_。</td></tr>
+</tbody></table></div>
+
+<h2>已确认正确</h2>
+<div class="tbl"><table>
+<thead><tr><th>板</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>桥</td><td>VCCIO45 回 3.3 V：L7（PWR2V5）标 NC，L3（VCC3P3→VCCIO45）贴片。Gowin 工具实测 3.3 V 下上行 20 对 LVDS 接收、链 4 D0 真差分输出均合法。</td></tr>
+<tr><td>桥</td><td>U19 型号、供电、去耦（C57 100 nF 在 VCC3P3，C58 在 PWR2V5）正确；删掉的 R129–R132（0 Ω 直连）、R173（10k 下拉）由 U19 一组器件接替。</td></tr>
+<tr><td>两板</td><td>SoC FPC1 / FPC2 与桥 FPC2 的 1–70 脚逐脚同名：DR1V_TXP/N0..17、TXCLK、TXCHK、ACK、RST、UART_RX/TX、TDO / TDI / TMS / TCK。</td></tr>
+<tr><td>SoC</td><td>40 对全部 <code>CEPx_kP → TXP</code>、<code>CEPx_kN → TXN</code>，同一个 k，无交叉、无跨对。信号路径上只有 0 Ω / NC，无电平转换（符合契约）。FPC 不走电源。位号无重复；两路 DCDC 反馈分压为 5.0 V 和 2.50 V。</td></tr>
+</tbody></table></div>
+
+<h2>附：FPC 逐脚对照（SoC 侧 → 桥侧）</h2>
+<div class="tbl"><table>
+<thead><tr><th>FPC 脚</th><th>契约信号</th><th>SoC FPC1（面 A，bank33）</th><th>SoC FPC2（面 B，bank11）</th><th>桥 FPC2</th></tr></thead>
+<tbody>
+<tr><td class="mono">2/3, 5/6, 8/9</td><td>UL_D12 / 13 / 14</td><td>CEP1_1 / 2 / 5</td><td>CEP2_1 / 2 / 3</td><td class="okc">✓</td></tr>
+<tr><td class="mono">11 … 26</td><td>UL_D0 … D5</td><td>CEP1_6 … 11</td><td>CEP2_4, 5, 6, 10, 11, 12</td><td class="okc">✓</td></tr>
+<tr><td class="mono">29/30</td><td>UL_CLK</td><td>CEP1_12</td><td>CEP2_9</td><td class="okc">✓</td></tr>
+<tr><td class="mono">32/33</td><td>UL_CHK</td><td>CEP1_13</td><td>CEP2_13</td><td class="okc">✓</td></tr>
+<tr><td class="mono">35 … 50</td><td>UL_D6 … D11</td><td>CEP1_14 … 19</td><td>CEP2_14 … 19</td><td class="okc">✓</td></tr>
+<tr><td class="mono">53 / 56 / 59</td><td>UL_D15 / 16 / 17</td><td>CEP1_20 / 21 / 22</td><td>CEP2_20 / 21 / 22</td><td class="okc">✓</td></tr>
+<tr><td class="mono">62 / 63</td><td>ACK / RST</td><td>CEP1_23P / N</td><td>CEP2_23P / N</td><td class="okc">✓</td></tr>
+<tr><td class="mono">64 / 65</td><td>UART_RX / TX</td><td>CEP1_3P / N</td><td>CEP2_7P / N</td><td class="okc">✓</td></tr>
+<tr><td class="mono">67</td><td>TDO</td><td class="bad">→ 桥 B 的 TDI（菊花链）</td><td>→ CEP1_24P</td><td class="okc">✓ 脚序</td></tr>
+<tr><td class="mono">68</td><td>TDI</td><td>CEP1_24N</td><td class="bad">← 桥 A 的 TDO（菊花链）</td><td class="okc">✓</td></tr>
+<tr><td class="mono">69 / 70</td><td>TMS / TCK</td><td>CEP1_4P / N</td><td>同一对（共用）</td><td class="okc">✓</td></tr>
+</tbody></table></div>
+<p class="note">SoC 板未用：CEP2_8P/N、CEP2_24N；CEP2_24P 给 CN3 光电开关。DR1 侧引脚需按本板重出约束并先用安路 TD 编一次：面 A 有 6 对（CEP1_5、12–16）、面 B 全部 20 对的 ODDRx2 输出尚未验证。</p>
+
+<p class="note">审查方法：pdftotext -bbox 机读坐标 + 局部 300 dpi 截图看图核对。U19 接反由截图人工复核确认。PCB 层面（CN3 / CN6 焊盘、FS03 排母奇偶列、FPC 座第 1 脚朝向）需看 PCB 文件。</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,24 @@
+---
+name: project-target-35hz-budget-recheck
+description: "目标板口径 192×216 / 605 片 / 35 Hz 体帧率 (17.5 rps); 现在的链路是 PC 切片不是板上切片; 35 Hz 下 WiFi 需求与桥片/2260 速率余量的初算, 待正式重核"
+metadata:
+  node_type: memory
+  type: project
+  originSessionId: 8546d15b-e447-401c-ad29-dcf7e23adf7b
+  modified: 2026-10-12T08:02:08.406Z
+---
+
+用户 2026-10-12 更正目标口径: **192×216 屏, 每圈 605 片, 体帧率 35 Hz** (= 2 面 × 17.5 rps, 1050 RPM; 与 project_pov3d_final_target.md 一致)。
+很多旧预算 (桥片 STRESS、9,045 fps、2260 刷新) 还是按 603 片 × 15 rps = 30 Hz 算的。
+
+## 现状事实 (用户问过两次, 别再说错)
+- Zynq + 2047 双面偏心方案**完整跑通到出厂** (07-28 首次立体、08-03 v3.1 几何、08-27 出厂配置)。
+- 但现在 (Zynq 和 DR1M90 都是) **电脑切片**: povstream 在 PC 渲染并切成 142×2 片 → lz4 → WiFi → 板上解压 → 显示。**不是板上切片**。
+- 板上切片 (体素表 VXT1 → vox_scatter + pov_slice_v2) 只到离线对拍 (vb358, 10-10) 和 ARM 交叉编译, **没在任何板子上跑过**; Zynq 的 HLS slicer 只 csynth 过; DR1 是安路 PL, Xilinx HLS 不能直接搬。切片放 A35 (DDR 83% 擦线) 还是 PL 直供 (28%) 未定, 推荐 PL。
+
+## 35 Hz 初算 (主会话推算, 未正式核)
+- WiFi (传体素表, 09-03 实测 192×216×192 格每帧载荷): 最重真实内容 bonsai 220 KB/帧 → 17.5 fps ≈ 31 Mbit/s, 35 fps ≈ 62; 病态上界 488 KB → 68 / 137。**不需要 200**; 200 是早期"传切片"口径。
+- 桥片/2260: 每面片率 605 × 17.5 = **10,588 fps** (比 9,045 多 17%)。STRESS 线上一帧 15,392 dclk: @166.67 MHz = 92.35 µs vs 片周期 94.4 µs (余量 ~2%); **@150 MHz (目标板 profile) = 102.6 µs > 94.4 → 放不下**。单颗 2260 实测上限 11,000 fps (余量 ~4%)。
+
+**Why:** 35 Hz 让桥片目标板 profile 可能超速, 是必须先核的风险; 用户关心 WiFi 需求和"切片到底在哪做"。
+**How to apply:** 动目标板/桥片/切片相关工作前, 先派 agent 按 35 Hz 正式重核整链 (桥片 dclk 与帧长、2260、DDR、WiFi); 汇报时明确"现在是 PC 切片"。相关: [[project-handoff-2026-10-12]]。

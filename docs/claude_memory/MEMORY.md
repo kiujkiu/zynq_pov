@@ -334,5 +334,6 @@
 - [🛠 GW5A 桥转接板 KiCad v1 (2026-10-12 开工)](project_gw5a_adapter_kicad_v1.md) — 与同事 Altium 版并行练手, 底稿 SCH 10-12 + 七项; 板框 144x52.65 已出 (`pcb/gw5a_adapter_v1`); 约束: FPC 在 LED 面 / 高度不挡灯 / 照灯板改好的 AXK 封装 / 宽 144; 下一步 3 agent 并行出原理图
 - [🎯 目标改 30 Hz](project_target_35hz_budget_recheck.md) — 10-12 用户定 30 Hz (605 片×15 rps/900 RPM), 两墙余量约 15%; 35 Hz 仅 1–2% 放弃; 报告 docs/budget/
 - [🚀 板上切片开工](project_pl_slice_kickoff_1012.md) — 10-12 四 agent 并行: task/pl-slice-golden/rtl/sw/integ, 按 30 Hz; 规格以 golden 的 slice/SPEC.md 为准
+- [🧪 3-bit 屏 CPU 板上切片试跑](project_slice_3bit_cpu_trial.md) — 10-12 先在试验屏用 A35 切片跑通传体素表链路, 切片绑 CPU1; task/slice-3bit-cpu; 上板前先问用户
 - [汇报先讲大局](feedback_big_picture_first.md) — 汇报/规划先讲大功能和里程碑, 寄存器、签名、提交号等细节放后面或省略
 - [M90 WiFi 点对点实测 (10-12)](project_m90_wifi_p2p_1012.md) — TCP 推流方向 ≥160 Mbit/s (台架封顶, CPU 未满); 推流 CPU 45 fps/68 Mbit; 带宽对显示已不是瓶颈

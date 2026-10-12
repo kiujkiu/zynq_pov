@@ -17,3 +17,4 @@ metadata:
 
 **10-12 18:3x 上板实测 (屏黑, 假转 16.15 rps, OE 8/4/2 未点亮):** 链路跑通, 0 NAK / 0 forced。bonsai@15 推: 实际 rx/切/翻页 12–13 fps, **切片 78–82 ms/帧 (估算 30–50 的 2 倍), 切片线程 CPU1 93–95% 打满 = 瓶颈**; rx 线程 CPU0 24–26% (scat 13 ms, dec 2.5 ms); 整板 70% 忙。static: 同网格不重切 ✓, 切片 0%, 但 rx 线程仍 16% (每帧整表重收重散写比对) ⇒ PC 端静止时应停发。离线对拍 96 帧逐字节一致 (task/slice-3bit-cpu 887c831)。下一步: 用户在场时 `m90_vs.sh light 60` 目视; 优化切片 (NEON / 翻页线程挪 CPU0)。
 - 10-12 18:4x 派优化 agent (task/slice-3bit-cpu 续): 目标 bonsai 稳 15 fps (切片 ≤55 ms), 翻页线程挪 CPU0 / NEON / 两核分担 / PC 静止不重发; 允许它上板测性能但屏必须黑。
+- **10-12 20:4x 光电开关模式上屏 ✅**: voxslice 0.2 + `m90_vs.sh start` 后写 0x10=0x008E0005 (传感器) + light; 用户确认屏上看到机器人。手转测到 rev_period 0x047A5D93 ≈1.50 s/圈 (aclk 50M); 静止时引擎停在某片 (slice_idx 不动, 翻页窗等不到 → voxslice 每 2 s 强制翻页, 正常)。0.2 版 (dddf19a, 紧凑列存+双核分片+翻页挪 CPU0) bonsai 稳 15 fps 切片 34–36 ms (0.1: 79–82 ms)。教训: 优化 agent 起的实例进程名是 vs_base, 占 9500 导致主会话的 voxslice bind 失败退出; 上板前查 9500 占用 (netstat) 而非按名字 grep。

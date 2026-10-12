@@ -21,3 +21,4 @@ metadata:
 **10-12 决定:** 转轴列中心先用 **95.5** (u = p − 95.5, 与现役 PC 渲染器一致), 等实物转起来再校准; 只改 LUT 不改 RTL。生产表已出: golden 6848846 slice/lut/lut_{A,B}.bin CRC32 **a28f6013 / 36da5ca7** (浮点 gas 几何, 越界输出 0, 对现役 render_slice 有效列 0 不符); `gen_lut.py --center` 校准重出。rtl_full/lut_*.bin (c5c754dc/3f050137) 是 96 中心测试表, 不上板; 合并时 voxrxd 的 CRC/默认路径要改指 slice/lut/。
 
 **10-12 进度:** golden 完成 (6848846, 规格 slice/SPEC.md, 与 pov_slice_v2.cpp / render_slice 逐位一致); sw 完成 (42329a8, voxrxd 新程序与 pov_rxd 二选一, 离线 215 项过, 增量写 16–22 MB/s @15 fps, pov_rxd 已 -static -no-pie)。两分支已推 origin + yjhh。rtl / integ 仍在跑。
+- 10-12 rtl 完成 (5d3cd22): 仿真全对, 一片 93.5 µs/110.19 (15%); 150 MHz setup 收敛 (hold −0.19 残留, 疑工具层), 200 MHz hclk 收住但 oclk 191.7/hold −0.82; 建议生产 hclk 150; eram 136/280 (RING 384=2 片/面, 并存 2047 时只能 192 仅作功能验证, 正式位流去掉 2047 fb+lz4)。

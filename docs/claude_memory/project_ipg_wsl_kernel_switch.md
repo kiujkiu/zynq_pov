@@ -19,3 +19,4 @@ metadata:
 **2026-10-12 换完:** `uname -r` = 6.6.114.1-microsoft-standard-WSL2 ✅。首轮压测 (16 路并发 写/读/cp/cmp 各 200 个 64K–4M 文件 ≈13 GB, 外加并发 find 遍历) 173 s 零错误, dmesg 无 9p 报错。MT7921AU (2-4) 已是 Shared 未挂进 WSL。接下来: 观察一周 + 结果补进 IT 文档。
 
 **10-12 晚复发:** 换上 6.6.114.1 约 4 小时后 (≈17:5x 和 18:0x) /mnt/d 又 EIO 两次 (多 agent 并发 TD 综合 + 仿真时), 新内核**没根治**。会话 cwd 在 /mnt/d 时连 bash 都起不来 (posix_spawn EIO), Claude 自己无法 remount (权限检查拦 dangerouslyDisableSandbox) ⇒ 让用户在普通终端跑 `bash ~/fixd.sh` (已写好, 内容即 umount -l + mount drvfs)。用户手敲长命令易错, 给脚本。待补进 IT 文档。
+- 10-12 22:1x IT 文档已补晚间更新 (换内核后仍 EIO 至少 4 次、dmesg 无 9p 错、请 IT 查 17:30–22:00 vmwp.exe 记录 + 按第 1/2 项加白): docs_out/WSL读写D盘出错_IT协助_2026-10-12_晚间更新.{docx,pdf,html} (原 docx 未覆盖)。WSL 已是 3.0.1.0。

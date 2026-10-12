@@ -17,3 +17,5 @@ metadata:
 **2026-10-12 16:19 进度:** ①②③ 已做 (pov3d-4b 全部 agent 已停, 16:18 sync_to_d, `.wslconfig` 已换成 wslconfig.ipg)。等用户 `wsl --update` + `wsl --shutdown`。重开后第一件事: `uname -r` 核 6.6.114.1 → 对 /mnt/d 并发读写压测 → 写进 IT 文档。hostapd + MT7921AU (usbipd 2-4) 会随 shutdown 停掉, 要还给 Windows 用 `usbipd detach --busid 2-4`。
 
 **2026-10-12 换完:** `uname -r` = 6.6.114.1-microsoft-standard-WSL2 ✅。首轮压测 (16 路并发 写/读/cp/cmp 各 200 个 64K–4M 文件 ≈13 GB, 外加并发 find 遍历) 173 s 零错误, dmesg 无 9p 报错。MT7921AU (2-4) 已是 Shared 未挂进 WSL。接下来: 观察一周 + 结果补进 IT 文档。
+
+**10-12 晚复发:** 换上 6.6.114.1 约 4 小时后 (≈17:5x 和 18:0x) /mnt/d 又 EIO 两次 (多 agent 并发 TD 综合 + 仿真时), 新内核**没根治**。会话 cwd 在 /mnt/d 时连 bash 都起不来 (posix_spawn EIO), Claude 自己无法 remount (权限检查拦 dangerouslyDisableSandbox) ⇒ 让用户在普通终端跑 `bash ~/fixd.sh` (已写好, 内容即 umount -l + mount drvfs)。用户手敲长命令易错, 给脚本。待补进 IT 文档。

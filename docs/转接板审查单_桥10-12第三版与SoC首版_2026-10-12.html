@@ -186,7 +186,7 @@ ul{margin:0;padding-left:1.2em}
 <tr><td>桥</td><td>U18 上下拉：现在 TDI / TMS / TCK（R221–R223）和 TDO（R219）全是下拉。TCK 被拉低功能上可用；按改板单应为 TMS、TDI 上拉到 PWR2V5，TDO 上拉到 VCC3P3，可顺手改。</td></tr>
 <tr><td>桥</td><td>U18 / U19 的 OE# 是 10k 下拉（R220 / R233），常使能、无跳线。下载座在 2.5 V 侧不需要靠 OE 让路，可接受；TI 建议上电期间 OE 保持高，属小风险。</td></tr>
 <tr><td>桥</td><td>下载座 H1（PZ254V-11-06P）脚序 1 GND / 2 TCK / 3 TMS / 4 TDI / 5 TDO / 6 PWR2V5，在 2.5 V 侧，与 U18 不冲突。<b>使用时须拔 FPC</b>，否则与 DR1 的 JTAG 冲突；高云下载器需做 6 针转接线（6 脚作 VREF）。</td></tr>
-<tr><td>桥</td><td>以前提过仍未改：RSTN 的 R171 + TXB0108；CN3 / CN6 旁无去耦；U1 / U2 / U8 的 OE 下拉位标 NC；5 V 入口无保险丝 / TVS；标题栏图名仍写 <code>_1010</code>。</td></tr>
+<tr><td>桥</td><td>以前提过仍未改：RSTN 的 R171 + TXB0108；CN3 / CN6 旁无去耦；U1 / U2 / U8 的 OE 下拉位标 NC；标题栏图名仍写 <code>_1010</code>。</td></tr>
 <tr><td>两板</td><td><b>FPC 尾部可以不改板，改契约。</b>两块板尾部一致：61 GND / 62 ACK / 63 RST / 64 UART_RX / 65 UART_TX / 66 GND / 67 TDO / 68 TDI / 69 TMS / 70 TCK；座子 XW0525512-702R-001 为 70 导体，71 / 72 是固定脚（接地，72 两边都请确认接地）。两端同名就不会短地，建议把接口契约改成这个实际脚序（原改板单第④项降级）。</td></tr>
 <tr><td>两板</td><td><b>FPC 线型写进图纸：必须 1↔1 导通。</b>两端是同一颗座子、脚号到网名对应相同；若买成镜像线（p ↔ 71−p），GND 1 / 4 / 7 会接到 TCK / TDO / UART_RX。同面 / 异面取决于座子上接 / 下接与两板叠放，请明确。</td></tr>
 <tr><td>SoC</td><td>发送端 100 Ω/NC 位（R182–R201、R53–R72）<b>必须 NC</b>：接收端桥板已有 100 Ω，再贴是双端接，摆幅减半。</td></tr>

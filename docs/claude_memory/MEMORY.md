@@ -330,3 +330,4 @@
 - [WSL D盘 EIO 用 remount 修 + 根因](feedback_wsl_d_eio_remount.md) — Windows 侧健康时 sudo umount -l /mnt/d + mount -t drvfs D: 即恢复; 根因嫌疑 = 7/17 换域账户后装的 IP-guard 透明加密 minifilter TsdEncryptMF(8/19), WSL 走 vmwp 照样过驱动; 根治=高频 IO 迁 ~/
 - [dr1v90 在 WSL, D 盘是镜像](project_dr1v90_in_wsl_d_is_mirror.md) — 10-12 起工作副本 ~/pov3d/dr1v90, D 盘 dr1v90 由 _wsl_sync/sync_to_d.sh 单向覆盖, 别在 D 上改; restore_from_d.sh 新 WSL 一键恢复
 - [POV 活放独立 agent](feedback_pov_in_subagent.md) — 并发 agent 在 ~/pov_work 克隆里跑 (origin=~/pov3d/dr1v90), 主窗口只派活和合并
+- [🔁 IP-guard WSL 兼容内核待切换 (2026-10-12)](project_ipg_wsl_kernel_switch.md) — IT 给的 6.6.114.1(root@teclink) 已就位 C:\Users\wanqi.liu\wsl_kernel\ (wslconfig.ipg/.bak); 等 agent 跑完→sync→换 .wslconfig→用户 wsl --update + --shutdown; 串口走 COM 不受影响, WSL WiFi 台架自编 mt76 模块要重编

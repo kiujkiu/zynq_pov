@@ -14,3 +14,6 @@ metadata:
 
 **Why:** 用 CPU 先验证整条板上切片链路, PL 切片器完成后替换 CPU 这一段。
 **How to apply:** 接手先看 `git -C /mnt/d/claude_workspace/pov3d/dr1v90 log -3 task/slice-3bit-cpu`; 与 [[project-pl-slice-kickoff-1012]] 同一大功能。
+
+**10-12 18:3x 上板实测 (屏黑, 假转 16.15 rps, OE 8/4/2 未点亮):** 链路跑通, 0 NAK / 0 forced。bonsai@15 推: 实际 rx/切/翻页 12–13 fps, **切片 78–82 ms/帧 (估算 30–50 的 2 倍), 切片线程 CPU1 93–95% 打满 = 瓶颈**; rx 线程 CPU0 24–26% (scat 13 ms, dec 2.5 ms); 整板 70% 忙。static: 同网格不重切 ✓, 切片 0%, 但 rx 线程仍 16% (每帧整表重收重散写比对) ⇒ PC 端静止时应停发。离线对拍 96 帧逐字节一致 (task/slice-3bit-cpu 887c831)。下一步: 用户在场时 `m90_vs.sh light 60` 目视; 优化切片 (NEON / 翻页线程挪 CPU0)。
+- 10-12 18:4x 派优化 agent (task/slice-3bit-cpu 续): 目标 bonsai 稳 15 fps (切片 ≤55 ms), 翻页线程挪 CPU0 / NEON / 两核分担 / PC 静止不重发; 允许它上板测性能但屏必须黑。

@@ -23,17 +23,21 @@ metadata:
 合并做法: 先在 ~/pov_work 克隆里试合并 + 验证, 再快进 feature/lvds-b2b, 然后"保存"。
 
 ## D9 (电机转起来) 停在"通电低速"之前
-板 DR1M90-02: bank A 已灌 helix3b (md5 edd12011…), 0x10=0x008E0004 (传感器模式, fake_en=0, pov_en=0), auto_en=0 屏黑。手转实测 rev_period 0x02E73EEF ≈ 0.97 s/圈 → 传感器有信号 (用户要确认每圈 1 脉冲)。
+板 DR1M90-02: bank A 原灌 helix3b, WiFi 推流测试后被推流的 helix 帧覆盖 (同源, D9 前重灌 frames_helix_big md5 edd12011…), 0x10=0x008E0004 (传感器模式, fake_en=0, pov_en=0), auto_en=0 屏黑。手转实测 rev_period 0x02E73EEF ≈ 0.97 s/圈 → 传感器有信号 (用户要确认每圈 1 脉冲)。
 步骤单要点: 先布 180 s 死人开关再点亮; 0x10=0x008E0005; OE 从 8/4/2 逐档升到 184/92/46 (只对 helix 这类稀疏内容); 推荐 600–660 RPM; 先黑屏再停转。用户说转的不急。
 
 ## WiFi
-- 办公网测不准 (两台 AP 之间绕, 丢包 33%)。改用 WSL 点对点台架 (第二块 MT7921AU usbipd 2-4, hostapd pov3d-p2p 192.168.77.1, 脚本 ~/pov_work/wifibw/rig_up.sh), 台架 PC 端封顶 ~145 Mbit/s。测速 agent 进行中, 数据在 ~/pov_work/wifibw/2026-10-12_p2p/。**换内核后这套台架失效** (自编 6.6.87.2 模块)。
+- 办公网测不准 (两台 AP 之间绕, 丢包 33%)。改用 WSL 点对点台架 (第二块 MT7921AU usbipd 2-4, hostapd pov3d-p2p 192.168.77.1, 脚本 ~/pov_work/wifibw/rig_up.sh), 台架 PC 端封顶 ~145 Mbit/s。✅ 已测完: TCP 推流方向 ≥160 Mbit/s (台架封顶, 板 CPU 未满), 见 [[project-m90-wifi-p2p-1012]]。**换内核后这套台架失效** (自编 6.6.87.2 模块)。
 - 需求结论见 [[project-target-35hz-budget-recheck]]: 目标板走"传体素表+板上切片"只需约 31–62 Mbit/s (病态 68–137), 不需要 200。
 
 ## 待用户决定 / 下一步
-1. 换完内核: 合并三分支 → 保存; WiFi 结论落记忆。
+1. 换完内核、D 盘确认稳定后: 合并三分支 → 保存 (用户: 其余的等 D 盘加载解决了再做)。
 2. 按 35 Hz (605 片 × 17.5 rps) 重核整条链预算 —— 桥片可能超速 (见 [[project-target-35hz-budget-recheck]])。
 3. 下一个大功能候选: 板上切片 (PL 直供), D9 转起来, 主控↔桥片真机对接。
 
 **Why:** 换 WSL 会断开所有会话和 agent, 需要无缝接续。
 **How to apply:** 新会话先读本条; 汇报用大功能语言 ([[feedback-big-picture-first]]); POV 活派后台 agent ([[feedback-pov-in-subagent]])。
+
+## 10-12 15:3x 换 WSL 前 (转接板会话)
+- 新开 GW5A 桥转接板 KiCad 自画: 板框已出并提交 (pcb 仓 45dd9e5), 记忆 zynq_pov 13ff20e `project_gw5a_adapter_kicad_v1.md` (已推两远端)。
+- 恢复后: 用户已同意开 3 个 agent 并行出原理图 (见该记忆"下一步"); 工作放 ~/pcb_work。

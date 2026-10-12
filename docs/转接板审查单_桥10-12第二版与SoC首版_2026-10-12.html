@@ -84,6 +84,8 @@ ul{margin:0;padding-left:1.2em}
 <tr><td class="mono">B1</td><td>桥</td><td>U19 两侧网络对调（A 侧接 FPC，B 侧接 GW5A）</td><td class="bad">边带 4 根全不通；ACK、UART_RX 与 GW5A 输出对冲；3.3 V 打进 DR1</td></tr>
 <tr><td class="mono">B2</td><td>桥</td><td>U19 上下拉挪到 FPC 一侧；删 R236</td><td class="bad">FPC 未插时复位悬空；串口持续 break</td></tr>
 <tr><td class="mono">B3</td><td>桥</td><td>CN3 / CN6 脚号仍是 101−n：恢复 n→n，或拿 PCB 截图证明焊盘对得上</td><td class="bad">座子转 180°，3.3 V 打到核心板 JTAG / IO</td></tr>
+<tr><td class="mono">B4</td><td>桥</td><td>灯板侧 CN1 / CN2 与 09-21 新灯板逐脚核对（<b>必核</b>）</td><td class="bad">对不上则下行与灯板电源错位；验证板 6 链映射仍是临时的</td></tr>
+<tr><td class="mono">B5</td><td>桥</td><td>ACK 在 GW5A 侧（<code>B4_B29_N</code>）加 10k 下拉</td><td class="bad">桥 FPGA 未配置时 ACK 误报为高，SoC 以为已对齐</td></tr>
 <tr><td class="mono">S1</td><td>SoC</td><td>U5 STI3411A 的 VIN 从孤立网 <code>PWR5V</code> 改接 <code>VCC_5V</code></td><td class="bad">2.5 V 永远不出电</td></tr>
 <tr><td class="mono">S2</td><td>SoC</td><td>JTAG 拆成每面独立：TCK/TMS 共用，桥 B 单独 TDI/TDO（用空闲 <code>CEP2_8P/N</code>）</td><td class="bad">任一面桥不在位，两面都加载不了；无法按面读 IDCODE 判在位</td></tr>
 <tr><td class="mono">S3</td><td>SoC</td><td>确认 DR1 底板 bank33 / bank11 改 2.5 V 的方案（H7 / H9 是否就是飞线口）</td><td class="bad">3.3 V 下 LVDS25 出不来；1.8 V 下被桥侧 2.5 V 打高</td></tr>
@@ -116,6 +118,24 @@ ul{margin:0;padding-left:1.2em}
   <dl class="grid">
     <dt>现状</dt><dd>CN 区域整体下移，脚号文字逐字未变：VCC3P3 仍在 97–100，<code>FPGA_TCK</code> 在 1。</dd>
     <dt>改法</dt><dd>恢复 09-23 的 n→n；或提供 PCB 截图：核心板 P1 第 1 脚落在本板哪个焊盘，证明 VCC3P3 对上核心板的电源脚。</dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">B4</span><h2>桥：灯板侧 CN1 / CN2 与新灯板逐脚核对</h2><span class="tag t-check">必核 · 与 10-10 相同</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>本版 CN1 / CN2 的脚位与 10-10 版逐字相同。灯板 09-21 版已改 AXK 封装（此前中心距 4.445 vs 5.00 的问题），脚位是否随之重排尚未核对。</dd>
+    <dt>要做</dt><dd>拿 09-21 灯板原理图的 CN1 / CN2 逐脚网络，与本板 CN1 / CN2 对插核对（含镜像方向、配对封装）。同时确认下行 12 组的链号与 ACK 编号，用于更新 FPGA 约束（验证板 6 链映射目前是临时的）。</dd>
+    <dt>后果</dt><dd>对不上则下行 LVDS、灯板电源、ACK 错位。</dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">B5</span><h2>桥：ACK 下拉做在 GW5A 一侧</h2><span class="tag t-must">必改 · 审 SoC 板时发现</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>契约要求 SB_ALIGNED（ACK）平时为低。SoC 板上没有下拉；即使加了，中间隔着 U19 推挽输出也盖不住。桥 FPGA 未配置时 IO 为弱上拉，经 U19 传到 FPC 就是高。</dd>
+    <dt>改法</dt><dd>在 U19 的 GW5A 一侧（对调后的 B1，网络 <code>B4_B29_N</code>）加 10k 下拉到 GND（需压过 GW5A 未配置时的弱上拉，回板实测电平）。</dd>
+    <dt>后果</dt><dd>桥 FPGA 还没加载时 ACK 为高，SoC 误判上行已对齐。</dd>
   </dl>
 </section>
 
@@ -179,6 +199,7 @@ ul{margin:0;padding-left:1.2em}
 <thead><tr><th>板</th><th>内容</th></tr></thead>
 <tbody>
 <tr><td>桥</td><td>VCCIO45 回 3.3 V：L7（PWR2V5）标 NC，L3（VCC3P3→VCCIO45）贴片。Gowin 工具实测 3.3 V 下上行 20 对 LVDS 接收、链 4 D0 真差分输出均合法。</td></tr>
+<tr><td>桥</td><td>上行转发时钟留在 <code>B5_B26</code>，不用动。链 4 的 D0 留在 <code>B4_B50</code>（bank4，3.3 V）：核心板只引出 47 个完整的 2.5 V 差分对，已全部用于下行，挪不了；改用真差分 TLVDS 输出即可（工具已出 bit），回板测共模和眼图。</td></tr>
 <tr><td>桥</td><td>U19 型号、供电、去耦（C57 100 nF 在 VCC3P3，C58 在 PWR2V5）正确；删掉的 R129–R132（0 Ω 直连）、R173（10k 下拉）由 U19 一组器件接替。</td></tr>
 <tr><td>两板</td><td>SoC FPC1 / FPC2 与桥 FPC2 的 1–70 脚逐脚同名：DR1V_TXP/N0..17、TXCLK、TXCHK、ACK、RST、UART_RX/TX、TDO / TDI / TMS / TCK。</td></tr>
 <tr><td>SoC</td><td>40 对全部 <code>CEPx_kP → TXP</code>、<code>CEPx_kN → TXN</code>，同一个 k，无交叉、无跨对。信号路径上只有 0 Ω / NC，无电平转换（符合契约）。FPC 不走电源。位号无重复；两路 DCDC 反馈分压为 5.0 V 和 2.50 V。</td></tr>
@@ -202,6 +223,7 @@ ul{margin:0;padding-left:1.2em}
 </tbody></table></div>
 <p class="note">SoC 板未用：CEP2_8P/N、CEP2_24N；CEP2_24P 给 CN3 光电开关。DR1 侧引脚需按本板重出约束并先用安路 TD 编一次：面 A 有 6 对（CEP1_5、12–16）、面 B 全部 20 对的 ODDRx2 输出尚未验证。</p>
 
+<p class="note">修订：同日补 B4（灯板侧 CN1 / CN2 必核）、B5（ACK 下拉）。</p>
 <p class="note">审查方法：pdftotext -bbox 机读坐标 + 局部 300 dpi 截图看图核对。U19 接反由截图人工复核确认。PCB 层面（CN3 / CN6 焊盘、FS03 排母奇偶列、FPC 座第 1 脚朝向）需看 PCB 文件。</p>
 </div>
 </body>

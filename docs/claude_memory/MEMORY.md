@@ -324,6 +324,7 @@
 - [🔧 转接板改板单七项 (2026-10-10 晚, 按 SCH 10-10)](reference_adapter_change_order_1010.md) — CN3/CN6 改回公座 / VCCIO45 回 3.3V / JTAG+边带 2×SN74AVC4T774 放桥板+下载座 / FPC 尾部 / UL_CLK 留 B5_B26 / 灯板侧 / SoC 侧; 本地 docs/转接板改板单_七项_2026-10-10.html+pdf
 - [🔴 桥转接板原理图 10-10 版审查](project_adapter_sch_1010_review.md) — CN3/CN6 改 AXK500137YG 与核心板同为母座插不上; UL_CLK 09-23 已到 B5_B26 (改板单①过时); JTAG/FPC 尾部未改; 链号↔球位组整组换名; 上行板上 100Ω 端接 ⇒ .cst DIFF_RESISTOR=OFF
 - [🔴 桥转接板原理图 10-12 版审查](project_adapter_sch_1012_review.md) — 七项只改两项: CN3/CN6 回 AXK600337YG 但脚号 101−n (须看 PCB); JTAG 加 U18 接法对但缺上下拉/下载座/OE 上拉; 用户定 VCCIO45 回 3.3V, Gowin 实测 3.3V 下 bank4/5 LVDS 收发合法 (ELVDS 除外); 改板单在线 v6
+- [🔴 桥转接板 10-12 第二版 + SoC 转接板首版审查](project_adapter_sch_1012b_and_soc_review.md) — 桥: VCCIO45 已 3.3V, U18 补齐, 新 U19 边带 A/B 接反, CN3/CN6 脚号/FPC2 尾部仍未改; SoC: FPC 逐脚对上, 2.5V DCDC VIN 悬空, JTAG 菊花链
 - [⚠ FS03 点 2047 屏前查 Bank11 跳帽 3.3V (2026-10-10)](feedback_fs03_bank11_jumper_3v3.md) — DR1M90-02 首亮屏无反应 = CEP2 Bank11 在 1.8V; 换板先核启动拨码 OFF-OFF / Bank11 3.3V / J2 1.8V(仅上行)
 - [🔁 10-12 交接](project_handoff_2026_10_12.md) — 三分支已合并推 origin (dr1v90 5b69726); D9 停在通电前; 遗留探针 ides_rst 未接
 - [✅ 1.3.9 lane-47 = 量具问题 (2026-10-12)](project_lane47_soak_verdict_1012.md) — vcpipe 47.9 h / 1.56e9 帧 / 0 错 BER<8.7e-16; V 行好帧÷9041 反推时长, 不用日志

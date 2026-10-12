@@ -71,7 +71,7 @@
 - [MBI 系列全是 cathode sink](reference_mbi_polarity.md) — Macroblock 5050/5152/5252/5253/5254/5264/5353 整条 PWM 灰度线都是 cathode sink, 没 anode source 同类款, 跟 ICND1069 不能直换, 行管必须配第三方 PMOS (DD311/FP9933/AP3402 等)
 - [refresh_bit.sh 说明](reference_refresh_bit_script.md)
 - [Vivado 批处理 Tcl 用法](reference_vivado_batch_tcl.md)
-- [WSL git push 走 cmd.exe](reference_git_push_via_cmd.md) — `cmd.exe /c "cd /d D:\... && git push"` 用 Windows GCM, 不要绕 SSH/PAT
+- [WSL git push 走 cmd.exe](reference_git_push_via_cmd.md) — `cmd.exe /c "cd /d D:\... && git push"` 用 Windows GCM, 不要绕 SSH/PAT; **10-12 起首选 WSL git -c credential.helper=<Windows GCM>**
 - [换机首次重建踩坑](feedback_new_machine_setup_gotchas.md) — 7 条: HLS PATH / vivado-library / rgb2dvi 重打包 / BD hdmi_tmds 自杀 / Vitis platform delete-recreate / dl_helloworld 路径切 hello_plat/hw/sdt / OBS Virtual Camera 假帧
 - [ESP32-C5 DevKitC bring-up](project_esp32c5_setup.md) — chip rev v1.0, COM6 (CH340), IDF v6.0 在 `D:\esp-idf` / `C:\Users\kiujkiu\.espressif`
 - [ESP32-C5 SDIO slave 已验证](project_esp32c5_sdio_slave.md) — IDF v6 example 通, 引脚 IOMUX 固定 (CLK9/CMD10/D0-3=8/7/14/13), 4-bit 模式占用 USB-JTAG
@@ -142,7 +142,7 @@
 - [把 n_slices 匹配到面板真实能力](project_pov3d_nslices_match_panel.md) — ✅ **2026-08-26: 已落地**, 现役 **142 槽/面**(不是 360), 板端 360 硬编码也在 08-20 解了; 剩余浪费约 **1/3** 不是 3/4; 🔴 对 DR1 的价值从'救命'变成'**载荷小 ⇒ lz4 引擎少一个 ⇒ 缓解 2 个 HP 口的瓶颈**'
 - [🔴 位"改义"让屏静默降速一个月](feedback_reg_bit_semantics_reversed.md) — bit29 从 `dclk_fast`(1=全速) 反转成 `ddr_slow`(1=降级) 而老脚本没跟着改; **回读配置只证明写进去了, 不证明它现在什么意思**; 兜底口 frame_period 规划了但没引出
 - [换 FPGA 平台的依赖清单](reference_port_to_other_fpga_deps.md) — RTL 仅 ODDR 其余纯 Verilog; 工作量取决于 PS 侧有无硬核+BSP; ⚠ **2026-08-26 追加第 6 个维度: HP slave 口数量 + 有无 N:1 汇聚 IP**(原清单漏了, 成了 DR1 头号问题); 通用教训: **弱核平台的出路是把热点搬进 PL, 不是选更快的核**
-- [🔴 提交 = 推两个远端](reference_git_dual_remote.md) — origin(kiujkiu) + yjhh(pov-yjhh); 说"提交"就两边都推; **dr1v90 工程仓只有 origin**; 保存记录=记忆进 zynq_pov + 工程进 dr1v90, 别 add -A; **10-12 起保存还要跑 _wsl_sync/sync_to_d.sh, dr1v90 从 D 盘镜像推**
+- [🔴 提交 = 推两个远端](reference_git_dual_remote.md) — origin(kiujkiu) + yjhh(pov-yjhh); 说"提交"就两边都推; **dr1v90 已配 yjhh 但 pov-yjhh/dr1v90 待用户建**; 保存记录=记忆进 zynq_pov + 工程进 dr1v90, 别 add -A; **10-12 起保存还要跑 _wsl_sync/sync_to_d.sh, dr1v90 在 ~/pov3d 里用 WSL git+Windows GCM 推**
 - [aibrain-app 项目](reference_aibrain_app_project.md) — PC 侧 3D Viewer + PVS1 推流, 与 POV 同链; pvs_streamer.js 已有滑动窗口(我重复劳动了); Docker 纯软件 demo 跑法
 - [🔴 FS03 CEP1/CEP2 完整引脚表 (2026-09-04 手册结案)](reference_fs03_cep_connector_pinout.md) — 各 50 脚 = **1 VCC + 1 GND + 48 个 FPGA IO** ⇒ **96 信号只配 2 根地**, 且那 2 根在两个连接器最边上(pin 2)离远端信号最远; **结掉了 onboarding 计划 W1 那条「有无专用 GND 脚」的悬案, 答案比担心的更糟**(不是「要从 96 里匀」而是「外面只有 2 根」); 2×25 **2.54mm 排针无受控阻抗**; ~~表内 (n,n+1) 只是排针物理列不等于差分对~~ **已回查 PINLIST 结案: 就是真差分対**(CEP1=Bank33 全 24 対 / CEP2=Bank11 全 24 対, 奇 P 偶 N), 且 **CEP2 pin7 的 Y19 是手册笔误**(跨 bank, 应为 Y9)而那正是 GCLK 対; 对照 FS03 其它引出口: MIPI 40 脚 ~5 対配 6 根地(电阻网络配置)、**HDMI 输出 3 数据+1 时钟対是 FS03 上唯一天生受控阻抗+每対配地的高速口**(FPGA 直驱 LVCMOS33, 标 1080P@60 = TMDS 1.485Gbps/対)
 - [安路 DR1 替代 Zynq7020 评估](reference_anlogic_dr1_fs03_eval.md) — 484 球逐脚核对 pin2pin 成立 + CEP2 与现板 J12 一致(线束零改); 风险全在 PS: RISC-V 单核/Buildroot/内核无无线栈
@@ -323,6 +323,7 @@
 - [📋 远程升级方案 X4 (2026-10-10)](project_remote_upgrade_x4.md) — SD 卡 A/B 槽位 + 热切换自检回滚; GW5A 每次上电由 DR1 灌不写 Flash; 内核第一期不做; ≈2.5 天
 - [🔧 转接板改板单七项 (2026-10-10 晚, 按 SCH 10-10)](reference_adapter_change_order_1010.md) — CN3/CN6 改回公座 / VCCIO45 回 3.3V / JTAG+边带 2×SN74AVC4T774 放桥板+下载座 / FPC 尾部 / UL_CLK 留 B5_B26 / 灯板侧 / SoC 侧; 本地 docs/转接板改板单_七项_2026-10-10.html+pdf
 - [🔴 桥转接板原理图 10-10 版审查](project_adapter_sch_1010_review.md) — CN3/CN6 改 AXK500137YG 与核心板同为母座插不上; UL_CLK 09-23 已到 B5_B26 (改板单①过时); JTAG/FPC 尾部未改; 链号↔球位组整组换名; 上行板上 100Ω 端接 ⇒ .cst DIFF_RESISTOR=OFF
+- [🔴 桥转接板原理图 10-12 版审查](project_adapter_sch_1012_review.md) — 七项只改两项: CN3/CN6 回 AXK600337YG 但脚号 101−n (须看 PCB); JTAG 加 U18 AVC4T774 接法对但缺上下拉/下载座/OE 上拉; VCCIO45 仍 2.5V、FPC 尾部/边带未改
 - [⚠ FS03 点 2047 屏前查 Bank11 跳帽 3.3V (2026-10-10)](feedback_fs03_bank11_jumper_3v3.md) — DR1M90-02 首亮屏无反应 = CEP2 Bank11 在 1.8V; 换板先核启动拨码 OFF-OFF / Bank11 3.3V / J2 1.8V(仅上行)
 - [🔁 10-12 D盘 EIO 中断交接](project_handoff_2026_10_12.md) — 屏故意黑着(guard.sh); 恢复后先做 1.3.14/1.3.6 后台, 用户在场做 D5/D8/D9 目视, 读 ACG525 lane-47 浸泡计数
 - [✅ 1.3.9 lane-47 = 量具问题 (2026-10-12)](project_lane47_soak_verdict_1012.md) — vcpipe 47.9 h / 1.56e9 帧 / 0 错 BER<8.7e-16; V 行好帧÷9041 反推时长, 不用日志

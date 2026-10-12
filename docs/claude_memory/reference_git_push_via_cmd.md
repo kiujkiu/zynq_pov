@@ -31,3 +31,11 @@ cd /mnt/d/claude_workspace/pov3d/zynq_pov && cmd.exe /c "cd /d D:\claude_workspa
 ## 避坑
 - 不要尝试在 WSL 配 credential.helper / SSH 等替代方案 — Windows GCM 已经现成可用
 - 不要用 `2>&1 |` 之外的复杂管道, 输出可能含 GBK 编码的中文报错乱码
+
+## 2026-10-12 更好的办法: WSL git 直接借 Windows GCM (不用 cmd.exe, /home 下的仓库也能推)
+```bash
+GCM='/mnt/c/Program\ Files/Git/mingw64/bin/git-credential-manager.exe'
+GIT_TERMINAL_PROMPT=0 git -c credential.helper= -c "credential.helper=$GCM" push origin <分支>
+```
+当天 cmd.exe 那条路报 `Could not resolve host: github.com` (Windows 侧 nslookup 超时, WSL 侧解析正常), 这条照样推成功。
+dr1v90 迁进 WSL (`~/pov3d/dr1v90`) 后, cmd.exe 进不了 /home, **dr1v90 就用这条直接在 ~/pov3d/dr1v90 里推**。

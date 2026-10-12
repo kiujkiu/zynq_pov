@@ -13,4 +13,4 @@ metadata:
 
 **Why:** 用户 2026-10-12: "WSL 内的环境大概率会频繁更换, 记得把结果同步 D 盘, 记忆和项目内容都同步, 后面说保存的时候就包含推到 D 和两个远端"。
 
-**How to apply:** 用户说"保存" = ① 记忆/docs 提交进 zynq_pov、工程提交进 ~/pov3d/dr1v90 (别 add -A) ② 跑 `sync_to_d.sh` ③ 推远端: zynq_pov 推 origin + yjhh; dr1v90 推 origin —— 从 **D 盘镜像** 用 `cmd.exe /c "cd /d D:\claude_workspace\pov3d\dr1v90 && git push origin <分支>"` (cmd.exe 进不了 /home 的 UNC 路径)。Claude 仍从 /mnt/d/claude_workspace/pov3d 启动, 自动记忆按启动目录取。
+**How to apply:** 用户说"保存" = ① 记忆/docs 提交进 zynq_pov、工程提交进 ~/pov3d/dr1v90 (别 add -A) ② 跑 `sync_to_d.sh` ③ 推远端: zynq_pov 推 origin + yjhh; dr1v90 推 origin (+ yjhh, 待用户在 pov-yjhh 下建好空仓) —— 直接在 ~/pov3d/dr1v90 用 WSL git 借 Windows GCM: `git -c credential.helper= -c "credential.helper=/mnt/c/Program\ Files/Git/mingw64/bin/git-credential-manager.exe" push origin <分支>` (见 reference_git_push_via_cmd; cmd.exe 进不了 /home, 且 10-12 Windows 侧 DNS 解析不了 github)。Claude 仍从 /mnt/d/claude_workspace/pov3d 启动, 自动记忆按启动目录取。

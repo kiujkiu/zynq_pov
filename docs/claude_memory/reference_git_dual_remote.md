@@ -49,4 +49,4 @@ cmd.exe /c "cd /d D:\claude_workspace\pov3d\<repo> && git push origin <branch> &
 ## 2026-10-12 起「保存」还包括同步 D 盘 (用户要求)
 
 dr1v90 工作副本迁进了 WSL (`~/pov3d/dr1v90`), D 盘那份变成镜像。「保存」= 提交 → `bash /mnt/d/claude_workspace/pov3d/_wsl_sync/sync_to_d.sh` → 推远端。
-dr1v90 从 **D 盘镜像** 推 (同步后 refs 一致; cmd.exe 进不了 /home)。详见 [[project_dr1v90_in_wsl_d_is_mirror]]。
+dr1v90 直接在 ~/pov3d/dr1v90 用 WSL git 借 Windows GCM 推 (见 [[reference_git_push_via_cmd]])。10-12 用户要求 dr1v90 也推 yjhh: remote 已配好, **等用户在 pov-yjhh 建空仓 dr1v90** (不勾 README)。详见 [[project_dr1v90_in_wsl_d_is_mirror]]。

@@ -22,3 +22,4 @@ metadata:
 
 **10-12 进度:** golden 完成 (6848846, 规格 slice/SPEC.md, 与 pov_slice_v2.cpp / render_slice 逐位一致); sw 完成 (42329a8, voxrxd 新程序与 pov_rxd 二选一, 离线 215 项过, 增量写 16–22 MB/s @15 fps, pov_rxd 已 -static -no-pie)。两分支已推 origin + yjhh。rtl / integ 仍在跑。
 - 10-12 rtl 完成 (5d3cd22): 仿真全对, 一片 93.5 µs/110.19 (15%); 150 MHz setup 收敛 (hold −0.19 残留, 疑工具层), 200 MHz hclk 收住但 oclk 191.7/hold −0.82; 建议生产 hclk 150; eram 136/280 (RING 384=2 片/面, 并存 2047 时只能 192 仅作功能验证, 正式位流去掉 2047 fb+lz4)。
+- 10-12 integ 完成 (fae9b22): 旧模式 bin 与生产逐位同 (2ac42cbb); 上板推荐 pov_m90sp_h150.bin (pls + hclk150 + RING192, eram 208/280); RING384 并存放不下 ⇒ 30 Hz 正式位流去掉 2047+PL lz4。修了 PLL 输出没过 DR1_LOGIC_BUFG (07_eta 量具同病)。**TD 能在 \\\\wsl.localhost\\... 路径下综合** ⇒ 重 IO 构建放 WSL ext4 可躲 D 盘 EIO (agent 克隆 ~/pov_work/slice_integ)。bin 副本 D:\\claude_workspace\\pov3d\\_work\\slice_integ_out\\。下一步: 上行格式器 + 纯切片位流。

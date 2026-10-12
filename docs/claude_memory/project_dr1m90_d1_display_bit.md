@@ -114,5 +114,18 @@ STATUS 0x00010B48 (base_b_act/dual_en/pov_en/at_locked=1, **auto_en=0**); 0x24=0
 3-bit 应为 31590 (54×3×195), 要 auto_en=1 才能读到 ⇒ 等用户在场。sub01/sub10 是只写的, 无回读。
 收尾: pov_en=0 (0x10=0x008E0004), 其余 3-bit 配置留着; guard.sh **仍在跑** (PID 884; 板上没有 pkill, 要点屏先 `kill $(ps | grep '[g]uard.sh' | awk '{print $1}')`, 否则它每秒把 auto_en 关掉; 板子重启它也就没了)。
 
+## ✅ D5 双面目视 (2026-10-12 11:39, DR1M90-02, WiFi 10.10.20.123)
+两面都灌 chess_obs_fb.bin (povctl fb-file, face 0/1), 0x1C=180, 0x10=0x01680004 (dual_en=1), OE=8 低亮度; STATUS 0x00001879。
+用户: "A/B 两面都显示棋盘格, 格子完整" ⇒ **D5 通过**。
+
+## ✅ D8 3-bit ramp 上屏目视 (2026-10-12 11:59, DR1M90-02)
+`fbload` (新, `dr1v90/board/povmem/fbload.c`: mmap /dev/povmem 把整帧原始镜像拷进 bank A, 只能 mmap 没有 write) 灌 `frames_chess3b_lv/frame_0000.bin`
+(10469376 B = 2 面×142 片×0x9000, md5 8d79e058…; 推板途中 D 盘 EIO 截断过一次, 推完一定要核 md5) → 0x14500000, 抽查 0 错;
+按 d8.sh 配置 (OE 8/4/2, duty≈0.024) 后 `0x0C=0xC1000003` 点亮:
+**STATUS 0x00011F79 (与 09-01 V90 配方值逐位相同) / 0x28 R frame_period = 0x7B66 = 31590 = 54×3×195 ⇒ 3-bit 证明** / idx 在走。
+用户: 两面都亮; 列从左到右逐级变暗, 灰对角 6→13→…→48 逐级变亮, 数字全清楚 ⇒ **BCM 三平面权重与顺序正确, D8 通过**。
+注: 手机照片里灰格全发白 (三色全亮过曝/摩尔纹), 彩色格明暗正常 —— 灰阶只能靠肉眼判。
+收尾 auto_en=0 + pov_en=0 (STATUS 0x00010948), 3-bit 配置与 bank A 内容留着。guard.sh 已不在 (板子重启过)。
+
 ## 还要用户眼睛的
-双面同时亮 (D5 目视) / 3-bit 棋盘+ramp 上屏 (D8 目视, 先在 auto_en=1 下读 0x28=31590) / 电机转起来体像方向 (D9)。
+电机转起来体像方向 (D9)。

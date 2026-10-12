@@ -142,7 +142,7 @@
 - [把 n_slices 匹配到面板真实能力](project_pov3d_nslices_match_panel.md) — ✅ **2026-08-26: 已落地**, 现役 **142 槽/面**(不是 360), 板端 360 硬编码也在 08-20 解了; 剩余浪费约 **1/3** 不是 3/4; 🔴 对 DR1 的价值从'救命'变成'**载荷小 ⇒ lz4 引擎少一个 ⇒ 缓解 2 个 HP 口的瓶颈**'
 - [🔴 位"改义"让屏静默降速一个月](feedback_reg_bit_semantics_reversed.md) — bit29 从 `dclk_fast`(1=全速) 反转成 `ddr_slow`(1=降级) 而老脚本没跟着改; **回读配置只证明写进去了, 不证明它现在什么意思**; 兜底口 frame_period 规划了但没引出
 - [换 FPGA 平台的依赖清单](reference_port_to_other_fpga_deps.md) — RTL 仅 ODDR 其余纯 Verilog; 工作量取决于 PS 侧有无硬核+BSP; ⚠ **2026-08-26 追加第 6 个维度: HP slave 口数量 + 有无 N:1 汇聚 IP**(原清单漏了, 成了 DR1 头号问题); 通用教训: **弱核平台的出路是把热点搬进 PL, 不是选更快的核**
-- [🔴 提交 = 推两个远端](reference_git_dual_remote.md) — origin(kiujkiu) + yjhh(pov-yjhh); 说"提交"就两边都推; **dr1v90 工程仓只有 origin**; 保存记录=记忆进 zynq_pov + 工程进 dr1v90, 别 add -A
+- [🔴 提交 = 推两个远端](reference_git_dual_remote.md) — origin(kiujkiu) + yjhh(pov-yjhh); 说"提交"就两边都推; **dr1v90 工程仓只有 origin**; 保存记录=记忆进 zynq_pov + 工程进 dr1v90, 别 add -A; **10-12 起保存还要跑 _wsl_sync/sync_to_d.sh, dr1v90 从 D 盘镜像推**
 - [aibrain-app 项目](reference_aibrain_app_project.md) — PC 侧 3D Viewer + PVS1 推流, 与 POV 同链; pvs_streamer.js 已有滑动窗口(我重复劳动了); Docker 纯软件 demo 跑法
 - [🔴 FS03 CEP1/CEP2 完整引脚表 (2026-09-04 手册结案)](reference_fs03_cep_connector_pinout.md) — 各 50 脚 = **1 VCC + 1 GND + 48 个 FPGA IO** ⇒ **96 信号只配 2 根地**, 且那 2 根在两个连接器最边上(pin 2)离远端信号最远; **结掉了 onboarding 计划 W1 那条「有无专用 GND 脚」的悬案, 答案比担心的更糟**(不是「要从 96 里匀」而是「外面只有 2 根」); 2×25 **2.54mm 排针无受控阻抗**; ~~表内 (n,n+1) 只是排针物理列不等于差分对~~ **已回查 PINLIST 结案: 就是真差分対**(CEP1=Bank33 全 24 対 / CEP2=Bank11 全 24 対, 奇 P 偶 N), 且 **CEP2 pin7 的 Y19 是手册笔误**(跨 bank, 应为 Y9)而那正是 GCLK 対; 对照 FS03 其它引出口: MIPI 40 脚 ~5 対配 6 根地(电阻网络配置)、**HDMI 输出 3 数据+1 时钟対是 FS03 上唯一天生受控阻抗+每対配地的高速口**(FPGA 直驱 LVCMOS33, 标 1080P@60 = TMDS 1.485Gbps/対)
 - [安路 DR1 替代 Zynq7020 评估](reference_anlogic_dr1_fs03_eval.md) — 484 球逐脚核对 pin2pin 成立 + CEP2 与现板 J12 一致(线束零改); 风险全在 PS: RISC-V 单核/Buildroot/内核无无线栈
@@ -326,4 +326,6 @@
 - [⚠ FS03 点 2047 屏前查 Bank11 跳帽 3.3V (2026-10-10)](feedback_fs03_bank11_jumper_3v3.md) — DR1M90-02 首亮屏无反应 = CEP2 Bank11 在 1.8V; 换板先核启动拨码 OFF-OFF / Bank11 3.3V / J2 1.8V(仅上行)
 - [🔁 10-12 D盘 EIO 中断交接](project_handoff_2026_10_12.md) — 屏故意黑着(guard.sh); 恢复后先做 1.3.14/1.3.6 后台, 用户在场做 D5/D8/D9 目视, 读 ACG525 lane-47 浸泡计数
 - [✅ 1.3.9 lane-47 = 量具问题 (2026-10-12)](project_lane47_soak_verdict_1012.md) — vcpipe 47.9 h / 1.56e9 帧 / 0 错 BER<8.7e-16; V 行好帧÷9041 反推时长, 不用日志
-- [WSL D盘 EIO 用 remount 修](feedback_wsl_d_eio_remount.md) — Windows 侧健康时 sudo umount -l /mnt/d + mount -t drvfs D: 即恢复, 不用重启
+- [WSL D盘 EIO 用 remount 修 + 根因](feedback_wsl_d_eio_remount.md) — Windows 侧健康时 sudo umount -l /mnt/d + mount -t drvfs D: 即恢复; 根因嫌疑 = 7/17 换域账户后装的 IP-guard 透明加密 minifilter TsdEncryptMF(8/19), WSL 走 vmwp 照样过驱动; 根治=高频 IO 迁 ~/
+- [dr1v90 在 WSL, D 盘是镜像](project_dr1v90_in_wsl_d_is_mirror.md) — 10-12 起工作副本 ~/pov3d/dr1v90, D 盘 dr1v90 由 _wsl_sync/sync_to_d.sh 单向覆盖, 别在 D 上改; restore_from_d.sh 新 WSL 一键恢复
+- [POV 活放独立 agent](feedback_pov_in_subagent.md) — 并发 agent 在 ~/pov_work 克隆里跑 (origin=~/pov3d/dr1v90), 主窗口只派活和合并

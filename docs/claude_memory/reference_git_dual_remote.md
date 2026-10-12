@@ -45,3 +45,8 @@ cmd.exe /c "cd /d D:\claude_workspace\pov3d\<repo> && git push origin <branch> &
 - **工程（RTL/脚本/README）** → `dr1v90`（当前分支 `feature/lvds-b2b`）→ 推 origin。
 - dr1v90 工作区有 ~1.4 万个未跟踪文件（jtag_load mock_board 产物、boot 镜像、frames 等，单个到 36 MB），
   **不要 `git add -A`**；只加已跟踪改动 + 明确是源码/文档的新文件。
+
+## 2026-10-12 起「保存」还包括同步 D 盘 (用户要求)
+
+dr1v90 工作副本迁进了 WSL (`~/pov3d/dr1v90`), D 盘那份变成镜像。「保存」= 提交 → `bash /mnt/d/claude_workspace/pov3d/_wsl_sync/sync_to_d.sh` → 推远端。
+dr1v90 从 **D 盘镜像** 推 (同步后 refs 一致; cmd.exe 进不了 /home)。详见 [[project_dr1v90_in_wsl_d_is_mirror]]。

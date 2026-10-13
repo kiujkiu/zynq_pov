@@ -9,7 +9,7 @@ metadata:
 
 ## 怎么做
 1. **派活**: 用户界面里开着的 Codex 会话被锁 (`~/.codex/thread-writer-locks/<id>.lock`), 不要 resume 它; 用 `codex exec fork <原会话id>` 继承全部上下文开新会话 (用户说"单开一个")。在工程目录下跑, `-c sandbox_mode='"workspace-write"' --skip-git-repo-check -o <回复文件> -` 从 stdin 喂提示词, nohup 后台。之后同一会话用 `codex exec resume <新id>` 续聊。会话 id 在日志头 `session id:`。原会话 id 用 `grep -rl <工程名> ~/.codex/sessions` 找。
-2. **让用户看得见**: 用户要求"你操作我直接能看到"。用 Monitor tail 日志, 只转 `codex` 段落 (前缀【Codex】) + ERROR (【异常】) + 进程结束; 不转命令刷屏。用户想在界面里看就等跑完后 `codex resume <id>` (跑的时候别开, 会冲突)。
+2. **让用户看得见 (默认安静模式, 用户 10-13 定, 省 Claude token)**: 只在 Codex 提问/要拍板、真错误、一轮结束复验后说话; 中间过程只进日志和交互记录。用户要直播时: 用户要求"你操作我直接能看到"。用 Monitor tail 日志, 只转 `codex` 段落 (前缀【Codex】) + ERROR (【异常】) + 进程结束; 不转命令刷屏。用户想在界面里看就等跑完后 `codex resume <id>` (跑的时候别开, 会冲突)。
 3. **提示词要点**: 说明我是谁和分工; 给证据文件路径; 本轮只做哪几项、明确不许动什么 (布局/架构/我的评审文件); 要求它的自写检查能对已知坏文件报 fail; 结尾要求中文回复 根因/改了哪些文件/意见/剩余风险。
 4. **放行以原生工具为准**: Codex 沙箱起不了 Windows kicad-cli, 由 Claude 侧跑 `"/mnt/c/Program Files/KiCad/10.0/bin/kicad-cli.exe" sch erc / sch export netlist` 复验。自写审计自洽 ≠ 正确 (首轮它报 pass, 原生网表 203 个单脚网)。
 5. **分闸门, 一步一步**: G0 连通 → G1 设计内容 → G2 器件冻结 (这三步 Codex 执行 + Claude 评审) → G3a 叠层+约束 (模型) → G3b 布局初稿 (模型: 大件分区做好+机械件锁定, 细节出初稿) → G3c 接口契约+FPGA 换脚 (换完回 G0/G1 + Gowin P&R 重过) → G4 关键走线 (10-13 改: 用户不会画 ⇒ 机器分块生成 layout-as-code, Claude 审, 原生 DRC 裁判, 见 [[project_layout_divide_conquer_1013]]) → G5 全布线出图 (Freerouting + 机器修 + 原生 DRC)。🔴 用户 10-13 定: **实现不能找人, G3–G5 全由机器做; 人只做最终外部评审** (板厂 DFM、Altium 同事外审); 没过不进下一步。依据 [[feedback_pcb_model_division]]: 模型布局弱、布线很弱。详表在工程 `review/合作路线_闸门.md`。

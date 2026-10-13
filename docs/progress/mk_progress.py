@@ -7,6 +7,8 @@
   metrics.csv      每次实测值 (来源必填)
   deliverables.csv 交付计划与完成
   mta.csv          里程碑趋势 (每次评审追加一组行)
+  daily_log.csv    每日进展流水 (日期/类型/编号/内容/来源, 人工追加)
+  daily_rates.csv  每日三个达成率 (脚本每次生成时写入/更新当天一行)
 
 用法:  cmd.exe /c "python mk_progress.py [--date 2026-10-13] [--no-pdf]"   (Windows Python 带 openpyxl)
       或 WSL 里 python3 mk_progress.py —— 没有 openpyxl 时自动转交 cmd.exe 里的 Windows Python。
@@ -447,6 +449,246 @@ def sheet_history(wb, krs, mets):
     return ws
 
 
+
+# ---------------------------------------------------------------- 阶段达成率 / 每日进展
+STAGE_V0, STAGE_V1P = 'V0', 'V1准备'
+RATE_FIELDS = ['日期', 'V0 达成率', 'V1 准备度', 'V2 距离']
+ALGO = [
+    'V0 达成率 = (V0 目标已达标的 KR 数 + 阶段为 V0 或 V1准备 的已完成交付数) ÷ (有 V0 目标的 KR 总数 + 阶段为 V0 或 V1准备 的交付总数)。V1 的准备算在 V0 里。KR 是否达标 = 最新硬件实测 vs V0 目标 (krs.csv 人工状态可覆盖)。',
+    'V1 准备度 = 阶段为 V1准备 的已完成交付数 ÷ 阶段为 V1准备 的交付总数 (阶段列见 deliverables.csv；没填阶段的交付不计)。',
+    'V2 距离 = 「距 V2 达成%」的平均值，只算有 V2 目标的数值型 KR (最新值相对 V2 目标的达成度，越大越接近终极目标)。',
+]
+
+
+def compute_rates(krs, mets, dels, asof):
+    """按 asof 当天(含)之前的数据算三个达成率, 返回 dict (含分子分母)"""
+    by = defaultdict(list)
+    for m in sorted(mets, key=lambda m: (m['_d'], m['_i'])):
+        if m['_d'] <= asof:
+            by[m['kr_id']].append(m)
+    v0k = [k for k in krs if num(k['V0 目标']) is not None]
+    ok = 0
+    v2 = []
+    for k in krs:
+        s, lr, la = kr_status(k, by[k['kr_id']])
+        if k in v0k and s == 'ok':
+            ok += 1
+        pg = v2_progress(k, lr or la)
+        if pg is not None:
+            v2.append(pg)
+
+    def done(d):
+        return d['状态'] == '✅' and d['_f'] and d['_f'] <= asof
+    d01 = [d for d in dels if d.get('阶段') in (STAGE_V0, STAGE_V1P)]
+    d1 = [d for d in dels if d.get('阶段') == STAGE_V1P]
+    n0 = ok + sum(1 for d in d01 if done(d))
+    m0 = len(v0k) + len(d01)
+    n1 = sum(1 for d in d1 if done(d))
+    return {
+        'v0': (n0 / m0 if m0 else None), 'v0n': n0, 'v0m': m0, 'v0_kr': (ok, len(v0k)),
+        'v0_del': (n0 - ok, len(d01)),
+        'v1': (n1 / len(d1) if d1 else None), 'v1n': n1, 'v1m': len(d1),
+        'v2': (sum(v2) / len(v2) if v2 else None), 'v2n': sum(v2), 'v2m': len(v2),
+    }
+
+
+def update_daily_rates(krs, mets, dels, today):
+    """写/更新 daily_rates.csv 当天一行 (10-12 缺则按当时数据补一行), 返回全部行"""
+    path = os.path.join(HERE, 'daily_rates.csv')
+    rows = OrderedDict()
+    if os.path.exists(path):
+        for r in read_csv('daily_rates.csv'):
+            rows[r['日期']] = r
+    for d in (dt.date(2026, 10, 12), today):
+        if d > today or (d != today and d.isoformat() in rows):
+            continue
+        c = compute_rates(krs, mets, dels, d)
+        if d != today and c['v0m'] == 0:
+            continue
+        rows[d.isoformat()] = {'日期': d.isoformat(), 'V0 达成率': '' if c['v0'] is None else f'{c["v0"]:.4f}',
+                              'V1 准备度': '' if c['v1'] is None else f'{c["v1"]:.4f}',
+                              'V2 距离': '' if c['v2'] is None else f'{c["v2"]:.4f}'}
+    out = sorted(rows.values(), key=lambda r: r['日期'])
+    with open(path, 'w', encoding='utf-8-sig', newline='') as f:
+        w = csv.DictWriter(f, fieldnames=RATE_FIELDS, lineterminator='\n')
+        w.writeheader()
+        w.writerows(out)
+    return [{'d': pdate(r['日期']), 'v0': num(r['V0 达成率']), 'v1': num(r['V1 准备度']), 'v2': num(r['V2 距离'])} for r in out]
+
+
+def kr_changes(krs, by_kr, today):
+    """每个 KR 取每天最后一个硬件实测值: 今天 vs 今天之前最近一天。返回 [(kr, 前(日期,值)|None, 今值, 判定)]"""
+    out = []
+    for k in krs:
+        real = per_date_last([m for m in by_kr[k['kr_id']] if is_real(m['硬件/阶段']) and m['_d'] <= today])
+        if today not in real:
+            continue
+        prev = [(d, v) for d, v in real.items() if d < today]
+        cur = real[today]
+        if not prev:
+            out.append((k, None, cur, 'new'))
+            continue
+        pd_, pv = prev[-1]
+        if cur == pv:
+            v = 'same'
+        else:
+            v = 'up' if better(k, cur, pv) else 'down'
+        out.append((k, (pd_, pv), cur, v))
+    return out
+
+
+def read_log(today):
+    if not os.path.exists(os.path.join(HERE, 'daily_log.csv')):
+        return []
+    rows = [r for r in read_csv('daily_log.csv') if r['日期'] and pdate(r['日期']) <= today]
+    for i, r in enumerate(rows):
+        r['_d'] = pdate(r['日期'])
+        r['_i'] = i
+    return sorted(rows, key=lambda r: (-r['_d'].toordinal(), r['_i']))
+
+
+CH_FILL = {'up': 'C6EFCE', 'down': 'FFC7CE', 'new': 'BDD7EE', 'same': 'F2F2F2'}
+CH_TXT = {'up': '变好', 'down': '变差', 'new': '新出现', 'same': '持平'}
+LOG_FILL = {'复验退回': 'FFC7CE', '问题': 'FFEB9C', '交付完成': 'C6EFCE', '复验通过': 'C6EFCE', '里程碑': 'BDD7EE', '决定': 'E4DFEC'}
+
+
+def pct(x):
+    return '—' if x is None else f'{x:.1%}'
+
+
+def sheet_daily(wb, ctx, today):
+    ws = wb.create_sheet('每日进展', 0)
+    cur = ctx['cur']
+    ws['A1'] = f'POV3D 每日进展 — {today}'
+    ws['A1'].font = F(True, 14)
+    for j, w in enumerate([11, 12, 30, 70, 44, 3, 11, 11, 11, 11], 1):
+        ws.column_dimensions[get_column_letter(j)].width = w
+    header(ws, 3, ['阶段达成率', '数值', '分子/分母', '算法'])
+    items = [
+        ('V0 达成率', cur['v0'], f'{cur["v0n"]}/{cur["v0m"]}', f'KR {cur["v0_kr"][0]}/{cur["v0_kr"][1]} + 交付 {cur["v0_del"][0]}/{cur["v0_del"][1]}  —  ' + ALGO[0]),
+        ('V1 准备度', cur['v1'], f'{cur["v1n"]}/{cur["v1m"]}', ALGO[1]),
+        ('V2 距离', cur['v2'], f'{cur["v2n"]:.2f}/{cur["v2m"]}', f'{cur["v2m"]} 个 KR 的达成度之和 / 个数  —  ' + ALGO[2]),
+    ]
+    for i, (n, v, fr, al) in enumerate(items):
+        r = 4 + i
+        put(ws, r, 1, n, bold=True)
+        put(ws, r, 2, v, bold=True, align=CENTER, numfmt='0.0%')
+        ws.cell(row=r, column=2).font = F(True, 14)
+        put(ws, r, 3, fr, align=CENTER)
+        put(ws, r, 4, al)
+        ws.row_dimensions[r].height = 48
+    # 趋势数据 (G..J) + 两条趋势线
+    rates = ctx['rates']
+    for j, h in enumerate(['日期', 'V0 达成率', 'V1 准备度', 'V2 距离']):
+        c = ws.cell(row=3, column=7 + j, value=h)
+        c.font = F(True, 9, 'FFFFFF'); c.fill = HEAD_FILL; c.alignment = CENTER; c.border = BORDER
+    for i, r in enumerate(rates):
+        put(ws, 4 + i, 7, r['d'], align=CENTER, numfmt='mm-dd')
+        for j, key in enumerate(('v0', 'v1', 'v2')):
+            put(ws, 4 + i, 8 + j, r[key], align=CENTER, numfmt='0.0%')
+    n = len(rates)
+    ch = LineChart()
+    style_chart(ch, '阶段达成率趋势 (V0 达成率 / V1 准备度)', '比例', 16, 7.5)
+    ch.add_data(Reference(ws, min_col=8, max_col=9, min_row=3, max_row=3 + n), titles_from_data=True)
+    ch.set_categories(Reference(ws, min_col=7, min_row=4, max_row=3 + n))
+    ch.x_axis.number_format = 'mm-dd'
+    ch.y_axis.number_format = '0%'
+    ch.y_axis.scaling.min = 0
+    ch.y_axis.scaling.max = 1
+    for s_, (c, dsh, mk) in zip(ch.series, [('2E75B6', 'solid', 'circle'), ('ED7D31', 'solid', 'triangle')]):
+        style_series(s_, c, dsh, mk)
+    ws.add_chart(ch, 'L3')
+    # 今天比昨天
+    r = 8
+    ws.cell(row=r, column=1, value=f'今天比昨天 (KR 取每天最后一个硬件实测值；绿 = 变好，红 = 变差，蓝 = 新出现)').font = F(True, 12)
+    r += 1
+    header(ws, r, ['KR', '变化', '指标', '昨日 → 今日', 'V0 / V1 / V2 目标；今日来源'])
+    chg = ctx['changes']
+    if not chg:
+        r += 1
+        put(ws, r, 1, '今天没有新的硬件实测值')
+    for k, prev, cv, v in chg:
+        r += 1
+        fill = CH_FILL[v]
+        put(ws, r, 1, k['kr_id'], fill=fill)
+        put(ws, r, 2, CH_TXT[v], fill=fill, align=CENTER)
+        put(ws, r, 3, f'{k["指标名"]} ({k["单位"]}, {k["方向"]})', fill=fill)
+        txt = (f'{fmt(prev[1])} ({prev[0]:%m-%d}) → {fmt(cv)}' if prev else f'(无) → {fmt(cv)}')
+        put(ws, r, 4, txt, fill=fill)
+        src = next((m['来源'] for m in reversed(ctx['by_kr'][k['kr_id']]) if m['_d'] == today and is_real(m['硬件/阶段'])), '')
+        put(ws, r, 5, f'{k["V0 目标"] or "—"} / {k["V1 目标"] or "—"} / {k["V2 目标"] or "—"}；{src}', fill=fill)
+    # 每日流水
+    r += 2
+    ws.cell(row=r, column=1, value='每日流水 (daily_log.csv，按天倒序)').font = F(True, 12)
+    r += 1
+    header(ws, r, ['日期', '类型', '编号', '内容', '来源'])
+    for e in ctx['log']:
+        r += 1
+        put(ws, r, 1, e['_d'], align=CENTER, numfmt='yyyy-mm-dd')
+        put(ws, r, 2, e['类型'], fill=LOG_FILL.get(e['类型']), align=CENTER)
+        put(ws, r, 3, e['编号'])
+        put(ws, r, 4, e['内容'])
+        put(ws, r, 5, e['来源'])
+    ws.freeze_panes = 'A4'
+    return ws
+
+
+def html_daily(ctx, today):
+    cur = ctx['cur']
+    o = []
+    o.append('<h2>阶段达成率</h2><div style="display:flex;gap:10px">')
+    cards = [
+        ('V0 达成率', cur['v0'], f'{cur["v0n"]} / {cur["v0m"]}', f'KR {cur["v0_kr"][0]}/{cur["v0_kr"][1]} + 交付 {cur["v0_del"][0]}/{cur["v0_del"][1]}'),
+        ('V1 准备度', cur['v1'], f'{cur["v1n"]} / {cur["v1m"]}', '阶段为 V1准备 的已完成交付'),
+        ('V2 距离', cur['v2'], f'{cur["v2n"]:.2f} / {cur["v2m"]}', f'{cur["v2m"]} 个有 V2 目标的数值型 KR 的平均达成度'),
+    ]
+    for n, v, fr, sub in cards:
+        o.append(f'<div style="flex:1;border:1px solid #ccc;border-top:4px solid #1F4E78;padding:6px 10px"><div style="color:#666">{n}</div>'
+                 f'<div style="font-size:28px;font-weight:700">{pct(v)}</div><div>分子/分母：<b>{fr}</b></div><div style="color:#666">{esc(sub)}</div></div>')
+    o.append('</div><ul style="margin:6px 0;padding-left:18px;color:#444">' + ''.join(f'<li>{esc(a)}</li>' for a in ALGO) + '</ul>')
+    rates = ctx['rates']
+    ser = [('V0 达成率', [(r['d'], r['v0']) for r in rates], '2E75B6', False, True),
+           ('V1 准备度', [(r['d'], r['v1']) for r in rates], 'ED7D31', False, True)]
+    o.append('<div style="width:55%">' + svg_chart(ser, w=520, h=220, yfmt=lambda v: f'{v:.0%}', title='阶段达成率趋势 (按日期)', yzero=True) + '</div>')
+    o.append('<h2>今天比昨天 (每个 KR 取每天最后一个硬件实测值；绿 = 变好，红 = 变差，蓝 = 新出现)</h2>')
+    colors = {'up': '#C6EFCE', 'down': '#FFC7CE', 'new': '#BDD7EE', 'same': '#F2F2F2'}
+    if not ctx['changes']:
+        o.append('<div>今天没有新的硬件实测值</div>')
+    else:
+        o.append('<table><tr><th>KR</th><th>变化</th><th>指标</th><th>昨日 → 今日</th><th>V0 / V1 / V2 目标</th></tr>')
+        for k, prev, cv, v in ctx['changes']:
+            txt = (f'{fmt(prev[1])} ({prev[0]:%m-%d}) → <b>{fmt(cv)}</b>' if prev else f'(无) → <b>{fmt(cv)}</b>')
+            o.append(f'<tr style="background:{colors[v]}"><td>{k["kr_id"]}</td><td class="c">{CH_TXT[v]}</td><td>{esc(k["指标名"])} ({esc(k["单位"])}, {esc(k["方向"])})</td>'
+                     f'<td>{txt}</td><td class="c">{esc(k["V0 目标"] or "—")} / {esc(k["V1 目标"] or "—")} / {esc(k["V2 目标"] or "—")}</td></tr>')
+        o.append('</table>')
+    o.append('<h2>每日流水 (daily_log.csv，按天倒序)</h2>')
+    lc = {'复验退回': '#FFC7CE', '问题': '#FFEB9C', '交付完成': '#C6EFCE', '复验通过': '#C6EFCE', '里程碑': '#BDD7EE', '决定': '#E4DFEC'}
+    last = None
+    o.append('<table><tr><th>日期</th><th>类型</th><th>编号</th><th>内容</th><th>来源</th></tr>')
+    for e in ctx['log']:
+        d = e['日期'] if e['日期'] != last else ''
+        last = e['日期']
+        o.append(f'<tr><td class="c" style="white-space:nowrap">{d}</td><td class="c" style="white-space:nowrap;background:{lc.get(e["类型"], "#fff")}">{esc(e["类型"])}</td><td class="c">{esc(e["编号"])}</td>'
+                 f'<td>{esc(e["内容"])}</td><td style="color:#555">{esc(e["来源"])}</td></tr>')
+    o.append('</table>')
+    return '\n'.join(o)
+
+
+def safe_path(path):
+    """文件被占用(Windows WinError 32)时改用带 _HHMM 的文件名"""
+    if os.path.exists(path):
+        try:
+            with open(path, 'ab'):
+                pass
+            return path
+        except OSError:
+            root, ext = os.path.splitext(path)
+            alt = f'{root}_{dt.datetime.now():%H%M}{ext}'
+            print(f'提示: {os.path.basename(path)} 被占用, 改写 {os.path.basename(alt)}')
+            return alt
+    return path
+
+
 # ---------------------------------------------------------------- HTML (SVG 图)
 def esc(s):
     return html.escape(str(s))
@@ -528,7 +770,7 @@ def bar(p):
             f'<div style="width:{p * 60:.0f}px;height:8px;background:{c}"></div></div>{p:.0%}</div>')
 
 
-def build_html(goals, krs, by_kr, dels, mta, today, out):
+def build_html(goals, krs, by_kr, dels, mta, today, out, ctx):
     css = """
 :root{--fg:#1a1a1a;--mut:#666;--bd:#ccc}
 body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC',sans-serif;color:var(--fg);background:#fff;margin:0;padding:16px;font-size:11px}
@@ -548,6 +790,7 @@ th{background:#1F4E78;color:#fff;font-weight:600}td.c{text-align:center}
     o = [f'<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>显性目的进度</title><style>{css}</style></head><body>']
     o.append(f'<h1>POV3D 显性目的进度看板 — {today}</h1>')
     o.append(f'<div class="sub">OKR：O = 观众看得到的效果，KR = 可量化指标。状态按「最新硬件实测 vs 当前期 {STAGE_KEY} 目标」自动判定。数据：zynq_pov/docs/progress/*.csv，脚本 mk_progress.py。</div>')
+    o.append(html_daily(ctx, today))
     # 状态汇总
     cnt = defaultdict(int)
     rows = []
@@ -568,7 +811,7 @@ th{background:#1F4E78;color:#fff;font-weight:600}td.c{text-align:center}
                         f'<td class="c">{esc(k["V0 目标"])}</td><td class="c">{esc(k["V1 目标"])}</td><td class="c">{esc(k["V2 目标"])}</td><td class="c {s}">{ST[s][0]}</td>'
                         f'<td>{bar(v2_progress(k, show))}</td></tr>')
     summ = ' · '.join(f'{ST[k][0]} {ST[k][2]} {cnt[k]}' for k in ('ok', 'doing', 'idle', 'bad'))
-    o.append(f'<h2>现状 (10 个显性目的：{summ})</h2>')
+    o.append(f'<h2 class="pb">现状 (10 个显性目的：{summ})</h2>')
     o.append('<table><tr><th>#</th><th>显性目的</th><th>状态</th><th>KR</th><th>单位</th><th>最新</th><th>日期/阶段</th><th>V0</th><th>V1</th><th>V2</th><th>KR</th><th>距 V2 达成</th></tr>')
     o += rows
     o.append('</table>')
@@ -643,7 +886,15 @@ def to_pdf(html_path, pdf_path):
            f'--print-to-pdf={w(tmp)}', url]
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120)
     if os.path.exists(tmp) and os.path.getsize(tmp) > 0:
-        shutil.move(tmp, pdf_path)
+        pdf_path = safe_path(pdf_path)
+        try:
+            shutil.move(tmp, pdf_path)
+        except OSError:
+            root, ext = os.path.splitext(pdf_path)
+            pdf_path = f'{root}_{dt.datetime.now():%H%M}{ext}'
+            print(f'提示: PDF 被占用, 改写 {os.path.basename(pdf_path)}')
+            shutil.move(tmp, pdf_path)
+        print('写出', pdf_path)
         return True
     print('PDF 生成失败')
     return False
@@ -659,18 +910,29 @@ def main():
     by_kr = defaultdict(list)
     for m in sorted(mets, key=lambda m: (m['_d'], m['_i'])):
         by_kr[m['kr_id']].append(m)
+    rates = update_daily_rates(krs, mets, dels, today)
+    ctx = {'cur': compute_rates(krs, mets, dels, today), 'rates': rates, 'by_kr': by_kr,
+           'changes': kr_changes(krs, by_kr, today), 'log': read_log(today)}
     wb = Workbook()
     sheet_status(wb, goals, krs, by_kr, today)
     sheet_trends(wb, krs, by_kr)
     sheet_burnup(wb, dels, today)
     sheet_mta(wb, mta)
     sheet_history(wb, krs, mets)
+    sheet_daily(wb, ctx, today)
     base = os.path.join(HERE, f'显性目的进度_{today}')
-    wb.save(base + '.xlsx')
-    build_html(goals, krs, by_kr, dels, mta, today, base + '.html')
-    print('写出', base + '.xlsx', base + '.html')
-    if not a.no_pdf and to_pdf(base + '.html', base + '.pdf'):
-        print('写出', base + '.pdf')
+    xlsx = safe_path(base + '.xlsx')
+    try:
+        wb.save(xlsx)
+    except PermissionError:
+        xlsx = f'{base}_{dt.datetime.now():%H%M}.xlsx'
+        print(f'提示: xlsx 被占用, 改写 {os.path.basename(xlsx)}')
+        wb.save(xlsx)
+    htm = safe_path(base + '.html')
+    build_html(goals, krs, by_kr, dels, mta, today, htm, ctx)
+    print('写出', xlsx, htm)
+    if not a.no_pdf:
+        to_pdf(htm, base + '.pdf')
 
 
 if __name__ == '__main__':

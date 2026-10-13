@@ -1,0 +1,33 @@
+﻿日期,类型,编号,内容,来源
+2026-10-13,交付完成,E6,按名字找板 (mDNS) 完成：无串口自重启后 34 s 按名字找到并 ssh 上,dr1v90 b0f6b5d
+2026-10-13,交付完成,E7,纯切片 30 Hz 位流第一次上硅 D'0–D'3，尾部 late 0.2%，暂停 netguard 后 late/miss 为 0,dr1v90 71d006f / 473abcf
+2026-10-13,交付完成,D1,主机实时推流完成：10 分钟 15.0 fps，NAK 0 / forced 0,dr1v90 596b191
+2026-10-13,问题,D1,第一次上板端到端延迟 p50 114 ms 未过（停等发送），改发送流水线后降到 84.7 ms,dr1v90 60c619a / 596b191
+2026-10-13,复验通过,D1,主会话新克隆独立复验离线+上板全过，合主线（延迟 p50 95 ms / p99 236.6 ms）,dr1v90 9bf16ad
+2026-10-13,复验退回,D4,桥接收核对 12-bit 第一次复验 FAIL（新克隆无可执行位），退回,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,复验通过,D4,桥接收核对 12-bit 复验 PASS，合主线,dr1v90 6a373d3
+2026-10-13,复验通过,D5,桥驱动 2260 1 期 6 链 24 Hz 12-bit 复验 ALL PASS，合主线,dr1v90 cdf49c6
+2026-10-13,问题,D5,6 链 4296 片/s 能跑但余量仅 0.40%，瓶颈是桥→2260 链路；留 10% 需 ≤3921 片/s，待用户定,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,问题,D5,发现 10-10 验证板 profile 寄存器在 166.67 MHz 下超规格（GCLK 667>600），1 期表已改,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,复验通过,D6,几何 LUT 生成器逐字节复现 2047 s3lut，verify 22 PASS，合主线,dr1v90 44ed2cd
+2026-10-13,复验退回,D7,转子运维首次复验 T5 偶发 FAIL，退回返工,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,复验通过,D14,10 类内容 + 手机网页遥控离线复验 ALL PASS，用户实转看过（尚未正式上板验收）,dr1v90 ffbfeeb
+2026-10-13,复验通过,D2,2047 PL 切片离线复验 26/0，待上板（之后 9ba9af0 测试用例过时 26/27 待修）,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,复验退回,D12,延迟降低上板复验 FAIL：B1 翻页 14.39<15 fps，p99 225 ms，退回,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,问题,D12,第二次上板仍未过，根因晚间 WiFi 尾巴（p99 334 vs 白天 48 ms）；判据改为调度问题 0 + 网络晚到 ≤1%，明早主机空闲复测,dr1v90 764f81d
+2026-10-13,复验退回,D13,启动提速上板 FAIL 11 项，但改进已装板保留（6 次重启正常），退回继续压启动时间,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,里程碑,D13,启动提速两轮后：复位→0° 片亮起 38.7→20.1→15.8 s，找板 34→30→25.6 s,dr1v90 task/d13-boot fdbb217
+2026-10-13,问题,D13,第二步（bootdelay 0 / 精简 uInitrd）写启动文件被权限系统拒绝，需用户明早本人批准后执行,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,复验通过,D15,WiFi 端 32 bit 像素（X2R10G10B10）阶段 1 复验：黄金/PL 仿真一致，合主线,dr1v90 1995be8
+2026-10-13,决定,D3;D4;D5,下午用户：2260 相关先暂停、先做共用部分（token 不够）；15:00 又改为多开并行恢复 2260,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,决定,,软件三期：0 期 2047 屏（现在）/ 1 期 2260 验证板 160×180（预计 11-10 回板）/ 2 期 192×216 目标板；1 期目标 24 Hz / 358 片 / 6 链,claude_memory/project_sw_three_phases_1013.md
+2026-10-13,里程碑,,硬件 1 期验证板预计 2026-11-10 回板（初步交期，可能变），回板前软件能做的都前置,claude_memory/project_sw_three_phases_1013.md
+2026-10-13,决定,,架构切分：PL 切片器及之前为各期共用的公共部分，屏幕显示为可替换后端，两者之间用实时按角度片流接口,claude_memory/project_arch_common_front_display_backend.md
+2026-10-13,决定,D3,用户定：2 期上行 1.2G；1 期保持 24 Hz（358 片，桥链路余量 0.40%）不降档,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,决定,D11,傍晚用户：杜邦线跑不了 1.2G，1.2G 实测等 V1 回板；C1 台架只做 ≤300M 低速功能档,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,决定,D12;D13;D14,19:00 用户：V0 可见的先插队、V1 接着做，新派 D12 延迟降低 / D13 启动提速 / D14 内容与手机控制,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,决定,D13,21:10 用户定 D13 目标：复位到 0° 片亮起 ≤12 s，找板 ≤20 s（看板 KR8.1 已改）,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,决定,D15;D16,用户选 12-bit 方案 A：WiFi 端传高位宽、像素位宽 16/32 bit 可配（D15）；DDR 做到极限 A 线（D16），B 线并入 T2 硬件,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,决定,KR5.2,用户实转核实：2047 旧表镜像，已更正为新表 0decad54,dr1v90 49031f6
+2026-10-13,问题,D7,D7 上板补测会装/还原 autorun，冲掉 D13 补丁，须排在 D13 定稿合并之后；夜间板子排程 D12→D13→D2→D7→8 h 长跑,claude_memory/project_short_term_delivery_1013.md
+2026-10-13,里程碑,,显性目的进度看板第一版建立：10 个显性目的 + KR 趋势 + 燃起图 + 里程碑趋势,claude_memory/project_progress_dashboard.md

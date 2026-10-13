@@ -14,3 +14,9 @@ metadata:
 
 **Why:** 生成器式原理图必须用原生工具验收。
 **How to apply:** Codex 改完后重跑 `kicad-cli sch erc` + `sch export netlist`, 查单脚网为 0 再放行布局。返工改由 Claude 用 codex exec fork 直接派给 Codex (见 [[feedback-claude-review-codex-execute]])。
+
+## 用户拍板 (10-13)
+- 电源: 0.9/3.3V DC-DC, 1.2/1.5/2.5V 从 3.3V 取 LDO (GPA 估流, LDO >0.6W 退回 DC-DC); 上电顺序改 0.9→1.2→3.3→1.5→2.5 (PUDC_B 在 bank0=1.5V, POR 只监控 VCC/VCCX/VCC_REG/VCCIO4/5/7, UG714 表4-2)。
+- VCC 抬到 0.937V (允许 0.87–1.0V)。
+- 🔴 接口契约新增: **DR1 上行 TX 在桥报告进入用户态前保持三态** —— 软件 (DR1 侧上行驱动) 必须遵守; GW5A 的 SSPI 脚落在上行 lane 2/5/7。待高云 FAE 确认 use_sspi_as_gpio。
+- 细审报告 `review/Claude细审_G1_2026-10-13.md`; 闸门表 `review/合作路线_闸门.md`。

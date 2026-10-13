@@ -28,3 +28,5 @@ metadata:
 用户介入点: D11 接线一次; 可选开电机目视一次; 待答两条信息 (V2/V3 原理图引脚; 160×180 2260 参考屏能否静态彩排)。
 
 **How to apply:** 每收到 agent 交付先按闭环规则复验再合并, 更新上表状态; 新会话接手先读本条。相关 [[project-sw-three-phases-1013]]
+
+**10-13 下午用户: "2260 相关的先暂停, 保存一下, 先把共用的先做, token 有点不够了"。** 已暂停 D3 (task/ul-fmt-30hz) / D4 (task/bridge-c1) / D5 (task/bridge-2260-p1), 各自提交 PROGRESS_PAUSED.md 后结束; D8–D11 不派。继续: D1 实时推流、D2 2047 PL 切片 (实时片流接口)、D6 几何 LUT、D7 转子运维 (GW5A 部分去掉)。恢复 2260 时先读各分支 PROGRESS_PAUSED.md。

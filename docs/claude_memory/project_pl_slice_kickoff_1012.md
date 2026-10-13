@@ -27,3 +27,7 @@ metadata:
 - 10-12 23:0x 纯切片位流完成并合入主线: task/pure-slice-30hz e617202 (td_pov/pure/pov_slice_top.v, POV_PURE=1); RING 384 eram 140/280, hclk150 靠 setup 过约束 0.3 ns 收敛 (hold 0.000), 旧模式 md5 仍 2ac42cbb; bin D:\\claude_workspace\\pov3d\\_work\\pure_slice_out\\pov_m90_pure.bin md5 253579a6, MAGIC SLP3, 须用 load_pov_m90_pure.sh。格式器桩 ul_fmt_stub (565→888, 列序直出, perm 寄存器 0x80004040); 待定: 面板置换 (等屏板 PCB)、hclk→pclk FIFO + uplink_tx_frame + ODDR 引脚、掉片补发。task/cfg-30hz 暂不合 (1.0G 与现板 800M 不兼容, 待上硅)。
 
 **10-13 上硅开工 (3 agent 并行):** ① task/pure-onboard (_work/pure_onboard) 独占板子: 停演示 → pov_m90_pure.bin 按 INTEGRATION §12.5 D'0-3 + B2 测 DDR → 收尾恢复演示; 结果写 slice/ONBOARD_PURE_2026-10-13.md。② task/ul-fmt-30hz (_work/ul_fmt) 离线: 格式器补 hclk→pclk FIFO + uplink_tx_frame + ODDR (面 A, 800M/1.0G 可选) + 掉片补发。③ task/bridge-c1 (_work/bridge_c1) 离线: 桥侧 C1 接收核对 + probe_vccio45_33 接新 ides_rst。
+
+**10-13 中午 (WSL 被 Windows Update 重启后接力):**
+- 纯切片上板 (task/pure-onboard 473abcf): D'0–D'3 全 PASS (散写+翻页+生产 LUT 硅上通); hclk150 均 93.5 µs/片。**每 10 s 一阵 late = netguard 那一轮** (kill -STOP 后 late/miss 0), 机制疑 USB WiFi DMA, 未拆完; 建议 netguard 改读 /proc/net/route、周期 30–60 s (未改)。10 min 带负载长跑未做。
+- **用户 10-13 定: 先只做 2047 双面偏心屏**, 方案 B: 停上板, 离线 task/ul-fmt-30hz / task/bridge-c1 照常 (留给 2260)。新派: task/live-push-2047 (主机实时边算边推 VXT1, 目标 ≤50 ms/帧, 测端到端延迟, 一键脚本) 与 **task/pls-2047 (用户要 2047 也换 PL 切片, 以便 2260 沿用)**: 方案=PL 按内容帧批量切 284 片, 做 sub3/γ/抖动/3-bit 打包直接写帧 bank, 显示通路不动, 与 slice3.c 逐字节一致; 切片核参数化 2047/2260 两套; 顺带修 slc_pls_reader flush (用户同意改)。

@@ -54,3 +54,5 @@ metadata:
 **10-13 19:00 用户: V0 可见的插队, V1 接着做。** 新派 (先离线, 板子主会话排队): D12 延迟降低 (相位对齐 p50≤60/p99≤120 + 帧率跟转速, task/d12-latency) / D13 启动提速+启动屏显 (0° 片≤10 s, 找板≤20 s, 基于 task/rotor-ops, task/d13-boot; 原 backlog B1 并入) / D14 内容+手机网页控制 (内容≥5 类, 交互 2 种, task/d14-content)。今晚 D2/D7 合入后跑无人值守 8 h 长跑 (KR7.2)。用户在场开电机约 1 h: 镜像核实 + 实转看实时推流/PL/新内容, 攒一起做。板子排队: D7 → D2 → D12 → D13 → D14 → 8 h 长跑。
 
 **10-13 19:30:** D4 合主线 6a373d3。D14 离线复验 ALL PASS (内容 10 类, 手机网页 http://10.10.20.125:8088/), 待上板。D2 离线复验 26/0 待上板。教训: agent 交付前必须在 WSL 本地盘新克隆跑 verify (D 盘仓库不记可执行位, D2/D4 都栽过)。
+
+**10-13 20:20 夜间无人值守队列 (用户已关电机, 明早汇报):** D12 上板复验 (进行中, 主会话在 scratchpad/v_d12 跑 live_phase/verify.sh --board) → D2 (等按新几何 0decad54 返工后, 主会话跑 td_pov/pls2047/verify.sh --board, 先查 povmem 64 MB) → D13 (d13_boot/verify.sh --board, 重启 6 次; 0° 片双面显示 IDLE_B_SLOT 待用户定, 我建议 B=两面) → D7 补 V3 (rotor_ops/verify.sh --board, 用 7ef55e1; 查 B 段单次阵是否 DHCP 续租) → 8 h 长跑 (KR7.2)。合并注意: D2/D12/D13 都改 voxslice.c, 按顺序手工合并并重跑验收。已合主线: D1 D4 D5 D6; 用户实转看过: 镜像更正 + 实时推流 + D14 10 类内容 + 手机遥控 (D14 未跑正式上板验收, 未合)。开机演示 = 几何体 geo.pvs + 新表 0decad54。

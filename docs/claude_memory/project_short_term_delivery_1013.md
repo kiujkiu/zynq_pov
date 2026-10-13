@@ -40,3 +40,7 @@ metadata:
 6. 三个 2260 分支暂停点: task/ul-fmt-30hz dc8bf2a (PROGRESS_PAUSED.md 在根目录) / task/bridge-c1 e9f2b5b (gw5a_bridge/c1_bench/PROGRESS_PAUSED.md; 探针复位已修好, C1 上板需主控出带桩图样的位流) / task/bridge-2260-p1 b058599 (gw5a_bridge/p1/PROGRESS_PAUSED.md)。主仓 gw5a_bridge/results/*_rel 是 IDES8 复位修复前的旧快照, 别当现状比。
 
 **10-13 15:00 用户: 多开并行, 恢复 2260。** D2/D7 因 API 限流中断后已续; D3/D4/D5 三个 agent 按 24 Hz/358/6 链口径恢复 (D5 改为在 10-10 的 6 链验证板 profile 上加 12-bit)。D7 第一次复验 FAIL (T5 偶发), 已退回。
+
+**D5 交付 (task/bridge-2260-p1 949a4e7, 主会话复验中):** 6 链 1串2 4,296 片/s 能跑但**余量 0.40%**, 瓶颈是桥→2260 链路 (每链每片 2×2,400 个 16 位字, 序列器一圈 231.84 µs = 4,313 片/s), 与色深无关; 留 10% 要 ≤3,921 片/s (358 片约 11 rps, 或 15 rps 约 261 片) — 待用户定。12-bit 可行 (2260 显示能力 10,016 fps)。**发现 10-10 验证板 profile 寄存器在 166.67 下超规格** (0x06=AA44 → GCLK 667>600), 1 期表已改 0x00=0F3C/0x06=AA43。12-bit 档 BSRAM 56/56 用满, 时序余量 0.08–0.45%。
+**要硬件同事确认 (回板前):** 灯板 SDO→SDI 0Ω (09-18 图悬空, 不补则每块下半黑) / 转接板 CN3/CN6 落实 n→n / R176–R181 贴 0Ω、伙伴组 1/3/4/7/9/11 0Ω 不贴 / 灯板 ACK_I 100k、ACK_O 10k 上拉 / B2、B5 改板 / 灯板与转接板连接器逐脚核对 (B4) / UL_CLK 是否 100 MHz。清单在 gw5a_bridge/p1/pins/diff_vs_sch.md + doc/回板点亮步骤_1期桥_2026-10-13.pdf。
+**1.2G (用户 10-13 问):** 09-22 实测 DR1↔DR1 1.2G 全死 (DR1 4:1 无 SERDES, sclk 600 贴 GCLK 628), 1.0G 满眼; 未分清 TX/RX 哪侧墙 ⇒ 建议 2 期 1.0G×16 lane 基线, C1 台架顺测 DR1→GW5A 1.2G。待用户定 A/B。

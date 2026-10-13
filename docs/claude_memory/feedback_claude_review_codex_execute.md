@@ -18,3 +18,5 @@ metadata:
 
 **Why:** 用户要 Claude 当评审/把关、GPT 当执行, 两者互为独立复验; 要过程可见、留痕, 并按闸门推进避免返工。
 **How to apply:** 用户说"让 gpt/codex 做、你来评审"时照此执行; 不能直接给用户界面里的 Codex 窗口发消息, 只能 fork/resume。
+
+**技能 (10-13 建)**: Claude 侧 `~/.claude/skills/pcb-native-verify` (一条命令原生复验) 与 `codex-pcb-round` (派活脚本+安静监视); Codex 侧 `~/.codex/skills/kicad-pcb-rules` (原则+KiCad 10.0.3 生成器坑+自查要求)。新踩的坑要补进 kicad-pcb-rules。

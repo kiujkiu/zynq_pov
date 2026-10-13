@@ -343,7 +343,7 @@
 - [软件三期](project_sw_three_phases_1013.md) — 0 期 2047 / 1 期 2260 验证板 配对屏 24 Hz×358 片 (11-10 回板) / 2 期 192×216; 0、1 期网格相同, 回板前做完能做的
 - [短期交付 D1–D11](project_short_term_delivery_1013.md) — 10-13~10-24 计划+闭环规则 (verify.sh/独立复验/全回归/无人值守上板), 链路 12-bit
 - [架构: 公共部分+可换显示后端](project_arch_common_front_display_backend.md) — 10-13 定; 切片器及之前共用, 2047/2260 只换后端; 接口=实时按角度片流
-- [显性目的进度看板](project_progress_dashboard.md) — OKR + KR趋势/燃起图/MTA; csv 在 zynq_pov/docs/progress, 脚本出 Excel, 每周 PDF; 汇报按显性目的说
+- [显性目的进度看板](project_progress_dashboard.md) — 交互页 显性目的进度_交互.html (时间滑块+功能列表+V0/V1/V2 统一达成率); csv 在 zynq_pov/docs/progress; 每次进展追加 daily_log
 - [子 agent 标任务编号](feedback_agent_label_task_id.md) — description 写 "D编号｜显性目的", 提交/汇报以 [D编号] 开头; 用户看不懂细节动作
 - [Claude 评审 × Codex 执行](feedback_claude_review_codex_execute.md) — codex exec fork/resume 派活, Monitor 直播, 闸门 G0–G5 放行, 原生工具复验, 每轮存记录
 - [GW5A 一体桥板评审 10-13](project_gw5a_integrated_bridge_review_1013.md) — Codex 版打回: 原生 ERC 核心页不在网表; 返工单+路线在工程 review/

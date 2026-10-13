@@ -13,7 +13,7 @@ metadata:
 
 | # | 交付 | 分支 | 预计 | 状态 |
 |---|---|---|---|---|
-| D1 | 主机实时推流 (0) | task/live-push-2047 | 10-14 | 进行中 |
+| D1 | 主机实时推流 (0) | task/live-push-2047 | 10-14 | ✅ 10-13 复验离线+上板全过, 合主线 9bf16ad |
 | D2 | 2047 PL 切片 (0) | task/pls-2047 | 10-16 | 进行中 |
 | D3 | 上行出口 12-bit (1/2) | task/ul-fmt-30hz | 10-16 | 进行中 |
 | D4 | 桥接收核对 12-bit | task/bridge-c1 | 10-16 | 进行中 |
@@ -38,3 +38,5 @@ metadata:
 4. ul-fmt: 1 期 800M 12-bit 综合 0 违例但 pclk 余量 0.000, hreg 补丁有一个 tb FAIL 未合; 桥 bridge-2260-p1: 60 扫 166.67 Fmax 167.04 (余 0.2%), 仿真未出结论。细节见各分支 PROGRESS_PAUSED.md。
 5. 0 期预演: geo_push.sh rehearse-prep 已备 11 张表, 用户在场开电机约 1 小时; 顺带查 2047 是否整体左右镜像 (F 字图样)。
 6. 三个 2260 分支暂停点: task/ul-fmt-30hz dc8bf2a (PROGRESS_PAUSED.md 在根目录) / task/bridge-c1 e9f2b5b (gw5a_bridge/c1_bench/PROGRESS_PAUSED.md; 探针复位已修好, C1 上板需主控出带桩图样的位流) / task/bridge-2260-p1 b058599 (gw5a_bridge/p1/PROGRESS_PAUSED.md)。主仓 gw5a_bridge/results/*_rel 是 IDES8 复位修复前的旧快照, 别当现状比。
+
+**10-13 15:00 用户: 多开并行, 恢复 2260。** D2/D7 因 API 限流中断后已续; D3/D4/D5 三个 agent 按 24 Hz/358/6 链口径恢复 (D5 改为在 10-10 的 6 链验证板 profile 上加 12-bit)。D7 第一次复验 FAIL (T5 偶发), 已退回。

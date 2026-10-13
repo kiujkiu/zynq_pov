@@ -345,3 +345,5 @@
 - [架构: 公共部分+可换显示后端](project_arch_common_front_display_backend.md) — 10-13 定; 切片器及之前共用, 2047/2260 只换后端; 接口=实时按角度片流
 - [显性目的进度看板](project_progress_dashboard.md) — OKR + KR趋势/燃起图/MTA; csv 在 zynq_pov/docs/progress, 脚本出 Excel, 每周 PDF; 汇报按显性目的说
 - [子 agent 标任务编号](feedback_agent_label_task_id.md) — description 写 "D编号｜显性目的", 提交/汇报以 [D编号] 开头; 用户看不懂细节动作
+- [Claude 评审 × Codex 执行](feedback_claude_review_codex_execute.md) — codex exec fork/resume 派活, Monitor 直播, 闸门 G0–G5 放行, 原生工具复验, 每轮存记录
+- [GW5A 一体桥板评审 10-13](project_gw5a_integrated_bridge_review_1013.md) — Codex 版打回: 原生 ERC 核心页不在网表; 返工单+路线在工程 review/

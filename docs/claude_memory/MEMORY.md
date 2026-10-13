@@ -328,10 +328,10 @@
 - [⚠ FS03 点 2047 屏前查 Bank11 跳帽 3.3V (2026-10-10)](feedback_fs03_bank11_jumper_3v3.md) — DR1M90-02 首亮屏无反应 = CEP2 Bank11 在 1.8V; 换板先核启动拨码 OFF-OFF / Bank11 3.3V / J2 1.8V(仅上行)
 - [🔁 10-12 交接](project_handoff_2026_10_12.md) — 三分支已合并推 origin (dr1v90 5b69726); D9 停在通电前; 遗留探针 ides_rst 未接
 - [✅ 1.3.9 lane-47 = 量具问题 (2026-10-12)](project_lane47_soak_verdict_1012.md) — vcpipe 47.9 h / 1.56e9 帧 / 0 错 BER<8.7e-16; V 行好帧÷9041 反推时长, 不用日志
-- [WSL D盘 EIO 用 remount 修 + 根因](feedback_wsl_d_eio_remount.md) — Windows 侧健康时 sudo umount -l /mnt/d + mount -t drvfs D: 即恢复; 根因嫌疑 = 7/17 换域账户后装的 IP-guard 透明加密 minifilter TsdEncryptMF(8/19), WSL 走 vmwp 照样过驱动; 根治=高频 IO 迁 ~/
+- [WSL D盘 EIO 用 remount 修 + 根因](feedback_wsl_d_eio_remount.md) — Windows 侧健康时 sudo umount -l /mnt/d + mount -t drvfs D: 即恢复; 根因嫌疑 = 7/17 换域账户后装的 IP-guard 透明加密 minifilter TsdEncryptMF(8/19), WSL 走 vmwp 照样过驱动; 10-13 起看门狗 dwatch 自动重挂 (日志 ~/d_eio.log, 兜底 bash ~/fixd.sh); 用户不迁 ~/, 工作留 D 盘
 - [dr1v90 回到 D 盘](project_dr1v90_in_wsl_d_is_mirror.md) — 10-12 换内核后工作全在 D 盘 dr1v90, WSL ~/ 副本弃用, 别再跑 sync_to_d; 保存=提交+推 origin+yjhh (dr1v90 的 yjhh=pov-yjhh/dr1m90)
 - [POV 活放独立 agent](feedback_pov_in_subagent.md) — 并发 agent 在 D 盘 _work/ 克隆里跑, 推回 D 盘 dr1v90 task/* 分支, 主窗口只派活和合并
-- [IP-guard WSL 内核已切换 (2026-10-12)](project_ipg_wsl_kernel_switch.md) — 换 6.6.114.1, 压测过但 4 小时后仍 EIO 两次, 未根治; 恢复=用户终端跑 bash ~/fixd.sh
+- [IP-guard WSL 内核已切换 (2026-10-12)](project_ipg_wsl_kernel_switch.md) — 换 6.6.114.1, 压测过但 4 小时后仍 EIO 两次, 未根治; 10-13 起看门狗自动恢复
 - [🛠 GW5A 桥转接板 KiCad v1 (2026-10-12 开工)](project_gw5a_adapter_kicad_v1.md) — 与同事 Altium 版并行练手, 底稿 SCH 10-12 + 七项; 板框 144x52.65 已出 (`pcb/gw5a_adapter_v1`); 约束: FPC 在 LED 面 / 高度不挡灯 / 照灯板改好的 AXK 封装 / 宽 144; 下一步 3 agent 并行出原理图
 - [🎯 目标改 30 Hz](project_target_35hz_budget_recheck.md) — 10-12 用户定 30 Hz (605 片×15 rps/900 RPM), 两墙余量约 15%; 35 Hz 仅 1–2% 放弃; 报告 docs/budget/
 - [🚀 板上切片开工](project_pl_slice_kickoff_1012.md) — 10-12 四 agent 并行: task/pl-slice-golden/rtl/sw/integ, 按 30 Hz; 规格以 golden 的 slice/SPEC.md 为准

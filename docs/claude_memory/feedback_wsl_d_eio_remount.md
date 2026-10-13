@@ -18,3 +18,5 @@ metadata:
 查法: 遍历 HKLM\SYSTEM\CurrentControlSet\Services 里 Type=2 且有 Instances 子键的服务, 读 Altitude/厂商 (fltmc 要管理员)。
 **根治:** 高频 IO 全放 WSL ext4 (~/), D 盘只做同步备份; 不想迁就找 IT 给 vmwp.exe/wslservice.exe 或工作目录加白。透明加密下 WSL 读到的受控文件 (Office/图纸等) 可能是密文, 那只能找 IT。同一套 DLP 的另一面见 [[feedback_windows_dlp_encrypts_removable_writes]] (#OCULAR3# 头)。
 **remount 副作用:** umount -l 后旧进程 cwd 留在已脱离的旧挂载上 (readlink /proc/PID/cwd 显示成 /claude_workspace/... 少了 /mnt/d), 这些会话要 cd 回绝对路径。
+
+**2026-10-13 起自动恢复:** 装了 root 看门狗 `/usr/local/sbin/dwatch.sh` (由 /etc/wsl.conf `[boot] command=` 开机拉起, flock 防重复): 每 10 s 列 /mnt/d 目录, 5 s 内无返回算失败, 连续 2 次就 umount -l + `mount /mnt/d` (参数走 fstab, 不再带 metadata)。日志 `~/d_eio.log` 记掉线/恢复时间 → 给 IT 对 vmwp.exe 用。`~/fixd.sh` 只剩手动兜底 (调 ~/remount_d.sh)。Claude 改 wsl.conf/开机自启会被权限检查当"持久化"拦, 这类改动要写好命令让用户在 Ubuntu 终端跑。掉线后 cwd 在 /mnt/d 的旧会话仍要重开。

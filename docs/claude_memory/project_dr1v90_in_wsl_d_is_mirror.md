@@ -11,3 +11,4 @@ metadata:
 - "保存" = 提交 (别 add -A) → 推 origin + yjhh。push 用 WSL git 借 Windows GCM: `git -c credential.helper= -c "credential.helper=/mnt/c/Program\ Files/Git/mingw64/bin/git-credential-manager.exe" push <远端> <分支>`。zynq_pov 推 origin + yjhh; dr1v90 的 yjhh 远端 10-12 起改指 **pov-yjhh/dr1m90** (私有, 用户定: 整份 dr1v90 推过去, pov-yjhh 下不建 dr1v90)。建仓用 GCM 里 kiujkiu 的令牌调 API (/orgs/pov-yjhh/repos), 没装 gh。
 
 **Why:** 换内核后 13 GB 并发压测零错误, 用户不想维护两份副本。若 EIO 复发, 回看 [[feedback-wsl-d-eio-remount]] 和 [[project-ipg-wsl-kernel-switch]]。
+**10-13 再确认:** 提议把 agent 克隆 (_work) 挪到 ext4 以减少 EIO, 用户拒绝: "还是想在本地d盘保存工作内容"。不要再提这个方案; 优化方向只走自动恢复 (看门狗 dwatch) + 挂载参数统一。

@@ -343,3 +343,4 @@
 - [软件三期](project_sw_three_phases_1013.md) — 0 期 2047 / 1 期 2260 验证板 配对屏 24 Hz×358 片 (11-10 回板) / 2 期 192×216; 0、1 期网格相同, 回板前做完能做的
 - [短期交付 D1–D11](project_short_term_delivery_1013.md) — 10-13~10-24 计划+闭环规则 (verify.sh/独立复验/全回归/无人值守上板), 链路 12-bit
 - [架构: 公共部分+可换显示后端](project_arch_common_front_display_backend.md) — 10-13 定; 切片器及之前共用, 2047/2260 只换后端; 接口=实时按角度片流
+- [显性目的进度看板](project_progress_dashboard.md) — OKR + KR趋势/燃起图/MTA; csv 在 zynq_pov/docs/progress, 脚本出 Excel, 每周 PDF; 汇报按显性目的说

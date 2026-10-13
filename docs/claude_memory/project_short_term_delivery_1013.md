@@ -17,7 +17,7 @@ metadata:
 | D2 | 2047 PL 切片 (0) | task/pls-2047 | 10-16 | 进行中 |
 | D3 | 上行出口 12-bit (1/2) | task/ul-fmt-30hz | 10-16 | 进行中 |
 | D4 | 桥接收核对 12-bit | task/bridge-c1 | 10-16 | 进行中 |
-| D5 | 桥驱动 2260 1 期 60 扫 12-bit | task/bridge-2260-p1 | 10-17 | 进行中 |
+| D5 | 桥驱动 2260 1 期 6 链 24 Hz 12-bit | task/bridge-2260-p1 | 10-17 | ✅ 10-13 复验 ALL PASS, 合主线 cdf49c6 |
 | D6 | 1 期几何 LUT+校准 (须逐字节复现 2047 s3lut) | task/geo-lut-p1 | 10-15 | ✅ 10-13 复验 22 PASS, 合主线 44ed2cd |
 | D7 | 转子运维 netguard-lite/遥测/远程升级 X4 | task/rotor-ops | 10-17 | 进行中 |
 | D8 | 主控↔桥联合仿真 | 待派 (D3+D4+D5 后) | 10-20 | |

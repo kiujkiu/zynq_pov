@@ -47,3 +47,4 @@ metadata:
 - 新事实: DDRC 端口 0 = CPU, 端口 1 = USB/SDIO/DMA, 端口 2 = HP (两 HP 都在 2); XMON DDR_S2.QOS_CONFIG 0xF8440804 上电默认固定 qos 0, 写 0x0F 可让端口 2 读优先 (待用户批准 A/B); RING 480 eram 174 / 576 eram 208 时序为正。
 - 探针 measure/09_ddr_slow/ddrprobe.c (1 ms 一拍, DDRC 四口带宽 + 中断/fork/收包对齐); 上板 1 h 长跑 `host_d16.sh --main 3600 --abl 300 --sweep 1|2` 定阵源。按 10-13 每 10 s 一阵算迟到率 ≈0.19% > 0.1%; povnetd 已去掉最大源。
 - ⚠ D7 的"不开 voxrxd 就不出阵"对照可能口径错 (不起 voxrxd 时 LUT 全 0, PL 不读 DDR)。
+- **10-13 晚 D16 首跑复盘 (8b88d1e):** 249% 是口径错 (分母用两面完成片数, PL 停摆后 trig 照走); XMON BANDWIDTH 是"上一窗口总字节"。真问题两个: ① **纯切片位流 253579a6 带载约 21 min 后 PL 停摆** (630 s 起面 B 失步, 1260 s 起两面不出片; 以前上板从没连跑 >60 s; 疑与 reader flush 缺陷有关, 待与 rdfix 版 661aab2a 对照浸泡); ② 带载时显示读 1.52 GB/s 正好等于 30 Hz 需求, 余量 ≈0, 迟到随 CPU 忙上升 (探针 v1 自占 ~30% 一核, 未分开)。"带宽够"结论收回, 等 smoke + 30 min 浸泡 + 1 h 有效数据。

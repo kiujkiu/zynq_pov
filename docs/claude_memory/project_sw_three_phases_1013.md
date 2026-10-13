@@ -17,3 +17,9 @@ metadata:
 
 **Why:** 硬件回板前软件不能空等; 用户要按期组织进度。
 **How to apply:** 汇报和排任务按 0/1/2 期分; 新任务先问"它属于哪一期、在不在 11-10 前的关键路径上"。相关: [[project-pl-slice-kickoff-1012]] [[project-target-35hz-budget-recheck]]
+
+**10-13 用户: "把所有软件可以做的都前置"。** 当天并行 7 个 agent (都推回 D 盘 dr1v90 task/*):
+- 0 期: task/live-push-2047 (主机实时推流, 唯一上板者) / task/pls-2047 (2047 PL 切片 + 切片核参数化 + 修 reader flush)
+- 1 期: task/ul-fmt-30hz (上行出口, 已改 1 期优先) / task/bridge-c1 (桥接收核对, 1 期优先) / task/geo-lut-p1 (503 片 LUT + 转起来几何校准, 先在 2047 预演) / task/bridge-2260-p1 (60 扫 2260 表 + 12 链 + dclk 166.67 + ACK + V2 引脚) / task/rotor-ops (netguard 轻量化 + WiFi 遥测 + 远程升级 X4)
+- 待派 (依赖上面): 全链路联合仿真 (主机→散写→PL 切片→上行→桥→2260 模型); 1 期整合位流 (要 V3 转接板引脚); C1 台架彩排 (要用户接线); 回板清单+一键脚本 (第 4 周)
+- 待用户答: 160×180 2260 参考屏 + ACG525 能否静态彩排; V2 桥板 / V3 转接板原理图引脚有没有

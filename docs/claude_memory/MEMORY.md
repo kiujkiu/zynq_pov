@@ -340,3 +340,4 @@
 - [M90 WiFi 点对点实测 (10-12)](project_m90_wifi_p2p_1012.md) — TCP 推流方向 ≥160 Mbit/s (台架封顶, CPU 未满); 推流 CPU 45 fps/68 Mbit; 带宽对显示已不是瓶颈
 - [🛰 DR1M90-02 无串口远程运维](project_dr1m90_02_remote_ops.md) — 10-12 开机自连 WiFi 实测通过 (uInitrd 追加 S45povboot→卡上 autorun); 供电独立于串口; netguard 守护; 回退=卡上 .bak
 - [软件三期](project_sw_three_phases_1013.md) — 0 期 2047 / 1 期 2260 验证板 160×180 (11-10 回板) / 2 期 192×216; 0、1 期网格相同, 回板前做完能做的
+- [短期交付 D1–D11](project_short_term_delivery_1013.md) — 10-13~10-24 计划+闭环规则 (verify.sh/独立复验/全回归/无人值守上板), 链路 12-bit

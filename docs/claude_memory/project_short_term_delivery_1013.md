@@ -37,3 +37,4 @@ metadata:
 3. 2 期 12-bit 每面 13.55 Gbps, 12 条数据 lane@1.0G 不够 ⇒ 1.2G 或 ≥14 lane。
 4. ul-fmt: 1 期 800M 12-bit 综合 0 违例但 pclk 余量 0.000, hreg 补丁有一个 tb FAIL 未合; 桥 bridge-2260-p1: 60 扫 166.67 Fmax 167.04 (余 0.2%), 仿真未出结论。细节见各分支 PROGRESS_PAUSED.md。
 5. 0 期预演: geo_push.sh rehearse-prep 已备 11 张表, 用户在场开电机约 1 小时; 顺带查 2047 是否整体左右镜像 (F 字图样)。
+6. 三个 2260 分支暂停点: task/ul-fmt-30hz dc8bf2a (PROGRESS_PAUSED.md 在根目录) / task/bridge-c1 e9f2b5b (gw5a_bridge/c1_bench/PROGRESS_PAUSED.md; 探针复位已修好, C1 上板需主控出带桩图样的位流) / task/bridge-2260-p1 b058599 (gw5a_bridge/p1/PROGRESS_PAUSED.md)。主仓 gw5a_bridge/results/*_rel 是 IDES8 复位修复前的旧快照, 别当现状比。

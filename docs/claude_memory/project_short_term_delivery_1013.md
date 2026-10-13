@@ -57,3 +57,9 @@ metadata:
 
 **10-13 20:20 夜间无人值守队列 (用户已关电机, 明早汇报):** D12 上板复验 (进行中, 主会话在 scratchpad/v_d12 跑 live_phase/verify.sh --board) → D2 (等按新几何 0decad54 返工后, 主会话跑 td_pov/pls2047/verify.sh --board, 先查 povmem 64 MB) → D13 (d13_boot/verify.sh --board, 重启 6 次; 用户定两面显示 IDLE_B_SLOT=1 (已通知 D13 改默认)) → D7 补 V3 (rotor_ops/verify.sh --board, 用 7ef55e1; 查 B 段单次阵是否 DHCP 续租) → 8 h 长跑 (KR7.2)。合并注意: D2/D12/D13 都改 voxslice.c, 按顺序手工合并并重跑验收。已合主线: D1 D4 D5 D6; 用户实转看过: 镜像更正 + 实时推流 + D14 10 类内容 + 手机遥控 (D14 未跑正式上板验收, 未合)。开机演示 = 几何体 geo.pvs + 新表 0decad54。
 **用户 10-13 20:2x:** D13 启动屏显两面显示; 几何体要无缝循环 (现状可用, 已派 D14 做 geo:loop=60 生成 geo_loop.pvs, 主会话安装)。
+
+**10-13 20:4x 用户定 (effort 已调 high, 子 agent effort 由我按推荐定, token 我自己管, 限流断了自己接上):**
+- 12-bit 选方案 A: **WiFi 端就传高位宽, 像素位宽 16/32 bit 可配** (32 bit ≈ 每通道 10–11 bit), 2047 后端量化 3-bit, 2260 后端 12-bit。→ **D15** (task/d15-color, high): 阶段 1 现在做 (SPEC/主机编码/黄金模型/带宽核算, 不碰 voxslice/pls), 阶段 2 等 D2/D12/D13 合主线后由主会话通知。
+- DDR 两条线 (另一窗口转达, 记忆 project_ddr_budget_by_phase_1013): **D16 A 线** (task/d16-ddr, high): 慢读定位长跑 → HP 分端口/QoS 实验 → PL 预取缓冲 (~80 KB, D2 合后改 RTL) → 迟到兜底 → 降争用。**B 线 32 bit DDR** 并入 T2 自研 SoC 板硬件任务, 不开软件 agent; 待写需求页 (32 bit DDR + PL 读带宽: 两 HP 口 64bit×150MHz 仅 2.4 GB/s < 2 期 32 bit 像素 3.01 GB/s, 且两口挤 DDRC 端口 2 ⇒ 要提 hclk≥200 或分端口; 留 eMMC; 转子 68–136 g 下 FS03 0.5 mm B2B 风险)。
+- C1 台架明早: DR1M90-01 (未入登记表, 无自连 WiFi; 用户明早插 COM24 串口, 我给它装自连+mDNS) ↔ ACG525, 杜邦线 240M; 接线 PDF zynq_pov/docs/c1_bench/C1台架接线_2026-10-13.pdf。用户已打开 WinUpdate 设置页自行暂停。明早用户在场: D13 启动屏显文字是否左右反、PL 切片实转 (若 D2 上板过)。
+- 内存已核: CMA 128 MB, 现 povmem 48 MB, 空 80 MB ⇒ PL 模式 64 MB 够。geo_loop.pvs (无缝, md5 798516c7) 已独立复现, 待 D12 跑完后装卡替换 geo.pvs。

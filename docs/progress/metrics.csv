@@ -55,3 +55,4 @@
 2026-10-13,KR10.1,2,V0 2047,dr1v90 887491a (live_push/README.md),walking / groot 实时推流逐字节核过
 2026-10-13,KR10.2,1,V0 2047,dr1v90 live_push/README.md,--keys 键盘旋转/缩放
 2026-10-12,KR1.6,10.8,V0 2047,claude_memory/project_slice_3bit_cpu_trial.md (D9 首次转起来 640–654 RPM),"由实转 ~650 RPM 推算 (= rps), 非逐帧计数"
+2026-10-13,KR4.2,1,仿真,dr1v90 cdf49c6 (gw5a_bridge/p1 verify ALL PASS),仅桥→2260 段仿真; 主控→桥→2260 全链未验

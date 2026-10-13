@@ -332,6 +332,7 @@
 - [dr1v90 回到 D 盘](project_dr1v90_in_wsl_d_is_mirror.md) — 10-12 换内核后工作全在 D 盘 dr1v90, WSL ~/ 副本弃用, 别再跑 sync_to_d; 保存=提交+推 origin+yjhh (dr1v90 的 yjhh=pov-yjhh/dr1m90)
 - [POV 活放独立 agent](feedback_pov_in_subagent.md) — 并发 agent 在 D 盘 _work/ 克隆里跑, 推回 D 盘 dr1v90 task/* 分支, 主窗口只派活和合并
 - [IP-guard WSL 内核已切换 (2026-10-12)](project_ipg_wsl_kernel_switch.md) — 换 6.6.114.1, 压测过但 4 小时后仍 EIO 两次, 未根治; 10-13 起看门狗自动恢复
+- [WSL 整机重启是 Windows Update (2026-10-13)](project_wsl_restart_by_winupdate.md) — 11:19 自动装 WSL 3.0.3.0 停了 VM, 非崩溃; "其他微软产品更新"本就关着挡不住; autoMemoryReclaim 已改 disabled; 再遇到先查 MsiInstaller/RestartManager 事件
 - [🛠 GW5A 桥转接板 KiCad v1 (2026-10-12 开工)](project_gw5a_adapter_kicad_v1.md) — 与同事 Altium 版并行练手, 底稿 SCH 10-12 + 七项; 板框 144x52.65 已出 (`pcb/gw5a_adapter_v1`); 约束: FPC 在 LED 面 / 高度不挡灯 / 照灯板改好的 AXK 封装 / 宽 144; 下一步 3 agent 并行出原理图
 - [🎯 目标改 30 Hz](project_target_35hz_budget_recheck.md) — 10-12 用户定 30 Hz (605 片×15 rps/900 RPM), 两墙余量约 15%; 35 Hz 仅 1–2% 放弃; 报告 docs/budget/
 - [🚀 板上切片开工](project_pl_slice_kickoff_1012.md) — 10-12 四 agent 并行: task/pl-slice-golden/rtl/sw/integ, 按 30 Hz; 规格以 golden 的 slice/SPEC.md 为准

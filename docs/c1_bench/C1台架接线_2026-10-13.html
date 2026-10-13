@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8"><title>C1 台架接线</title><style>
+body{font-family:"Microsoft YaHei",sans-serif;margin:24px;color:#111} h1{font-size:20px;margin:0 0 4px} .sub{color:#555;font-size:12px;margin-bottom:12px}
+table{border-collapse:collapse;width:100%;font-size:12.5px} th,td{border:1px solid #999;padding:4px 6px;text-align:center} th{background:#1f4e79;color:#fff}
+tr:nth-child(even) td{background:#f3f6fa} .box{border-left:4px solid #c00;background:#fff4f4;padding:6px 10px;margin:10px 0;font-size:12.5px}
+.ok{border-left:4px solid #1f4e79;background:#f3f6fa} ol{margin:4px 0 4px 18px;padding:0} li{margin:2px 0}</style></head><body>
+<h1>C1 台架接线：DR1M90-01 (FS03 CEP1) ↔ ACG525 (GW5A)</h1>
+<div class="sub">2026-10-13 ｜ 240 Mbps 低速功能档，杜邦线 ｜ 目的：硬件上验证 12-bit 切片数据从主控到桥逐像素不错 ｜ 来源 dr1v90 task/ul-fmt-30hz td_pov/pure_ul/C1_BENCH.md</div>
+<div class="box"><b>上电前必须做：</b><ol>
+<li>FS03 的 <b>J2 跳到 1.8V 侧</b>，上电前量 CEP1.4 ≈ 1.8 V（主控输出 LVDS18）。</li>
+<li>ACG525 的 P6-11/12/29/30 里哪根是地，<b>上电前用万用表认</b>，只把地接到 FS03 CEP1.2。</li>
+<li>FS03 上 CEP1 的伪地脚（7–12、25–34、47–50）主控会驱低，<b>只许接 ACG525 的 GND</b>，不要接到任何信号。</li>
+<li>每对 P→P、N→N，两根绞在一起，<b>越短越好（≤ 10 cm）</b>。</li></ol></div>
+<table><tr><th>信号</th><th>FS03 CEP1 脚 (P / N)</th><th>DR1 球</th><th>FS03 排阻</th><th>ACG525 脚 (P / N)</th><th>GW5A 球</th><th>bank</th></tr><tr><td>转发时钟</td><td><b>5 / 6</b></td><td>G15 / G16</td><td>R187</td><td><b>P11-20 / P11-19</b></td><td>L15</td><td>3</td></tr><tr><td>lane 0 ★</td><td><b>35 / 36</b></td><td>F18 / E18</td><td>R195</td><td><b>P6-1 / P6-2</b></td><td>C17</td><td>2</td></tr><tr><td>lane 1 ★</td><td><b>37 / 38</b></td><td>D16 / D17</td><td>R195</td><td><b>P6-3 / P6-4</b></td><td>F14</td><td>2</td></tr><tr><td>lane 2 ★</td><td><b>39 / 40</b></td><td>A21 / A22</td><td>R197</td><td><b>P6-5 / P6-6</b></td><td>D17</td><td>2</td></tr><tr><td>lane 3 ★</td><td><b>41 / 42</b></td><td>A18 / A19</td><td>R197</td><td><b>P6-7 / P6-8</b></td><td>G16</td><td>2</td></tr><tr><td>lane 4 ★</td><td><b>43 / 44</b></td><td>F16 / E16</td><td>R196</td><td><b>P6-9 / P6-10</b></td><td>F17</td><td>2</td></tr><tr><td>lane 5 ★</td><td><b>45 / 46</b></td><td>E15 / D15</td><td>R196</td><td><b>P6-13 / P6-14</b></td><td>H13</td><td>2</td></tr><tr><td>lane 6</td><td><b>3 / 4</b></td><td>H19 / H20</td><td>R191</td><td><b>P6-15 / P6-16</b></td><td>K15</td><td>2</td></tr><tr><td>lane 7</td><td><b>13 / 14</b></td><td>D22 / C22</td><td>R189</td><td><b>P6-17 / P6-18</b></td><td>J13</td><td>2</td></tr><tr><td>lane 8</td><td><b>15 / 16</b></td><td>F21 / F22</td><td>R190</td><td><b>P6-19 / P6-20</b></td><td>K12</td><td>2</td></tr><tr><td>lane 9</td><td><b>17 / 18</b></td><td>G17 / F17</td><td>R190</td><td><b>P6-21 / P6-22</b></td><td>L12</td><td>2</td></tr><tr><td>lane 10</td><td><b>19 / 20</b></td><td>A16 / A17</td><td>R187</td><td><b>P6-23 / P6-24</b></td><td>H17</td><td>3</td></tr><tr><td>lane 11</td><td><b>21 / 22</b></td><td>C15 / B15</td><td>R191</td><td><b>P6-25 / P6-26</b></td><td>K17</td><td>3</td></tr><tr><td>lane 12 (校验)</td><td><b>23 / 24</b></td><td>B16 / B17</td><td>R192</td><td><b>P6-27 / P6-28</b></td><td>L17</td><td>3</td></tr><tr><td>地 GND</td><td><b>CEP1.2</b></td><td>—</td><td>—</td><td><b>P6-11/12/29/30 中的地 (上电前用表认)</b></td><td>—</td><td>—</td></tr></table>
+<div class="box ok"><b>分两步接，先少后多：</b><ol>
+<li><b>第一步只接 ★ 6 对 + 转发时钟 + 地</b>（09-22 板对板测过最干净的 6 对），先跑误码测试。</li>
+<li>第一步 0 误码后，再接其余 7 对（lane 6–12），跑逐像素 12-bit 核对。</li></ol>
+<b>串阻：</b>FS03 原装 33Ω 排阻在 240M 下可能还能用（09-22 是两端各 33Ω 时 400M 就死）。<b>先不拆试一次</b>；误码不为 0 再把对应排阻换 0Ω：只接 ★ 时换 R187/R195/R196/R197（4 只），全接时 8 只（再加 R189/R190/R191/R192）。</div>
+<div class="box ok"><b>接好以后告诉我就行</b>，加载位流、发训练码、读误码和逐像素结果都由我来跑，判据：13 lane 全锁定、每 lane 误码 0 持续 ≥ 10 分钟；逐像素坏片/像素错/CRC 错/片号跳变全为 0。</div>
+</body></html>

@@ -456,6 +456,7 @@ NEEDS = {'V0': ('V0',), 'V1': ('V0', 'V1准备'), 'V2': ('V0', 'V1准备', 'V2')
 RATE_FIELDS = ['日期', 'V0 达成率', 'V1 达成率', 'V2 达成率']
 ALGO = [
     '统一口径：达成率_P = (P 目标已达标的 KR 数 + P 需要的交付里已完成数) ÷ (有 P 目标的 KR 数 + P 需要的交付总数)，P = V0 / V1 / V2。',
+    '只按「必须」项计：KR 全算必须；交付看 deliverables.csv 的「级别」列 (必须/加分)，加分项不进分子分母。',
     '交付的"需要"是嵌套的：V0 需要 = 阶段 V0；V1 需要 = V0 + V1准备；V2 需要 = V1 需要 + V2 (阶段列见 deliverables.csv，没填阶段的交付不计)。',
     'KR 是否达到 P 目标 = 截至该日的最新硬件实测值 vs P 目标 (仿真/台架点不算达标)。',
 ]
@@ -486,7 +487,7 @@ def compute_rates(krs, mets, dels, asof):
         sts = [kr_meets(k, by[k['kr_id']], P, asof) for k in krs]
         kk = [s for s in sts if s is not None]
         a = sum(1 for s in kk if s == 'ok')
-        need = [d for d in dels if d.get('阶段') in NEEDS[P]]
+        need = [d for d in dels if d.get('阶段') in NEEDS[P] and d.get('级别', '必须') != '加分']
         c = sum(1 for d in need if d['状态'] == '✅' and d['_f'] and d['_f'] <= asof)
         m_ = len(kk) + len(need)
         out[P] = {'rate': (a + c) / m_ if m_ else None, 'n': a + c, 'm': m_, 'kr': (a, len(kk)), 'dl': (c, len(need))}
@@ -533,6 +534,37 @@ def kr_changes(krs, by_kr, today):
             v = 'up' if better(k, cur, pv) else 'down'
         out.append((k, (pd_, pv), cur, v))
     return out
+
+
+
+def gate_states(gates, krs, by_kr, dels, asof):
+    """出口清单每条在 asof 的状态: 关联项全完成/达标 ✅, 部分 🔄, 都没有 ⬜; 无关联用 gates.csv 人工状态。返回 [(行, 状态, 已完成数, 关联数)]"""
+    krm = {k['kr_id']: k for k in krs}
+    dm = {d['id']: d for d in dels}
+    out = []
+    for g in gates:
+        links = [x.strip() for x in g['关联(交付/KR 编号)'].split(';') if x.strip()]
+        stage = 'V0' if g['清单'].startswith('V0') else 'V1'
+        if not links:
+            out.append((g, g['状态'] or '⬜', 0, 0))
+            continue
+        n = 0
+        for x in links:
+            if x in krm:
+                n += kr_meets(krm[x], by_kr[x], stage, asof) == 'ok'
+            elif x in dm:
+                d = dm[x]
+                n += bool(d['状态'] == '✅' and d['_f'] and d['_f'] <= asof)
+        out.append((g, '✅' if n == len(links) else ('🔄' if n else '⬜'), n, len(links)))
+    return out
+
+
+RISK_FILL = {'开': 'FFC7CE', '监控': 'FFEB9C', '关': 'C6EFCE'}
+GATE_FILL = {'✅': 'C6EFCE', '🔄': 'FFEB9C', '⬜': 'F2F2F2'}
+
+
+def read_opt(name):
+    return read_csv(name) if os.path.exists(os.path.join(HERE, name)) else []
 
 
 def read_log(today):
@@ -615,6 +647,33 @@ def sheet_daily(wb, ctx, today):
         put(ws, r, 4, txt, fill=fill)
         src = next((m['来源'] for m in reversed(ctx['by_kr'][k['kr_id']]) if m['_d'] == today and is_real(m['硬件/阶段'])), '')
         put(ws, r, 5, f'{k["V0 目标"] or "—"} / {k["V1 目标"] or "—"} / {k["V2 目标"] or "—"}；{src}', fill=fill)
+    # 阶段出口清单
+    for lst in OrderedDict.fromkeys(g[0]['清单'] for g in ctx['gates']):
+        rows_ = [x for x in ctx['gates'] if x[0]['清单'] == lst]
+        r += 2
+        ws.cell(row=r, column=1, value=f'阶段出口清单 — {lst}  (已打勾 {sum(1 for x in rows_ if x[1] == "✅")}/{len(rows_)}；状态由关联项在当日是否完成/达标推出)').font = F(True, 12)
+        r += 1
+        header(ws, r, ['序号', '状态', '条目', '关联项进度', '来源'])
+        for g, st, n, m in rows_:
+            r += 1
+            put(ws, r, 1, g['序号'], align=CENTER)
+            put(ws, r, 2, st, fill=GATE_FILL[st], align=CENTER)
+            put(ws, r, 3, g['条目'])
+            put(ws, r, 4, (f'{g["关联(交付/KR 编号)"]} ({n}/{m})' if m else '人工状态'))
+            put(ws, r, 5, g['来源'])
+    # 风险表
+    r += 2
+    ws.cell(row=r, column=1, value='风险表 (risks.csv；红 = 开，黄 = 监控，绿 = 关)').font = F(True, 12)
+    r += 1
+    header(ws, r, ['编号', '状态', '风险', '影响 / 应对', '负责 · 登记日期 · 来源'])
+    for x in ctx['risks']:
+        r += 1
+        f_ = RISK_FILL.get(x['状态(开/监控/关)'], 'FFFFFF')
+        put(ws, r, 1, x['编号'], fill=f_, align=CENTER)
+        put(ws, r, 2, x['状态(开/监控/关)'], fill=f_, align=CENTER)
+        put(ws, r, 3, x['风险'], fill=f_)
+        put(ws, r, 4, f'影响：{x["影响"]}\n应对：{x["应对/退路"]}', fill=f_)
+        put(ws, r, 5, f'{x["负责"]} · {x["登记日期"]} · {x["来源"]}', fill=f_)
     # 每日流水
     r += 2
     ws.cell(row=r, column=1, value='每日流水 (daily_log.csv，按天倒序)').font = F(True, 12)
@@ -656,6 +715,21 @@ def html_daily(ctx, today):
             o.append(f'<tr style="background:{colors[v]}"><td>{k["kr_id"]}</td><td class="c">{CH_TXT[v]}</td><td>{esc(k["指标名"])} ({esc(k["单位"])}, {esc(k["方向"])})</td>'
                      f'<td>{txt}</td><td class="c">{esc(k["V0 目标"] or "—")} / {esc(k["V1 目标"] or "—")} / {esc(k["V2 目标"] or "—")}</td></tr>')
         o.append('</table>')
+    for lst in OrderedDict.fromkeys(g[0]['清单'] for g in ctx['gates']):
+        rows_ = [x for x in ctx['gates'] if x[0]['清单'] == lst]
+        o.append(f'<h2>阶段出口清单 — {esc(lst)} (已打勾 {sum(1 for x in rows_ if x[1] == "✅")}/{len(rows_)})</h2><table><tr><th>序号</th><th>状态</th><th>条目</th><th>关联项进度</th></tr>')
+        gc = {'✅': '#C6EFCE', '🔄': '#FFEB9C', '⬜': '#F2F2F2'}
+        for g, st, n, m in rows_:
+            o.append(f'<tr><td class="c">{esc(g["序号"])}</td><td class="c" style="background:{gc[st]}">{st}</td><td>{esc(g["条目"])}</td><td>{esc(g["关联(交付/KR 编号)"])} ({n}/{m})' if m else
+                     f'<tr><td class="c">{esc(g["序号"])}</td><td class="c" style="background:{gc[st]}">{st}</td><td>{esc(g["条目"])}</td><td>人工状态')
+            o.append('</td></tr>')
+        o.append('</table>')
+    o.append('<h2>风险表 (红 = 开，黄 = 监控，绿 = 关)</h2><table><tr><th>编号</th><th>状态</th><th>风险</th><th>影响</th><th>应对 / 退路</th><th>负责</th></tr>')
+    rc = {'开': '#FFC7CE', '监控': '#FFEB9C', '关': '#C6EFCE'}
+    for x in ctx['risks']:
+        st = x['状态(开/监控/关)']
+        o.append(f'<tr style="background:{rc.get(st, "#fff")}"><td class="c">{esc(x["编号"])}</td><td class="c">{esc(st)}</td><td>{esc(x["风险"])}</td><td>{esc(x["影响"])}</td><td>{esc(x["应对/退路"])}</td><td>{esc(x["负责"])}</td></tr>')
+    o.append('</table>')
     o.append('<h2>每日流水 (daily_log.csv，按天倒序)</h2>')
     lc = {'复验退回': '#FFC7CE', '问题': '#FFEB9C', '交付完成': '#C6EFCE', '复验通过': '#C6EFCE', '里程碑': '#BDD7EE', '决定': '#E4DFEC'}
     last = None
@@ -887,7 +961,10 @@ td{padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top}td.c{text-ali
 td.n{width:42%}.tag{display:inline-block;font-size:10.5px;border:1px solid #bbb;border-radius:3px;padding:0 4px;color:#666;margin-right:5px}
 .pm{display:inline-block;width:16px;font-weight:900;font-size:16px;line-height:1}.plus{color:var(--ok)}.minus{color:var(--bad)}
 tr.up{background:#f0fbf2}tr.down{background:#fff1f1}tr.light td.v,tr.light td.n .nm{color:#999}
-.sim{color:#999;font-size:11px}.fut{color:#aaa}
+.sim{color:#999;font-size:11px}tr.bonus td{opacity:.5}tr.bonus .tag{border-style:dashed}
+.blk{background:#fff;border:1px solid var(--bd);border-radius:4px;margin-bottom:10px;overflow:hidden}.blk .gh{background:#4a5b6e}
+.g-ok{background:#C6EFCE}.g-mid{background:#FFEB9C}.g-no{background:#f2f2f2}.r-开{background:#FFC7CE}.r-监控{background:#FFEB9C}.r-关{background:#C6EFCE}
+.two{display:flex;gap:10px;flex-wrap:wrap}.two>div{flex:1;min-width:380px}.fut{color:#aaa}
 .bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #1F4E78;padding:8px 18px 10px;display:flex;align-items:center;gap:12px;z-index:9}
 .bar input[type=range]{flex:1;height:26px}.bar button{font-size:16px;padding:3px 12px;cursor:pointer;border:1px solid #888;background:#f3f3f3;border-radius:4px}
 .bar .lab{font-size:18px;font-weight:700;min-width:130px;text-align:center}.bar .lim{color:var(--mut);font-size:11px}
@@ -895,9 +972,11 @@ tr.up{background:#f0fbf2}tr.down{background:#fff1f1}tr.light td.v,tr.light td.n 
 <h1>POV3D 显性目的进度 — 交互看板</h1>
 <div class="sub">生成日期 __TODAY__ · 拖动底部时间滑块 (或按 ← →) 查看任一天的状态；数据内嵌，不联网。数据源 zynq_pov/docs/progress/*.csv，脚本 mk_progress.py。</div>
 <div class="top" id="top"></div>
-<div class="algo">达成率_P = (P 目标已达标的 KR 数 + P 需要的交付里已完成数) ÷ (有 P 目标的 KR 数 + P 需要的交付总数)；交付需要是嵌套的：V0 = 阶段 V0，V1 = V0 + V1准备，V2 = V1 + V2。KR 达标 = 截至所选日期的最新<b>硬件实测</b>值达到 P 目标；
+<div class="algo">达成率_P = (P 目标已达标的 KR 数 + P 需要的交付里已完成数) ÷ (有 P 目标的 KR 数 + P 需要的交付总数)；只计「必须」项 (灰显的是加分项，不进分子分母)；交付需要是嵌套的：V0 = 阶段 V0，V1 = V0 + V1准备，V2 = V1 + V2。KR 达标 = 截至所选日期的最新<b>硬件实测</b>值达到 P 目标；
 仿真/台架点不算达标，显示为 🔵。图例：✅ 达成　⬜ 未达成　🔵 仅仿真/台架已达成　— 无该期目标/不需要。名称前 <span class="pm plus">+</span> = 所选当天新完成/新达标，<span class="pm minus">−</span> = 当天变差。</div>
+<div id="gates"></div>
 <div id="goals"></div>
+<div id="risks"></div>
 <div class="bar"><button id="prev" title="前一天 (←)">◀</button><input type="range" id="sl" min="0" value="0" step="1"><button id="next" title="后一天 (→)">▶</button>
 <div class="lab" id="lab"></div><div class="lim" id="lim"></div></div>
 <script>
@@ -917,7 +996,7 @@ function krState(kr,P,d){const t=kr.t[P];if(t==null)return null;
  const s=latest(kr,d,false);if(s&&better(kr,s.v,t))return 'sim';return 'no'}
 function isDone(x,d){return x.status==='✅'&&x.done&&x.done<=d}
 function rates(d){const o={};for(const P of STG){let a=0,b=0;for(const k of DATA.krs){const s=krState(k,P,d);if(s===null)continue;b++;if(s==='ok')a++}
- const nd=DATA.dels.filter(x=>NEEDS[P].includes(x.stage));const c=nd.filter(x=>isDone(x,d)).length;
+ const nd=DATA.dels.filter(x=>NEEDS[P].includes(x.stage)&&x.level!=='加分');const c=nd.filter(x=>isDone(x,d)).length;
  o[P]={n:a+c,m:b+nd.length,ka:a,kb:b,dc:c,dd:nd.length,r:(b+nd.length)?(a+c)/(b+nd.length):0}}return o}
 // 日期轴
 const dates=[];for(let d=DATA.start;d<=DATA.today;d=addDay(d,1))dates.push(d);
@@ -952,16 +1031,27 @@ function krRow(k,d,prev){
 function delRow(x,d){const done=isDone(x,d),just=x.status==='✅'&&x.done===d;
  const cell=P=>NEEDS[P].includes(x.stage)?(done?'✅':'⬜'):'—';
  const dt=done?x.done.slice(5):(x.plan?`<span class="fut">计划 ${x.plan.slice(5)}</span>`:'<span class="fut">未排期</span>');
- return `<tr class="${just?'up':''}"><td class="n"><span class="pm ${just?'plus':''}">${just?'+':''}</span><span class="tag">交付</span><span class="nm">${esc(x.id)} ${esc(x.name)}</span> <span class="sim">[${esc(x.stage)}]</span></td>
+ return `<tr class="${just?'up':''}${x.level==='加分'?' bonus':''}"><td class="n"><span class="pm ${just?'plus':''}">${just?'+':''}</span><span class="tag">${x.level==='加分'?'加分':'交付'}</span><span class="nm">${esc(x.id)} ${esc(x.name)}</span> <span class="sim">[${esc(x.stage)}]</span></td>
  <td class="c v">${done?'已完成':esc(x.status)+' 未完成'}</td>${STG.map(P=>`<td class="c">${cell(P)}</td>`).join('')}<td class="c">${dt}</td></tr>`}
+function gateState(g,d){if(!g.links.length)return{s:g.status||'⬜',n:0,m:0};const st=g.list.startsWith('V0')?'V0':'V1';let n=0;
+ for(const x of g.links){const k=DATA.krs.find(k=>k.id===x);if(k){if(krState(k,st,d)==='ok')n++}else{const y=DATA.dels.find(y=>y.id===x);if(y&&isDone(y,d))n++}}
+ return{s:n===g.links.length?'✅':n?'🔄':'⬜',n,m:g.links.length}}
+function gatesHtml(d){const lists=[...new Set(DATA.gates.map(g=>g.list))];let h='<div class="two">';
+ for(const l of lists){const rs=DATA.gates.filter(g=>g.list===l).map(g=>({g,...gateState(g,d)}));const ok=rs.filter(r=>r.s==='✅').length;
+  h+=`<div class="blk"><div class="gh"><b>阶段出口清单 — ${esc(l)}</b><span>已打勾 ${ok}/${rs.length}</span></div><table><tr><th>状态</th><th>条目</th><th>关联</th></tr>`+
+  rs.map(r=>`<tr class="${r.s==='✅'?'g-ok':r.s==='🔄'?'g-mid':'g-no'}"><td class="c">${r.s}</td><td>${esc(r.g.item)}</td><td class="c sim">${r.m?esc(r.g.links.join(' ; '))+' ('+r.n+'/'+r.m+')':'人工'}</td></tr>`).join('')+'</table></div>'}
+ return h+'</div>'}
+function risksHtml(d){const rs=DATA.risks.filter(r=>r.date<=d);
+ return `<div class="blk"><div class="gh"><b>风险表</b><span>开 ${rs.filter(r=>r.status==='开').length} · 监控 ${rs.filter(r=>r.status==='监控').length} · 关 ${rs.filter(r=>r.status==='关').length}（按登记日期随滑块显示）</span></div><table><tr><th>编号</th><th>状态</th><th>风险</th><th>影响</th><th>应对 / 退路</th><th>负责</th></tr>`+
+ rs.map(r=>`<tr class="r-${r.status}"><td class="c">${esc(r.id)}</td><td class="c">${esc(r.status)}</td><td>${esc(r.risk)}</td><td>${esc(r.impact)}</td><td>${esc(r.plan)}</td><td class="c">${esc(r.owner)}</td></tr>`).join('')+'</table></div>'}
 function goalsHtml(d){const prev=addDay(d,-1);let h='';
  for(const g of DATA.goals){const ks=DATA.krs.filter(k=>k.goal===g.id),ds=DATA.dels.filter(x=>x.goals[0]===g.id);
   const sub=STG.map(P=>{let a=0,b=0;ks.forEach(k=>{const s=krState(k,P,d);if(s!==null){b++;if(s==='ok')a++}});return `${P} ${a}/${b}`}).join(' · ');
-  const v1=ds.filter(x=>x.stage==='V1准备'),v1d=v1.filter(x=>isDone(x,d)).length,all=ds.filter(x=>isDone(x,d)).length;
-  h+=`<div class="goal"><div class="gh"><b>${g.id}. ${esc(g.name)}</b><span>KR 达标 ${sub} ｜ 交付 完成 ${all}/${ds.length}${v1.length?`（V1 准备 ${v1d}/${v1.length}）`:''}</span></div>
+  const dm=ds.filter(x=>x.level!=='加分'),v1=dm.filter(x=>x.stage==='V1准备'),v1d=v1.filter(x=>isDone(x,d)).length,all=dm.filter(x=>isDone(x,d)).length;
+  h+=`<div class="goal"><div class="gh"><b>${g.id}. ${esc(g.name)}</b><span>KR 达标 ${sub} ｜ 必须交付 完成 ${all}/${dm.length}${v1.length?`（V1 准备 ${v1d}/${v1.length}）`:''}</span></div>
   <table><tr><th>名称</th><th>当前值</th><th>V0</th><th>V1</th><th>V2</th><th>完成/实测日期</th></tr>${ks.map(k=>krRow(k,d,prev)).join('')}${ds.map(x=>delRow(x,d)).join('')}</table></div>`}
  return h}
-function render(){const d=dates[cur];$('top').innerHTML=cards(cur);$('goals').innerHTML=goalsHtml(d);
+function render(){const d=dates[cur];$('top').innerHTML=cards(cur);$('goals').innerHTML=goalsHtml(d);$('gates').innerHTML=gatesHtml(d);$('risks').innerHTML=risksHtml(d);
  const wd='日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()];$('lab').textContent=d+' 周'+wd;$('sl').value=cur}
 const sl=$('sl');sl.max=dates.length-1;$('lim').textContent=dates[0].slice(5)+' ~ '+dates[dates.length-1].slice(5);
 sl.addEventListener('input',()=>{cur=+sl.value;render()});
@@ -974,6 +1064,7 @@ render();
 
 
 def build_interactive(goals, krs, mets, dels, today, out):
+    gates, risks = read_opt('gates.csv'), read_opt('risks.csv')
     import json
     ds = [m['_d'] for m in mets] + [d['_p'] for d in dels if d['_p']] + [d['_f'] for d in dels if d['_f']]
     start = min(ds)
@@ -984,7 +1075,9 @@ def build_interactive(goals, krs, mets, dels, today, out):
                  't': {P: num(k[f'{P} 目标']) for P in STAGES}} for k in krs],
         'mets': [{'d': m['日期'], 'kr': m['kr_id'], 'v': m['_v'], 'real': is_real(m['硬件/阶段']), 'i': m['_i']} for m in mets],
         'dels': [{'id': d['id'], 'name': d['名称'], 'goals': d['服务的 goal_id'].split(';'), 'stage': d.get('阶段', ''),
-                  'plan': d['计划日期'], 'done': d['完成日期'], 'status': d['状态']} for d in dels],
+                  'plan': d['计划日期'], 'done': d['完成日期'], 'status': d['状态'], 'level': d.get('级别', '必须')} for d in dels],
+        'gates': [{'list': g['清单'], 'seq': g['序号'], 'item': g['条目'], 'links': [x.strip() for x in g['关联(交付/KR 编号)'].split(';') if x.strip()], 'status': g['状态']} for g in gates],
+        'risks': [{'id': r['编号'], 'risk': r['风险'], 'impact': r['影响'], 'plan': r['应对/退路'], 'owner': r['负责'], 'status': r['状态(开/监控/关)'], 'date': r['登记日期']} for r in risks],
     }
     js = json.dumps(data, ensure_ascii=False).replace('</', '<\\/')
     with open(out, 'w', encoding='utf-8') as f:
@@ -1035,7 +1128,8 @@ def main():
         by_kr[m['kr_id']].append(m)
     rates = update_daily_rates(krs, mets, dels, today)
     ctx = {'cur': compute_rates(krs, mets, dels, today), 'rates': rates, 'by_kr': by_kr,
-           'changes': kr_changes(krs, by_kr, today), 'log': read_log(today)}
+           'changes': kr_changes(krs, by_kr, today), 'log': read_log(today),
+           'gates': gate_states(read_opt('gates.csv'), krs, by_kr, dels, today), 'risks': read_opt('risks.csv')}
     wb = Workbook()
     sheet_status(wb, goals, krs, by_kr, today)
     sheet_trends(wb, krs, by_kr)

@@ -1872,7 +1872,7 @@ def sheet_contract():
             note = '阶段二 lane, 在 20 対两端' if i >= 12 else '阶段一 lane'
         for pol, pos in zip('PN', CPOS[k]):
             v = [pos, f'{sname(k)}_{pol}', pol, 'SoC → 桥', '差分·时钟' if k == 'CLK' else ('差分·校验' if k == 'CHK' else '差分·数据'),
-                 role, ph1, ELEC_DIFF, rate, TERM_DIFF, note + '; 对内等长, 对间偏斜由桥侧每 lane IODELAY 吸收',
+                 role, ph1, ELEC_DIFF, rate, TERM_DIFF, note + '; 对内等长 ±5 mil, 对间 ±50 mil (上限 ±200 mil), 对间偏斜由桥侧每 lane IODELAY 吸收 («e:iodelay»)',
                  '用户 09-15; SPEC.md §1; bridge_defs.vh §2/§3; DS1200 表 3-14 (LVDS25)', st1, '建议 (脚序; 形态由硬件定)']
             rows[pos] = (v, sty(st1, v[13]))
     for s in SB:
@@ -1905,7 +1905,7 @@ def sheet_contract():
     body = [rows[p] for p in sorted(rows)]
 
     rules = [
-        ('规定·差分', 'UL_D[17:0] / UL_CHK / UL_CLK 共 20 対: ' + ELEC_DIFF + '; ' + TERM_DIFF + '; 每対 G-S-S-G; 対内 P/N 严格等长, 对间偏斜由接收端 IODELAY 吸收。',
+        ('规定·差分', 'UL_D[17:0] / UL_CHK / UL_CLK 共 20 対: ' + ELEC_DIFF + '; ' + TERM_DIFF + '; 每対 G-S-S-G; 対内 P/N 等长 ±5 mil, 对间目标 ±50 mil、上限 ±200 mil (每块板每段; 计算见 «e:iodelay»), 对间偏斜由接收端 IODELAY 吸收。',
          '用户 09-15; DS1200 表 3-14; DS1103 表 3-26', '已定 (用户 09-15)'),
         ('规定·速率', RATE_NOM + "; UL_CLK = 400 MHz (fwd_clk 4'b0101)。本条已定的只有 800 Mbps 标称; " + RATE_DOWN + ' —— 降速档不在本条已定范围, 并入 «d:proto_12bit»。',
          'bridge_defs.vh §1/§2 (本表计算); 用户 09-15 (800 Mbps 标称)', '已定 (800 Mbps 标称)'),
@@ -2366,8 +2366,10 @@ def sheet_constraints():
                  f'上行 20 対跨 bank4 (11 対) + bank5 (9 対); 阶段一 14 対 = bank4 {GW_PH1_BANK[4]} + bank5 {GW_PH1_BANK[5]}。转发时钟建议 B4_B33 (GCLKT_9A / BPLL_T_IN1), 备选 B4_B35 (GCLKT_8)。'
                  '转发时钟直驱 HCLK → IDES8.FCLK 能否覆盖两个 bank、或经 BPLL 再生, 未综合过 («d:gw_hclk»)。',
                  'DS1103 表 3-38 (经 README_1g6.md 引); README_x8.md 未做项', '待定'),
-        'iodelay': ('时序', '对间偏斜吸收', 'IODELAY Tdlyunit 10 / 12.5 / 15 ps, Tdlyoffset 200 / 250 / 300 ps, 256 步 ⇒ 量程约 2.76 ~ 4.14 ns',
-                    '对间长度差由每 lane IODELAY 吸收, 不必强求对间等长; 对内仍需等长 (建议 ≤5 mil, 估)。', 'DS1103 表 2-8; README_1g6.md', '建议'),
+        'iodelay': ('时序', '等长公差 (对内 / 对间) 与对间偏斜吸收',
+                    '计算口径 (10-13): 线速按 1.0 Gbps (30 Hz 方案), UI = 1000 ps; 800 Mbps 时 UI = 1250 ps, 下列比例再宽 25 %。FR4 带状线 εr ≈ 4.2 ⇒ tpd = √εr / c = 2.05 / 11.8 in/ns ≈ 174 ps/in = 0.174 ps/mil (6.8 ps/mm; 微带 εeff ≈ 3.2 时约 0.15 ps/mil, 取带状线偏严) ⇒ 1 UI ≈ 5750 mil。① 对内: P/N 斜移 Δt 使差分边沿变缓并转成共模 (EMI / 串扰), 判据 Δt ≤ 1 % UI = 10 ps, 且 ≤ 0.05 × tr (tr 按 200 ps 估)。全链对内预算 10 ps: 核心板既有 ≤36 mil = 6.3 ps («e:core_len»), 剩 3.7 ps ≈ 21 mil 给我方各段 (V2 / V3 / FS03 改造段) ⇒ 每段 ±5 mil = 0.87 ps, 3 段合计 2.6 ps, 余 1.1 ps。② 对间: 桥侧训练期每 lane IODELAY 扫眼定中点 + P/N 极性 (gw5a_xboard eye_scan), UL_CLK 只作上行 PLL 参考 (10-10 修订) ⇒ 静态对间偏斜全部被吸收; IODELAY 量程 = 256 步 × Tdlyunit 10 / 12.5 / 15 ps + Tdlyoffset 200 / 250 / 300 ps ≈ 2.76 ~ 4.14 ns > 1 UI + 全链偏斜, 不靠 bitslip 也能定中点。全链对间预算 ≤ 0.2 UI = 200 ps: 核心板跨 bank 544 mil ≈ 95 ps («e:core_len») + V2 / V3 各 ±200 mil = 35 ps × 2 = 70 ps ⇒ 165 ps, FS03 段只剩约 35 ps (FS03 CEP 线长未知); 按目标 ±50 mil (8.7 ps/段) 合计约 112 ps。③ 漂移: 只上电训练时扫一次眼, 之后偏斜随温度漂移 ≈ 偏斜 × 100 ppm/°C (FR4 Dk 温漂, 估): 200 ps × 100 ppm × 60 °C ≈ 1.2 ps, 可忽略。',
+                    '我方画的每块板 (V2 底板 / V3 转接板 / 目标板) 每段: 对内 P/N ±5 mil; 20 対之间 (含 UL_CLK) 目标 ±50 mil, 上限 ±200 mil。连接器两侧 P/N 脚序交叉 (sheet4 规划·P/N 脚序) 造成的长度差在本段内补齐, 不跨板补。对间不是功能极限 (IODELAY 吸收), 收紧是为了全链偏斜 ≤ 0.2 UI, 把余量留给抖动与扫眼, 换板后扫眼落点也不会差太多。拿到 FS03 CEP 线长与 V2 核心板线长报告后按上式复算。',
+                    'DS1103 表 2-8; «e:core_len» (V1 核心板线长); dr1v90 gw5a_xboard eye_scan / ul_rxfe_gw5a.v; 本行计算 (10-13)', '建议 (计算, 10-13)'),
         'core_len': ('时序', '核心板引出线长', 'V1 核心板线长报告: bank 内对间差 ≤47 mil (≈8 ps), 对内 ≤36 mil (≈6 ps); 跨 bank 最大差 544 mil (≈90 ps)',
                      '上行 20 対必跨 bank4 / bank5 (各引出 11 完整対); 90 ps 在 IODELAY 量程内。V2 核心板线长报告本包没有。', 'project_gw5a_bridge_verification (记忆库线索)', '建议'),
         'fpc_z': ('SI·阻抗', '连接器 / FPC', '100 Ω ±10 % 差分受控, 向厂家写明并给叠层; 必须是阻抗受控多层 FPC (或同等连接器), 不是普通 FFC; 长度尽量 ≤200 mm (估)',

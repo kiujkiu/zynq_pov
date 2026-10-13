@@ -451,45 +451,46 @@ def sheet_history(wb, krs, mets):
 
 
 # ---------------------------------------------------------------- 阶段达成率 / 每日进展
-STAGE_V0, STAGE_V1P = 'V0', 'V1准备'
-RATE_FIELDS = ['日期', 'V0 达成率', 'V1 准备度', 'V2 距离']
+STAGES = ['V0', 'V1', 'V2']
+NEEDS = {'V0': ('V0',), 'V1': ('V0', 'V1准备'), 'V2': ('V0', 'V1准备', 'V2')}   # 交付"需要"是嵌套的
+RATE_FIELDS = ['日期', 'V0 达成率', 'V1 达成率', 'V2 达成率']
 ALGO = [
-    'V0 达成率 = (V0 目标已达标的 KR 数 + 阶段为 V0 或 V1准备 的已完成交付数) ÷ (有 V0 目标的 KR 总数 + 阶段为 V0 或 V1准备 的交付总数)。V1 的准备算在 V0 里。KR 是否达标 = 最新硬件实测 vs V0 目标 (krs.csv 人工状态可覆盖)。',
-    'V1 准备度 = 阶段为 V1准备 的已完成交付数 ÷ 阶段为 V1准备 的交付总数 (阶段列见 deliverables.csv；没填阶段的交付不计)。',
-    'V2 距离 = 「距 V2 达成%」的平均值，只算有 V2 目标的数值型 KR (最新值相对 V2 目标的达成度，越大越接近终极目标)。',
+    '统一口径：达成率_P = (P 目标已达标的 KR 数 + P 需要的交付里已完成数) ÷ (有 P 目标的 KR 数 + P 需要的交付总数)，P = V0 / V1 / V2。',
+    '交付的"需要"是嵌套的：V0 需要 = 阶段 V0；V1 需要 = V0 + V1准备；V2 需要 = V1 需要 + V2 (阶段列见 deliverables.csv，没填阶段的交付不计)。',
+    'KR 是否达到 P 目标 = 截至该日的最新硬件实测值 vs P 目标 (仿真/台架点不算达标)。',
 ]
 
 
+def kr_meets(kr, ms, stage, asof):
+    """截至 asof 的最新硬件实测是否达到 stage 目标: 'ok' / 'sim' (仅仿真/台架达到) / 'no' / None (无该期目标)"""
+    t = num(kr[f'{stage} 目标'])
+    if t is None:
+        return None
+    ms = [m for m in ms if m['_d'] <= asof]
+    real = [m for m in ms if is_real(m['硬件/阶段'])]
+    if real and better(kr, real[-1]['_v'], t):
+        return 'ok'
+    sim = [m for m in ms if not is_real(m['硬件/阶段'])]
+    if sim and better(kr, sim[-1]['_v'], t):
+        return 'sim'
+    return 'no'
+
+
 def compute_rates(krs, mets, dels, asof):
-    """按 asof 当天(含)之前的数据算三个达成率, 返回 dict (含分子分母)"""
+    """按 asof (含) 之前的数据算 V0/V1/V2 三期达成率, 返回 {期: dict(rate, n, m, kr=(a,b), dl=(c,d))}"""
     by = defaultdict(list)
     for m in sorted(mets, key=lambda m: (m['_d'], m['_i'])):
-        if m['_d'] <= asof:
-            by[m['kr_id']].append(m)
-    v0k = [k for k in krs if num(k['V0 目标']) is not None]
-    ok = 0
-    v2 = []
-    for k in krs:
-        s, lr, la = kr_status(k, by[k['kr_id']])
-        if k in v0k and s == 'ok':
-            ok += 1
-        pg = v2_progress(k, lr or la)
-        if pg is not None:
-            v2.append(pg)
-
-    def done(d):
-        return d['状态'] == '✅' and d['_f'] and d['_f'] <= asof
-    d01 = [d for d in dels if d.get('阶段') in (STAGE_V0, STAGE_V1P)]
-    d1 = [d for d in dels if d.get('阶段') == STAGE_V1P]
-    n0 = ok + sum(1 for d in d01 if done(d))
-    m0 = len(v0k) + len(d01)
-    n1 = sum(1 for d in d1 if done(d))
-    return {
-        'v0': (n0 / m0 if m0 else None), 'v0n': n0, 'v0m': m0, 'v0_kr': (ok, len(v0k)),
-        'v0_del': (n0 - ok, len(d01)),
-        'v1': (n1 / len(d1) if d1 else None), 'v1n': n1, 'v1m': len(d1),
-        'v2': (sum(v2) / len(v2) if v2 else None), 'v2n': sum(v2), 'v2m': len(v2),
-    }
+        by[m['kr_id']].append(m)
+    out = {}
+    for P in STAGES:
+        sts = [kr_meets(k, by[k['kr_id']], P, asof) for k in krs]
+        kk = [s for s in sts if s is not None]
+        a = sum(1 for s in kk if s == 'ok')
+        need = [d for d in dels if d.get('阶段') in NEEDS[P]]
+        c = sum(1 for d in need if d['状态'] == '✅' and d['_f'] and d['_f'] <= asof)
+        m_ = len(kk) + len(need)
+        out[P] = {'rate': (a + c) / m_ if m_ else None, 'n': a + c, 'm': m_, 'kr': (a, len(kk)), 'dl': (c, len(need))}
+    return out
 
 
 def update_daily_rates(krs, mets, dels, today):
@@ -498,22 +499,19 @@ def update_daily_rates(krs, mets, dels, today):
     rows = OrderedDict()
     if os.path.exists(path):
         for r in read_csv('daily_rates.csv'):
-            rows[r['日期']] = r
+            if 'V1 达成率' in r:      # 旧版列 (V1 准备度/V2 距离) 口径不同, 丢弃
+                rows[r['日期']] = r
     for d in (dt.date(2026, 10, 12), today):
         if d > today or (d != today and d.isoformat() in rows):
             continue
         c = compute_rates(krs, mets, dels, d)
-        if d != today and c['v0m'] == 0:
-            continue
-        rows[d.isoformat()] = {'日期': d.isoformat(), 'V0 达成率': '' if c['v0'] is None else f'{c["v0"]:.4f}',
-                              'V1 准备度': '' if c['v1'] is None else f'{c["v1"]:.4f}',
-                              'V2 距离': '' if c['v2'] is None else f'{c["v2"]:.4f}'}
+        rows[d.isoformat()] = {'日期': d.isoformat(), **{f'{P} 达成率': ('' if c[P]['rate'] is None else f'{c[P]["rate"]:.4f}') for P in STAGES}}
     out = sorted(rows.values(), key=lambda r: r['日期'])
     with open(path, 'w', encoding='utf-8-sig', newline='') as f:
         w = csv.DictWriter(f, fieldnames=RATE_FIELDS, lineterminator='\n')
         w.writeheader()
         w.writerows(out)
-    return [{'d': pdate(r['日期']), 'v0': num(r['V0 达成率']), 'v1': num(r['V1 准备度']), 'v2': num(r['V2 距离'])} for r in out]
+    return [{'d': pdate(r['日期']), 'v0': num(r['V0 达成率']), 'v1': num(r['V1 达成率']), 'v2': num(r['V2 达成率'])} for r in out]
 
 
 def kr_changes(krs, by_kr, today):
@@ -564,11 +562,11 @@ def sheet_daily(wb, ctx, today):
     for j, w in enumerate([11, 12, 30, 70, 44, 3, 11, 11, 11, 11], 1):
         ws.column_dimensions[get_column_letter(j)].width = w
     header(ws, 3, ['阶段达成率', '数值', '分子/分母', '算法'])
-    items = [
-        ('V0 达成率', cur['v0'], f'{cur["v0n"]}/{cur["v0m"]}', f'KR {cur["v0_kr"][0]}/{cur["v0_kr"][1]} + 交付 {cur["v0_del"][0]}/{cur["v0_del"][1]}  —  ' + ALGO[0]),
-        ('V1 准备度', cur['v1'], f'{cur["v1n"]}/{cur["v1m"]}', ALGO[1]),
-        ('V2 距离', cur['v2'], f'{cur["v2n"]:.2f}/{cur["v2m"]}', f'{cur["v2m"]} 个 KR 的达成度之和 / 个数  —  ' + ALGO[2]),
-    ]
+    items = []
+    for i, P in enumerate(STAGES):
+        c = cur[P]
+        items.append((f'{P} 达成率', c['rate'], f'{c["n"]}/{c["m"]}',
+                      f'KR {c["kr"][0]}/{c["kr"][1]} + 交付 {c["dl"][0]}/{c["dl"][1]}' + (' — ' + ALGO[0] if i == 0 else (' — ' + ALGO[1] if i == 1 else ' — ' + ALGO[2]))))
     for i, (n, v, fr, al) in enumerate(items):
         r = 4 + i
         put(ws, r, 1, n, bold=True)
@@ -579,7 +577,7 @@ def sheet_daily(wb, ctx, today):
         ws.row_dimensions[r].height = 48
     # 趋势数据 (G..J) + 两条趋势线
     rates = ctx['rates']
-    for j, h in enumerate(['日期', 'V0 达成率', 'V1 准备度', 'V2 距离']):
+    for j, h in enumerate(['日期', 'V0 达成率', 'V1 达成率', 'V2 达成率']):
         c = ws.cell(row=3, column=7 + j, value=h)
         c.font = F(True, 9, 'FFFFFF'); c.fill = HEAD_FILL; c.alignment = CENTER; c.border = BORDER
     for i, r in enumerate(rates):
@@ -588,14 +586,14 @@ def sheet_daily(wb, ctx, today):
             put(ws, 4 + i, 8 + j, r[key], align=CENTER, numfmt='0.0%')
     n = len(rates)
     ch = LineChart()
-    style_chart(ch, '阶段达成率趋势 (V0 达成率 / V1 准备度)', '比例', 16, 7.5)
-    ch.add_data(Reference(ws, min_col=8, max_col=9, min_row=3, max_row=3 + n), titles_from_data=True)
+    style_chart(ch, '阶段达成率趋势 (V0 / V1 / V2)', '比例', 16, 7.5)
+    ch.add_data(Reference(ws, min_col=8, max_col=10, min_row=3, max_row=3 + n), titles_from_data=True)
     ch.set_categories(Reference(ws, min_col=7, min_row=4, max_row=3 + n))
     ch.x_axis.number_format = 'mm-dd'
     ch.y_axis.number_format = '0%'
     ch.y_axis.scaling.min = 0
     ch.y_axis.scaling.max = 1
-    for s_, (c, dsh, mk) in zip(ch.series, [('2E75B6', 'solid', 'circle'), ('ED7D31', 'solid', 'triangle')]):
+    for s_, (c, dsh, mk) in zip(ch.series, [('2E75B6', 'solid', 'circle'), ('ED7D31', 'solid', 'triangle'), ('70AD47', 'solid', 'circle')]):
         style_series(s_, c, dsh, mk)
     ws.add_chart(ch, 'L3')
     # 今天比昨天
@@ -637,18 +635,15 @@ def html_daily(ctx, today):
     cur = ctx['cur']
     o = []
     o.append('<h2>阶段达成率</h2><div style="display:flex;gap:10px">')
-    cards = [
-        ('V0 达成率', cur['v0'], f'{cur["v0n"]} / {cur["v0m"]}', f'KR {cur["v0_kr"][0]}/{cur["v0_kr"][1]} + 交付 {cur["v0_del"][0]}/{cur["v0_del"][1]}'),
-        ('V1 准备度', cur['v1'], f'{cur["v1n"]} / {cur["v1m"]}', '阶段为 V1准备 的已完成交付'),
-        ('V2 距离', cur['v2'], f'{cur["v2n"]:.2f} / {cur["v2m"]}', f'{cur["v2m"]} 个有 V2 目标的数值型 KR 的平均达成度'),
-    ]
+    cards = [(f'{P} 达成率', cur[P]['rate'], f'{cur[P]["n"]} / {cur[P]["m"]}', f'KR {cur[P]["kr"][0]}/{cur[P]["kr"][1]} + 交付 {cur[P]["dl"][0]}/{cur[P]["dl"][1]}') for P in STAGES]
     for n, v, fr, sub in cards:
         o.append(f'<div style="flex:1;border:1px solid #ccc;border-top:4px solid #1F4E78;padding:6px 10px"><div style="color:#666">{n}</div>'
                  f'<div style="font-size:28px;font-weight:700">{pct(v)}</div><div>分子/分母：<b>{fr}</b></div><div style="color:#666">{esc(sub)}</div></div>')
     o.append('</div><ul style="margin:6px 0;padding-left:18px;color:#444">' + ''.join(f'<li>{esc(a)}</li>' for a in ALGO) + '</ul>')
     rates = ctx['rates']
     ser = [('V0 达成率', [(r['d'], r['v0']) for r in rates], '2E75B6', False, True),
-           ('V1 准备度', [(r['d'], r['v1']) for r in rates], 'ED7D31', False, True)]
+           ('V1 达成率', [(r['d'], r['v1']) for r in rates], 'ED7D31', False, True),
+           ('V2 达成率', [(r['d'], r['v2']) for r in rates], '70AD47', False, True)]
     o.append('<div style="width:55%">' + svg_chart(ser, w=520, h=220, yfmt=lambda v: f'{v:.0%}', title='阶段达成率趋势 (按日期)', yzero=True) + '</div>')
     o.append('<h2>今天比昨天 (每个 KR 取每天最后一个硬件实测值；绿 = 变好，红 = 变差，蓝 = 新出现)</h2>')
     colors = {'up': '#C6EFCE', 'down': '#FFC7CE', 'new': '#BDD7EE', 'same': '#F2F2F2'}
@@ -869,6 +864,134 @@ th{background:#1F4E78;color:#fff;font-weight:600}td.c{text-align:center}
         f.write('\n'.join(o))
 
 
+# ---------------------------------------------------------------- 交互式页面
+INTERACTIVE_TPL = r"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>显性目的进度 (交互)</title><style>
+:root{--fg:#1a1a1a;--mut:#777;--bd:#d8d8d8;--ok:#1a9d3c;--bad:#d32f2f}
+*{box-sizing:border-box}
+body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC',sans-serif;color:var(--fg);background:#f5f6f8;margin:0;padding:14px 18px 96px;font-size:13px}
+h1{font-size:19px;margin:0 0 2px}.sub{color:var(--mut);margin-bottom:10px;font-size:12px}
+.top{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap}
+.card{background:#fff;border:1px solid var(--bd);border-top:4px solid #1F4E78;border-radius:4px;padding:8px 14px;min-width:190px;flex:1}
+.card .nm{color:var(--mut)}.card .big{font-size:34px;font-weight:700;line-height:1.15}.card .fr{font-weight:600}.card .dt{color:var(--mut);font-size:12px}
+.card.p0{border-top-color:#2E75B6}.card.p1{border-top-color:#ED7D31}.card.p2{border-top-color:#70AD47}
+.trend{flex:2;min-width:300px;background:#fff;border:1px solid var(--bd);border-radius:4px;padding:4px 8px}
+.trend svg{width:100%;height:auto;display:block}
+.algo{color:#555;font-size:11.5px;margin:6px 0 10px;line-height:1.6}
+.goal{background:#fff;border:1px solid var(--bd);border-radius:4px;margin-bottom:10px;overflow:hidden}
+.gh{background:#1F4E78;color:#fff;padding:5px 10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.gh b{font-size:14px}.gh span{font-size:11.5px;opacity:.92}
+table{border-collapse:collapse;width:100%}
+th{background:#eef2f7;color:#333;font-weight:600;padding:4px 6px;border-bottom:1px solid var(--bd);text-align:center;font-size:12px}
+td{padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top}td.c{text-align:center;white-space:nowrap}
+td.n{width:42%}.tag{display:inline-block;font-size:10.5px;border:1px solid #bbb;border-radius:3px;padding:0 4px;color:#666;margin-right:5px}
+.pm{display:inline-block;width:16px;font-weight:900;font-size:16px;line-height:1}.plus{color:var(--ok)}.minus{color:var(--bad)}
+tr.up{background:#f0fbf2}tr.down{background:#fff1f1}tr.light td.v,tr.light td.n .nm{color:#999}
+.sim{color:#999;font-size:11px}.fut{color:#aaa}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #1F4E78;padding:8px 18px 10px;display:flex;align-items:center;gap:12px;z-index:9}
+.bar input[type=range]{flex:1;height:26px}.bar button{font-size:16px;padding:3px 12px;cursor:pointer;border:1px solid #888;background:#f3f3f3;border-radius:4px}
+.bar .lab{font-size:18px;font-weight:700;min-width:130px;text-align:center}.bar .lim{color:var(--mut);font-size:11px}
+</style></head><body>
+<h1>POV3D 显性目的进度 — 交互看板</h1>
+<div class="sub">生成日期 __TODAY__ · 拖动底部时间滑块 (或按 ← →) 查看任一天的状态；数据内嵌，不联网。数据源 zynq_pov/docs/progress/*.csv，脚本 mk_progress.py。</div>
+<div class="top" id="top"></div>
+<div class="algo">达成率_P = (P 目标已达标的 KR 数 + P 需要的交付里已完成数) ÷ (有 P 目标的 KR 数 + P 需要的交付总数)；交付需要是嵌套的：V0 = 阶段 V0，V1 = V0 + V1准备，V2 = V1 + V2。KR 达标 = 截至所选日期的最新<b>硬件实测</b>值达到 P 目标；
+仿真/台架点不算达标，显示为 🔵。图例：✅ 达成　⬜ 未达成　🔵 仅仿真/台架已达成　— 无该期目标/不需要。名称前 <span class="pm plus">+</span> = 所选当天新完成/新达标，<span class="pm minus">−</span> = 当天变差。</div>
+<div id="goals"></div>
+<div class="bar"><button id="prev" title="前一天 (←)">◀</button><input type="range" id="sl" min="0" value="0" step="1"><button id="next" title="后一天 (→)">▶</button>
+<div class="lab" id="lab"></div><div class="lim" id="lim"></div></div>
+<script>
+const DATA=__DATA__;
+const STG=['V0','V1','V2'],NEEDS={V0:['V0'],V1:['V0','V1准备'],V2:['V0','V1准备','V2']};
+const COL={V0:'#2E75B6',V1:'#ED7D31',V2:'#70AD47'};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtv=v=>v==null?'—':(Math.abs(v)>=1e6?v.toFixed(0):String(+v.toPrecision(6)));
+const addDay=(iso,n)=>{const d=new Date(iso+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+const better=(k,a,b)=>k.dir==='越大越好'?a>=b:a<=b;
+const mByKr={};DATA.mets.forEach(m=>(mByKr[m.kr]=mByKr[m.kr]||[]).push(m));
+Object.values(mByKr).forEach(a=>a.sort((x,y)=>x.d<y.d?-1:x.d>y.d?1:x.i-y.i));
+function latest(kr,d,real){let r=null;for(const m of mByKr[kr.id]||[]){if(m.d>d)break;if(real===undefined||m.real===real)r=m}return r}
+function krState(kr,P,d){const t=kr.t[P];if(t==null)return null;
+ const r=latest(kr,d,true);if(r&&better(kr,r.v,t))return 'ok';
+ const s=latest(kr,d,false);if(s&&better(kr,s.v,t))return 'sim';return 'no'}
+function isDone(x,d){return x.status==='✅'&&x.done&&x.done<=d}
+function rates(d){const o={};for(const P of STG){let a=0,b=0;for(const k of DATA.krs){const s=krState(k,P,d);if(s===null)continue;b++;if(s==='ok')a++}
+ const nd=DATA.dels.filter(x=>NEEDS[P].includes(x.stage));const c=nd.filter(x=>isDone(x,d)).length;
+ o[P]={n:a+c,m:b+nd.length,ka:a,kb:b,dc:c,dd:nd.length,r:(b+nd.length)?(a+c)/(b+nd.length):0}}return o}
+// 日期轴
+const dates=[];for(let d=DATA.start;d<=DATA.today;d=addDay(d,1))dates.push(d);
+const allRates=dates.map(rates);
+let cur=dates.length-1;
+function trendSvg(i){const W=560,H=150,L=34,R=8,T=8,B=20,pw=W-L-R,ph=H-T-B,n=dates.length;
+ const X=j=>L+(n>1?j/(n-1):0)*pw,Y=v=>T+ph-v*ph;let o=`<svg viewBox="0 0 ${W} ${H}">`;
+ for(let g=0;g<=4;g++){const v=g/4;o+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eee"/><text x="${L-4}" y="${Y(v)+3}" font-size="9" fill="#777" text-anchor="end">${v*100}%</text>`}
+ const step=Math.max(1,Math.round(n/6));for(let j=0;j<n;j+=step)o+=`<text x="${X(j)}" y="${H-5}" font-size="9" fill="#777" text-anchor="middle">${dates[j].slice(5)}</text>`;
+ for(const P of STG){o+=`<polyline fill="none" stroke="${COL[P]}" stroke-width="1.8" points="${allRates.map((r,j)=>X(j).toFixed(1)+','+Y(r[P].r).toFixed(1)).join(' ')}"/>`}
+ o+=`<line x1="${X(i)}" x2="${X(i)}" y1="${T}" y2="${T+ph}" stroke="#444" stroke-dasharray="3 3"/>`;
+ for(const P of STG)o+=`<circle cx="${X(i)}" cy="${Y(allRates[i][P].r)}" r="4.5" fill="${COL[P]}" stroke="#fff" stroke-width="1.5"/>`;
+ let lx=L+4;for(const P of STG){o+=`<rect x="${lx}" y="${T+2}" width="10" height="3" fill="${COL[P]}"/><text x="${lx+13}" y="${T+7}" font-size="10" fill="#333">${P}</text>`;lx+=44}
+ return o+'</svg>'}
+function cards(i){const r=allRates[i];let h='';STG.forEach((P,j)=>{const c=r[P];
+ h+=`<div class="card p${j}"><div class="nm">${P} 达成率</div><div class="big">${(c.r*100).toFixed(1)}%</div><div class="fr">${c.n} / ${c.m}</div><div class="dt">KR ${c.ka}/${c.kb} + 交付 ${c.dc}/${c.dd}</div></div>`});
+ return h+`<div class="trend">${trendSvg(i)}</div>`}
+function icon(s){return s==='ok'?'✅':s==='sim'?'🔵':s==='no'?'⬜':'—'}
+function krRow(k,d,prev){
+ const rr=latest(k,d,true),ra=latest(k,d),show=rr||ra,sim=!rr&&ra;
+ let gain=false,loss=false;const st={},ps={};
+ for(const P of STG){st[P]=krState(k,P,d);ps[P]=krState(k,P,prev);if(ps[P]!=='ok'&&st[P]==='ok')gain=true;if(ps[P]==='ok'&&st[P]!=='ok')loss=true}
+ // 当天最后一个实测 vs 此前最后一个实测
+ const today_=(mByKr[k.id]||[]).filter(m=>m.real&&m.d===d).pop(),before=latest(k,prev,true);
+ const worse=today_&&before&&!better(k,today_.v,before.v);
+ const mark=gain&&!loss?'<span class="pm plus">+</span>':(loss||worse)?'<span class="pm minus">−</span>':'<span class="pm"></span>';
+ const cls=(gain&&!loss)?'up':(loss||worse)?'down':'';
+ const allSim=STG.every(P=>st[P]!=='ok')&&STG.some(P=>st[P]==='sim');
+ return `<tr class="${cls}${sim?' light':''}"><td class="n">${mark}<span class="tag">KR</span><span class="nm">${esc(k.id)} ${esc(k.name)}</span> <span class="sim">(${esc(k.unit)}, ${esc(k.dir)})</span></td>
+ <td class="c v">${show?fmtv(show.v)+(sim?' <span class="sim">仿真/台架</span>':''):'—'}</td>${STG.map(P=>`<td class="c">${icon(st[P])}</td>`).join('')}
+ <td class="c v">${show?show.d.slice(5):'—'}</td></tr>`}
+function delRow(x,d){const done=isDone(x,d),just=x.status==='✅'&&x.done===d;
+ const cell=P=>NEEDS[P].includes(x.stage)?(done?'✅':'⬜'):'—';
+ const dt=done?x.done.slice(5):(x.plan?`<span class="fut">计划 ${x.plan.slice(5)}</span>`:'<span class="fut">未排期</span>');
+ return `<tr class="${just?'up':''}"><td class="n"><span class="pm ${just?'plus':''}">${just?'+':''}</span><span class="tag">交付</span><span class="nm">${esc(x.id)} ${esc(x.name)}</span> <span class="sim">[${esc(x.stage)}]</span></td>
+ <td class="c v">${done?'已完成':esc(x.status)+' 未完成'}</td>${STG.map(P=>`<td class="c">${cell(P)}</td>`).join('')}<td class="c">${dt}</td></tr>`}
+function goalsHtml(d){const prev=addDay(d,-1);let h='';
+ for(const g of DATA.goals){const ks=DATA.krs.filter(k=>k.goal===g.id),ds=DATA.dels.filter(x=>x.goals[0]===g.id);
+  const sub=STG.map(P=>{let a=0,b=0;ks.forEach(k=>{const s=krState(k,P,d);if(s!==null){b++;if(s==='ok')a++}});return `${P} ${a}/${b}`}).join(' · ');
+  const v1=ds.filter(x=>x.stage==='V1准备'),v1d=v1.filter(x=>isDone(x,d)).length,all=ds.filter(x=>isDone(x,d)).length;
+  h+=`<div class="goal"><div class="gh"><b>${g.id}. ${esc(g.name)}</b><span>KR 达标 ${sub} ｜ 交付 完成 ${all}/${ds.length}${v1.length?`（V1 准备 ${v1d}/${v1.length}）`:''}</span></div>
+  <table><tr><th>名称</th><th>当前值</th><th>V0</th><th>V1</th><th>V2</th><th>完成/实测日期</th></tr>${ks.map(k=>krRow(k,d,prev)).join('')}${ds.map(x=>delRow(x,d)).join('')}</table></div>`}
+ return h}
+function render(){const d=dates[cur];$('top').innerHTML=cards(cur);$('goals').innerHTML=goalsHtml(d);
+ const wd='日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()];$('lab').textContent=d+' 周'+wd;$('sl').value=cur}
+const sl=$('sl');sl.max=dates.length-1;$('lim').textContent=dates[0].slice(5)+' ~ '+dates[dates.length-1].slice(5);
+sl.addEventListener('input',()=>{cur=+sl.value;render()});
+const go=n=>{cur=Math.min(dates.length-1,Math.max(0,cur+n));render()};
+$('prev').onclick=()=>go(-1);$('next').onclick=()=>go(1);
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){go(-1);e.preventDefault()}else if(e.key==='ArrowRight'){go(1);e.preventDefault()}});
+render();
+</script></body></html>
+"""
+
+
+def build_interactive(goals, krs, mets, dels, today, out):
+    import json
+    ds = [m['_d'] for m in mets] + [d['_p'] for d in dels if d['_p']] + [d['_f'] for d in dels if d['_f']]
+    start = min(ds)
+    data = {
+        'today': today.isoformat(), 'start': start.isoformat(),
+        'goals': [{'id': g['id'], 'name': g['显性目的']} for g in goals],
+        'krs': [{'id': k['kr_id'], 'goal': k['goal_id'], 'name': k['指标名'], 'unit': k['单位'], 'dir': k['方向'],
+                 't': {P: num(k[f'{P} 目标']) for P in STAGES}} for k in krs],
+        'mets': [{'d': m['日期'], 'kr': m['kr_id'], 'v': m['_v'], 'real': is_real(m['硬件/阶段']), 'i': m['_i']} for m in mets],
+        'dels': [{'id': d['id'], 'name': d['名称'], 'goals': d['服务的 goal_id'].split(';'), 'stage': d.get('阶段', ''),
+                  'plan': d['计划日期'], 'done': d['完成日期'], 'status': d['状态']} for d in dels],
+    }
+    js = json.dumps(data, ensure_ascii=False).replace('</', '<\\/')
+    with open(out, 'w', encoding='utf-8') as f:
+        f.write(INTERACTIVE_TPL.replace('__DATA__', js).replace('__TODAY__', today.isoformat()))
+
+
+
 def to_pdf(html_path, pdf_path):
     if not os.path.exists(EDGE):
         print('找不到 Edge, 跳过 PDF')
@@ -931,6 +1054,9 @@ def main():
     htm = safe_path(base + '.html')
     build_html(goals, krs, by_kr, dels, mta, today, htm, ctx)
     print('写出', xlsx, htm)
+    ih = safe_path(os.path.join(HERE, '显性目的进度_交互.html'))
+    build_interactive(goals, krs, mets, dels, today, ih)
+    print('写出', ih)
     if not a.no_pdf:
         to_pdf(htm, base + '.pdf')
 

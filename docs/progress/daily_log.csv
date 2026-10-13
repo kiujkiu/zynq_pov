@@ -31,3 +31,8 @@
 2026-10-13,决定,KR5.2,用户实转核实：2047 旧表镜像，已更正为新表 0decad54,dr1v90 49031f6
 2026-10-13,问题,D7,D7 上板补测会装/还原 autorun，冲掉 D13 补丁，须排在 D13 定稿合并之后；夜间板子排程 D12→D13→D2→D7→8 h 长跑,claude_memory/project_short_term_delivery_1013.md
 2026-10-13,里程碑,,显性目的进度看板第一版建立：10 个显性目的 + KR 趋势 + 燃起图 + 里程碑趋势,claude_memory/project_progress_dashboard.md
+2026-10-14,复验通过,D3,"上行出口全量复验 45/0, 合主线",dr1v90 fdb4de6
+2026-10-14,复验退回,D2,"PL 切片上板: 与 CPU 逐字节一致、30 min 无停摆, 但内容帧率 4.2<15, 退回",scratchpad/v_pls4_board.log
+2026-10-14,问题,D16,"30 Hz 带载迟到+掉片 3.7% (空载 0.2% 来自旧 netguard), 归因测试中",project_ddr_budget_by_phase_1013
+2026-10-14,问题,D16,纯切片带载约 21 min 停摆; 无负载浸泡 2×30 min 不停摆,project_ddr_budget_by_phase_1013
+2026-10-14,决定,D13,"用户定目标: 复位到亮起 ≤12 s, 找板 ≤20 s",project_short_term_delivery_1013

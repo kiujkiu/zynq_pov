@@ -4,6 +4,8 @@ description: "10-13 11:19 WSL 整机重启不是崩溃, 是 Windows Update 自�
 metadata:
   node_type: memory
   type: project
+  originSessionId: ed0ca74a-6354-4658-9945-b7ef0888c888
+  modified: 2026-10-13T03:57:41.140Z
 ---
 
 2026-10-13 11:17:54–11:19:26 Windows Update (SoftwareDistribution 下的 wsl.3.0.3.0.x64.msi) 自动升级 WSL, RestartManager 关掉 wslhost/wslrelay, VM 被拆再起。不是内核 panic; wsl-crashes/ 里只有用户进程 dump (11:15 git SIGBUS 是 D 盘 EIO, 见 [[feedback_wsl_d_eio_remount]])。
@@ -14,3 +16,4 @@ metadata:
 
 **Why:** 用户以为 WSL 本身开始崩了。
 **How to apply:** 再遇到 WSL 整体重启, 先查 Windows 事件日志 MsiInstaller / RestartManager, 再怀疑内核。
+- 10-13 21:02 用户已在设置里暂停 Windows 更新至 **2026-11-17** (覆盖 11-10 回板); 之后记得恢复更新。

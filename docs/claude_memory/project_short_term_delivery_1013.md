@@ -55,4 +55,5 @@ metadata:
 
 **10-13 19:30:** D4 合主线 6a373d3。D14 离线复验 ALL PASS (内容 10 类, 手机网页 http://10.10.20.125:8088/), 待上板。D2 离线复验 26/0 待上板。教训: agent 交付前必须在 WSL 本地盘新克隆跑 verify (D 盘仓库不记可执行位, D2/D4 都栽过)。
 
-**10-13 20:20 夜间无人值守队列 (用户已关电机, 明早汇报):** D12 上板复验 (进行中, 主会话在 scratchpad/v_d12 跑 live_phase/verify.sh --board) → D2 (等按新几何 0decad54 返工后, 主会话跑 td_pov/pls2047/verify.sh --board, 先查 povmem 64 MB) → D13 (d13_boot/verify.sh --board, 重启 6 次; 0° 片双面显示 IDLE_B_SLOT 待用户定, 我建议 B=两面) → D7 补 V3 (rotor_ops/verify.sh --board, 用 7ef55e1; 查 B 段单次阵是否 DHCP 续租) → 8 h 长跑 (KR7.2)。合并注意: D2/D12/D13 都改 voxslice.c, 按顺序手工合并并重跑验收。已合主线: D1 D4 D5 D6; 用户实转看过: 镜像更正 + 实时推流 + D14 10 类内容 + 手机遥控 (D14 未跑正式上板验收, 未合)。开机演示 = 几何体 geo.pvs + 新表 0decad54。
+**10-13 20:20 夜间无人值守队列 (用户已关电机, 明早汇报):** D12 上板复验 (进行中, 主会话在 scratchpad/v_d12 跑 live_phase/verify.sh --board) → D2 (等按新几何 0decad54 返工后, 主会话跑 td_pov/pls2047/verify.sh --board, 先查 povmem 64 MB) → D13 (d13_boot/verify.sh --board, 重启 6 次; 用户定两面显示 IDLE_B_SLOT=1 (已通知 D13 改默认)) → D7 补 V3 (rotor_ops/verify.sh --board, 用 7ef55e1; 查 B 段单次阵是否 DHCP 续租) → 8 h 长跑 (KR7.2)。合并注意: D2/D12/D13 都改 voxslice.c, 按顺序手工合并并重跑验收。已合主线: D1 D4 D5 D6; 用户实转看过: 镜像更正 + 实时推流 + D14 10 类内容 + 手机遥控 (D14 未跑正式上板验收, 未合)。开机演示 = 几何体 geo.pvs + 新表 0decad54。
+**用户 10-13 20:2x:** D13 启动屏显两面显示; 几何体要无缝循环 (现状可用, 已派 D14 做 geo:loop=60 生成 geo_loop.pvs, 主会话安装)。

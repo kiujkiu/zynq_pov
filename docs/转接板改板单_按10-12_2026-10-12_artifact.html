@@ -1,0 +1,264 @@
+<title>转接板改板单</title>
+<style>
+/* Layout: 单栏工程单, 页首总表按处理状态分色; 每项 = 编号块 + 现状/改法/原因/回板验收; 末尾列 09-18 遗留项 */
+:root{
+  --bg:#f6f7f5; --paper:#ffffff; --fg:#1d2420; --muted:#5d6a63; --rule:#d5dbd6;
+  --accent:#1f6f54; --accent-soft:#e2efe9; --red:#b3261e; --red-soft:#fbe9e7;
+  --amber:#8a5a00; --amber-soft:#fbf0d9; --code:#eef1ee;
+  --f-head:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono","Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141917; --paper:#1b211e; --fg:#e4ebe7; --muted:#9aa8a0; --rule:#33403a;
+  --accent:#6cc4a1; --accent-soft:#20342b; --red:#ff8a80; --red-soft:#3a1f1d;
+  --amber:#f2c46b; --amber-soft:#3a2f17; --code:#232b27; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --paper:#1b211e; --fg:#e4ebe7; --muted:#9aa8a0; --rule:#33403a;
+  --accent:#6cc4a1; --accent-soft:#20342b; --red:#ff8a80; --red-soft:#3a1f1d;
+  --amber:#f2c46b; --amber-soft:#3a2f17; --code:#232b27; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.7}
+.wrap{max-width:920px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-direction:column;gap:6px;border-bottom:2px solid var(--fg);padding-bottom:14px}
+h1{font-family:var(--f-head);font-size:1.7rem;margin:0;text-wrap:balance;letter-spacing:.02em}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted);font-size:.86rem}
+.meta b{color:var(--fg);font-weight:600}
+h2{font-family:var(--f-head);font-size:1.18rem;margin:0;text-wrap:balance}
+p{margin:0}
+.lead{background:var(--paper);border:1px solid var(--rule);border-left:4px solid var(--accent);padding:12px 16px;border-radius:4px;display:flex;flex-direction:column;gap:8px}
+.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--rule);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--rule);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+code,.mono{font-family:var(--f-mono);font-size:.86em;background:var(--code);padding:1px 5px;border-radius:3px;white-space:nowrap}
+td.mono{background:none}
+.item{background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;break-inside:avoid-page}
+.itemhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.no{font-family:var(--f-mono);font-weight:700;color:var(--accent);font-size:1.05rem}
+.tag{font-size:.75rem;letter-spacing:.06em;padding:2px 8px;border-radius:3px;font-weight:600;white-space:nowrap}
+.t-must{background:var(--red-soft);color:var(--red)}
+.t-check{background:var(--amber-soft);color:var(--amber)}
+.t-done{background:var(--accent-soft);color:var(--accent)}
+.grid{display:grid;grid-template-columns:7.5em 1fr;gap:6px 14px}
+.grid dt{color:var(--muted);font-size:.86rem;padding-top:2px}
+.grid dd{margin:0;min-width:0}
+ul{margin:0;padding-left:1.2em}
+.bad{color:var(--red);font-weight:600}
+.warn{color:var(--amber);font-weight:600}
+.okc{color:var(--accent);font-weight:600}
+.note{color:var(--muted);font-size:.86rem}
+.nw{white-space:nowrap}
+.check{list-style:none;padding:0;display:flex;flex-direction:column;gap:4px}
+.check li::before{content:"☐ ";color:var(--accent)}
+@media (max-width:560px){.grid{grid-template-columns:1fr}.grid dt{padding-top:6px}}
+@media print{body{font-size:12.5px}.wrap{max-width:none;padding-block:0}.tbl{overflow:visible}table{font-size:.82rem}}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>转接板改板单 · 按 10-12 原理图</h1>
+  <div class="meta">
+    <span>板子 <b>桥转接板 ACG525-LED-V01</b>（灯板 ↔ 本板 ↔ GW5A 核心板 ACG525-CORE-V2；FPC2 去 SoC 侧），另含 <b>SoC 转接板</b> 一项</span>
+    <span>被审图 <b>SCH_GW5A to LED board V01_2026-10-12</b>（对比 10-10 版）</span>
+    <span>日期 <b>2026-10-12</b></span>
+  </div>
+</header>
+
+<div class="lead">
+  <p>本单按硬件 10-12 发来的原理图写，替换 10-10 的七项单。10-12 版相比 10-10 只改了两处：<b>核心板侧 CN3 / CN6 的料号</b>，以及 <b>JTAG 新加了一片电平转换 U18</b>。其余文字和连线与 10-10 版逐字相同。</p>
+  <p>目标不变：<b>桥 FPGA 永远能起来</b>。板载 flash 存出厂保底固件，由本地 JTAG 下载座烧写；每次上电先从 flash 自动启动，再由 SoC（DR1）经 JTAG 把新固件灌进 SRAM。第 1–4 条是这个目标的硬件前提。SoC 与桥之间的电平转换全部放在桥转接板上，FPC 上单端统一 2.5 V（接口契约 D5）。</p>
+  <p class="note">标题栏日期已是 10-12，但图名仍写 <code>01_ICN2260_LED_V01_高云转接板_1010</code>，顺手改一下。</p>
+</div>
+
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>改什么</th><th>10-12 状态</th><th>不改的后果</th></tr></thead>
+<tbody>
+<tr><td class="mono">1</td><td>核心板侧 CN3 / CN6：料号已改回 <code>AXK600337YG</code>；脚号要恢复 09-23 的 n → n</td><td class="bad">料号已改 · 脚号必改或用 PCB 证明</td><td class="bad">座子转 180° 接，3.3 V 打到核心板 JTAG / IO</td></tr>
+<tr><td class="mono">2</td><td>VCCIO45 改回 3.3 V：L3 贴片、L7 改 NC</td><td class="bad">未改 · 必改</td><td class="bad">flash 上电自动加载不可靠，保底固件起不来</td></tr>
+<tr><td class="mono">3</td><td>JTAG：U18 补上下拉、OE 上拉 + 跳线、本地下载座；边带 4 根加第二片 SN74AVC4T774</td><td class="warn">JTAG 已加转换 · 其余必改</td><td class="bad">FPC 没插时 JTAG 输入悬空；烧不了 flash；边带 3.3 V 反灌 DR1</td></tr>
+<tr><td class="mono">4</td><td>FPC2 尾部 64–72 按接口契约 v3 重排；核实 FPC 座是否 72 导体</td><td class="bad">未改 · 必改</td><td class="bad">JTAG / UART 四根短到地</td></tr>
+<tr><td class="mono">5</td><td>上行转发时钟留在 <code>B5_B26</code></td><td class="okc">已确认 · 不用动</td><td>—</td></tr>
+<tr><td class="mono">6</td><td>灯板侧 CN1 / CN2 和新版灯板逐脚对插核对</td><td class="warn">与 10-10 相同 · 必核</td><td>对不上则下行和灯板电源错位</td></tr>
+<tr><td class="mono">7</td><td><b>SoC 转接板</b>的 FPC 尾部按同一份契约核对</td><td class="warn">必核</td><td>一头对、一头错，照样短地 / 接错</td></tr>
+</tbody></table></div>
+
+<section class="item">
+  <div class="itemhead"><span class="no">1</span><h2>核心板侧座子：料号对了，脚号转了 180°</h2><span class="tag t-must">必改 · 10-12 新引入</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>
+      <ul>
+        <li>CN3、CN6 已改回 <code>AXK600337YG</code>（公座），与核心板 P1 / P2 的 <code>AXK500137YG</code> 母座配对。这一点改对了。</li>
+        <li>但脚号换成了 <b>101 − n</b>：网络在符号上的位置没变，第 1 脚标记从左上角移到了右下角。09-23 版是 n → n，10-10 版是镜像，10-12 是第三种。</li>
+      </ul></dd>
+    <dt>对照</dt><dd>
+      <div class="tbl"><table>
+        <thead><tr><th>网络</th><th>核心板 / 官方底板 / 09-23 版</th><th>10-12 版</th></tr></thead>
+        <tbody>
+          <tr><td><code>VCC3P3</code></td><td class="mono">1–4</td><td class="mono">97–100</td></tr>
+          <tr><td><code>B4_B33_N / P</code></td><td class="mono">19 / 21</td><td class="mono">82 / 80</td></tr>
+          <tr><td><code>B4_B45_N</code></td><td class="mono">20</td><td class="mono">81</td></tr>
+          <tr><td><code>FPGA_TCK</code></td><td class="mono">100</td><td class="mono">1</td></tr>
+        </tbody></table></div></dd>
+    <dt>为什么要紧</dt><dd>101 − n 相当于把座子原地转 180°。如果新封装的 1 号焊盘和 09-23 版（也就是官方底板 LB3524-G100P）在同一物理位置，<code>VCC3P3</code> 会落到核心板的 97–100 脚（JTAG 和 bank2 IO），GND 和信号也全部错位，上电即损坏。只有新封装自己的焊盘编号也转了 180° 时才对得上，这一点原理图上看不出来。</dd>
+    <dt>改法</dt><dd>推荐把 CN3 / CN6 脚号恢复成 09-23 版：转接板第 n 脚对核心板第 n 脚（官方底板就是这样）。如果是换了库里的新封装、确实需要 101 − n，请发 PCB 截图证明：<b>转接板上接 VCC3P3 的焊盘，与核心板 P1 的 1–4 脚正对</b>。CN6 同理（核心板 P2.1 = <code>B7_T15_P</code>）。</dd>
+    <dt>回板验收</dt><dd><ul class="check">
+      <li>PCB 上把核心板 P1 / P2 的 1 脚标记与 CN3 / CN6 叠放比对，VCC3P3、VCCIO、GND 焊盘位置一致。</li>
+      <li>不插核心板量通断：CN3 上与核心板 P1.1 / P1.3 对应的触点 = VCC3P3，P1.20 对应触点 = <code>B4_B45_N</code>（与对接表 v3 的 200 脚表逐脚一致）。</li>
+    </ul></dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">2</span><h2>VCCIO45 改回 3.3 V</h2><span class="tag t-must">必改 · flash 启动前提</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>与 10-10 相同：<code>L7</code>（PWR2V5 → VCCIO45）贴片，<code>L3</code>（VCC3P3 → VCCIO45）标 <code>UPZ1608E121-3R0TF/NC</code>。默认装配下 bank4/5 是 2.5 V。</dd>
+    <dt>为什么错</dt><dd>核心板（原理图第 4 页）bank4/5 的整套启动电路都接在核心板自己的 VCC3P3 上：
+      <ul>
+        <li>启动 flash GD25Q128 的电源，以及 CS / MISO / WP / HOLD 的 4.7 kΩ 上拉；</li>
+        <li>READY、RECONFIG_N 的 4.7 kΩ 上拉，MODE0 / 1 的上拉位，DONE 指示灯；</li>
+        <li>50 MHz 有源晶振的电源，输出进 T9。</li>
+      </ul>
+      bank 降到 2.5 V 后，这些 3.3 V 信号超过 GW5A 2.5 V 输入上限 2.8 V（DS1103 表 3-21，VIH max = VCCIO + 0.3）；FPGA 驱 flash 的高电平只有 2.5 V，离 flash 输入门限约 2.31 V 只剩 0.2 V。</dd>
+    <dt>为什么不换宽电压 flash</dt><dd>这条路我们评估过：只换 flash 不够，因为它的电源脚仍接核心板 VCC3P3，读回数据照样是 3.3 V。要合规得把上面一整组都从 VCC3P3 改到 VCCIO45，等于让核心板厂家出定制版。VCC3P3 同时供 FPGA 的 VCCX 和 JTAG bank，也不能整轨降。所以选择：bank 回 3.3 V，边带的电平差由第 3 条的转换器解决。</dd>
+    <dt>LVDS 不受影响</dt><dd>bank4/5 上的上行 20 对（GW5A 收）和链 4 的 D0（<code>B4_B50</code>，GW5A 发）在 3.3 V 下都合法：LVDS25 差分输入任何 bank 电压都能用（DS1103 表 2-7），输入共模 0.3–2.35 V；真差分 TLVDS 输出支持 2.5 / 3.3 V，输出 VOD / VOS 指标只有一套，不随 bank 电压变（表 2-6、表 3-27）。<span id="lvds-tool"><br><b>工具实测（10-12，高云 V1.9.12.03，GW5A-25）</b>：bank4/5 设 3.3 V，上行 20 对按 LVDS25 收、<code>B4_B50</code> 用真差分 TLVDS 按 333 Mbps 发、边带 4 根按 LVCMOS33，<span class="okc">出 bit，0 错误 0 警告</span>，报告里 26 个端口 / 47 个球的位置、电平标准和 bank 电压与原理图逐个对上。对照：同一对改用仿真差分输出（ELVDS）在 3.3 V 下工具直接拒绝，在 2.5 V 下能过，说明工具确实按电压检查。<b>结论：bank4/5 的 LVDS 部分不用改线，只需保证链 4 的 D0 用真差分输出。</b>实际电气表现（共模、摆幅、眼图）回板后实测。</span></dd>
+    <dt>改法</dt><dd><code>L3</code> 贴 <code>UPZ1608E121-3R0TF</code>，<code>L7</code> 改 NC 或删掉。VCCIO45 固定接 VCC3P3（U15 供电）。</dd>
+    <dt>回板验收</dt><dd><ul class="check">
+      <li>上电量 VCCIO45 = 3.3 V。</li>
+      <li>flash 里烧好保底位流后，单独上电（不插 FPC），GW5A 自己加载，DONE 变高。</li>
+    </ul></dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">3</span><h2>JTAG 转换补齐 + 边带第二片转换 + 本地下载座</h2><span class="tag t-must">部分完成 · 必改</span></div>
+  <dl class="grid">
+    <dt>10-12 已做</dt><dd><span class="okc">U18 <code>SN74AVC4T774PWR</code> 接法正确</span>（已对照 TI 手册 SCES693I 逐脚核）：VCCA（16 脚）= PWR2V5 对 FPC，VCCB（15 脚）= VCC3P3 对 GW5A；DIR1 接地 → TDO 从桥到 DR1，DIR2–4 接 PWR2V5 → TDI / TMS / TCK 从 DR1 到桥；两侧各 0 Ω 串阻，VCCA / VCCB 各一只 100 nF。</dd>
+    <dt>U18 还缺</dt><dd>
+      <ul>
+        <li><b>FPC 一侧输入上下拉</b>：TI 手册要求 CMOS 输入不能悬空。FPC 没插或 DR1 没上电时，A2–A4 悬空，B 侧输出不确定，TCK 可能乱跳。补 <code>DR1_O_TCK</code> 10 kΩ 下拉到 GND，<code>DR1_O_TMS</code>、<code>DR1_O_TDI</code> 10 kΩ 上拉到 PWR2V5。</li>
+        <li><b>FPGA_TDO 上拉</b>：GW5A 的 TDO 不移位时是高阻，B1 输入同样悬空。补 10 kΩ 上拉到 VCC3P3。</li>
+        <li><b>OE#</b>：现在直接接地。TI 要求上电期间 OE 经电阻上拉到 VCCA，电源稳定后再使能。改成 10 kΩ 上拉到 PWR2V5 + 跳线到 GND：插跳线 = DR1 使用；拔跳线 = U18 输出高阻，给本地下载器让路。</li>
+        <li><b>本地下载座</b>：全板仍没有。高云下载器 10 针座直接接 GW5A 一侧的 <code>FPGA_TCK / TMS / TDI / TDO</code> + VCC3P3 + GND。现在 B 侧被 U18 推挽驱动，不拔 OE 跳线就接不上下载器。</li>
+      </ul></dd>
+    <dt>边带（新增一片）</dt><dd>边带 4 根仍从 bank4 直连 FPC2.62–65。bank4 回 3.3 V 后必须转换，加第二片 <code>SN74AVC4T774</code>，与 U18 同型号、同供电（VCCA = PWR2V5，VCCB = VCC3P3），OE# 下拉常使能。<b>不要用 TXS0108E、TXB0108 这类自动方向器件</b>：前者有内部上拉，后者输出阻抗约 4 kΩ，RSTN 上已经出过问题。</dd>
+  </dl>
+  <div class="tbl"><table>
+    <thead><tr><th>片</th><th>信号（契约名 / 现网名）</th><th>FPC2 脚（契约）</th><th>方向 / DIR</th><th>GW5A 侧</th><th>2.5 V 侧上下拉</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="4">U18 JTAG<br><span class="note">OE 上拉 + 跳线</span></td><td><code>JTAG_TCK</code> / DR1_O_TCK</td><td class="mono">68</td><td class="nw">SoC → 桥 · DIR = H</td><td>bank10</td><td>10 kΩ 下拉</td></tr>
+      <tr><td><code>JTAG_TMS</code> / DR1_O_TMS</td><td class="mono">70</td><td class="nw">SoC → 桥 · DIR = H</td><td>bank10</td><td>10 kΩ 上拉</td></tr>
+      <tr><td><code>JTAG_TDI</code> / DR1_O_TDI</td><td class="mono">71</td><td class="nw">SoC → 桥 · DIR = H</td><td>bank10</td><td>10 kΩ 上拉</td></tr>
+      <tr><td><code>JTAG_TDO</code> / DR1_I_TDO</td><td class="mono">72</td><td class="nw">桥 → SoC · DIR = L</td><td>bank10，10 kΩ 上拉</td><td>—</td></tr>
+      <tr><td rowspan="4">边带（新增）<br><span class="note">OE 常使能</span></td><td><code>SB_RSTN</code> / DR1V_RST</td><td class="mono">63</td><td class="nw">SoC → 桥 · DIR = H</td><td><code>B4_B52_N</code>，保留 R173 10 kΩ 下拉</td><td>10 kΩ 下拉</td></tr>
+      <tr><td><code>SB_UART_S2B</code> / DR1V_UART_TX</td><td class="mono">66</td><td class="nw">SoC → 桥 · DIR = H</td><td><code>B4_B39_N</code></td><td>10 kΩ 上拉</td></tr>
+      <tr><td><code>SB_ALIGNED</code> / DR1V_ACK</td><td class="mono">62</td><td class="nw">桥 → SoC · DIR = L</td><td><code>B4_B29_N</code></td><td>—</td></tr>
+      <tr><td><code>SB_UART_B2S</code> / DR1V_UART_RX</td><td class="mono">65</td><td class="nw">桥 → SoC · DIR = L</td><td><code>B4_B39_P</code></td><td>—</td></tr>
+    </tbody></table></div>
+  <dl class="grid">
+    <dt>回板验收</dt><dd><ul class="check">
+      <li>两片转换器两侧电平：FPC 侧 2.5 V，GW5A 侧 3.3 V；不插 FPC 时 TCK 低、TMS / TDI 高、SB_RSTN 低。</li>
+      <li>拔 OE 跳线，插高云下载器能读到 IDCODE <code>0x0001281B</code>（GW5A-25），并能把保底位流烧进 flash。</li>
+      <li>插回跳线后，DR1 经 JTAG 读到同一个 IDCODE，并能把位流灌进 SRAM。</li>
+      <li>DR1 拉低 SB_RSTN，GW5A 侧对应脚为低；GW5A 的 UART 输出在 DR1 侧量到 2.5 V 摆幅。</li>
+    </ul></dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">4</span><h2>FPC2 尾部按契约重排</h2><span class="tag t-must">未改 · 必改</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>10-12 版尾部顺序与 10-10 相同，只是 JTAG 四根改名为 <code>DR1_*</code> 并经过 U18。前 1–61 脚与契约一致。FPC 座 <code>XW0525512-702R-001</code> 的符号仍把 71 / 72 画在管脚列外并接地，推断只有 70 导体，契约要求 72。</dd>
+    <dt>改法</dt><dd>按下表右列改成契约 v3 的排法；同时核 FPC 座规格书，确认是 72 导体，不是就换座子或与 SoC 侧一起改契约。</dd>
+  </dl>
+  <div class="tbl"><table>
+    <thead><tr><th>FPC2 脚</th><th>10-12 实际</th><th>契约 v3（改成这样）</th><th>现在的问题</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">64</td><td><code>DR1V_UART_RX</code></td><td>GND</td><td>UART 被对端短到地</td></tr>
+      <tr><td class="mono">65</td><td><code>DR1V_UART_TX</code></td><td><code>SB_UART_B2S</code></td><td>名字和方向对不上</td></tr>
+      <tr><td class="mono">66</td><td>GND</td><td><code>SB_UART_S2B</code></td><td>SoC 的 UART 输出短到地</td></tr>
+      <tr><td class="mono">67</td><td><code>DR1_I_TDO</code></td><td>GND</td><td>TDO 短到地</td></tr>
+      <tr><td class="mono">68</td><td><code>DR1_O_TDI</code></td><td><code>JTAG_TCK</code></td><td>接错</td></tr>
+      <tr><td class="mono">69</td><td><code>DR1_O_TMS</code></td><td>GND</td><td>TMS 短到地</td></tr>
+      <tr><td class="mono">70</td><td><code>DR1_O_TCK</code></td><td><code>JTAG_TMS</code></td><td>接错</td></tr>
+      <tr><td class="mono">71</td><td>GND（列外）</td><td><code>JTAG_TDI</code></td><td>短到地</td></tr>
+      <tr><td class="mono">72</td><td>GND（列外）</td><td><code>JTAG_TDO</code></td><td>短到地</td></tr>
+    </tbody></table></div>
+  <dl class="grid">
+    <dt>回板验收</dt><dd><ul class="check">
+      <li>按上表逐脚通断，64 / 67 / 69 对地导通，其余不对地。</li>
+      <li>FPC 座实物数导体为 72。</li>
+    </ul></dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">5</span><h2>上行转发时钟留在 B5_B26</h2><span class="tag t-done">已确认 · 不用动</span></div>
+  <dl class="grid">
+    <dt>结论</dt><dd>FPC2.29/30 <code>DR1V_TXCLKP/N</code> → <code>B5_B26_P/N</code>（GCLKT_9B，球 M10 / N9）。我们已用高云工具按转接板真引脚整机试综合（10-12）：转发时钟经全局时钟网络进上行 PLL，出 bit，无相关告警。<b>硬件不用改。</b></dd>
+    <dt>端接</dt><dd>上行 20 对在板上各有 100 Ω 差分端接（R182–R201），我们的约束已关片内端接。布线时请把 R182–R201 放在靠近核心板座 CN3 / CN6 的一端。</dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">6</span><h2>灯板侧 CN1 / CN2 与新灯板逐脚核对</h2><span class="tag t-check">必核 · 与 10-10 相同</span></div>
+  <dl class="grid">
+    <dt>现状</dt><dd>10-12 版 CN1 / CN2 与 10-10 版相同：编号 1–50 / 51–100，每对 P/N 同排相邻；下行每条链的 4 对球（CLK / D0 / D1 / D2）没有拆开，链号换了，见下表。</dd>
+    <dt>要硬件提供</dt><dd>与这版转接板同步改过的<b>新版灯板原理图</b>（我们手上最新的是 09-18 版），以及新编号下的座子封装。核对完我们按新链号更新约束和 RTL 链索引。</dd>
+  </dl>
+  <div class="tbl"><table>
+    <thead><tr><th>新链号</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>回读 SDI</th></tr></thead>
+    <tbody>
+      <tr><td>用的是 09-23 版哪组球</td><td class="mono">链11</td><td class="mono">链5</td><td class="mono">SDI 组</td><td class="mono">链4</td><td class="mono">链8</td><td class="mono">链7</td><td class="mono">链10</td><td class="mono">链2</td><td class="mono">链9</td><td class="mono">链3</td><td class="mono">链1</td><td class="mono">链6</td></tr>
+      <tr><td>bank</td><td class="mono">3</td><td class="mono">7</td><td class="mono">6</td><td class="mono">7/4/3/2</td><td class="mono">2</td><td class="mono">2</td><td class="mono">3</td><td class="mono">7</td><td class="mono">3</td><td class="mono">7</td><td class="mono">6</td><td class="mono">2</td></tr>
+    </tbody></table></div>
+  <dl class="grid">
+    <dt>回板验收</dt><dd><ul class="check">
+      <li>两板座子一公一母；灯板 3V8 / 2V8 电源脚与转接板同号电源脚对齐，没有落到地或信号上。</li>
+      <li>每对 P/N 在两板上都是同排相邻、两侧有地；逐对通断与新链号表一致。</li>
+    </ul></dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><span class="no">7</span><h2>SoC 转接板的 FPC 尾部按同一份契约核对</h2><span class="tag t-check">必核 · 与第 4 条成对</span></div>
+  <dl class="grid">
+    <dt>在哪块板</dt><dd><b>SoC 转接板</b>（FS03 / DR1M90 一侧）。第 1–6 条都在桥转接板上，这一条在 FPC 另一头。</dd>
+    <dt>核什么</dt><dd>
+      <ul>
+        <li>FPC 64–72 逐脚与第 4 条表中"契约 v3"列一致：64 GND、65 <code>SB_UART_B2S</code>、66 <code>SB_UART_S2B</code>、67 GND、68 <code>JTAG_TCK</code>、69 GND、70 <code>JTAG_TMS</code>、71 <code>JTAG_TDI</code>、72 <code>JTAG_TDO</code>。</li>
+        <li>FPC 29/30 = 转发时钟 <code>UL_CLK_P/N</code>，32/33 = <code>UL_CHK_P/N</code>；FPC 座同样是 72 导体。</li>
+        <li>SoC 侧 JTAG / 边带是 2.5 V，电平转换全在桥转接板上做（第 3 条），SoC 转接板这头不加器件、不加 3.3 V 上拉。</li>
+      </ul></dd>
+    <dt>回板验收</dt><dd><ul class="check">
+      <li>两块板用同一根 FPC 对插后，从 SoC 侧到 GW5A 侧逐脚通断。</li>
+    </ul></dd>
+  </dl>
+</section>
+
+<section class="item">
+  <div class="itemhead"><h2>已改好的</h2><span class="tag t-done">不用再动</span></div>
+  <ul>
+    <li><b>10-12</b>：CN3 / CN6 料号改回公座 <code>AXK600337YG</code>（脚号见第 1 条）。</li>
+    <li><b>10-12</b>：JTAG 加 U18 <code>SN74AVC4T774</code>，电源、方向、脚序正确（缺项见第 3 条）。</li>
+    <li>2.8 V 用 TPS548A28，反馈 33 k + 22 k / 15 k，输出 2.80 V。</li>
+    <li>3.8 V 用 TPS548A28，反馈 53.6 k / 10 k，输出 3.82 V。</li>
+    <li>U15（STI3411A）给 VCC3P3 供电，反馈 33 k + 12 k / 10 k，输出 3.30 V。</li>
+    <li>U1 / U2 为 TXB0108，VCCA 1.5 V 在器件范围内。</li>
+  </ul>
+</section>
+
+<section class="item">
+  <div class="itemhead"><h2>以前提过、10-12 仍未改的</h2><span class="tag t-must">照旧要改</span></div>
+  <ul>
+    <li>RSTN 上 10 kΩ 下拉（R171）与 TXB0108 约 4 kΩ 的输出阻抗分压，高电平只剩约 2.7 V；换单向推挽器件（74LVC2T45 / 74LVC244）或下拉加大到 ≥ 50 kΩ。</li>
+    <li>CN3 / CN6 旁边没有去耦：每条 bank 电源脚旁加 10–22 µF + 2–4 只 100 nF。</li>
+    <li>U1 / U2 / U8 电平转换器 OE 的下拉位标 NC，应贴下拉、电源稳定后再使能。</li>
+    <li>5 V 入口没有保险丝和 TVS。</li>
+    <li>链 4 整组为 NC/0Ω 选贴，其中 D0 在 <code>B4_B50</code>（bank4）。bank4 回 3.3 V 后它仍可用真差分输出（见第 2 条），不必为此改线。</li>
+    <li>上行 lane 6 / 7 用的 <code>B5_B8</code>、<code>B5_B12</code> 是配置复用脚（SO / SSPI_WPN）。MSPI 正常启动时没有影响；我们这边在软件上规定 DR1 等 GW5A 加载完成后才开上行发送，下一版再挪到阶段二才用的 lane。</li>
+  </ul>
+</section>
+
+<p class="note">出处：<code>SCH_GW5A to LED board V01_2026-10-12.pdf</code> 与 10-10、09-23 版逐脚比对；核心板 <code>ACG525-CORE-V2_20260709</code> 原理图第 4 页；高云 DS1103 v1.0.9（表 2-6、2-7、3-21、3-26、3-27）、UG714（配置管脚上拉接对应 bank VCCIO）；TI <code>SN74AVC4T774</code> 手册 SCES693I；<code>POV3D_模组间接口规格书_v3_2026-09-15.html</code>（10-10 修订）；<code>DR1V90_GW5A对接关系表</code>（核心板 200 脚表）；官方底板 ACG525-CB-V2（P1 / P2 = LB3524-G100P）。SoC 与桥之间的线数不变：20 对上行 LVDS + 4 根边带 + 4 根 JTAG。</p>
+</div>

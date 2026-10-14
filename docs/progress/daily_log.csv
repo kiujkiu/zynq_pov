@@ -36,3 +36,5 @@
 2026-10-14,问题,D16,"30 Hz 带载迟到+掉片 3.7% (空载 0.2% 来自旧 netguard), 归因测试中",project_ddr_budget_by_phase_1013
 2026-10-14,问题,D16,纯切片带载约 21 min 停摆; 无负载浸泡 2×30 min 不停摆,project_ddr_budget_by_phase_1013
 2026-10-14,决定,D13,"用户定目标: 复位到亮起 ≤12 s, 找板 ≤20 s",project_short_term_delivery_1013
+2026-10-14,问题,D2,"找到 PL 切片器带载停摆根因: 零列描述符丢失 (公共核, 2260 也有) + pop 握手串片, 已修",dr1v90 task/pls-2047 debd3cd
+2026-10-14,复验退回,D2,上板 60 min 带载 0 停摆、逐字节一致、late 0; 帧率 13.8 差 0.5 退回,scratchpad v_pls6_board.log

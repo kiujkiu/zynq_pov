@@ -1,0 +1,100 @@
+{
+ "result": "PASS",
+ "params": {
+  "board": "dr1m90-02",
+  "min": 480,
+  "push_min": 40,
+  "gap_min": 7,
+  "stream_idle_s": 300
+ },
+ "checks": [
+  {
+   "id": "S1_duration",
+   "pass": true,
+   "criterion": "board ran the full 480 min (wall clock on the board; health rows span >= 477 min), uptime monotonic (no reboot)",
+   "measured": "health rows 465, span 478.8 min, monotonic True, \"480 min done\" True"
+  },
+  {
+   "id": "S2_alive",
+   "pass": true,
+   "criterion": "voxslice never died/restarted; PL stall 0 (1 s monitor)",
+   "measured": "stalls 0 deaths 0"
+  },
+  {
+   "id": "S3_completion",
+   "pass": true,
+   "criterion": "every 10 s window completion A and B >= 99 %; per hour un-completed slices <= 0.1 % (KR7.1)",
+   "measured": "windows 2878 (>= 2592), below 99 %: 0, min A/B 100.0/100.0 %, worst hour 0.0012 %, hourly (incomplete %, miss+late %): h0 0.0011/0.0047, h1 0.0012/0.0046, h2 0.0011/0.0045, h3 0.0011/0.0048, h4 0.0011/0.0048, h5 0.0012/0.0047, h6 0.0011/0.0045, h7 0.0011/0.0049"
+  },
+  {
+   "id": "S4_pl_errors",
+   "pass": true,
+   "criterion": "PL grid-switch failures 0; on-board verify same >= 1, different 0; backend error / RRESP 0",
+   "measured": "failures 0, verify 204/0, error windows 0"
+  },
+  {
+   "id": "S5_stream",
+   "pass": true,
+   "criterion": "all pushes: voxlive rc 0, frames / push time >= 14.0 fps, NAK 0; a connection lost by error is re-made within 60 s (auto reconnect)",
+   "measured": "pushes 11 (rc 0,0,0,0,0,0,0,0,0,0,0), 353980 frames / 24163 s = 14.65 fps, connections 11, lost by error 0 (re-made after  s); NAK lines 0"
+  },
+  {
+   "id": "S6_hold_back",
+   "pass": true,
+   "criterion": "after every push: keep the last frame, back to the local demo 300 s later",
+   "measured": "holds 11, backs 11, delays 300,300,300,300,300,300,300,300,300,300,300"
+  },
+  {
+   "id": "S7_network",
+   "pass": true,
+   "criterion": "ping loss <= 2 %, longest outage <= 5 min; povnetd + povstat present in every health row",
+   "measured": "ping 961 probes, lost 0, longest 0 s; rows without povnetd/povstat 0"
+  },
+  {
+   "id": "S8_memory",
+   "pass": true,
+   "criterion": "voxslice VmRSS growth <= 8 MB, MemAvailable drop <= 32 MB (median of first/last 10 min)",
+   "measured": "voxslice RSS 33.6 -> 33.6 MB, MemAvailable 305 -> 302 MB"
+  },
+  {
+   "id": "S9_restored",
+   "pass": true,
+   "criterion": "board back to the boot default (card voxslice --pl, slice.mode pl)",
+   "measured": "restore=ok; vs=14697 cmd=/mnt/mmcblk0p1/pov/vs/voxslice_aarch64 ... --local-fps 10 --stat 60 --idle-ctl /tmp/vs/vs.mode --oe-w0 32 --idle-oe 8,4,2 --idle-b-slot 1 --stream-hold 300 --pl --pl-lut /mnt/mmcblk0p1/pov/pls/lut_pl --cpu-rx 0 --cpu-slice 1 --max-fps 15  slice.mo"
+  }
+ ],
+ "hourly": {
+  "0": [
+   0.0011141873716792221,
+   0.004735296329636694
+  ],
+  "1": [
+   0.001150508979117051,
+   0.004589925295635393
+  ],
+  "2": [
+   0.0011383967038813394,
+   0.004535420910676187
+  ],
+  "3": [
+   0.0010899657750746627,
+   0.004753461852408945
+  ],
+  "4": [
+   0.0011141790056945447,
+   0.00477159269830055
+  ],
+  "5": [
+   0.0011868424226893267,
+   0.004656539913510675
+  ],
+  "6": [
+   0.0011262886922552998,
+   0.00449304413792168
+  ],
+  "7": [
+   0.001144765595848057,
+   0.004944413105471395
+  ]
+ }
+}

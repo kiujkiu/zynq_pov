@@ -352,3 +352,5 @@
 - [子 agent 并行 ≤5](feedback_save_weekly_quota.md) — 10-14 用户: 7 天额度超, 同时并行不超过 5 个; 机械活用 Sonnet
 - [派活省 token 清单](feedback_dispatch_token_playbook.md) — 自己做>Haiku/Sonnet>Opus; 说明写窄+小样本; 复验过即关; 不唤醒老 agent; 安静汇报
 - [电机控制器口 10-14](project_motor_ctrl_interface_1014.md) — SoC 转接板加 CN4: 24P 光电 / 8P TX / 8N RX 已定 (撤 S2, 无备用脚), 待定转子/定子与电平
+- [10-14 交接](project_handoff_2026_10_14.md) — V0 83.8% 出口 5/8; 在跑 D7c 上板 + D15b 查 32 bit; 下一步 ⑤⑦→⑥ 8 h
+- [主动提醒 compact](feedback_remind_compact.md) — Claude 不能自己执行; 工作告一段落/上下文过长时提醒, 先写交接; 有后台任务时 compact 不关窗

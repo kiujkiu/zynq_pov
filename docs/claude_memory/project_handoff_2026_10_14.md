@@ -25,3 +25,5 @@ metadata:
 - 10-14 晚: D16b agent 已停 (额度, 推到下周); QoS 对照照做 (主会话, board_qos.sh)。
 - 10-14 晚: D16b 阶段 1 (只量化, 做完停) 在跑; QoS 对照已排在长跑后自动跑 (~/qos_runs/chain.sh, 长跑没过就不跑)。额度 >70% 先保存再停。
 - 10-14 晚用户: "把 D16 做完" —— D16b 阶段 2 (Sonnet) 在做; 完成后主会话新克隆复验 → 板子空了 (长跑+QoS 后) 上板 A/B (现布局 vs tile 4, D16 --attr A0/A6) → 过了合主线, 不用再问。
+- 10-14 23:45 重开长跑: 第一轮第 6 段企业 WiFi 踢线 ~5 s, voxlive 不重连直接退出 -> 修 voxlive 断线自动重连 (主线 5cbe79f, 回归全过), 判读 S5/S6 允许重连。第一轮前 4 h 板端: 停摆 0 / 死 0 / RSS 稳 34.4 MB。
+  新一轮: ~/soak_runs/v0_8h_1014_2345 (PID 见 ~/soak_runs/last_8h.pid), 约 07:45 结束; 接力 ~/qos_runs/chain_all.sh: 判读 PASS -> QoS 对照 (attr --with-qos + color@QoS 0x0F) -> D16b tile A/B (~/rv_d16b, 离线复验 5 套全过)。

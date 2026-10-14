@@ -349,3 +349,4 @@
 - [GW5A 一体桥板评审 10-13](project_gw5a_integrated_bridge_review_1013.md) — Codex 版打回: 原生 ERC 核心页不在网表; 返工单+路线在工程 review/
 - [需要时提醒开高 effort](feedback_remind_effort.md) — 主窗口平时中档; 难判断节点/硬骨头子 agent 先提醒用户, 用户同意才指定 high
 - [多 agent 禁按名字杀进程](feedback_no_kill_by_name.md) — 只杀自己记录的 PID; pkill 按名字会误伤别的 agent (10-13 D16→D2)
+- [子 agent 并行 ≤5](feedback_save_weekly_quota.md) — 10-14 用户: 7 天额度超, 同时并行不超过 5 个; 机械活用 Sonnet

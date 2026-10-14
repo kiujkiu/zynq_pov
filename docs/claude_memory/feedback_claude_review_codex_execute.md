@@ -20,3 +20,5 @@ metadata:
 **How to apply:** 用户说"让 gpt/codex 做、你来评审"时照此执行; 不能直接给用户界面里的 Codex 窗口发消息, 只能 fork/resume。
 
 **技能 (10-13 建)**: Claude 侧 `~/.claude/skills/pcb-native-verify` (一条命令原生复验) 与 `codex-pcb-round` (派活脚本+安静监视); Codex 侧 `~/.codex/skills/kicad-pcb-rules` (原则+KiCad 10.0.3 生成器坑+自查要求)。新踩的坑要补进 kicad-pcb-rules。
+
+**省额度监工 (用户 10-14, Claude 7 天额度紧)**: 不用 Monitor 30 分钟反复重挂 (每次到期都耗一轮); 改用一个 `run_in_background` 的 Bash 等 Codex 进程结束 (`while kill -0 pid; do sleep 60; done`), 只在结束时被唤醒一次; 中途提问让 Codex 按自己的兜底方案走。回复用户只给结论, 不逐条转述。

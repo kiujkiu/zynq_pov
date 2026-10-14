@@ -82,7 +82,7 @@ ul{margin:0;padding-left:1.2em}
 <tr><td class="mono">FPC1</td><td>面 A 桥板</td><td>XW0525512-702R-001 70 导体</td><td>20 对 LVDS25 上行 + ACK / RST / UART_RX / UART_TX + JTAG 4 根 + 地；电源不走 FPC</td><td>现有</td></tr>
 <tr><td class="mono">FPC2</td><td>面 B 桥板</td><td>同上</td><td>同上（网名 DRV2_*）</td><td>现有</td></tr>
 <tr><td class="mono">CN1 / CN2</td><td>两块桥板 5 V 入口</td><td>B2P-VH</td><td>1 = GND，2 = 5 V</td><td>现有</td></tr>
-<tr><td class="mono">H5 / H6</td><td>滑环 / 外部电源</td><td>单针排针 ×2</td><td>24 V / GND 入口（建议加保险丝、TVS、防反接）</td><td>现有</td></tr>
+<tr><td class="mono">H5 / H6</td><td>无线供电接收模块（24 V 2 A）</td><td>单针排针 ×2</td><td>24 V / GND 入口（建议加保险丝、TVS、防反接）</td><td>现有</td></tr>
 <tr><td class="mono">H7 / H9</td><td>FS03 两个 VCCIO 跳帽</td><td>2 针</td><td>PWR2V5 / GND，给 bank33 / bank11 供 2.5 V</td><td>现有（依赖 S1 修好）</td></tr>
 <tr><td class="mono">H3 / H4</td><td>未注明</td><td>单针排针 ×2</td><td>网 AC1 / AC2，全图各只出现 1 次，没接任何东西</td><td class="warn">问用途</td></tr>
 <tr><td class="mono">CN3</td><td>真光电开关（备用）</td><td>HC-XH-3ALT</td><td>1 = 信号（R82 10 Ω + C23 1 nF → CEP2_24P），2 = VCC3V3，3 = GND</td><td>保留，改走电平转换</td></tr>
@@ -118,7 +118,7 @@ ul{margin:0;padding-left:1.2em}
 <h2>5 · 待定</h2>
 <div class="tbl"><table>
 <tr><th>#</th><th>事项</th><th>影响</th></tr>
-<tr><td>M1</td><td><b>电机控制器装在转子还是定子？</b>SoC 板有 24 V 滑环入口，说明 SoC 在转子上；如果电机控制器在定子上，这 4 根线要过滑环（至少多 4 道，IDX 抖动要实测），或者换红外 / 无线</td><td class="warn">决定 CN4 是板上直连还是接滑环</td></tr>
+<tr><td>M1</td><td><b>电机控制器装在转子还是定子？</b>转子是无线供电（2026-09-08 澄清），整机跨转子 / 定子<b>没有任何电线</b>（供电无线、数据 WiFi、光电索引是光学对射）。如果电机控制器在定子上，CN4 这 3 根线过不去，要改成：角度仍用转子上的真光电开关（CN3），串口改走 WiFi 或红外</td><td class="bad">决定 CN4 能不能用电线直连</td></tr>
 <tr><td>M2</td><td>电机控制器 IO 电平（3.3 V / 5 V）和型号</td><td>5 V 时 VCCB 改接 5 V，SN74AVC4T774 的 VCCB 上限 3.6 V 不够，要换 1.1–5.5 V 的 LXC 系（如 2 片 SN74LXC2T45）</td></tr>
 <tr><td>M3</td><td>CEP2_24P = 光电，CEP2_8P = TX，CEP2_8N = RX，CEP2_24N 留空，不设备用脚 → 按方案 A，JTAG 保持菊花链，S2 撤回</td><td class="okc">✅ 10-14 用户确认（原理图中 BK11_L14P / L14N 为空网）</td></tr>
 <tr><td>M4</td><td>H3 / H4（AC1 / AC2）用途</td><td>问硬件同事</td></tr>

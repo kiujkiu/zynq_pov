@@ -24,3 +24,4 @@ metadata:
 - ✅ 10-13 晚 G0 通过、G1 第 3 轮 (电源照抄原板) 原生 ERC 0 error 有条件通过。原板电源: 外部 3.3V(桥 U15 STI3411A) + BL8028(0.9/1.5) + RS3236 固定 LDO(1.2/1.8/2.5) 并行使能; 两路 2.5V (桥 PWR2V5→bank2/3+电平转换, 核心 VCC2P5→bank6/7) 不可合并。🔴 阻塞: FPGA 完整订货号 UG324 vs UG324S (固件 .cst 按 UG324S, 40 球差异) 待用户看丝印。FAE 待问: PUDC/POR 窗口、自动 SSPI、新版 UG987 上电建议。SSPI 冲突 4 对 8 球 N6/P7 R3/T3 R5/T5 U5/V5。
 - ✅ 10-13 G2 器件冻结有条件通过: ERC 0 违规, 网名统一后拓扑与 r3 一致, BOM 448 行 (review/bom_g2.csv)。下一步 G3a 叠层 S2+约束。
 - 10-14 用户给高云厂家资料 (D:\芯片资料\gowin, 解到工程 core/gowin_vendor/): 官方最小系统图证实 MIPI 未用脚悬空、PUDC_B 有内部弱下拉 ⇒ 两项 FAE 问题关闭; 官方开发板 .brd 是 Allegro 二进制 KiCad 导不了, 需人用 Allegro 导出 Extracts/ODB++。
+- 🎯 10-14 芯片丝印确认: **GW5A-LV25 UG324C2/I1** (UG324, 非 UG324S) ⇒ 原理图球表正确, 阻塞关闭; 固件 .cst/Gowin device 须从 UG324S 改为 UG324C2/I1 并重跑 P&R。

@@ -90,3 +90,4 @@ metadata:
 **10-14 15:0x 用户批准 D13 第二步**, 主会话自己做: uenv-on (uboot.env bootdelay 0, md5 e6520ce5) 已装, 重启正常 (26 s 找回, PL 位流+演示在跑); 接着 initrd-slim。回退: boot_levers.sh uenv-off / initrd-restore, u-boot 下 fatrm mmc 0:1 uboot.env。
 **10-14 15:2x D13 第二步完成 (已装卡):** uboot.env bootdelay 0 (e6520ce5) + 精简 uInitrd 36→12 MB (8112646f), 卡上留 .bak-d13。3 次实测: 复位→亮起 12.3–12.4 s, 找板 19.8–20.9 s, prekernel 6.5 s (原 9.4)。差目标 0.3–0.9 s; 剩余小项 wifi_up 白等 ~3 s / sshd 每次生成主机密钥 ~2 s。问用户: A 放宽到 12.5/21 s 直接勾 ④ (推荐) 或 B 再做两小项。D7b (b05ca24) 离线 11/11 + 15/15, 主会话上板 1 h 跑中。
 **10-14 15:3x 🔴 D7b 上板 20/22: V3_nonet_rollback FAIL —— 推'关 WiFi 的坏镜像'后板子未自动回滚, 15 min+ 找不回 (用户已拔 COM28)。** 用户要求严肃彻底处理。计划: ① 用户插回 COM28 先读现场 (不断电); ② 修回滚 + 加硬件看门狗兜底; ③ 断网包回滚 + 升级中断电列为必跑回归; ④ 修好前远程升级不上转子, V0 ⑤ 不勾。日志 scratchpad/v_d7b_board.log。
+**10-14 16:0x:** D7b 断网回滚失联已查清 (见 project_dr1m90_02_remote_ops 末条), 板子已用串口 dhcpcd -n 救回。派 D7c 修 (task/d7c-net-robust), 要求断网包回滚连续 3 次过。V0 ⑤ 待 D7c。

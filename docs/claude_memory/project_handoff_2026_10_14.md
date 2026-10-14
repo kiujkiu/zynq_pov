@@ -14,3 +14,9 @@ metadata:
 - ⑦ D15b (task/d15b-color-p2 58bfebb, agent 在查): 上板速率全达标, 但 **32 bit PL 输出 ≠ CPU (4/4, 对拍 0/6), 16 bit 一致, 仿真一致** ⇒ 硅上差异待查; 修好后主会话上板 `slice/color/verify.sh --board dr1m90-02` (新克隆要先补 bench/deps/aarch64musl)。
 **下一步:** ⑤⑦ 过 → ⑥ 8 h 无人值守长跑过夜 (KR7.2) → V0 完成。之后 V1 准备: 纯切片/D3 上行档按新切片核重综合、D8 联合仿真、D10 整合位流、D11 C1 台架 (用户接线 + DR1M90-01 COM24)、D16 网格 4×4 分块 (待用户定)、QoS 寄存器写 (待批)。
 **规则提醒:** 子 agent ≤5, 按难度 Opus/Sonnet/Haiku, 复验过即 TaskStop, 安静汇报 (feedback_dispatch_token_playbook)。
+
+## 10-14 晚更新 (19:30)
+- ⑤ D7 合主线 dee9be6 (V3N 11/11 + V2 12/12); ⑦ D15 合主线 3a41eb7 (上板全过; 32 bit 只到 10.83 rps); 回归修基准 0808333 全过。V0 出口 7/8。
+- ⑥ 8 h 长跑 19:20 开跑, 预计 03:20 结束: 克隆 ~/soak_v0 (26e69ec), 结果 ~/soak_runs/v0_8h_1014_1919/ (run.log, report.md); soak.sh PID 27278 (setsid, 关窗不死);
+  判读 `bash soak8h/soak.sh --judge <目录>`; 中断时板子自己回开机默认。过了 ⇒ 勾 ⑥ (KR7.2=8), V0 完成。注意 S8: 试跑 15 min voxslice RSS 24→34 MB, 看 8 h 是否涨。
+- 用户 10-14 授权: D15b 过了直接合主线并开长跑。V1 台架硬件清单已给用户 (等用户接线后告诉)。

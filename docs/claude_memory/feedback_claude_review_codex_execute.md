@@ -22,3 +22,5 @@ metadata:
 **技能 (10-13 建)**: Claude 侧 `~/.claude/skills/pcb-native-verify` (一条命令原生复验) 与 `codex-pcb-round` (派活脚本+安静监视); Codex 侧 `~/.codex/skills/kicad-pcb-rules` (原则+KiCad 10.0.3 生成器坑+自查要求)。新踩的坑要补进 kicad-pcb-rules。
 
 **省额度监工 (用户 10-14, Claude 7 天额度紧)**: 不用 Monitor 30 分钟反复重挂 (每次到期都耗一轮); 改用一个 `run_in_background` 的 Bash 等 Codex 进程结束 (`while kill -0 pid; do sleep 60; done`), 只在结束时被唤醒一次; 中途提问让 Codex 按自己的兜底方案走。回复用户只给结论, 不逐条转述。
+
+**Codex 额度 (10-14)**: 同一会话 resume 到第 9 轮, 单轮 token 1.3M→3.8M, 一天用掉 Codex 周额度 3%→84% (prolite 档, 10-20 16:05 重置)。⇒ 一个会话最多 2–3 轮, 之后写 `review/交接_当前状态.md` 开新会话; 派活前查 used_percent, >80% 先问用户。

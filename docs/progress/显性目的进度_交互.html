@@ -24,12 +24,15 @@ tr.up{background:#f0fbf2}tr.down{background:#fff1f1}tr.light td.v,tr.light td.n 
 .blk{background:#fff;border:1px solid var(--bd);border-radius:4px;margin-bottom:10px;overflow:hidden}.blk .gh{background:#4a5b6e}
 .g-ok{background:#C6EFCE}.g-mid{background:#FFEB9C}.g-no{background:#f2f2f2}.r-开{background:#FFC7CE}.r-监控{background:#FFEB9C}.r-关{background:#C6EFCE}
 .two{display:flex;gap:10px;flex-wrap:wrap}.two>div{flex:1;min-width:380px}.fut{color:#aaa}
+.vf{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px}.vf button{font-size:14px;padding:4px 14px;cursor:pointer;border:1px solid #888;background:#fff;border-radius:4px}.vf button.on{background:#1F4E78;color:#fff;border-color:#1F4E78;font-weight:700}.vf .ex{color:#555;font-size:12px}
+.vt{display:inline-block;font-size:10.5px;font-weight:700;color:#fff;border-radius:3px;padding:0 5px;margin-right:4px}.vt.v0{background:#2E75B6}.vt.v1{background:#ED7D31}.vt.v2{background:#8c8c8c}.vt.bn{background:#fff;color:#888;border:1px solid #aaa}
 .bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #1F4E78;padding:8px 18px 10px;display:flex;align-items:center;gap:12px;z-index:9}
 .bar input[type=range]{flex:1;height:26px}.bar button{font-size:16px;padding:3px 12px;cursor:pointer;border:1px solid #888;background:#f3f3f3;border-radius:4px}
 .bar .lab{font-size:18px;font-weight:700;min-width:130px;text-align:center}.bar .lim{color:var(--mut);font-size:11px}
 </style></head><body>
 <h1>POV3D 显性目的进度 — 交互看板</h1>
 <div class="sub">生成日期 2026-10-14 · 拖动底部时间滑块 (或按 ← →) 查看任一天的状态；数据内嵌，不联网。数据源 zynq_pov/docs/progress/*.csv，脚本 mk_progress.py。</div>
+<div class="vf" id="vf"></div>
 <div class="top" id="top"></div>
 <div class="algo">达成率_P = (P 目标已达标的 KR 数 + P 需要的交付里已完成数) ÷ (有 P 目标的 KR 数 + P 需要的交付总数)；只计「必须」项 (灰显的是加分项，不进分子分母)；交付需要是嵌套的：V0 = 阶段 V0，V1 = V0 + V1准备，V2 = V1 + V2。KR 达标 = 截至所选日期的最新<b>硬件实测</b>值达到 P 目标；
 仿真/台架点不算达标，显示为 🔵。图例：✅ 达成　⬜ 未达成　🔵 仅仿真/台架已达成　— 无该期目标/不需要。名称前 <span class="pm plus">+</span> = 所选当天新完成/新达标，<span class="pm minus">−</span> = 当天变差。</div>
@@ -61,6 +64,15 @@ function rates(d){const o={};for(const P of STG){let a=0,b=0;for(const k of DATA
 const dates=[];for(let d=DATA.start;d<=DATA.today;d=addDay(d,1))dates.push(d);
 const allRates=dates.map(rates);
 let cur=dates.length-1;
+const FOPT=[['v0','只看 V0'],['v1','只看 V1'],['v2','只看 V2'],['all','全部']];
+function hashF(){try{const h=location.hash.slice(1).toLowerCase();return FOPT.some(o=>o[0]===h)?h:'v0'}catch(e){return 'v0'}}
+let F=hashF();
+const FP=()=>F==='all'?null:F.toUpperCase();
+const delVis=x=>F==='all'||NEEDS[FP()].includes(x.stage);
+const krVis=k=>F==='all'||k.t[FP()]!=null;
+const krFirst=k=>STG.find(P=>k.t[P]!=null);
+const stCls={'V0':'v0','V1准备':'v1','V2':'v2'};
+function vfHtml(){return FOPT.map(o=>`<button data-f="${o[0]}" class="${o[0]===F?'on':''}">${o[1]}</button>`).join('')+'<span class="ex">V0 = 现在 2047 屏上要交付的；V1准备 = 2260 验证板回板前要准备好的；V2 = 目标板</span>'}
 function trendSvg(i){const W=560,H=150,L=34,R=8,T=8,B=20,pw=W-L-R,ph=H-T-B,n=dates.length;
  const X=j=>L+(n>1?j/(n-1):0)*pw,Y=v=>T+ph-v*ph;let o=`<svg viewBox="0 0 ${W} ${H}">`;
  for(let g=0;g<=4;g++){const v=g/4;o+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eee"/><text x="${L-4}" y="${Y(v)+3}" font-size="9" fill="#777" text-anchor="end">${v*100}%</text>`}
@@ -84,18 +96,19 @@ function krRow(k,d,prev){
  const mark=gain&&!loss?'<span class="pm plus">+</span>':(loss||worse)?'<span class="pm minus">−</span>':'<span class="pm"></span>';
  const cls=(gain&&!loss)?'up':(loss||worse)?'down':'';
  const allSim=STG.every(P=>st[P]!=='ok')&&STG.some(P=>st[P]==='sim');
- return `<tr class="${cls}${sim?' light':''}"><td class="n">${mark}<span class="tag">KR</span><span class="nm">${esc(k.id)} ${esc(k.name)}</span> <span class="sim">(${esc(k.unit)}, ${esc(k.dir)})</span></td>
+ const fp=krFirst(k);const vt=fp?`<span class="vt ${fp.toLowerCase()}">${fp==='V1'?'V1准备':fp}</span>`:'';
+ return `<tr class="${cls}${sim?' light':''}"><td class="n">${mark}${vt}<span class="tag">KR</span><span class="nm">${esc(k.id)} ${esc(k.name)}</span> <span class="sim">(${esc(k.unit)}, ${esc(k.dir)})</span></td>
  <td class="c v">${show?fmtv(show.v)+(sim?' <span class="sim">仿真/台架</span>':''):'—'}</td>${STG.map(P=>`<td class="c">${icon(st[P])}</td>`).join('')}
  <td class="c v">${show?show.d.slice(5):'—'}</td></tr>`}
 function delRow(x,d){const done=isDone(x,d),just=x.status==='✅'&&x.done===d;
  const cell=P=>NEEDS[P].includes(x.stage)?(done?'✅':'⬜'):'—';
  const dt=done?x.done.slice(5):(x.plan?`<span class="fut">计划 ${x.plan.slice(5)}</span>`:'<span class="fut">未排期</span>');
- return `<tr class="${just?'up':''}${x.level==='加分'?' bonus':''}"><td class="n"><span class="pm ${just?'plus':''}">${just?'+':''}</span><span class="tag">${x.level==='加分'?'加分':'交付'}</span><span class="nm">${esc(x.id)} ${esc(x.name)}</span> <span class="sim">[${esc(x.stage)}]</span></td>
+ return `<tr class="${just?'up':''}${x.level==='加分'?' bonus':''}"><td class="n"><span class="pm ${just?'plus':''}">${just?'+':''}</span><span class="vt ${stCls[x.stage]||'v2'}">${esc(x.stage)}</span>${x.level==='加分'?'<span class="vt bn">加分</span>':''}<span class="tag">${x.level==='加分'?'加分':'交付'}</span><span class="nm">${esc(x.id)} ${esc(x.name)}</span> <span class="sim">[${esc(x.stage)}]</span></td>
  <td class="c v">${done?'已完成':esc(x.status)+' 未完成'}</td>${STG.map(P=>`<td class="c">${cell(P)}</td>`).join('')}<td class="c">${dt}</td></tr>`}
 function gateState(g,d){if(!g.links.length)return{s:g.status||'⬜',n:0,m:0};const st=g.list.startsWith('V0')?'V0':'V1';let n=0;
  for(const x of g.links){const k=DATA.krs.find(k=>k.id===x);if(k){if(krState(k,st,d)==='ok')n++}else{const y=DATA.dels.find(y=>y.id===x);if(y&&isDone(y,d))n++}}
  return{s:n===g.links.length?'✅':n?'🔄':'⬜',n,m:g.links.length}}
-function gatesHtml(d){const lists=[...new Set(DATA.gates.map(g=>g.list))];let h='<div class="two">';
+function gatesHtml(d){const lists=[...new Set(DATA.gates.map(g=>g.list))].filter(l=>F==='all'||F==='v2'||l.startsWith('V0')||(F==='v1'&&l.startsWith('V1')));let h='<div class="two">';
  for(const l of lists){const rs=DATA.gates.filter(g=>g.list===l).map(g=>({g,...gateState(g,d)}));const ok=rs.filter(r=>r.s==='✅').length;
   h+=`<div class="blk"><div class="gh"><b>阶段出口清单 — ${esc(l)}</b><span>已打勾 ${ok}/${rs.length}</span></div><table><tr><th>状态</th><th>条目</th><th>关联</th></tr>`+
   rs.map(r=>`<tr class="${r.s==='✅'?'g-ok':r.s==='🔄'?'g-mid':'g-no'}"><td class="c">${r.s}</td><td>${esc(r.g.item)}</td><td class="c sim">${r.m?esc(r.g.links.join(' ; '))+' ('+r.n+'/'+r.m+')':'人工'}</td></tr>`).join('')+'</table></div>'}
@@ -104,15 +117,17 @@ function risksHtml(d){const rs=DATA.risks.filter(r=>r.date<=d);
  return `<div class="blk"><div class="gh"><b>风险表</b><span>开 ${rs.filter(r=>r.status==='开').length} · 监控 ${rs.filter(r=>r.status==='监控').length} · 关 ${rs.filter(r=>r.status==='关').length}（按登记日期随滑块显示）</span></div><table><tr><th>编号</th><th>状态</th><th>风险</th><th>影响</th><th>应对 / 退路</th><th>负责</th></tr>`+
  rs.map(r=>`<tr class="r-${r.status}"><td class="c">${esc(r.id)}</td><td class="c">${esc(r.status)}</td><td>${esc(r.risk)}</td><td>${esc(r.impact)}</td><td>${esc(r.plan)}</td><td class="c">${esc(r.owner)}</td></tr>`).join('')+'</table></div>'}
 function goalsHtml(d){const prev=addDay(d,-1);let h='';
- for(const g of DATA.goals){const ks=DATA.krs.filter(k=>k.goal===g.id),ds=DATA.dels.filter(x=>x.goals[0]===g.id);
-  const sub=STG.map(P=>{let a=0,b=0;ks.forEach(k=>{const s=krState(k,P,d);if(s!==null){b++;if(s==='ok')a++}});return `${P} ${a}/${b}`}).join(' · ');
+ for(const g of DATA.goals){const ks=DATA.krs.filter(k=>k.goal===g.id&&krVis(k)),ds=DATA.dels.filter(x=>x.goals[0]===g.id&&delVis(x));if(!ks.length&&!ds.length)continue;
+  const sub=STG.filter(P=>!FP()||P===FP()).map(P=>{let a=0,b=0;ks.forEach(k=>{const s=krState(k,P,d);if(s!==null){b++;if(s==='ok')a++}});return `${P} ${a}/${b}`}).join(' · ');
   const dm=ds.filter(x=>x.level!=='加分'),v1=dm.filter(x=>x.stage==='V1准备'),v1d=v1.filter(x=>isDone(x,d)).length,all=dm.filter(x=>isDone(x,d)).length;
   h+=`<div class="goal"><div class="gh"><b>${g.id}. ${esc(g.name)}</b><span>KR 达标 ${sub} ｜ 必须交付 完成 ${all}/${dm.length}${v1.length?`（V1 准备 ${v1d}/${v1.length}）`:''}</span></div>
   <table><tr><th>名称</th><th>当前值</th><th>V0</th><th>V1</th><th>V2</th><th>完成/实测日期</th></tr>${ks.map(k=>krRow(k,d,prev)).join('')}${ds.map(x=>delRow(x,d)).join('')}</table></div>`}
  return h}
-function render(){const d=dates[cur];$('top').innerHTML=cards(cur);$('goals').innerHTML=goalsHtml(d);$('gates').innerHTML=gatesHtml(d);$('risks').innerHTML=risksHtml(d);
+function render(){const d=dates[cur];$('vf').innerHTML=vfHtml();$('top').innerHTML=cards(cur);$('goals').innerHTML=goalsHtml(d);$('gates').innerHTML=gatesHtml(d);$('risks').innerHTML=risksHtml(d);
  const wd='日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()];$('lab').textContent=d+' 周'+wd;$('sl').value=cur}
 const sl=$('sl');sl.max=dates.length-1;$('lim').textContent=dates[0].slice(5)+' ~ '+dates[dates.length-1].slice(5);
+$('vf').addEventListener('click',e=>{const f=e.target.dataset&&e.target.dataset.f;if(!f)return;F=f;try{location.hash=f}catch(_){}render()});
+window.addEventListener('hashchange',()=>{F=hashF();render()});
 sl.addEventListener('input',()=>{cur=+sl.value;render()});
 const go=n=>{cur=Math.min(dates.length-1,Math.max(0,cur+n));render()};
 $('prev').onclick=()=>go(-1);$('next').onclick=()=>go(1);

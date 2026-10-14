@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SoC 转接板接口</title>
+<style>
+/* Layout: 单栏接口清单; 先结论, 再全板接口总表, 再新增电机口逐脚定义与待定项 */
+:root{
+  --bg:#f6f7f5; --paper:#ffffff; --fg:#1d2420; --muted:#5d6a63; --rule:#d5dbd6;
+  --accent:#1f6f54; --accent-soft:#e2efe9; --red:#b3261e; --red-soft:#fbe9e7;
+  --amber:#8a5a00; --amber-soft:#fbf0d9; --code:#eef1ee;
+  --f-head:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono","Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141917; --paper:#1b211e; --fg:#e4ebe7; --muted:#9aa8a0; --rule:#33403a;
+  --accent:#6cc4a1; --accent-soft:#20342b; --red:#ff8a80; --red-soft:#3a1f1d;
+  --amber:#f2c46b; --amber-soft:#3a2f17; --code:#232b27; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --paper:#1b211e; --fg:#e4ebe7; --muted:#9aa8a0; --rule:#33403a;
+  --accent:#6cc4a1; --accent-soft:#20342b; --red:#ff8a80; --red-soft:#3a1f1d;
+  --amber:#f2c46b; --amber-soft:#3a2f17; --code:#232b27; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.7}
+.wrap{max-width:920px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-direction:column;gap:6px;border-bottom:2px solid var(--fg);padding-bottom:14px}
+h1{font-family:var(--f-head);font-size:1.7rem;margin:0;text-wrap:balance;letter-spacing:.02em}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted);font-size:.86rem}
+.meta b{color:var(--fg);font-weight:600}
+h2{font-family:var(--f-head);font-size:1.18rem;margin:0;text-wrap:balance}
+p{margin:0}
+.lead{background:var(--paper);border:1px solid var(--rule);border-left:4px solid var(--accent);padding:12px 16px;border-radius:4px;display:flex;flex-direction:column;gap:8px}
+.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--rule);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--rule);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+code,.mono{font-family:var(--f-mono);font-size:.86em;background:var(--code);padding:1px 5px;border-radius:3px;white-space:nowrap}
+td.mono{background:none}
+.item{background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;break-inside:avoid-page}
+.itemhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.no{font-family:var(--f-mono);font-weight:700;color:var(--accent);font-size:1.05rem}
+.tag{font-size:.75rem;letter-spacing:.06em;padding:2px 8px;border-radius:3px;font-weight:600;white-space:nowrap}
+.t-must{background:var(--red-soft);color:var(--red)}
+.t-check{background:var(--amber-soft);color:var(--amber)}
+.t-done{background:var(--accent-soft);color:var(--accent)}
+.grid{display:grid;grid-template-columns:7.5em 1fr;gap:6px 14px}
+.grid dt{color:var(--muted);font-size:.86rem;padding-top:2px}
+.grid dd{margin:0;min-width:0}
+ul{margin:0;padding-left:1.2em}
+.bad{color:var(--red);font-weight:600}
+.warn{color:var(--amber);font-weight:600}
+.okc{color:var(--accent);font-weight:600}
+.note{color:var(--muted);font-size:.86rem}
+.nw{white-space:nowrap}
+.check{list-style:none;padding:0;display:flex;flex-direction:column;gap:4px}
+.check li::before{content:"☐ ";color:var(--accent)}
+@media (max-width:560px){.grid{grid-template-columns:1fr}.grid dt{padding-top:6px}}
+@media print{h2{break-after:avoid-page}tr,.lead{break-inside:avoid-page}body{font-size:12.5px}.wrap{max-width:none;padding-block:0}.tbl{overflow:visible}table{font-size:.82rem}}
+</style></head>
+<body><div class="wrap">
+<header>
+<h1>SoC 转接板接口清单 · 加电机控制器口</h1>
+<div class="meta"><span><b>板</b> SoC 转接板（DR1M90 / FS03 底板 → 两路 FPC）</span><span><b>底稿</b> SCH_Schematic1_2026-10-12 首版</span><span><b>日期</b> 2026-10-14</span><span><b>状态</b> 管脚分配已确认</span></div>
+</header>
+
+<div class="lead">
+<p><b>这次改什么：</b>SoC 和电机控制器之间加一个接口，一共 3 根信号加地：</p>
+<ul>
+<li><b>串口 2 根</b>（MOT_TX / MOT_RX）：启停、设转速、读实际转速和故障。慢速，115200 起。</li>
+<li><b>角度脉冲 1 根</b>（MOT_IDX）：电机控制器在固定角度<b>模拟光电开关</b>，每转一个上升沿 = 0°。脉冲直接进 FPGA，按时钟打时间戳，比走串口报角度实时得多。</li>
+</ul>
+<p><b>管脚（10-14 已确认）：</b>光电 / 角度脉冲 = <code>CEP2_24P</code>，串口 TX = <code>CEP2_8P</code>，RX = <code>CEP2_8N</code>。<code>CEP2_24N</code> 留空。占用 CEP2_8P/N 的前提是 <b>JTAG 维持两桥菊花链</b>，也就是撤回审查单 S2。详见第 3 节。</p>
+<p><b>电平：</b>bank11 改板后是 2.5 V，电机控制器按 3.3 V 算，中间加一片 4 路电平转换（和桥板 U19 同型号 SN74AVC4T774）。原 CN3 推挽 3.3 V 直接进 2.5 V bank 超 VIH 上限的问题也一起解决。</p>
+</div>
+
+<h2>1 · 全板接口总表（首版现状 + 本次新增）</h2>
+<div class="tbl"><table>
+<tr><th>位号</th><th>接到哪</th><th>座子</th><th>内容</th><th>状态</th></tr>
+<tr><td class="mono">H1 / H2</td><td>FS03 底板 CEP1 / CEP2</td><td>50 针 ×2</td><td>bank33（面 A）、bank11（面 B）全部 IO</td><td>现有</td></tr>
+<tr><td class="mono">FPC1</td><td>面 A 桥板</td><td>XW0525512-702R-001 70 导体</td><td>20 对 LVDS25 上行 + ACK / RST / UART_RX / UART_TX + JTAG 4 根 + 地；电源不走 FPC</td><td>现有</td></tr>
+<tr><td class="mono">FPC2</td><td>面 B 桥板</td><td>同上</td><td>同上（网名 DRV2_*）</td><td>现有</td></tr>
+<tr><td class="mono">CN1 / CN2</td><td>两块桥板 5 V 入口</td><td>B2P-VH</td><td>1 = GND，2 = 5 V</td><td>现有</td></tr>
+<tr><td class="mono">H5 / H6</td><td>滑环 / 外部电源</td><td>单针排针 ×2</td><td>24 V / GND 入口（建议加保险丝、TVS、防反接）</td><td>现有</td></tr>
+<tr><td class="mono">H7 / H9</td><td>FS03 两个 VCCIO 跳帽</td><td>2 针</td><td>PWR2V5 / GND，给 bank33 / bank11 供 2.5 V</td><td>现有（依赖 S1 修好）</td></tr>
+<tr><td class="mono">H3 / H4</td><td>未注明</td><td>单针排针 ×2</td><td>网 AC1 / AC2，全图各只出现 1 次，没接任何东西</td><td class="warn">问用途</td></tr>
+<tr><td class="mono">CN3</td><td>真光电开关（备用）</td><td>HC-XH-3ALT</td><td>1 = 信号（R82 10 Ω + C23 1 nF → CEP2_24P），2 = VCC3V3，3 = GND</td><td>保留，改走电平转换</td></tr>
+<tr><td class="mono">CN4</td><td><b>电机控制器</b></td><td>XH 2.54 4 针（建议）</td><td>MOT_IDX / MOT_TX / MOT_RX + GND</td><td class="okc">新增</td></tr>
+</table></div>
+
+<h2>2 · 新增电机控制器口 CN4 逐脚定义</h2>
+<div class="tbl"><table>
+<tr><th>CN4 脚</th><th>信号</th><th>方向</th><th>电机侧电平</th><th>经过</th><th>FPGA 球（FS03）</th><th>说明</th></tr>
+<tr><td>1</td><td class="mono">GND</td><td>—</td><td>—</td><td>—</td><td>—</td><td>信号参考地，必须和信号同线走</td></tr>
+<tr><td>2</td><td class="mono">MOT_IDX</td><td>电机 → SoC</td><td>3.3 V 推挽</td><td>U_LS 通道 1（B→A）</td><td class="mono">CEP2_24P · BK11_L5P</td><td>模拟光电开关：每转 1 个上升沿 = 0°，高电平 ≥10 µs。和 CN3 二选一（0 Ω 选通），RTL 现有上升沿逻辑不用改</td></tr>
+<tr><td>3</td><td class="mono">MOT_TX</td><td>SoC → 电机</td><td>3.3 V</td><td>U_LS 通道 2（A→B）</td><td class="mono">CEP2_8P · BK11_L14P</td><td>UART 8N1，115200 起、可到 921600；10 kΩ 上拉保证空闲为高</td></tr>
+<tr><td>4</td><td class="mono">MOT_RX</td><td>电机 → SoC</td><td>3.3 V</td><td>U_LS 通道 3（B→A）</td><td class="mono">CEP2_8N · BK11_L14N</td><td>10 kΩ 上拉，不插线时不误收</td></tr>
+</table></div>
+<p class="note">U_LS = SN74AVC4T774PWR：VCCA = PWR2V5（FPGA 侧），VCCB = VCC3V3（电机侧），DIR 硬接成上表方向，OE 下拉常使能，通道 4 不用（输入端接地）；每路电机侧串 33 Ω、加 ESD 阵列（可沿用桥板的 SP3003-04XTG）。CN3 的 R82 / C23 保留在电机侧；CN3 和 CN4 的 IDX 各经一只 0 Ω 进通道 1，默认贴 CN4、CN3 那只 DNP。</p>
+
+<h2>3 · 管脚预算：为什么要撤回 S2</h2>
+<div class="tbl"><table>
+<tr><th>方案</th><th>CEP2_8P/N</th><th>CEP2_24N</th><th>CEP2_24P</th><th>结果</th></tr>
+<tr><td><b>A（已定）</b>JTAG 菊花链</td><td>MOT_TX / MOT_RX</td><td>留空</td><td>MOT_IDX</td><td class="okc">串口全双工 + 角度脉冲</td></tr>
+<tr><td>B · 按 S2 拆 JTAG</td><td>桥 B 的 TDI2 / TDO2</td><td>只剩 1 根</td><td>MOT_IDX</td><td class="bad">串口缺 1 根，只能单向</td></tr>
+</table></div>
+<p>方案 A 的代价：一面桥不在位时，另一面也没法用 JTAG 加载。验证板上两面桥总是同时装，单块调试可以用桥板本地下载座 J103，所以可以接受。首版图里 R6（桥 A TDO → 桥 B TDI）已经是菊花链，<b>JTAG 部分不用改图</b>。2 期自研板管脚宽裕，到时再按契约拆独立 JTAG。</p>
+
+<h2>4 · 串口内容（先定框架，协议细节另出）</h2>
+<div class="tbl"><table>
+<tr><th>方向</th><th>内容</th><th>频率</th></tr>
+<tr><td>SoC → 电机</td><td>启动 / 停止、目标转速、角度脉冲相位偏置（校 0° 用）、每转脉冲数 N</td><td>按需</td></tr>
+<tr><td>电机 → SoC</td><td>实际转速、状态（加速中 / 稳速 / 故障码）、母线电压电流（可选）</td><td>10 Hz 周期上报</td></tr>
+</table></div>
+<p class="note">帧格式建议：帧头 + 长度 + 命令 + 数据 + CRC8。转速门控逻辑以 IDX 测出的周期为准，串口上报的转速只做交叉核对。</p>
+
+<h2>5 · 待定</h2>
+<div class="tbl"><table>
+<tr><th>#</th><th>事项</th><th>影响</th></tr>
+<tr><td>M1</td><td><b>电机控制器装在转子还是定子？</b>SoC 板有 24 V 滑环入口，说明 SoC 在转子上；如果电机控制器在定子上，这 4 根线要过滑环（至少多 4 道，IDX 抖动要实测），或者换红外 / 无线</td><td class="warn">决定 CN4 是板上直连还是接滑环</td></tr>
+<tr><td>M2</td><td>电机控制器 IO 电平（3.3 V / 5 V）和型号</td><td>5 V 时 VCCB 改接 5 V，SN74AVC4T774 的 VCCB 上限 3.6 V 不够，要换 1.1–5.5 V 的 LXC 系（如 2 片 SN74LXC2T45）</td></tr>
+<tr><td>M3</td><td>CEP2_24P = 光电，CEP2_8P = TX，CEP2_8N = RX，CEP2_24N 留空，不设备用脚 → 按方案 A，JTAG 保持菊花链，S2 撤回</td><td class="okc">✅ 10-14 用户确认（原理图中 BK11_L14P / L14N 为空网）</td></tr>
+<tr><td>M4</td><td>H3 / H4（AC1 / AC2）用途</td><td>问硬件同事</td></tr>
+<tr><td>M5</td><td>FPGA 约束：CEP2_8P / CEP2_8N 设 LVCMOS25，加一个 UART 核</td><td>软件侧回板前做完</td></tr>
+</table></div>
+
+<p class="note">依据：SCH_Schematic1_2026-10-12（CN3 / H1–H9 / CN1–2 读图 + 300 dpi 截图）；转接板审查单 v3（2026-10-12：空闲脚 CEP2_8P/N、CEP2_24N，S2、S3 连带）；模组间接口规格书 v3（E38 / D23 光电开关、bank11 2.5 V 的 VIH 上限 2.8 V）。</p>
+</div></body></html>

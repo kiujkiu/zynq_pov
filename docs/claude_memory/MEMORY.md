@@ -351,3 +351,4 @@
 - [多 agent 禁按名字杀进程](feedback_no_kill_by_name.md) — 只杀自己记录的 PID; pkill 按名字会误伤别的 agent (10-13 D16→D2)
 - [子 agent 并行 ≤5](feedback_save_weekly_quota.md) — 10-14 用户: 7 天额度超, 同时并行不超过 5 个; 机械活用 Sonnet
 - [派活省 token 清单](feedback_dispatch_token_playbook.md) — 自己做>Haiku/Sonnet>Opus; 说明写窄+小样本; 复验过即关; 不唤醒老 agent; 安静汇报
+- [电机控制器口 10-14](project_motor_ctrl_interface_1014.md) — SoC 转接板加 CN4: UART + 模拟光电 IDX; 三脚已确认 (撤 S2), 待定转子/定子与电平

@@ -354,3 +354,4 @@
 - [电机控制器口 10-14](project_motor_ctrl_interface_1014.md) — SoC 转接板加 CN4: 24P 光电 / 8P TX / 8N RX 已定 (撤 S2, 无备用脚), 待定转子/定子与电平
 - [10-14 交接](project_handoff_2026_10_14.md) — V0 83.8% 出口 5/8; 在跑 D7c 上板 + D15b 查 32 bit; 下一步 ⑤⑦→⑥ 8 h
 - [主动提醒 compact](feedback_remind_compact.md) — Claude 不能自己执行; 工作告一段落/上下文过长时提醒, 先写交接; 有后台任务时 compact 不关窗
+- [GW5A 一体桥板交接 10-14](project_gw5a_bridge_handoff_1014.md) — 监工窗口压缩前交接: 进度/下一步/待办/关键文件

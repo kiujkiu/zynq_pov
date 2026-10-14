@@ -25,3 +25,4 @@ metadata:
 - ✅ 10-13 G2 器件冻结有条件通过: ERC 0 违规, 网名统一后拓扑与 r3 一致, BOM 448 行 (review/bom_g2.csv)。下一步 G3a 叠层 S2+约束。
 - 10-14 用户给高云厂家资料 (D:\芯片资料\gowin, 解到工程 core/gowin_vendor/): 官方最小系统图证实 MIPI 未用脚悬空、PUDC_B 有内部弱下拉 ⇒ 两项 FAE 问题关闭; 官方开发板 .brd 是 Allegro 二进制 KiCad 导不了, 需人用 Allegro 导出 Extracts/ODB++。
 - 🎯 10-14 芯片丝印确认: **GW5A-LV25 UG324C2/I1** (UG324, 非 UG324S) ⇒ 原理图球表正确, 阻塞关闭; 固件 .cst/Gowin device 须从 UG324S 改为 UG324C2/I1 并重跑 P&R。
+- 10-14 官方开发板 DK_START_GW5A-EV25UG324S .brd 已用 KiCad 10 Python (PCB_IO Allegro 导入, kicad-cli import 不列此格式) 转为 core/gowin_vendor/dk_import.kicad_pcb, 12 层板, 作扇出/去耦参考。

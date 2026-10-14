@@ -18,3 +18,4 @@ metadata:
 **How to apply:** 每次派活前先问"这活该给 Codex / Sonnet / Opus 哪个"; 汇报里可顺带说明派给了谁。
 
 **10-14 用户追加: 同时并行的子 agent 不超过 5 个** ("现在 7 天的消耗比例有点超")。派新 agent 前先数在跑的 (含被 SendMessage 唤醒在干活的); 满了就排队, 先合并/复验收尾; 复验跑脚本自己跑不占 agent; 能用 Sonnet 的用 Sonnet。
+- 10-14 用户: 跑完的 agent 要关掉 (TaskStop), 方便区分。约定: 交付并通过主会话复验后立即 TaskStop; 后续工作开新 agent (用 D 编号命名, 背景写进说明), 不唤醒累积了几十万 token 上下文的老 agent。

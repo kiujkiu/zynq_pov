@@ -78,3 +78,4 @@
 2026-10-15,测量,D22/D20,"1 h 产品配置 (无对拍) 推流诊断: 换帧 14.64/s 软件损失 2.4% ✅, 间隔 p99 124 ms ✅, 长停顿 3.7‰ ✅, 最长 495 ms ❌ (门槛 267); PC→板 ping 16781/0 丢; >0.5 s ACK 停顿 46 min 内 4 次 (最长 0.78 s), 同刻 PC→网关 RTT 165-275 ms = PC 侧 WiFi 抖动。周期 3 s 卡顿消失 (确认系对拍)。余项: 0.5-0.8 s 偶发抖动 (播放缓冲 vs 延迟取舍 / PC 有线或专用路由)",soak_runs/netdiag_1015_1814
 2026-10-15,问题,D21,"换档位流 (REV 0x20471021) 上板起步即停摆 (档 0 未换档时写完 47 片后停, 换网格全超时), 仿真全过 → 硅上与仿真不同; D21b 开查根因。另: D21 上板收尾用 m90/up.sh 会让板子没 PL, 已重启回开机默认 (0x20471019 + QoS)",~/rv_d21.board.log
 2026-10-15,问题,D22,"新克隆离线 O6 误 FAIL: hostapd/povreach 二进制 git 模式 644, WSL 本地盘克隆不可执行, qemu 静默拒绝 (板上 autorun 有 chmod, 不受影响); 已修 (git +x, verify chmod), 重跑后自动上板演练",dr1v90 task/d22-reach
+2026-10-15,问题,D22,"首轮上板演练 9 项误 FAIL = 验收脚本 info() 把板上 board_d22.sh info 的非 0 退出码当失败 (内容正常), settle/wait_healthy 恒失败; 板子本身正常 (装好开机 healthy, povreach managed, 看门狗 armed)。已修, 单独重跑全套演练 (~80 min); 期间 D21 取证因同时上板被干扰, 待 D22 后单独跑",dr1v90 task/d22-reach

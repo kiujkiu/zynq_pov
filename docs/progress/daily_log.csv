@@ -92,3 +92,4 @@
 2026-10-16,交付完成,D20c,"内容帧率跟转速 voxlive --fps auto 合主线 d3f16f3 (默认不变; 主机空闲时离线复验 PASS, 之前失败为主机忙)。上板 A/B (583 rpm 固定 15 vs auto+板 20/1.0) 进行中",dr1v90 feature/lvds-b2b
 2026-10-16,测量,D20c,"上板 A/B (假转 583 rpm, 无对拍, 逐帧): A 默认 (推 15 + 板 15/0.9) 14.85/s, 间隔 p50/p95 51.5/103 ms, 节拍偏差 p50/p95 23%/55%; B (推 auto + 板 max-fps 20 / margin 1.0) 19.14/s, 间隔 51.4/51.8 ms, 偏差 0%/1%, 最长 206 ms。B 明显更流畅; 测 C (转速取自板遥测) 后决定改开机默认",soak_runs/fps_A fps_B
 2026-10-16,问题,D20c,"测 C: 不手填转速时 auto 拿不到转速 → 退回 15 fps (povstat UDP 在 WSL NAT 收不到; 且 V0 2047 PL 位流遥测本无转速)。开 D20d: 推流 TCP ACK 扩展回传转速 (新旧兼容) + 默认改 板 max-fps 20/margin 1.0、推流 auto; 同时开 D10 V1 12-bit 位流按主线重综合",soak_runs/fps_C
+2026-10-16,交付,D20d,"推流 ACK 扩展回传转速 (帧头 flags bit15 请求 → 板回 0x07+rps×100+max-fps+margin+半圈标志; 新旧三种组合逐字节兼容) + 默认 板 max-fps 20/margin 1.0、推流 --fps auto (不用手填): 离线假转 583 rpm 自动锁 19.49/s std 0.2 ms。复验 + 上板 D 组进行中",dr1v90 task/d20d-ackrps db4ec93

@@ -79,3 +79,4 @@
 2026-10-15,问题,D21,"换档位流 (REV 0x20471021) 上板起步即停摆 (档 0 未换档时写完 47 片后停, 换网格全超时), 仿真全过 → 硅上与仿真不同; D21b 开查根因。另: D21 上板收尾用 m90/up.sh 会让板子没 PL, 已重启回开机默认 (0x20471019 + QoS)",~/rv_d21.board.log
 2026-10-15,问题,D22,"新克隆离线 O6 误 FAIL: hostapd/povreach 二进制 git 模式 644, WSL 本地盘克隆不可执行, qemu 静默拒绝 (板上 autorun 有 chmod, 不受影响); 已修 (git +x, verify chmod), 重跑后自动上板演练",dr1v90 task/d22-reach
 2026-10-15,问题,D22,"首轮上板演练 9 项误 FAIL = 验收脚本 info() 把板上 board_d22.sh info 的非 0 退出码当失败 (内容正常), settle/wait_healthy 恒失败; 板子本身正常 (装好开机 healthy, povreach managed, 看门狗 armed)。已修, 单独重跑全套演练 (~80 min); 期间 D21 取证因同时上板被干扰, 待 D22 后单独跑",dr1v90 task/d22-reach
+2026-10-15,验证,D22,"第二轮上板演练 (单独): 杀 sshd/mdns/povnetd 27-72 s 自愈找回 ✅; 错 SSID → 兜底热点 → 自己回公司网 ✅ (但 23.5 min, 目标 ≤10); 杀 wpa/关网卡、装后重启: 板子恢复了但 mDNS 按名字 240 s 内找不回 ❌ (缓存 IP 可连); 看门狗复位发生但晚于测试判定、卡上未记非正常结束 ❌。交回 D22 agent 修 (mDNS 找回为主)",~/rv_d22.board2.log

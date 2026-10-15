@@ -31,3 +31,4 @@ metadata:
 - 🎯 10-15 用户批准下行换脚 (只在 48 对内部重排, 左右各 6 组)。R15 做完: 原生拓扑仅下行球归属变; Gowin 复核 (工程 firmware_check/: remap_cst.py + build_v1.sh, UG324C2/I1) P&R+位流 OK, dclk Fmax 173MHz。**固件交接: 用 firmware_check/gw5a_bridge_v1_valid.cst** (含 r9 上行换球 + r15 下行换脚)。R16 在布下行 (先摆串阻再成束)。
 - 10-16: 并行 4 路 Codex (左右下行/PDN/灯电源) + Claude 按 UUID/整网合并 (scripts_claude/merge_added.py)。下行完成 O5/O9/O11 (3/12)。PWR_* 线宽 min 改 0.20 (原值=整网等效宽度, 逐段不适用)。F200 两脚同网 DNP = 照抄原板预留, 不改。
 - 10-16 凌晨: 下行 4/12 (O5/O8/O9/O11) 后连续 3 轮 0 组 (含 astra 一轮); 根因 = 布局未留下行通道 + 自定源端预算分配过紧。R23: 每段未耦合上限 12.7, 整链和 ≤12.7 由 verify.py 原生实测求和验收。merge_added.py 必须带 @/+ 限定 (曾因旧副本重复加铜出 28 重叠孔)。灯电源/PDN 等下行完成后在最新主板重做 (试合并与下行短路 49)。
+- 10-16 07:30 R23 合并: I、O2 入主板 (下行 5/12: I/O2/O5/O8/O9, O11 被拆待补); U102 改 B 面(避 TOP_OPTICAL_RESERVE, B 面空间待机械确认); 坑: merge 时主板旁无 .kicad_pro 会把默认板设置写回 (脚本已防); R24 续做 O6/O10

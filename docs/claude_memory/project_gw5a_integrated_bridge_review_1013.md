@@ -26,3 +26,4 @@ metadata:
 - 10-14 用户给高云厂家资料 (D:\芯片资料\gowin, 解到工程 core/gowin_vendor/): 官方最小系统图证实 MIPI 未用脚悬空、PUDC_B 有内部弱下拉 ⇒ 两项 FAE 问题关闭; 官方开发板 .brd 是 Allegro 二进制 KiCad 导不了, 需人用 Allegro 导出 Extracts/ODB++。
 - 🎯 10-14 芯片丝印确认: **GW5A-LV25 UG324C2/I1** (UG324, 非 UG324S) ⇒ 原理图球表正确, 阻塞关闭; 固件 .cst/Gowin device 须从 UG324S 改为 UG324C2/I1 并重跑 P&R。
 - 10-14 官方开发板 DK_START_GW5A-EV25UG324S .brd 已用 KiCad 10 Python (PCB_IO Allegro 导入, kicad-cli import 不列此格式) 转为 core/gowin_vendor/dk_import.kicad_pcb, 12 层板, 作扇出/去耦参考。
+- ✅ 10-15 上行块通过 (R11 补 1µF 9/10 路缺 VCC1P8; R12 修 TX3)。KiCad 10.0.3 差分 uncoupled 对跨层 gap 规则虚高 (源码 :209 只按 uncoupled 规则名合组), 验收改为 主板 gap 0 + 包络副本原生复算真实超预算 0 (verify.py --drc 自动做); 规则/预算不放宽。R13 新会话 01a13e69 在布下行。

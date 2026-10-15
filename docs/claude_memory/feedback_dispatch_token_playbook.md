@@ -36,3 +36,4 @@ metadata:
 **How to apply:** 每次派活前过一遍: 能不能自己做? 能不能 Sonnet/Haiku? 说明够不够窄? 有没有小样本? 判据是否一条命令? 相关 [[feedback-save-weekly-quota]] [[feedback-agent-label-task-id]] [[feedback-no-kill-by-name]]
 
 - 10-15 用户: "你自主完成就行, 把结论同步就行, 记得提交代码, 有验证的记得打分支, 减少我的介入" —— 已批准的方向直接做到底 (派 agent→复验→合主线), 只同步结论; 只有需要人在场 (实转/接线) 或真正的取舍才找用户。
+- 10-15 用户: 测试结果 (如实转 1 h) 直接记进项目跟踪文件 (zynq_pov/docs/progress: metrics/daily_log + 重新生成看板) 就行, 不用单独发给用户; 不要因等用户而阻塞, 记完直接做下一个任务。

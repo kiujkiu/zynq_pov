@@ -34,3 +34,5 @@ metadata:
 - 重复的进度/记忆/看板更新合并成一次提交。
 
 **How to apply:** 每次派活前过一遍: 能不能自己做? 能不能 Sonnet/Haiku? 说明够不够窄? 有没有小样本? 判据是否一条命令? 相关 [[feedback-save-weekly-quota]] [[feedback-agent-label-task-id]] [[feedback-no-kill-by-name]]
+
+- 10-15 用户: "你自主完成就行, 把结论同步就行, 记得提交代码, 有验证的记得打分支, 减少我的介入" —— 已批准的方向直接做到底 (派 agent→复验→合主线), 只同步结论; 只有需要人在场 (实转/接线) 或真正的取舍才找用户。

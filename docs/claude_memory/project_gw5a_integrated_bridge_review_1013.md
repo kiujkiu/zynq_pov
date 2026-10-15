@@ -28,3 +28,4 @@ metadata:
 - 10-14 官方开发板 DK_START_GW5A-EV25UG324S .brd 已用 KiCad 10 Python (PCB_IO Allegro 导入, kicad-cli import 不列此格式) 转为 core/gowin_vendor/dk_import.kicad_pcb, 12 层板, 作扇出/去耦参考。
 - ✅ 10-15 上行块通过 (R11 补 1µF 9/10 路缺 VCC1P8; R12 修 TX3)。KiCad 10.0.3 差分 uncoupled 对跨层 gap 规则虚高 (源码 :209 只按 uncoupled 规则名合组), 验收改为 主板 gap 0 + 包络副本原生复算真实超预算 0 (verify.py --drc 自动做); 规则/预算不放宽。R13 新会话 01a13e69 在布下行。
 - 🎯 10-15 用户批准: 下行 DL 差分整链未耦合预算 6.35→12.7mm (166.67MHz 灯板时钟; 上行 1Gbps 仍 6.35)。R13 下行 0/12 组卡在预算; R14 允许重摆下行串阻成行后成束布线。
+- 🎯 10-15 用户批准下行换脚 (只在 48 对内部重排, 左右各 6 组)。R15 做完: 原生拓扑仅下行球归属变; Gowin 复核 (工程 firmware_check/: remap_cst.py + build_v1.sh, UG324C2/I1) P&R+位流 OK, dclk Fmax 173MHz。**固件交接: 用 firmware_check/gw5a_bridge_v1_valid.cst** (含 r9 上行换球 + r15 下行换脚)。R16 在布下行 (先摆串阻再成束)。

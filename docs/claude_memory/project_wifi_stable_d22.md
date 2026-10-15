@@ -12,3 +12,4 @@ metadata:
 候选对策: 板端锁频/少扫描加快重连、产品自带专用 AP 或板子开热点 (避开企业 WiFi 调度), 小播放缓冲。
 相关: [[project-smoothness-first-class]] [[project-dr1m90-02-remote-ops]]
 - 10-15 用户: "wifi 问题核心第一条, 不能脱离串口连不上" "这个要彻底解决" → D22 (Opus, task/d22-reach): 四层兜底 = 服务监护 (sshd/povmdns/povstat) + 硬件看门狗 (/dev/watchdog, pov/nowdt 关) + 兜底热点 POV-<板名> 192.168.77.1 (需静编 hostapd, 板上无 hostapd/udhcpd) + 故障注入上板验收 (不插串口按名字找回)。热点那项 PC 测不了 (单 WiFi 卡), 需用户手机确认一次。
+- 10-15: PC 上插着 USB WiFi 联发科 MT7921AU (USB 0E8D:7961), Windows 未装驱动 (状态 Error)。用户定留着; 装好驱动后作第二块网卡专连板子兜底热点 (192.168.77.x), D22 热点测试可全自动。

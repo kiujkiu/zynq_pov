@@ -28,3 +28,4 @@ metadata:
 - 10-14 23:45 重开长跑: 第一轮第 6 段企业 WiFi 踢线 ~5 s, voxlive 不重连直接退出 -> 修 voxlive 断线自动重连 (主线 5cbe79f, 回归全过), 判读 S5/S6 允许重连。第一轮前 4 h 板端: 停摆 0 / 死 0 / RSS 稳 34.4 MB。
   新一轮: ~/soak_runs/v0_8h_1014_2345 (PID 见 ~/soak_runs/last_8h.pid), 约 07:45 结束; 接力 ~/qos_runs/chain_all.sh: 判读 PASS -> QoS 对照 (attr --with-qos + color@QoS 0x0F) -> D16b tile A/B (~/rv_d16b, 离线复验 5 套全过)。
 - 10-15 07:50 V0 出口 8/8: 8 h 长跑 9/9 (报告 zynq_pov/docs/progress/soak_v0/); QoS 对照 + D16b A/B 在跑 (~/qos_runs/chain_rest.sh)。
+- 10-15 08:35 QoS 带载迟到 4.1%→0 (决定性); D16b 分块无收益 (漂移内), 不合主线。待用户定: QoS 0x0F 是否做进开机默认。

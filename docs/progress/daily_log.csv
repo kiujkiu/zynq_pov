@@ -97,3 +97,4 @@
 2026-10-16,验证,D20d,"上板 D 组 (不手填任何参数): 推流经 ACK 扩展自动拿到转速并锁 19.4 帧/s ✅; 但间隔 p95 103 ms (>5% 帧翻倍), 不如手填转速的 B 组 (p95 51.8) —— 估计转速与实际微差导致周期性滑格, 需相位锁定 (跟板端 ACK 节奏) 作后续。离线复验 (指定 BASE) PASS, 合主线回归中",soak_runs/fps_D
 2026-10-16,交付完成,D20d,"ACK 回传转速 + 默认推流 auto / 板 20/1.0 合主线 (合并回归 7 套通过)。卡上部署尚未更新 (下次装卡带上); 后续: 相位锁定消 5% 滑格",dr1v90 feature/lvds-b2b
 2026-10-16,部署,V0,"卡上部署更新到主线 1d23e50 (voxslice md5 ecdc246f = 主线, show_boot max-fps 20 / margin 1.0, QoS 0x0F, PL 0x20471019, D22 povreach); D19 上板假转扫点 PASS",~/rv_deploy.board.log
+2026-10-16,交付完成,D10,V1 主控位流按主线重综合合主线 (复验 5/5: 构建记录/联合仿真/上行回归/MAXMISS 说明); 回板步骤 d10_v1bit/BOARD_DAY.md,dr1v90 feature/lvds-b2b

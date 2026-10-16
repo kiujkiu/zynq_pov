@@ -26,6 +26,7 @@ td,th{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:l
 <tr><td>B4</td><td><b>桥 JTAG 远程升级</b>（D27 H-3）：只装面 A 时菊花链断，读不到桥 TDO。</td><td>面 B FPC 位置跳接 TDO–TDI，或改 SoC 板 R6。</td><td>回板前改 R6 或备跳线</td></tr>
 <tr><td>B5</td><td><b>GW5A 是 A 版还是 B 版</b>（D27 H-4）：A 版要求 TCK ≥15 MHz，位敲达不到。</td><td>看核心板丝印（09-23 记过丝印 25B）。</td><td>确认是 B 版即可</td></tr>
 <tr><td>B6</td><td><b>B22/G22 是 ADC 复用球当输出</b>（D27 H-2）</td><td>TD 综合接受，电气等安路答复 + 回板实测。</td><td>催安路回复</td></tr>
+<tr><td>B7</td><td><b>V2 桥板硬件</b>（V2-6）：2 期桥一颗 GW5A-25 够用（BSRAM 37/56，时序 +0.018 ns）。</td><td>需硬件确认：UL_CLK 差分（第 87 对）放 3.3V bank 4/5 当 LVDS 输入；24 链 ACK 要片外 3 颗 8 选 1；预存窗口在 15.3 rps 只有 ±0.5 µs，回板按实测重扫。</td><td>画 2 期桥板时带上 3 颗 8 选 1</td></tr>
 </table>
 
 <h2>C. 周末已完成（供参考）</h2>

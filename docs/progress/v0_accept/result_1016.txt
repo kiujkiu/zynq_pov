@@ -1,0 +1,6 @@
+A1 PASS | 按名字找回, 板上 uptime 137 s, 断开到登上 - s, IP 10.10.20.220
+A2 PASS | 守护进程 缺: 无
+A3 PASS | 卡上 voxslice --pl, mode 'pl', QoS 0x0000000F, PL 签名/版本 0x53335254 0x20471019
+A4 PASS | wlan0  SSID: undef; signal: -55 dBm; tx bitrate: 864.8 MBit/s 80MHz HE-MCS 8 HE-NSS 2 HE-GI 0 HE-DCM 0; ping 30 丢 0
+A5 PASS | (判读脚本正则错, 人工复核) voxlive rc 0; 板上 连接结束 (对端关闭) 本连接 1339 帧 / 90 s = 14.9 帧/s
+A6 PASS | voxslice PID 495 -> 495

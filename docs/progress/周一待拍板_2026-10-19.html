@@ -14,7 +14,7 @@ td,th{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:l
 <h2>A. 要你批准 / 动手（挡着进度）</h2>
 <table><tr><th>#</th><th>事项</th><th>推荐</th><th>你要做的</th></tr>
 <tr><td>A1</td><td><b>D29 03 冷启动认不到 TF 卡</b>：只改卡上 <code>uboot.env</code> 的启动命令，加"重扫卡再试 ×15"；其余 49 项逐字节不变，不动 BOOT.bin/内核。改 u-boot 读的文件需你批准。</td><td class="rec">批准</td><td>回"批准 D29"；我从板上 Linux 替换（留备份）。然后你给 03 断电≥10 s 再上电 20 次，我串口只听统计，判据 20/20。</td></tr>
-<tr><td>A2</td><td><span class="red">回板阻塞：桥复位脚 SB_RSTN 被 R235 10k 下拉</span>，现役主控位流不驱动它 → 桥一直复位，屏不亮。</td><td class="rec">回板用 D27 主控位流（驱动 SB_RSTN=1）；备用：FPC63 临时上拉</td><td>定用哪套；若用 D27 套，我安排出可上板的 bin（目前只做了时序评估）。</td></tr>
+<tr><td>A2</td><td><span class="red">回板阻塞：桥复位脚 SB_RSTN 被 R235 10k 下拉</span>，现役主控位流不驱动它 → 桥一直复位，屏不亮。</td><td class="rec">回板用 D27 套（主控 a36365e9 + 桥 e60c e7289b13，已出件，时序全正，脚本 --set d27）；备用：现役套 + FPC63 临时上拉</td><td>回一句"用 D27 套"即可，回板当天不用飞线。</td></tr>
 <tr><td>A3</td><td><b>D11 C1 台架彩排 + 误码</b>：V1 剩下的必须项之一，需要接线。</td><td>—</td><td>按 <code>c1_bench/C1台架接线_2026-10-13.pdf</code> 接线，告诉我 COM 口。</td></tr>
 </table>
 

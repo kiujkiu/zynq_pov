@@ -116,3 +116,4 @@
 2026-10-16,开工,周末,"用户: SoC↔桥通信全功能开工, 软件能做的都做, 周一看结果。开 D27 (SoC↔桥全功能, Opus) / D28 (V1 回板一键脚本) / D29 (冷启动认卡); 02 跑 24 h 产品配置长跑 (PLV=0 max-fps 20 margin 1.0, 主线 8eced5a)",dr1v90 soak8h/runs/1016_wkend_24h
 2026-10-16,方案,D29,"03 冷启动认卡: 热重启 13/13 无法复现, 最可能 u-boot sdhci 首次 mmc_init 间歇失败且 an_bootcmd 无重试; 方案 A 只改卡上 uboot.env 的 bootcmd (mmc rescan 重试 15 次, 其余 49 变量逐字节同, md5 dae13f64), u-boot 提示符手敲已验证; 等用户批准写卡 + 冷上电 20 次验收 (判据 20/20); 发现 03 未装 S00sdoff 钩子",dr1v90 d29_sdboot/PLAN.md
 2026-10-16,交付完成,D28,"V1 回板一键脚本合主线: bringup.sh S0 前置 → S9 恢复, 每步 CHECK + 失败原因/下一步; 演练 (假寄存器/qemu) 74 PASS, 12 种故障注入全命中; 待真板核: 位流加载/真线速误码/真画面/桥 UART 字符串",dr1v90 v1_bringup/
+2026-10-16,修复,D30,"回归计时判据 (d20d P2 / d20c F3) 抗机器忙合主线: 稳健 std + 失败重测; load 17-31 下 5/5 PASS, 反例全检出",dr1v90 d20c_fps/test_d30_judge.sh

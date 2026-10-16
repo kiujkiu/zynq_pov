@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>周一待拍板</title>
+<style>
+:root{--fg:#1d1d1f;--mut:#5f6368;--bd:#d9d9de;--acc:#b3261e;--ok:#1e7a3c;--bg:#fff}
+body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--fg);background:var(--bg);max-width:900px;margin:24px auto;padding:0 16px;line-height:1.55;font-size:14px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:22px 0 8px;border-bottom:1px solid var(--bd);padding-bottom:4px}
+.sub{color:var(--mut);margin-bottom:14px}table{border-collapse:collapse;width:100%;margin:6px 0}
+td,th{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:left}th{background:#f4f4f6}
+.red{color:var(--acc);font-weight:600}.rec{color:var(--ok);font-weight:600}.small{color:var(--mut);font-size:12px}
+</style></head><body>
+<h1>周一待拍板（10-19）</h1>
+<div class="sub">周末自主推进的结果里，需要你决定或动手的事项。按影响先后排列；每项给出推荐。达成率 V0 95.5% / V1 82.5% / V2 74.2%（10-17）。</div>
+
+<h2>A. 要你批准 / 动手（挡着进度）</h2>
+<table><tr><th>#</th><th>事项</th><th>推荐</th><th>你要做的</th></tr>
+<tr><td>A1</td><td><b>D29 03 冷启动认不到 TF 卡</b>：只改卡上 <code>uboot.env</code> 的启动命令，加"重扫卡再试 ×15"；其余 49 项逐字节不变，不动 BOOT.bin/内核。改 u-boot 读的文件需你批准。</td><td class="rec">批准</td><td>回"批准 D29"；我从板上 Linux 替换（留备份）。然后你给 03 断电≥10 s 再上电 20 次，我串口只听统计，判据 20/20。</td></tr>
+<tr><td>A2</td><td><span class="red">回板阻塞：桥复位脚 SB_RSTN 被 R235 10k 下拉</span>，现役主控位流不驱动它 → 桥一直复位，屏不亮。</td><td class="rec">回板用 D27 主控位流（驱动 SB_RSTN=1）；备用：FPC63 临时上拉</td><td>定用哪套；若用 D27 套，我安排出可上板的 bin（目前只做了时序评估）。</td></tr>
+<tr><td>A3</td><td><b>D11 C1 台架彩排 + 误码</b>：V1 剩下的必须项之一，需要接线。</td><td>—</td><td>按 <code>c1_bench/C1台架接线_2026-10-13.pdf</code> 接线，告诉我 COM 口。</td></tr>
+</table>
+
+<h2>B. 方案选择（不挡今天，但越早越好）</h2>
+<table><tr><th>#</th><th>事项</th><th>选项与数字</th><th>推荐</th></tr>
+<tr><td>B1</td><td><b>V1 每圈片数改奇数</b>（D31）：面 A 过转轴，偶数时后半圈与前半圈取样重合。</td><td>两面漏柱：358/286/210 = 124/458/1524 根 → 357/285/209 = 0/62/467 根。只改档表，不动 RTL/位流；桥余量略宽（24 Hz 点 +0.40%→+0.68%）。</td><td class="rec">改 357/285/209</td></tr>
+<tr><td>B2</td><td><b>24 Hz 用哪一档</b>：按现有换档阈值，12 rps（24 Hz）实际落在 286 档，不是满档。</td><td>想让 24 Hz 用 357 片：357 档最高转速须 ≥12 rps，余量 +0.68%（低于 2.5% 门槛，与现在 358@12 rps 的 +0.40% 同类）。</td><td>24 Hz 用满档（接受 0.68%），回板实测桥是否稳</td></tr>
+<tr><td>B3</td><td><b>V2 档表</b>（V2-3）：2 期上行（105.33 µs/片）比 2260 更紧，605/512 两档只到 1110 rpm。</td><td>① 605/513/461 三档 → 到 1200 rpm；② 两档 → 1110 rpm 封顶。奇数 513 比 512 漏柱 1864→46。</td><td class="rec">三档 605/513/461</td></tr>
+<tr><td>B4</td><td><b>桥 JTAG 远程升级</b>（D27 H-3）：只装面 A 时菊花链断，读不到桥 TDO。</td><td>面 B FPC 位置跳接 TDO–TDI，或改 SoC 板 R6。</td><td>回板前改 R6 或备跳线</td></tr>
+<tr><td>B5</td><td><b>GW5A 是 A 版还是 B 版</b>（D27 H-4）：A 版要求 TCK ≥15 MHz，位敲达不到。</td><td>看核心板丝印（09-23 记过丝印 25B）。</td><td>确认是 B 版即可</td></tr>
+<tr><td>B6</td><td><b>B22/G22 是 ADC 复用球当输出</b>（D27 H-2）</td><td>TD 综合接受，电气等安路答复 + 回板实测。</td><td>催安路回复</td></tr>
+</table>
+
+<h2>C. 周末已完成（供参考）</h2>
+<table><tr><th>项</th><th>结果</th></tr>
+<tr><td>D27 SoC↔桥通信全功能</td><td>握手、闭环训练/自动重训、桥计数回传遥测、桥寄存器读写、2260 表改写+回读、亮度/黑场、看门狗（修黑场死锁）、停转降亮、版本核对；端到端仿真 0 错。默认构建不变。</td></tr>
+<tr><td>D28 V1 回板一键脚本</td><td>S0–S9 分阶段 + 失败原因/下一步；演练 + 12 种故障注入；人用清单 <code>v1_bringup/回板当天.md</code>。D28b 正在接入 D27。</td></tr>
+<tr><td>D9 V1 端到端仿真</td><td>主机推流 → 板端 → 主控 RTL → 上行 → 桥 → 2260 屏像素，逐像素 0 错。</td></tr>
+<tr><td>D20e/D12 流畅度</td><td>相位锁定 + 提前量 70 ms：583 rpm 滑格 5.2%→0.14%，延迟 p50 133 ms。02 已部署。</td></tr>
+<tr><td>D25 / V2-3 / D26</td><td>V1 换档到 1200 rpm；V2 映射与档表；V2 位流按主线重出（余量 0.000 ns，无裕量）。</td></tr>
+<tr><td>DR1M90-03</td><td>第二块板可用（卡块级写，控制台 COM30），V0 验收 6/6。</td></tr>
+<tr><td>02 24 h 长跑</td><td>产品配置（不开对拍、max-fps 20），周六 22:12 结束，结果见看板。</td></tr>
+</table>
+<p class="small">详细数字与出处：项目看板 显性目的进度_交互.html；各任务目录 d27_link/、v1_bringup/、d31_v1odd/REPORT.md、v2_map/DESIGN.md、d29_sdboot/PLAN.md。</p>
+</body></html>

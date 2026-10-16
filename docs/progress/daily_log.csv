@@ -106,3 +106,6 @@
 2026-10-16,部署,V0,"02 卡上 voxslice 换 D20e 版 (ba243d71, 旧版留 .bak-d20e), 重启后 V0 验收 6/6 PASS (推流 1326 帧/90 s, WiFi -44 dBm 丢 0)",progress/v0_accept/accept_1016_d20e.log
 2026-10-16,交付完成,KR7.3/D24,"KR7.3 16 位计数回绕修正合主线 (存档无原始计数, 99.84% 无法重算; 38/57 转动行待核); D24 立方体候选合主线, 用户定开机保持 geo_loop",dr1v90 feature/lvds-b2b
 2026-10-16,硬件,DR1M90-03,"第二块板: 公司 DLP 拦 TF 卡文件写入 → WSL 做 512 MB 镜像 + host/flash_card_raw.ps1 块级写, 读回 PASS; 等上电按名字找",D:\card03
+2026-10-16,交付完成,D25,"V1 换档合主线 90b1d79: 358/286/210 档 (阈值 11.6/14.6 rps, 回差), 各档最高转速桥余量 3.9/3.3/2.7%; 不改 RTL 不重出位流; 顺修 --local-always SIGTERM 挂死; 卡上 voxslice 仍 D20e 版 (V0 dump 逐字节同, 不急换)",dr1v90 feature/lvds-b2b
+2026-10-16,问题,DR1M90-03,"用户改供电上电后: mDNS 查不到, 串口 COM29/COM30 (CH342) 140 s 无输出、回车无回显; 后台录串口 2 h + 寻板 3 h; 待用户回来断电重上电",D:\card03\cap_COM29.log
+2026-10-16,问题,回归,"d20d P2 / d20c F3 帧间隔 std 判据在机器高负载 (load 4-6, D25 全量 + D26 TD) 时偶发超门槛 (4.6/8.3 ms vs <4), 空闲同代码 0.1 ms; 待空闲复测, 必要时改失败重测一次",dr1v90 d20d_ackrps d20c_fps

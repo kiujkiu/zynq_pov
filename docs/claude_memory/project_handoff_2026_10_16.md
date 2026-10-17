@@ -1,6 +1,6 @@
 ---
 name: project-handoff-2026-10-16
-description: 10-16 晚交接 (周末自主跑到周一): 主线 c8e8294; 两块板 02/03 都验收 6/6; 跑着 D27 SoC↔桥全功能 / D28 V1 回板脚本 / D29 03 冷启动认卡 / 02 24h 长跑
+description: 周末交接 (10-17 晚更新): 主线 3bf094f; 周末合 D27/D27b/D28/D28b/D29方案/D30/D31/V2-3/V2-5/V2-6/D20e修; 02 24h 长跑 PASS; 03 24h 长跑在跑; 周一清单 PDF
 metadata:
   type: project
 ---
@@ -12,3 +12,8 @@ metadata:
 **已知不稳**: d20d P2 / d20c F3 帧间隔 std 判据在机器高负载时偶发超门槛, 空闲 0.1 ms; 待改失败重测。
 **教训**: 写 TF 卡只能块级 (host/flash_card_raw.ps1, 用户管理员窗口 `powershell -ExecutionPolicy Bypass -File .\go.ps1`), 文件写会被 DLP 拒/加密; 串口发回车会打断 u-boot 自动启动, 看启动只听不发; build.sh 自带 flock, 外面再包 flock 自死锁 (D26 白等 2.5 h); 板上多步任务写进同一脚本串行; 排队只用 kill -0 PID。
 用户偏好: 自主推进只同步结论, 结果记看板, 不阻塞; 流畅度与无串口连网是一等要求; 周额度到 70% 先保存再停 (用户报数)。
+
+**10-17 晚更新**: 主线 dr1v90 = 3bf094f。周末已合: D27 SoC↔桥边带全功能 (仿真 E1-E5) / D27b D27 套位流出件 (主控 a36365e9 在 D:\claude_workspace\pov3d\_work\d10_v1bit_out\, 桥 e60c e7289b13) / D28+D28b V1 回板一键脚本 v1_bringup/ (--set cur|d27) / D29 冷启动认卡方案 (只改 uboot.env, 待批准) / D30 计时判据抗负载 / D31 V1 奇数档评估 / V2-3 映射 / V2-5 主控 p2 字槽格式器 / V2-6 2 期桥 p2 core / D20e 修本地播放半圈换回归 (根因 --pl-gate 作用到本地帧)。
+全套 19 套回归在 fdb63f4 跑过 (修后各套已单独复验)。02 24 h 产品配置长跑 PASS 10/10 (progress/soak_v0/1016_wkend_24h)。02/03 卡上 voxslice = 63e7afea (主线 86caee5), 旧版 .bak-0717。03 24 h 长跑 10-17 22:26 起 (~/.soak_local/runs/1017_03_24h, 结束拷回 dr1v90/soak8h/runs/1017_03_24h)。
+**周一给用户**: zynq_pov/docs/progress/周一待拍板_2026-10-19.pdf (A1 批准 D29 写卡+冷上电 20 次 / A2 回板用 D27 套 / A3 C1 台架接线 / B1 V1 357/285/209 / B2 24 Hz 满档 / B3 V2 605/513/461 / B4 JTAG 菊花链 R6 / B5 GW5A A/B / B6 ADC 复用脚 / B7 V2 桥板 3 颗 8 选 1)。
+**新教训**: 守护类 verify ("现役代码不变") 要只比自己的合并提交, 否则后续正当改动全误报; soak.sh 现在先拷本地再跑; 新克隆在 D 盘 git 丢可执行位, 假板工具要沙箱 chmod; agent push 被拒时主会话从 _work 克隆 git fetch 本地分支 (先核 remote 只指本地)。

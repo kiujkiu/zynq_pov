@@ -17,3 +17,4 @@ metadata:
 全套 19 套回归在 fdb63f4 跑过 (修后各套已单独复验)。02 24 h 产品配置长跑 PASS 10/10 (progress/soak_v0/1016_wkend_24h)。02/03 卡上 voxslice = 63e7afea (主线 86caee5), 旧版 .bak-0717。03 24 h 长跑 10-17 22:26 起 (~/.soak_local/runs/1017_03_24h, 结束拷回 dr1v90/soak8h/runs/1017_03_24h)。
 **周一给用户**: zynq_pov/docs/progress/周一待拍板_2026-10-19.pdf (A1 批准 D29 写卡+冷上电 20 次 / A2 回板用 D27 套 / A3 C1 台架接线 / B1 V1 357/285/209 / B2 24 Hz 满档 / B3 V2 605/513/461 / B4 JTAG 菊花链 R6 / B5 GW5A A/B / B6 ADC 复用脚 / B7 V2 桥板 3 颗 8 选 1)。
 **新教训**: 守护类 verify ("现役代码不变") 要只比自己的合并提交, 否则后续正当改动全误报; soak.sh 现在先拷本地再跑; 新克隆在 D 盘 git 丢可执行位, 假板工具要沙箱 chmod; agent push 被拒时主会话从 _work 克隆 git fetch 本地分支 (先核 remote 只指本地)。
+**10-19 更新**: 主线 8bff92e。D22b povnetd 1.3 (断线恢复 ≤21 s) + D32 开机屏让位推流 均合主线并部署 02/03 (voxslice 4ac8a7f0, povnetd 1.3), 两块重启验收 6/6。03 24 h 长跑 9/10 (WiFi 断 155 s, 已修)。达成率 V0 95.7 / V1 83.1 / V2 75.0。周一清单 PDF 已更新。没有 agent 在跑。

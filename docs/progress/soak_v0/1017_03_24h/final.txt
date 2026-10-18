@@ -1,0 +1,4 @@
+vs=10853 cmd=/mnt/mmcblk0p1/pov/vs/voxslice_aarch64 --lut /mnt/mmcblk0p1/pov/vs/s3lut.bin --sensor --fake-slices 142 --oe-w 16,8 --local /mnt/mmcblk0p1/pov/vs/geo_loop.pvs --local-fps 10 --stat 60 --idle-ctl /tmp/vs/vs.mode --oe-w0 32 --idle-oe 8,4,2 --idle-b-slot 1 --stream-hold 300 --pl --pl-lut /mnt/mmcblk0p1/pov/pls/lut_pl --cpu-rx 0 --cpu-slice 1 --max-fps 20 --pl-sw-margin 1.0 
+slice.mode=pl
+uptime=86974.82
+netd=769 stat=1083

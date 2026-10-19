@@ -28,6 +28,6 @@ metadata:
 - **用户决定**：V1 主控 IO 走 2.5V（拔 J2 帽，底板 H7/H9 专供 J1/J2），桥板不改；R82→2.2k；底板 100Ω 空贴（已确认）；见 [[project-v1-io-1v8-1019]]。改板清单 progress/回板当天改板清单_2026-10-19.pdf 定稿。
 - **SoC 底板 + 桥转接板本周到货**，先验通信：`bash d39_comm/comm_check.sh --board <名> --bridge-load sram`；到板页 progress/到板当天_通信验证.pdf；位流 /mnt/d/claude_workspace/pov3d/_work/v1_main_1019（主控 sb_io25 2b4f3311、sb_prbs_io25 e7c33e78、io18 备用；桥 e60cp 6d5b3db3、e60cb f919ea30；e60c 7f612855 在主线 results）。
 - **D29**：03 已用 D29 uboot.env，软重启 20/20；冷上电改由 USB 继电器（LCUS-1 1 路 CH340，常闭串 24V+）自动跑，用户同意采购，到货告知 COM 口。串口录制改用 D:\card03\cap2.ps1（自动重连，旧 cap.ps1 掉电后句柄失效）。
-- **在跑**：D40（task/d40-ab，双面主控位流 TD hold 修复段错误崩溃，资源 74%/拥塞），重启后看 D 盘该分支 WIP 提交续做。
+- **D40 WIP**：task/d40-ab d2ba972（代码 2d30b0f）。根因：面 B 借面 A 上行时钟，两面引脚在芯片两侧（A 右 bank33 / B 左 bank11），时钟走普通线偏斜大 → TD hold 修复崩溃。已给面 B 独立 PLL+分频并锁 x0y0；布局后 SWNS +1.280 / HWNS +0.105，布线未跑完被重启打断；sim_v1、run_ab 过，单面档预处理不变。重启后：在该分支重跑双面构建命令看布线后收敛与否，再复验合并。
 - **复验经验**：新克隆拷依赖必须 `mkdir -p bench/deps && cp -r <主仓>/bench/deps/aarch64musl bench/deps/`（直接 cp 到不存在目录会拍平）；chmod 后要 `git config core.fileMode false`；排队等待别用 pgrep -f 匹配自身命令行；并发演练抢 9500 端口会造成 v1_bringup 偶发 FAIL。
 - 等用户：USB 继电器、到板前硬件准备、D11 接线（可由 D39 代替）。

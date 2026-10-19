@@ -149,3 +149,4 @@
 2026-10-19,交付,D39,"SoC↔桥通信专项验证包 comm_check.sh (不接屏, 自动判 PRBS/边带/寄存器/JTAG/恢复, 13 电平测点); 离线 88/0; 与 D38 冲突由 D39b 合并并出 PRBS 位流; 到板页 progress/到板当天_通信验证.pdf",dr1v90 task/d39-comm b69f6d8
 2026-10-19,合并,V2-7,"板端 voxslice_p2 驱动 2 期主控 (--disp p2), 端到端逐像素 0 错, V0/V1 行为不变; regress 27/0",dr1v90 ff1846a
 2026-10-19,合并,D39,"通信验证包进主线 + PRBS 位流 (桥 e60cp 6d5b3db3 / 主控 sb_prbs_io25 e7c33e78, 0 违例); 到板即可 comm_check.sh --board <名> --bridge-load sram; 复验 85/0 110/0 76/0",dr1v90 3ef6b06
+2026-10-19,验证,D29,"03 手动冷上电 20/20: 每次 U-Boot→读 env OK→boot.scr→进内核→login, 0 次停在 =>, env 读失败 0 (u-boot 早期 -110 探测行仍有, 不影响); 加软重启 20/20, D29 关闭; USB 继电器不再需要",progress/d29_coldboot

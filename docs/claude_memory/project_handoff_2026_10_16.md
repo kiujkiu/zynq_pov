@@ -22,3 +22,12 @@ metadata:
 **在跑**: D33 主控 JTAG 灌桥位流 (task/d33-jtag) / D34 V1 奇数档+24Hz 满档 (task/d34-v1odd) / V2-7 voxslice --disp p2 (task/v2-disp, 已告知 B3) / D36 软件对齐投板版+改约束+重出桥位流 (task/d36-hwsync, 已告知三板检查 + 对调是故意的 + 按回板改板写)。D35 已交 (task/d35-faceb 80539cc, 待主会话复验合并): V1 可双面, W6 冲突是 V0 约束遗留; 发现 V1 位流约束错 2 处 (spin_sync_i 应 U12 LVCMOS25 / bank11 2047 屏 31 脚要删)。
 **D29 冷上电**: 用户 10-19 上午在做 20 次; COM30 录制 cap.ps1 曾静默死掉 (第 1 次没录到), 10:2x 重启录制; 监视后台任务盯 /mnt/d/card03/cap_COM30.log, count.sh 统计。
 **用户要的交付**: 《回板当天改板清单》本地 PDF (D35+D36 汇总, 按板分组/先后顺序, 标"不改点不亮/会损坏" vs 可选), 出来就发。
+
+## 10-19 下午更新（重启前）
+- **主线 dr1v90 feature/lvds-b2b = 3ef6b06**，今天合入 D33/D34/D35/D36/D37/D38/D39/V2-7；达成率 V0 97.8% / V1 85.3% / V2 79.7%（看板 8cfb4f9）。
+- **用户决定**：V1 主控 IO 走 2.5V（拔 J2 帽，底板 H7/H9 专供 J1/J2），桥板不改；R82→2.2k；底板 100Ω 空贴（已确认）；见 [[project-v1-io-1v8-1019]]。改板清单 progress/回板当天改板清单_2026-10-19.pdf 定稿。
+- **SoC 底板 + 桥转接板本周到货**，先验通信：`bash d39_comm/comm_check.sh --board <名> --bridge-load sram`；到板页 progress/到板当天_通信验证.pdf；位流 /mnt/d/claude_workspace/pov3d/_work/v1_main_1019（主控 sb_io25 2b4f3311、sb_prbs_io25 e7c33e78、io18 备用；桥 e60cp 6d5b3db3、e60cb f919ea30；e60c 7f612855 在主线 results）。
+- **D29**：03 已用 D29 uboot.env，软重启 20/20；冷上电改由 USB 继电器（LCUS-1 1 路 CH340，常闭串 24V+）自动跑，用户同意采购，到货告知 COM 口。串口录制改用 D:\card03\cap2.ps1（自动重连，旧 cap.ps1 掉电后句柄失效）。
+- **在跑**：D40（task/d40-ab，双面主控位流 TD hold 修复段错误崩溃，资源 74%/拥塞），重启后看 D 盘该分支 WIP 提交续做。
+- **复验经验**：新克隆拷依赖必须 `mkdir -p bench/deps && cp -r <主仓>/bench/deps/aarch64musl bench/deps/`（直接 cp 到不存在目录会拍平）；chmod 后要 `git config core.fileMode false`；排队等待别用 pgrep -f 匹配自身命令行；并发演练抢 9500 端口会造成 v1_bringup 偶发 FAIL。
+- 等用户：USB 继电器、到板前硬件准备、D11 接线（可由 D39 代替）。

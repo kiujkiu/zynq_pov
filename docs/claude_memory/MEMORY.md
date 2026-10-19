@@ -1,5 +1,5 @@
 - [全程中文交互](user_chinese_only.md) — 回复和思考都用中文; 正式记忆库在 zynq_pov/docs/claude_memory/
-- [10-16 交接](project_handoff_2026_10_16.md) — V0 97.5% 必须项全完成; 卡上=主线 1d23e50; 待办 D10 合并 / 相位锁定 / D23 V1 内容通路
+- [10-16~19 交接](project_handoff_2026_10_16.md) — 主线 3ef6b06; 10-19 合 D33-D39/V2-7; V1 主控 2.5V; 本周到板验通信 comm_check.sh; D40 双面在跑; D29 等继电器
 - [WSL D盘 EIO 用 remount 修](feedback_wsl_d_eio_remount.md) — 10-13 起看门狗 dwatch 自动重挂, 日志 ~/d_eio.log; 手动兜底 bash ~/fixd.sh; 根因 IP-guard 透明加密驱动
 - [POV 活放独立 agent](feedback_pov_in_subagent.md) — 并发 agent 在 D 盘 _work/ 克隆里跑, 推回 D 盘 dr1v90 task/* 分支; 主窗口只派活和合并
 - [dr1v90 回到 D 盘](project_dr1v90_in_wsl_d_is_mirror.md) — 10-12 起工作全在 D 盘 dr1v90, 不用 WSL ~/ 副本, 别再跑 sync_to_d; 保存=提交+推 origin+yjhh
@@ -30,8 +30,9 @@
 - [派活省 token 清单](feedback_dispatch_token_playbook.md) — 自己做>Haiku/Sonnet>Opus; 说明写窄+小样本; 复验过即关; 不唤醒老 agent; 安静汇报
 - [电机控制器口 10-14](project_motor_ctrl_interface_1014.md) — SoC 转接板加 CN4: 24P 光电 / 8P TX / 8N RX 已定 (撤 S2, 无备用脚), 待定转子/定子与电平
 - [主动提醒 compact](feedback_remind_compact.md) — Claude 不能自己执行; 工作告一段落/上下文过长时提醒, 先写交接; 有后台任务时 compact 不关窗
-- [GW5A 一体桥板交接 10-14](project_gw5a_bridge_handoff_1014.md) — 监工窗口压缩前交接: 进度/下一步/待办/关键文件
-- [GW5A 核心板 10-19](project_gw5a_core_board_1019.md) — 替代 ACG525 去 DDR3; 原理图 ERC 0; PCB 底板已生成; Codex 第 1 轮摆放中 (只交 csv)
+- [GW5A 一体桥板交接 (最新 10-16)](project_gw5a_bridge_handoff_1014.md) — 10-16 暂停存档: 下行 10/12, 电源未进主板 (定了 Claude 平面+Codex 功率), 等用户命令
 - [转速 300–1200 rpm](project_rpm_range_300_1200.md) — 10-15 用户定三期都要兼容; PL 换帧受转速限制 (583 rpm 只 8 fps) 先解
 - [流畅度一等要求](project_smoothness_first_class.md) — 10-15 用户定; 软件卡顿可测可拦可修 → D20 (指标/门槛/画面模拟/修)
 - [D22 WiFi 稳定](project_wifi_stable_d22.md) — 10-15 用户: V0 必须, 不靠串口; 124.5 s 周期卡顿 = 测试对拍 (非 WiFi); 真问题: 偶发 1-1.7 s 停顿 + AP 踢线
+- [GW5A 核心板 10-19](project_gw5a_core_board_1019.md) — 替代 ACG525 去 DDR3; 原理图 ERC 0; PCB 底板已生成; Codex 第 1 轮摆放中 (只交 csv)
+- [V1 主控 IO 2.5V 10-19](project_v1_io_1v8_1019.md) — 最终走 2.5V (H7/H9 专供 J1/J2), 桥板不改; 1.8V 弃用 (桥板倒灌/下行 LVDS 需 2.5V); R82 2.2k

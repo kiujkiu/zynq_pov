@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>到板当天·通信验证</title>
+<style>
+:root{--bg:#ffffff;--fg:#1d1d1f;--mut:#5f6368;--line:#d9dce1;--card:#f6f7f9;--acc:#1a5fb4;--ok:#137333;--bad:#c5221f;--warn:#a05a00;--code:#eef1f5}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#17181a;--fg:#e8eaed;--mut:#a5a9b0;--line:#3a3d42;--card:#202226;--acc:#8ab4f8;--ok:#81c995;--bad:#f28b82;--warn:#fdd663;--code:#26292e}}
+:root[data-theme="dark"]{--bg:#17181a;--fg:#e8eaed;--mut:#a5a9b0;--line:#3a3d42;--card:#202226;--acc:#8ab4f8;--ok:#81c995;--bad:#f28b82;--warn:#fdd663;--code:#26292e}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.6 system-ui,"Microsoft YaHei","PingFang SC",sans-serif;margin:0 auto;max-width:1080px;padding:20px 16px 48px}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:18px;margin:28px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--line)}h3{font-size:15px;margin:16px 0 6px}
+.sub{color:var(--mut);font-size:13px}
+.lead{background:var(--card);border-left:4px solid var(--acc);padding:10px 14px;border-radius:6px;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13px;margin:6px 0}th,td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}th{background:var(--card)}
+.wrap{overflow-x:auto}
+code,pre{font-family:Consolas,"Cascadia Mono",monospace;font-size:12.5px;background:var(--code);border-radius:4px}
+code{padding:1px 4px}pre{padding:10px 12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+.red{color:var(--bad);font-weight:700}.ok{color:var(--ok);font-weight:600}.warn{color:var(--warn);font-weight:600}
+ol li,ul li{margin:3px 0}
+.box{display:inline-block;width:14px;height:14px;border:1.5px solid var(--fg);border-radius:3px;margin-right:6px;vertical-align:-2px}
+@media print{body{max-width:none;font-size:12px}h2{break-after:avoid}table,pre{break-inside:avoid}}
+</style>
+</head>
+<body>
+<h1>到板当天 · 主控 ↔ 桥 通信验证</h1>
+<div class="sub">[D39] 2026-10-19 · SoC 底板 + 桥转接板到货后先只验 DR1M90 ↔ GW5A 通信, 不接 2260 屏也能跑全 · 分支 task/d39-comm · 口径: 用户 10-19 最终定 bank33 走 2.5V</div>
+
+<div class="lead"><b>一句话:</b> 人只做硬件前置、接线上电、按提示量几个电压并把读数敲进去; 其余 (装位流 → 握手 → 训练 → PRBS 误码 → 边带 → 寄存器 → JTAG → 故障恢复 → 报告) 由一条命令自动跑完, 每项 PASS/FAIL 并给"最可能原因/下一步"。<br>
+<b>通过标准:</b> 报告末行 <code>COMM_CHECK: PASS</code>; 其中 800M PRBS 13 lane 全锁、连续 ≥ 10 min 每 lane 0 误码。</div>
+
+<h2>一、先讲大步骤</h2>
+<div class="wrap"><table>
+<tr><th>步</th><th>做什么</th><th>谁做</th><th>过关标准</th></tr>
+<tr><td>S0</td><td>前置: 文件/md5、主控位流电平档 == 板 (2.5V)、JTAG 工具、连板、推文件</td><td>脚本 + 人接线上电</td><td>md5 全对; 位流档 25 (不符直接停, 不碰板)</td></tr>
+<tr><td>C0</td><td>加载位流<b>前</b>的电平测点 (bank33、U18/U19 VCCA、配置前 RSTN/TCK)</td><td><b>人量</b>, 脚本判</td><td>bank33 2.40–2.60 V 等 (见第四节); 不过不加载</td></tr>
+<tr><td>S1/S3</td><td>停 V0 演示; 装主控位流 (可选板上 JTAG 灌桥)</td><td>脚本</td><td>MAGIC/GEOM/pclk 200 MHz; 边带页 SBD1</td></tr>
+<tr><td>C1</td><td>握手/版本: 桥出复位、MAGIC/PROTO/BUILD/GEOM</td><td>脚本</td><td>桥状态帧到、协议主版本 2、GEOM 对、BUILD = 所选桥位流</td></tr>
+<tr><td>C2</td><td>训练与对齐 (闭环, 读 SB_ALIGNED) + 图样源 1250 片/s 上行</td><td>脚本</td><td>SB_ALIGNED 升、aligned=1; 桥 crc 0 / 不重训 / 不丢片</td></tr>
+<tr><td>C3</td><td>PRBS 误码 (800M), 跑的同时量共模/地差/摆幅</td><td>脚本 + <b>人量</b></td><td>13 lane 全锁, ≥ 600 s 每 lane 0 误码, 不掉锁; 切回后自动恢复</td></tr>
+<tr><td>C4</td><td>边带 RSTN / ALIGNED / UART 双向 + 边带高电平</td><td>脚本 + <b>人量</b></td><td>状态帧连续、RXERR 0; 20 条命令 0 坏帧; 复位桥后自愈</td></tr>
+<tr><td>C5</td><td>桥寄存器读写回读</td><td>脚本</td><td>SCRATCH 7 图样相等; 只读拒写; 无效地址 st 1 / 只写区 st 2</td></tr>
+<tr><td>C6</td><td>JTAG IDCODE / 板上灌桥</td><td>脚本</td><td>面 A 单装读不到 IDCODE = WARN (预期); 灌桥 JT01–JT05 过</td></tr>
+<tr><td>C7</td><td>故障恢复: 桥看门狗黑场、硬件闭环重训、sbd 守护看门狗</td><td>脚本</td><td>断流进黑场/来片退出; 打断对齐 5 s 内自愈; 守护会复位桥</td></tr>
+<tr><td>C8</td><td>(可选 <code>--sweep</code>) 1.0G / 1.2G PRBS 摸底</td><td>脚本</td><td>软判据 (WARN 不挡 1 期)</td></tr>
+<tr><td>S9</td><td>安全恢复 + 报告 <code>runs/&lt;时间&gt;/comm_report.html</code></td><td>脚本</td><td>上行 run=0; 恢复 V0 = 重启板子</td></tr>
+</table></div>
+
+<h2>二、硬件前置 (上电前逐项打勾)</h2>
+<ol>
+<li><span class="box"></span><b class="red">bank33 改 2.5V</b>: SoC 底板 FS03 <b>拔掉 J2 帽</b>, 从底板 <b>H7/H9</b> (1 脚 = PWR2V5, 2 脚 = GND; 已确认专供 J1/J2) 飞线到 J2 中脚供 2.5V。上电后、加载位流前量 bank33 = <b>2.40–2.60 V</b> (测点 M01, 不过脚本不加载)。J1 (bank11 / 面 B) 不动。</li>
+<li><span class="box"></span><b>24V 用限流电源</b>: 先 0.5–1 A 限流起 (底板 24V 无保险/TVS/防反接, d36 §五)。</li>
+<li><span class="box"></span><b>底板 R182–R201 空贴</b> (已确认): 否则双端接摆幅减半; FPC1.11–12 应开路。</li>
+<li><span class="box"></span><b class="red">桥转接板核心板方向</b>: GW5A 核心板 P1 压 CN3 不可装反 (两座 180° 对称, 装反也插得进) —— 上电前量 CN3.1 与核心板 TCK 导通、VCC3P3 对地不短; 看核心板丝印记下 A/B 版 (A 版 JTAG 要 TCK ≥ 15 MHz, 板上灌桥可能不进, H-4)。</li>
+<li><span class="box"></span>桥板<b>不改</b>: U18/U19 VCCA 保持 PWR2V5 (测点 M02a/M02b = 2.5V), R236 保持上拉。</li>
+<li><span class="box"></span>R82 改 2.2k (光电口; 本次通信测试不用, 同次改)。</li>
+<li><span class="box"></span>只上面 A: FPC 桥 ↔ 主控 (FPC1); 2260 灯板<b>可以不接</b>。桥板 5V 上电。</li>
+<li><span class="box"></span>桥位流怎么进桥: <b>推荐 <code>--bridge-load sram</code></b> (主控经 FPC 67–69 的 JTAG 灌桥 SRAM, 不用 PC 下载器)。用 PC 下载器 (H1 座) 须<b>拔 FPC</b> 才能下载 (JTAG 经 U18, d36), 所以只在 sram 灌不进 (A 版芯片) 时用。</li>
+<li><span class="box"></span>(可选) 要在 C6 读到 IDCODE: 底板 R6.2 飞线到 R5.2 (≈75 mm), 否则面 A 单装 TDO 悬空, C6 记 WARN (预期)。</li>
+<li><span class="box"></span>工具: 万用表 (直流电压); 示波器 + 差分探头 (或两通道相减) 量摆幅; PC 能按板名连上主控 (WiFi)。</li>
+</ol>
+
+<h2>三、位流 (路径全部可配)</h2>
+<div class="wrap"><table>
+<tr><th>位流</th><th>缺省名 / 位置</th><th>做什么</th><th>现状</th></tr>
+<tr><td>主控 (带 PRBS 档)</td><td><code>COMM_KIT</code> (缺省 <code>D:\claude_workspace\pov3d\_work\v1_main_1019</code>) / <code>pov_m90_pure_ul800_p1_b12_sb_prbs_io25.bin</code></td><td>全部项目含 C3 PRBS</td><td><span class="warn">待放行构建</span> (第七节; 需先合入 D38 的 POV_IOV 开关)</td></tr>
+<tr><td>主控 (无 PRBS) <b>= 当前缺省</b></td><td>同目录 <code>pov_m90_pure_ul800_p1_b12_sb_io25.bin</code> (md5 <code>2b4f3311…</code>; 2.5V, D27 边带, 光电 U12; io18 备用版 6493e837 板上 2.5V 时会被 P15 拒)</td><td>除 PRBS 外全部; C3 判 FAIL 并给构建命令</td><td><span class="ok">已出</span> (task/d38-faceb b56a8f1, 时序过)</td></tr>
+<tr><td>桥 e60cp (PRBS 计数)</td><td><code>gw5a_bridge/results/gw25S_bridge_p1_e60cp_d166p67/bridge.fs</code></td><td>C3 PRBS 计数经边带读 (0x60..0x6F)</td><td><span class="warn">待放行构建</span></td></tr>
+<tr><td>桥 e60c (退路)</td><td><code>COMM_BRIDGE_DIR=gw5a_bridge/results/gw25S_bridge_p1_e60c_d166p67</code> (md5 7f612855)</td><td>除 PRBS 外全部</td><td>已入库 (D36 投板版)</td></tr>
+<tr><td>扫描档</td><td><code>..._sb_prbs_io25</code> 名里 ul800→ul1000/ul1200; 桥 <code>..._e60cp_d166p67_l1000/_l1200</code></td><td><code>--sweep</code></td><td>可选, 待构建 (仅作 PRBS, 不作视频)</td></tr>
+</table></div>
+<p class="sub">每个主控位流旁放 <code>&lt;bin&gt;.md5</code>; 位流电平档取 <code>&lt;bin&gt;.vccio</code> 旁文件 (写 25), 没有就按名字 (<code>_io18</code> = 1.8V, 其余按 2.5V)。与 <code>COMM_VCCIO</code> (缺省 25) 不符 = P15 FAIL, <b>脚本停在 S0 不碰板</b>。也可直接 <code>COMM_MAIN_BIN=文件名</code> / <code>COMM_MAIN_MD5=…</code> 指定。</p>
+
+<h2>四、电平人工测点 (脚本到点会停下来问, 读数敲进去, 自动判并记入 meas.json)</h2>
+<p class="sub">读数单位 V, 也可写 <code>350mV</code>; 量不到输 <code>s</code> (记 WARN)。也可事先放环境变量 <code>MEAS_M01_bank33=2.49</code> 等, 脚本直接取。</p>
+<div class="wrap"><table>
+<tr><th>测点</th><th>何时</th><th>量什么</th><th>在哪量 / 怎么量</th><th>判据</th></tr>
+<tr><td>M01_bank33</td><td>C0 上电后/加载位流前</td><td>主控 bank33 VCCIO (面 A, 2.5V)</td><td>J2 帽已拔、H7/H9 飞线供 2.5V; 万用表量 FS03 CEP1.4 (或 J2 中脚) 对 GND</td><td>2.40–2.60 V 为 PASS</td></tr>
+<tr><td>M02a_u18_vcca</td><td>C0 上电后/加载位流前</td><td>桥板 U18 pin16 VCCA (= PWR2V5, 桥板不改)</td><td>桥板 U18 (SN74AVC4T774) 第 16 脚对 GND</td><td>2.40–2.60 V 为 PASS</td></tr>
+<tr><td>M02b_u19_vcca</td><td>C0 上电后/加载位流前</td><td>桥板 U19 pin16 VCCA (= PWR2V5, 桥板不改)</td><td>桥板 U19 (SN74AVC4T774) 第 16 脚对 GND</td><td>2.40–2.60 V 为 PASS</td></tr>
+<tr><td>M03_rstn_pre</td><td>C0 上电后/加载位流前</td><td>配置前 SB_RSTN (DR1V_RST) 电平</td><td>主控 PL 还没加载时, 量 FPC63 (主控侧) 对 GND; 期望低 (R235 下拉 = 桥保持复位)</td><td>-0.10–0.70 V 为 PASS</td></tr>
+<tr><td>M04_tck_pre</td><td>C0 上电后/加载位流前</td><td>配置前 TCK 电平</td><td>主控 PL 还没加载时, 量 FPC69 (TCK, 主控侧) 对 GND; 期望低 (R223 下拉)</td><td>-0.10–0.70 V 为 PASS</td></tr>
+<tr><td>M05_ack_hi</td><td>C4 边带 (桥已对齐)</td><td>SB_ALIGNED / ACK 高电平 (桥→主控)</td><td>桥已对齐时量 FPC62 (主控侧, DR1V_ACK) 对 GND; 期望 ≈2.5 V</td><td>1.70–2.65 V 为 PASS</td></tr>
+<tr><td>M06_uart_hi</td><td>C4 边带</td><td>UART_RX (桥→主控 B2S) 空闲高电平</td><td>量 FPC64 (主控侧 DR1V_UART_RX) 对 GND, 空闲为高, 期望 ≈2.5 V</td><td>1.70–2.65 V 为 PASS</td></tr>
+<tr><td>M07_tdo_hi</td><td>C4 边带</td><td>TDO (桥→主控) 高电平</td><td>量 FPC66 (主控侧 TDO) 对 GND; 只装面 A 且没飞 R6.2→R5.2 时 TDO 悬空, 可输 s 跳过</td><td>1.70–2.65 V 为 PASS</td></tr>
+<tr><td>M08_vcm</td><td>C3 PRBS 跑着时</td><td>桥收端共模 VCM</td><td>PRBS 跑着时, 在桥板接收端 (lane0 的 P、N 两脚, 100Ω 端接处) 分别量对 GND 直流, 取平均; 期望约 1.25 V</td><td>0.90–1.40 V 为 PASS; 0.40–0.90 WARN, 1.40–2.25 WARN</td></tr>
+<tr><td>M09_gnd</td><td>C3 PRBS 跑着时</td><td>两板地差</td><td>主控底板 GND 与桥板 GND 之间直流电压 (表笔两头都接地)</td><td>-0.05–0.05 V 为 PASS; -0.10–0.10 WARN</td></tr>
+<tr><td>M10_vod</td><td>C3 PRBS 跑着时</td><td>差分摆幅 VOD (绝对值)</td><td>PRBS 跑着时, 桥收端 lane0 P−N 差分 (示波器差分探头或两通道相减), 取眼图幅度</td><td>0.20–0.60 V 为 PASS; 0.60–0.90 WARN</td></tr>
+<tr><td>M11_rstn_post</td><td>C4 边带</td><td>配置后 SB_RSTN 高电平</td><td>主控 D27 位流加载后量 FPC63 (主控侧) 对 GND; 期望高 ≈2.5 V (主控驱动 1, 桥出复位)</td><td>1.70–2.65 V 为 PASS</td></tr>
+</table></div>
+
+<h2>五、命令</h2>
+<h3>回板前 (今天就能做)</h3>
+<pre>bash d39_comm/verify.sh                 # 离线验收: 判据单元 + 假板演练 + 全部故障注入 + 端到端仿真 (约 30 min; --quick 跳过仿真)
+bash d39_comm/comm_check.sh --dry-run   # 看一遍流程 (假板, 不连板)
+bash d39_comm/comm_check.sh --dry-run --inject prbs_err   # 看故障时报告长什么样; 全部注入键: bash v1_bringup/bringup.sh --list-inject</pre>
+<h3>到板当天</h3>
+<pre># 主流程 (推荐: 板上 JTAG 灌桥, 不接 PC 下载器; 主控位流缺省取 _work/v1_main_1019, 有 _sb_prbs_io25 就自动用它)
+bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load sram
+
+# PRBS 档位流都还没出时: 用现成的 _sb_io25 + 桥 e60c (其余照测, C3 判 FAIL 并打印构建命令)
+COMM_BRIDGE_DIR=$PWD/gw5a_bridge/results/gw25S_bridge_p1_e60c_d166p67 \
+  bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load sram
+
+# 长跑 (C3 改成 1 h / 8 h; 也可 --prbs-dur 秒) / 只跑某几段 / 从某段起
+bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load sram --long 8h
+bash d39_comm/comm_check.sh --board &lt;板名&gt; --only C3 --skip-bridge
+bash d39_comm/comm_check.sh --board &lt;板名&gt; --from C4 --skip-bridge
+# 加线速扫描 1.0G / 1.2G (需扫描档位流)
+bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load sram --sweep</pre>
+<p class="sub">入口等价于 <code>bash v1_bringup/bringup.sh --comm-only …</code>。必须显式 <code>--board</code> (不设默认, 防误动 V0 板)。日志/报告在 <code>v1_bringup/runs/&lt;时间&gt;/</code>: <code>comm_report.html</code> (可 Edge 打 PDF)、<code>meas.json</code>、<code>prbs_800.csv</code>。不写 TF 卡、不写桥 flash、不按名字杀进程; 恢复 V0 = 重启板子 (<code>--reboot</code>)。</p>
+
+<h2>六、判据速查与常见失败</h2>
+<div class="wrap"><table>
+<tr><th>编号</th><th>判据</th><th>失败先做什么</th></tr>
+<tr><td>P15_vccio</td><td>主控位流电平档 == 板 (2.5V)</td><td>换对档位流 / 写 .vccio 旁文件; 不加载</td></tr>
+<tr><td>M01–M04</td><td>bank33 2.40–2.60 V; VCCA 2.5V; 配置前 RSTN/TCK ≤ 0.7 V</td><td>断电改 J2/H7-H9 飞线; RSTN/TCK 高 = R235/R223 建议 10k→2.2k</td></tr>
+<tr><td>B02/SV01–03</td><td>桥出复位、PROTO 主版本 2、GEOM 对、sbd 读得到</td><td>sbd info 看 SB_RSTN; FPC 61–65; 桥烧对档 (12-bit 配 e60c/e60cp)</td></tr>
+<tr><td>CH02_build</td><td>桥 BUILD = 所选桥位流 (e60cp 20261019)</td><td>桥还是金版/旧版: 重灌或重烧</td></tr>
+<tr><td>T05/T03</td><td>train 后 SB_ALIGNED 升; go 后 aligned=1</td><td>差分对/FPC、共模摆幅 (M08/M10)、线速档 800M</td></tr>
+<tr><td>PR01/PR02</td><td>主控/桥位流带 PRBS</td><td>放行第七节构建命令</td></tr>
+<tr><td>PR03–PR06</td><td>13 lane 全锁, ≥600 s 每 lane 0 误码, 不掉锁</td><td>报告点名错 lane (真误码 ≈ 计数/3); 单条 = 那对线; 普遍 = 共模/地差/电源</td></tr>
+<tr><td>SB01–SB04</td><td>B2S 帧连续 RXERR 0; S2B 0 坏帧; ALIGNED 线与状态一致; RSTN 复位后自愈</td><td>FPC64/65/62/63 与 U19/U18; 量 M05/M06/M11</td></tr>
+<tr><td>RG01–RG04</td><td>寄存器读写回读</td><td>同 SB01/SB02 先排除线</td></tr>
+<tr><td>JT10</td><td>IDCODE 0x0001281B (面 A 单装 = WARN)</td><td>R6.2→R5.2 飞线; 怪值查 FPC 67–69</td></tr>
+<tr><td>JT01–JT05</td><td>板上灌桥成功 (盲灌靠桥状态帧判)</td><td>桥板断电重上电回金版; A 版芯片改 PC 下载器 (拔 FPC)</td></tr>
+<tr><td>WD01–WD03</td><td>桥看门狗、硬件重训、守护看门狗</td><td>见报告原因行</td></tr>
+</table></div>
+<p class="sub">报告每行: <code>CHECK 编号 PASS|FAIL|WARN|SKIP | 判据 | 实测</code>; FAIL/WARN 后紧跟"最可能原因 / 下一步" (原因表在 <code>d39_comm/comm_stages.sh</code> 与 <code>v1_bringup/bringup.sh</code> 的 WHY[…])。硬 FAIL 默认停后续 (C3/C5/C8 例外, 照跑后面的边带与恢复项), 直奔 S9 安全恢复; <code>--keep-going</code> 继续。</p>
+
+<h2>七、需要用户放行的构建 (本次只准备, 未运行)</h2>
+<pre># 1) 桥 e60cp (= e60c + 13 lane PRBS 计数, 约 3 min; 判据: run.log 无 ERROR, 0 违例, dclk Fmax ≥ 166.667, run.cst ul_p[12]=R7,T7)
+flock ~/.gw5a_synth.lock bash gw5a_bridge/p1/build_p1.sh e60cp
+# 2) 主控 PRBS 档 (= _sb + CTRL bit10 PRBS7, 约 20 min; build.sh 自带 flock; 2.5V 档与主会话 _sb_io25 同口径)
+POV_ZERO_OK=1 POV_DEVICE=DR1M90GEG484 POV_PURE=1 POV_UL=800 POV_UL_GEOM=p1 POV_UL_BPC=12 POV_UL_PINS=v3 POV_UL_SB=1 POV_UL_PRBS=1 POV_SPIN_PIN=v3 POV_IOV=25 bash td_pov/build.sh
+#    产物 td_pov/out/pov_m90_pure_ul800_p1_b12_sb_prbs_io25.bin → 拷进 _work/v1_main_1019/ 并写 .md5 (md5sum 格式)
+#    注: 2.5V/1.8V 档以 D38 (task/d38-faceb) 的构建开关为准; 合入 D38 后按它的口径加 POV_UL_PRBS=1 即可
+# 3) (可选, --sweep) 扫描档: 桥 P1_LINE=1000|1200 …build_p1.sh e60cp; 主控同 2) 换 POV_UL=1000|1200 (仅作 PRBS)</pre>
+
+<p class="sub">出处: d39_comm/ (comm_stages.sh / meas.py / prbs.py / verify.sh)、d27_link/SPEC.md (边带协议/寄存器/H-1…H-6)、d33_jtag/README.md、d36_hwsync/REPORT.md §五、d37_io18/REPORT.md、td_pov/pure_ul/C1_BENCH.md、gw5a_bridge/c1_bench/README.md §7.2–§8、v1_bringup/回板当天.md。</p>
+</body>
+</html>

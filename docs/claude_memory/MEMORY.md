@@ -31,7 +31,7 @@
 - [电机控制器口 10-14](project_motor_ctrl_interface_1014.md) — SoC 转接板加 CN4: 24P 光电 / 8P TX / 8N RX 已定 (撤 S2, 无备用脚), 待定转子/定子与电平
 - [主动提醒 compact](feedback_remind_compact.md) — Claude 不能自己执行; 工作告一段落/上下文过长时提醒, 先写交接; 有后台任务时 compact 不关窗
 - [GW5A 一体桥板交接 10-14](project_gw5a_bridge_handoff_1014.md) — 监工窗口压缩前交接: 进度/下一步/待办/关键文件
-- [GW5A 核心板 10-19](project_gw5a_core_board_1019.md) — 替代 ACG525 去 DDR3; 原理图出了 ERC 0, 连接器 200/200; 等用户评审
+- [GW5A 核心板 10-19](project_gw5a_core_board_1019.md) — 替代 ACG525 去 DDR3; 原理图 ERC 0; PCB 底板已生成; Codex 第 1 轮摆放中 (只交 csv)
 - [转速 300–1200 rpm](project_rpm_range_300_1200.md) — 10-15 用户定三期都要兼容; PL 换帧受转速限制 (583 rpm 只 8 fps) 先解
 - [流畅度一等要求](project_smoothness_first_class.md) — 10-15 用户定; 软件卡顿可测可拦可修 → D20 (指标/门槛/画面模拟/修)
 - [D22 WiFi 稳定](project_wifi_stable_d22.md) — 10-15 用户: V0 必须, 不靠串口; 124.5 s 周期卡顿 = 测试对拍 (非 WiFi); 真问题: 偶发 1-1.7 s 停顿 + AP 踢线

@@ -31,3 +31,7 @@ metadata:
 
 ## 10-19 12:40 第2轮(扇出+电源分割)部分完成
 - layout/r2/core_r2.kicad_pcb 已由我原生生成; DRC 无短路; 324球扇出201, 123未解(NC 52 球其实不用打孔); 电源 15 端点未通。待用户/Opus 定: 跳过NC球、是否放宽净距到0.10或换更小过孔(需问板厂能力)。Codex 会话仍是 01a1523b (已 2 轮, 第3轮建议换新会话)。
+
+## 10-19 第3轮派出 (Opus 判断)
+- 加 kicad/POV3D_GW5A_Core_V1.0.kicad_dru: BGA_ESCAPE 区 0.10 / 过孔 0.20-0.45, 照抄桥板 G3a (同芯片同叠层, g4_fanout 171/171 全扇出原生过)。NC 球不打孔; B 面去耦可重排。
+- Codex 新会话 01a15287-fec6-7142-a60b-b70b17a1eb31, pid 文件 /tmp/codex_rounds/run_core3.pid, 只写 layout/r3/; 结束后我原生跑 layout/r3/generate_native.py + DRC。

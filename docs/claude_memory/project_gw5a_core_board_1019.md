@@ -35,3 +35,7 @@ metadata:
 ## 10-19 第3轮派出 (Opus 判断)
 - 加 kicad/POV3D_GW5A_Core_V1.0.kicad_dru: BGA_ESCAPE 区 0.10 / 过孔 0.20-0.45, 照抄桥板 G3a (同芯片同叠层, g4_fanout 171/171 全扇出原生过)。NC 球不打孔; B 面去耦可重排。
 - Codex 新会话 01a15287-fec6-7142-a60b-b70b17a1eb31, pid 文件 /tmp/codex_rounds/run_core3.pid, 只写 layout/r3/; 结束后我原生跑 layout/r3/generate_native.py + DRC。
+
+## 10-19 13:35 第3轮复验
+- layout/r3/core_r3.kicad_pcb (我修了生成器 zone 多轮廓丢失 bug 后原生生成): DRC 无短路; 181 信号全逃逸; 电源 13 网全连通; GND 6 处缺陷。
+- 待改 (第4轮): In3 过碎, VCC 核心需整块+宽颈; 单球电源改走线; GND dogbone 修; 然后连逃逸线到 P1/P2。Codex 会话 01a15287 已用 1 轮。

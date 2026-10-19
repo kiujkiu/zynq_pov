@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>回板改板清单</title>
+<style>
+:root{--fg:#1d1d1f;--mut:#5f6368;--bd:#d9d9de;--bg:#fff}
+body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--fg);background:var(--bg);max-width:900px;margin:24px auto;padding:0 16px;line-height:1.55;font-size:14px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:22px 0 8px;border-bottom:1px solid var(--bd);padding-bottom:4px}
+.sub{color:var(--mut);margin-bottom:14px}table{border-collapse:collapse;width:100%;margin:6px 0}
+td,th{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:left}th{background:#f4f4f6}
+.r{color:#b3261e;font-weight:700}.o{color:#c25e00;font-weight:700}.y{color:#8a6d00;font-weight:700}.g{color:#1e7a3c;font-weight:700}.small{color:var(--mut);font-size:12px}
+</style></head><body>
+<h1>V1 回板当天改板清单</h1>
+<div class="sub">对象：SoC 底板 10-15、桥转接板 10-14（= 10-16 制板）、柔性板 10-15。依据：投板网表机读核对（D35、D36）与三板检查 10-15。按"先做哪件"排序。<br>
+<span class="r">● 不改会损坏</span>　<span class="o">● 不改可能误码 / 点不亮</span>　<span class="y">● 只影响诊断 / 远程升级（可选）</span>　<span class="g">● 软件已处理，不用动烙铁</span></div>
+
+<h2>结论</h2>
+<p>这一版硬件<b>能用，不需要重新投板</b>。烙铁要动的只有 4 处：24V 临时防护、按需拆底板 100Ω、可选 JTAG 飞线、可选 R82。引脚变化（TXCHK 换脚、光电换到 U12）全部由软件和位流吸收。<b>桥位流必须用这次重出的版本</b>，旧的 D27 套桥位流不能用。</p>
+
+<h2>一、上电前（第 1 步）</h2>
+<table><tr><th>#</th><th>板</th><th>做什么</th><th>为什么 / 怎么验</th></tr>
+<tr><td>1</td><td>桥转接板</td><td><span class="r">●</span> 核心板压到 CN3 上时<b>方向不能反</b>。两座焊盘 180° 对称，装反也插得进。建议先在实物上标出方向。</td><td>上电前量：CN3 第 1 脚（FPGA_TCK）与核心板 TCK 导通；VCC3P3 对地不短路。</td></tr>
+<tr><td>2</td><td>SoC 底板</td><td><span class="r">●</span> <b>24V 临时防护</b>（P4：3 脚 24V，4 脚地）。台架用限流电源（0.5–1 A）；线束串 2A 保险丝 + 肖特基二极管（如 SS54）防反接；P4 背面并一颗 TVS（SMBJ26A 一类，先核 TPS56A37 的输入耐压上限）。</td><td>底板 24V 输入没有保险丝、TVS 和防反接。<b>上滑环前必须做完</b>。</td></tr>
+<tr><td>3</td><td>SoC 模块</td><td><span class="o">●</span> 模块 bank33 改成 2.5V（由 H7/H9 供电）。</td><td>加载 LVDS25 位流前，量到 2.40–2.60 V 才算对。</td></tr>
+<tr><td>4</td><td>SoC 底板</td><td><span class="o">●</span> 底板 <b>R182–R201</b>（底面 H1 旁一排）如果贴了，<b>全部拆掉</b>；桥侧那组 100Ω 保留。</td><td>两端都有终端电阻时，驱动端看到约 50Ω，摆幅大约减半，训练余量不足。拆前和拆后各量一次 FPC1 第 11、12 脚之间的电阻，拆后应为开路。R53–R72 同理，先确认贴了没有。</td></tr>
+</table>
+
+<h2>二、可选改动</h2>
+<table><tr><th>#</th><th>板</th><th>做什么</th><th>什么时候需要</th></tr>
+<tr><td>5</td><td>桥转接板</td><td><span class="y">●</span> R176–R181 贴 0Ω（R176–R180 在底面 x≈64.8 mm，R181 在顶面）。</td><td>只影响 ACK 回读诊断，不影响点亮。</td></tr>
+<tr><td>6</td><td>SoC 底板</td><td><span class="y">●</span> 只装面 A 又想远程升级桥：从 R6 第 2 脚（FPGA2_TDI 侧，FPC1 旁）飞 30AWG 线到 R5 第 2 脚（FPGA2_TDO 侧，FPC2 旁），约 75 mm，不用拆元件。</td><td>改完后 <code>sbd jtag idcode</code> 应读到 0x0001281B。<b>装面 B 之前剪掉这根线</b>。</td></tr>
+<tr><td>7</td><td>SoC 底板</td><td><span class="y">●</span> R82 由 10Ω 换成 2.2kΩ。</td><td>只有 bank11 改成 2.5V、并且光电是 3.3V 推挽输出时才需要（限流到约 0.23 mA）。bank11 留 3.3V 就不用动。</td></tr>
+</table>
+
+<h2>三、保持不动</h2>
+<p>桥转接板上：伙伴组 0Ω 不贴；L7 不贴；桥侧 R182–R201（100Ω）保留。CN3/CN6 脚号按 101−n 对应<b>是对的</b>（焊盘几何拟合残差 0.35 mm），之前怀疑的这一条作废。</p>
+
+<h2>四、软件 / 位流已处理（不用动烙铁）</h2>
+<table><tr><th>变化</th><th>处理</th></tr>
+<tr><td>桥 TXCHK 与 TXP17 对调（为了走线，故意的）</td><td><span class="g">●</span> 桥约束 <code>ul_p[12]</code> 改为 R7/T7，其余不变。<b>桥位流四套需要重出</b>（等你放行）。旧版 e60c e7289b13 不能用。</td></tr>
+<tr><td>光电从 W6 换到 CN3 → R82 → U12</td><td><span class="g">●</span> 主控约束 <code>spin_sync_i</code> 改到 U12（<code>POV_SPIN_PIN=v3</code>），主控位流需要重出。没重出前，D27 主控位流仍然能点亮，只是光电不同步。</td></tr>
+<tr><td>R236 改 10k 上拉、新增 R237 下拉</td><td><span class="g">●</span> 已在投板版里，D27 SPEC 的 H-5 消除。</td></tr>
+<tr><td>R235 10k 下拉 SB_RSTN</td><td><span class="g">●</span> D27 套主控会驱动这个脚，不用飞线。</td></tr>
+<tr><td>V1 装 A、B 两面</td><td><span class="g">●</span> 可以装两面，W6 冲突不成立。面 B 还需要：主控删掉 bank11 上 31 根 2047 屏脚（panel_lat 会和桥对顶）、加面 B 边带约束、桥 B 用 FACE=1 变体、JTAG 两器件链。这些都排在软件后续任务里。</td></tr>
+</table>
+
+<h2>五、要你确认</h2>
+<table><tr><th>#</th><th>问题</th><th>影响</th></tr>
+<tr><td>Q1</td><td>底板 R182–R201、R53–R72 贴片时到底贴没贴？</td><td>决定第 4 条要不要拆</td></tr>
+<tr><td>Q2</td><td>V1 的 bank11 留 3.3V 还是改 2.5V？</td><td>决定第 7 条；装面 B 必须改 2.5V</td></tr>
+<tr><td>Q3</td><td>光电传感器是推挽还是开集输出？</td><td>开集可直接用（约束已开上拉）</td></tr>
+<tr><td>Q4</td><td>10-15 底板没有 CN4 电机口，是故意的吗？</td><td>要用的话从 H2 第 17、18 脚飞线</td></tr>
+<tr><td>Q5</td><td>放行重出位流：桥四套 + 主控光电档</td><td>回板前必须有</td></tr>
+</table>
+<p class="small">出处：dr1v90 d36_hwsync/REPORT.md、d35_faceb/REPORT.md；三板检查_2026-10-15.pdf。网表从投板 epro2 机读，主会话已独立复核光电与 CN3/R82/H2.49 连接。</p>
+</body></html>

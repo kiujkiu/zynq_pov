@@ -8,21 +8,20 @@ h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:22px 0 8px;border-bott
 td,th{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:left}th{background:#f4f4f6}
 .r{color:#b3261e;font-weight:700}.o{color:#c25e00;font-weight:700}.y{color:#8a6d00;font-weight:700}.g{color:#1e7a3c;font-weight:700}.small{color:var(--mut);font-size:12px}
 </style></head><body>
-<h1>V1 回板当天改板清单</h1><p class="small">更新 10-19 午：用户定 <b>主控 bank33 走 1.8V（LVDS18）+ 桥板方案 A</b>；底板 100Ω 空贴（已确认）；有限流电源。</p>
+<h1>V1 回板当天改板清单</h1><p class="small">更新 10-19 午（最终）：用户定 <b>主控 bank33 走 2.5V（从底板 H7/H9 供，H7/H9 即专供 J1/J2）</b>，桥板不改；底板 100Ω 空贴（已确认）；有限流电源。1.8V 方案（需改每块桥板 U18/U19）不采用，见 D37 报告备查。</p>
 <div class="sub">对象：SoC 底板 10-15、桥转接板 10-14（= 10-16 制板）、柔性板 10-15。依据：投板网表机读核对（D35、D36）与三板检查 10-15。按"先做哪件"排序。<br>
 <span class="r">● 不改会损坏</span>　<span class="o">● 不改可能误码 / 点不亮</span>　<span class="y">● 只影响诊断 / 远程升级（可选）</span>　<span class="g">● 软件已处理，不用动烙铁</span></div>
 
 <h2>结论</h2>
-<p>这一版硬件<b>能用，不需要重新投板</b>。按 1.8V 方案，烙铁要动的是：<b>每块桥板 U18/U19 改 1.8V 供电（必做）</b>、R82 换阻（必做）、桥板 R235/R223 换 2.2k（推荐）、24V 防护、可选 JTAG 飞线。引脚变化（TXCHK 换脚、光电换到 U12）全部由软件和位流吸收。<b>桥位流必须用这次重出的版本</b>，旧的 D27 套桥位流不能用。</p>
+<p>这一版硬件<b>能用，不需要重新投板</b>。烙铁要动的：主控 J2 改由 H7/H9 供 2.5V（两根飞线）、R82 换 2.2k（必做）、桥板 R235/R223 换 2.2k（推荐）、24V 防护、可选 JTAG 飞线。<b>桥板 U18/U19 不用改</b>。引脚变化（TXCHK 换脚、光电换到 U12）全部由软件和位流吸收。<b>桥位流必须用这次重出的版本</b>，旧的 D27 套桥位流不能用。</p>
 
 <h2>一、上电前（第 1 步）</h2>
 <table><tr><th>#</th><th>板</th><th>做什么</th><th>为什么 / 怎么验</th></tr>
 <tr><td>1</td><td>桥转接板</td><td><span class="r">●</span> 核心板压到 CN3 上时<b>方向不能反</b>。两座焊盘 180° 对称，装反也插得进。建议先在实物上标出方向。</td><td>上电前量：CN3 第 1 脚（FPGA_TCK）与核心板 TCK 导通；VCC3P3 对地不短路。</td></tr>
 <tr><td>2</td><td>SoC 底板</td><td><span class="r">●</span> <b>24V 临时防护</b>（P4：3 脚 24V，4 脚地）。台架用限流电源（0.5–1 A）；线束串 2A 保险丝 + 肖特基二极管（如 SS54）防反接；P4 背面并一颗 TVS（SMBJ26A 一类，先核 TPS56A37 的输入耐压上限）。</td><td>底板 24V 输入没有保险丝、TVS 和防反接。<b>上滑环前必须做完</b>。</td></tr>
-<tr><td>3</td><td>SoC 模块</td><td><span class="r">●</span> 主控 bank33（丝印 BK35，J2）用 <b>1.8V</b>：J2 帽在 2-3；<b>H7/H9 不要接到 J1/J2</b>。</td><td>加载 LVDS18 位流前量 1.71–1.89 V。位流 IO 标准与 bank 电压不符会伤器件（UG1210 p13）。</td></tr>
-<tr><td>3a</td><td>桥转接板（每块）</td><td><span class="r">●</span> <b>方案 A</b>：U18、U19 的 16 脚（VCCA）与 PWR2V5 断开（抬脚或割线），改接一颗 1.8V 小 LDO（如 XC6206P182，输入取 VCC3P3），16 脚就近补 0.1µF；<b>R236 不贴</b>。</td><td>不改则桥→主控的 ACK/串口/TDO 以 2.5V 打进 1.8V bank，超绝对最大 2.1V、毫安级倒灌（D37）。改后量 16 脚 = 1.8V；主控侧这 3 根线 ≤1.9V。</td></tr>
-<tr><td>3b</td><td>SoC 底板</td><td><span class="r">●</span> <b>R82 由 10Ω 换 5.6kΩ</b>（光电为推挽或自带上拉时）；纯开集无上拉则保持 10Ω。</td><td>10Ω 时 3.3V 光电灌进 1.8V bank 约百毫安，会烧。类型没确认前按 5.6k 装最安全。</td></tr>
-<tr><td>4</td><td>SoC 底板</td><td><span class="g">●</span> R182–R201、R53–R72 空贴（用户已确认）。</td><td>1.8V 下双端接会把差分余量吃到 0，必须保持空贴。</td></tr>
+<tr><td>3</td><td>SoC 模块</td><td><span class="r">●</span> 主控 bank33（丝印 BK35，J2）改 <b>2.5V</b>：拔 J2 帽，从底板 H7 或 H9（1 脚 PWR2V5，2 脚地）飞线到 J2 的 bank 供电脚。只验面 A 时 J1 不动。</td><td>加载 LVDS25 位流前量 2.40–2.60 V。位流 IO 标准与 bank 电压不符会伤器件（UG1210 p13）。守"模块先上电、最后断电"。</td></tr>
+<tr><td>3b</td><td>SoC 底板</td><td><span class="r">●</span> <b>R82 由 10Ω 换 2.2kΩ</b>（光电为 3.3V 推挽或自带上拉时）；纯开集无上拉可保持 10Ω（约束已开上拉）。</td><td>10Ω 时 3.3V 光电灌进 2.5V bank 电流过大。类型没确认前按 2.2k 装最安全。</td></tr>
+<tr><td>4</td><td>SoC 底板</td><td><span class="g">●</span> R182–R201、R53–R72 空贴（用户已确认）。</td><td>双端接会让摆幅减半，保持空贴。</td></tr>
 </table>
 
 <h2>二、可选改动</h2>
@@ -48,10 +47,10 @@ td,th{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:l
 <h2>五、要你确认</h2>
 <table><tr><th>#</th><th>问题</th><th>影响</th></tr>
 <tr><td>Q1</td><td>底板 100Ω 贴没贴</td><td>已答：空贴 ✓</td></tr>
-<tr><td>Q2</td><td>主控 IO 电压</td><td>已定：bank33 1.8V + 桥板方案 A ✓；面 B（bank11/J1）同理用 1.8V</td></tr>
+<tr><td>Q2</td><td>主控 IO 电压</td><td>已定：bank33 2.5V（H7/H9 供）✓；面 B（bank11/J1）同理</td></tr>
 <tr><td>Q3</td><td>光电传感器是推挽还是开集输出？</td><td>开集可直接用（约束已开上拉）</td></tr>
 <tr><td>Q4</td><td>10-15 底板没有 CN4 电机口，是故意的吗？</td><td>要用的话从 H2 第 17、18 脚飞线</td></tr>
-<tr><td>Q5</td><td>放行重出位流</td><td>已放行 ✓ 桥四套已出（e60c 7f612855 等，时序全过）；主控 LVDS18 + 光电 U12 待开关就绪后出</td></tr>
+<tr><td>Q5</td><td>放行重出位流</td><td>已放行 ✓ 桥四套已出（e60c 7f612855 等，时序全过）；主控 LVDS25 + 光电 U12 正在构建</td></tr>
 </table>
 <p class="small">出处：dr1v90 d36_hwsync/REPORT.md、d35_faceb/REPORT.md；三板检查_2026-10-15.pdf。网表从投板 epro2 机读，主会话已独立复核光电与 CN3/R82/H2.49 连接。</p>
 </body></html>

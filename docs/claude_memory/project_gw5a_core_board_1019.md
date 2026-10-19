@@ -22,3 +22,6 @@ metadata:
 - Codex 第 1 轮 (新会话 01a1523b-36cc-71e1-bda4-cfd17582ff0d, gpt-6.1-sol xhigh): 只交 `layout/r1/placement.csv` + check_placement.py + 布局说明.md, 不改 PCB。日志 /tmp/codex_rounds/run_core1.log, PID 文件 run_core1.pid, 回复 reply_core1.md。
 - 收到后: `scripts_kicad/apply_placement.py <pcb> <csv> <输出>` 原生回填 → 原生 DRC (`kicad-cli pcb drc --schematic-parity`)。交接 `review/交接_当前状态.md`, 交互记录 `review/Claude-Codex交互记录.md`。
 - 待用户拍板: 核心板下方 (B 面) 限高/底板该处有无元件; 安装孔焊盘离边 0.26–0.29 (<0.3, ACG525 原尺寸, 建议照抄); P5K 封装插接方向人工复核。
+
+## 10-19 11:52 第1轮摆放已回填
+- 143 件回填, 原生 DRC 无短路/重叠/间距问题; 余未布线、丝印、孔边 ×4、字段警告 30。下一步: 等用户看图, 再派布线/扇出轮。

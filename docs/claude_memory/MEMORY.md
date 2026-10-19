@@ -34,5 +34,5 @@
 - [转速 300–1200 rpm](project_rpm_range_300_1200.md) — 10-15 用户定三期都要兼容; PL 换帧受转速限制 (583 rpm 只 8 fps) 先解
 - [流畅度一等要求](project_smoothness_first_class.md) — 10-15 用户定; 软件卡顿可测可拦可修 → D20 (指标/门槛/画面模拟/修)
 - [D22 WiFi 稳定](project_wifi_stable_d22.md) — 10-15 用户: V0 必须, 不靠串口; 124.5 s 周期卡顿 = 测试对拍 (非 WiFi); 真问题: 偶发 1-1.7 s 停顿 + AP 踢线
-- [GW5A 核心板 10-19](project_gw5a_core_board_1019.md) — 替代 ACG525 去 DDR3; 原理图 ERC 0; PCB 底板已生成; Codex 第 1 轮摆放中 (只交 csv)
+- [GW5A 核心板 10-19](project_gw5a_core_board_1019.md) — 替代 ACG525 去 DDR3; 孔 M2 2.2; 第3轮全逃逸+电源通; 第4轮(In3 重做)在跑 Codex 01a15287, 重启后按文末恢复
 - [V1 主控 IO 2.5V 10-19](project_v1_io_1v8_1019.md) — 最终走 2.5V (H7/H9 专供 J1/J2), 桥板不改; 1.8V 弃用 (桥板倒灌/下行 LVDS 需 2.5V); R82 2.2k

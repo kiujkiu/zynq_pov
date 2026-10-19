@@ -39,3 +39,9 @@ metadata:
 ## 10-19 13:35 第3轮复验
 - layout/r3/core_r3.kicad_pcb (我修了生成器 zone 多轮廓丢失 bug 后原生生成): DRC 无短路; 181 信号全逃逸; 电源 13 网全连通; GND 6 处缺陷。
 - 待改 (第4轮): In3 过碎, VCC 核心需整块+宽颈; 单球电源改走线; GND dogbone 修; 然后连逃逸线到 P1/P2。Codex 会话 01a15287 已用 1 轮。
+
+## 10-19 重启前存档 (第4轮进行中)
+- 第4轮 (In3 重做+GND 6处修) 已派: Codex 会话 01a15287-fec6-7142-a60b-b70b17a1eb31, 只写 layout/r4/; 提示词存 review/codex_prompt_r4.txt。
+- 重启会杀掉 Codex 进程。恢复: 看 layout/r4/ 是否有 generate_native.py+扇出说明.md; 没有就 cd 工程根, `codex exec resume 01a15287-fec6-7142-a60b-b70b17a1eb31 -m gpt-6.1-sol -c model_reasoning_effort=xhigh -c sandbox_mode='"workspace-write"' --skip-git-repo-check -o /tmp/codex_rounds/reply_core4.md - < review/codex_prompt_r4.txt` (先说明"上次被重启打断, 接着做"), 后台 while kill -0 等。
+- 收到后: Windows 原生 python 跑 layout/r4/generate_native.py → kicad-cli pcb drc → 对照 r3 (review/drc_native_r3.rpt: 无短路, 电源全通, GND 6 处, 信号 208 未连为预期)。
+- 之后第5轮: 逃逸线连 P1/P2。未决给用户: 孔焊盘 4.0 离边 0.26-0.29 是否缩到 3.6; B 面限高/底板对插。

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>创龙核心板询价清单</title>
+<style>
+:root{--fg:#1d1d1f;--mut:#5f6368;--bd:#d9d9de;--acc:#b3261e;--ok:#1e7a3c;--bg:#fff}
+body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--fg);background:var(--bg);max-width:900px;margin:24px auto;padding:0 16px;line-height:1.55;font-size:14px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:22px 0 8px;border-bottom:1px solid var(--bd);padding-bottom:4px}
+.sub{color:var(--mut);margin-bottom:14px}table{border-collapse:collapse;width:100%;margin:6px 0}
+td,th{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:left}th{background:#f4f4f6}
+.red{color:var(--acc);font-weight:600}.rec{color:var(--ok);font-weight:600}.small{color:var(--mut);font-size:12px}
+</style></head><body>
+<h1>创龙 SOM-TLDR1 核心板询价清单（10-20）</h1>
+<div class="sub">用途：POV3D 主控核心板，替代米联派 FS03（同为 DR1M90GEG484）。目的：先买样板评估 32 bit DDR4 带宽和我方位流/软件，数据过关再画转接底板。<br>
+联系：sales@tronlong.com ／ 020-8998-6280；技术 support@tronlong.com ／ 020-3893-9734</div>
+
+<h2>A. 采购询价（样品阶段）</h2>
+<table><tr><th>#</th><th>物料</th><th>型号</th><th>数量</th><th>说明</th></tr>
+<tr><td>A1</td><td class="rec">核心板（标配，主选）</td><td>SOM-TLDR1-M90-64GE8GD-I-A1.0<br><span class="small">DR1M90 / 1 GB DDR4 32bit / 8 GB eMMC / B2B</span></td><td>2</td><td>1 块装评估板测，1 块留作转子台架/对拍</td></tr>
+<tr><td>A2</td><td>评估底板</td><td>TLDR1-EVM（含核心板套件价）</td><td>1</td><td>先在评估板上测带宽、跑通我方位流；问能否"核心板+评估板"套装价</td></tr>
+<tr><td>A3</td><td>B2B 连接器（底板侧）</td><td>爱特姆 BTB050080-F1D08200（母座）<br>BTB050080-M1D08200（公座）</td><td>各 10</td><td>按选型表，核心板公母各 2 个；确认底板侧应贴哪种、交期与最小包装</td></tr>
+<tr><td>A4</td><td>贴片螺母</td><td>M2-L4-E3.5（国信达）</td><td>20</td><td>核心板 4 孔固定（转子离心力用）</td></tr>
+<tr><td>A5</td><td class="small">备选比价</td><td class="small">SOM-TLDR1-M90-128GE16GD-I-A1.0（2 GB/16 GB）<br>SOM-TLDR1-S（邮票孔版）</td><td class="small">只报价</td><td class="small">-S 版不作主选：Bank 11 只引出一半、DDR4 只跑 1333</td></tr>
+</table>
+<p>每项请报：<b>单价（1 / 10 / 100 / 1000 片阶梯）、交期、含税/运费、样品能否当周发</b>。</p>
+
+<h2>B. 下单后必须拿到的资料</h2>
+<table><tr><th>#</th><th>资料</th><th>为什么要</th></tr>
+<tr><td>B1</td><td>核心板<b>完整引脚定义表</b>（B2B 脚号 ↔ 芯片球号 ↔ 走线长度，Excel 版）</td><td>转接底板原理图 + 我方管脚约束；差分对等长</td></tr>
+<tr><td>B2</td><td>评估底板<b>可编辑原理图 + PCB</b>（AD/PADS/KiCad 均可）、核心板 3D 模型（STEP）、机械尺寸 DXF</td><td>画转接底板、结构堆叠</td></tr>
+<tr><td>B3</td><td><b>TD 工程 / PS IP 配置</b>（DDR4 参数、时钟、MIO 分配）</td><td>我方位流要按这块板的 DDR4 重新生成 PS 端</td></tr>
+<tr><td>B4</td><td>SDK_2025.1 全套：Buildroot 2022.02、Linux 6.1.111 源码、U-Boot/FSBL 源码、设备树、镜像固化工具</td><td>迁移我方系统（启动脚本、WiFi、netguard、voxslice）</td></tr>
+<tr><td>B5</td><td>核心板电源上电时序与底板供电要求（5 V 纹波、各 PL Bank VCCO 供电推荐电路）</td><td>Bank 33/11 我方用 2.5 V</td></tr>
+<tr><td>B6</td><td>振动 / 高低温检测报告原件（已有公开版，要测试条件明细）</td><td>评估转子离心力</td></tr>
+</table>
+
+<h2>C. 要厂家书面答复的技术问题</h2>
+<table><tr><th>#</th><th>问题</th><th>我方背景</th></tr>
+<tr><td>C1</td><td class="red">DDR4 实测带宽：PL 经 HP0/HP1 读 DDR 的实测 GB/s？DDRC 端口按地址还是按 master 分？有无 QoS 配置？</td><td>我方 2 期需 PL 持续读 ≈1.5 GB/s；现 16 bit 板只余 11%</td></tr>
+<tr><td>C2</td><td class="red">2 GB 配置的容量问题：DR1M90 手册写 DDR 最大 1 GB，2 GB 型号如何寻址？</td><td>我方 1 GB 够用，问清避免选错</td></tr>
+<tr><td>C3</td><td>固定方式确认：4 个安装孔用 M2 螺丝 + 底板 M2-L4 贴片螺母（高度 4 mm = B2B 合高）锁紧即可？孔位坐标与推荐扭矩？</td><td>核心板装转子，靠 4 颗螺丝固定（已定，不打胶）</td></tr>
+<tr><td>C4</td><td>Bank 11 / 33 是否完整 24 对差分都可用（无核心板内部占用、无上电强制脚）？Bank 33 VCCO 2.5 V 下 LVDS25 输出是否验证过？</td><td>我方上行 LVDS 用这两组</td></tr>
+<tr><td>C5</td><td>PL 位流加载方式：PS 运行中从 Linux 重载 PL 是否支持？冷启动从 eMMC 自动加载？</td><td>我方无串口远程运维，靠网络换位流</td></tr>
+<tr><td>C6</td><td>USB0/ETH1 复用：只用 USB0 接 WiFi 网卡、不用网口时如何配置？SDIO0 能否接 SDIO WiFi 模组，有无驱动案例？</td><td>转子上 WiFi 是唯一数据通道</td></tr>
+<tr><td>C7</td><td>供货与停产：DR1M90 与本核心板供货周期、最小订货量、价格是否可锁定一年</td><td>—</td></tr>
+<tr><td>C8</td><td>转接底板能否代画/评审（增值服务报价），或免费评审我方底板原理图</td><td>降低回板风险</td></tr>
+</table>
+
+<h2>D. 收到样板后我方评估项（参考）</h2>
+<ol>
+<li>评估板上跑 PL 读 DDR 带宽实测（对照 FS03 的 1.786 GB/s）。</li>
+<li>我方 V1 主控位流按新 PS IP 重出，跑通 voxslice + WiFi 推流。</li>
+<li>冷/热启动各 20 次认 eMMC、自动加载 PL。</li>
+<li>以上通过 → 画转接底板（另一窗口）。</li>
+</ol>
+<p class="small">依据：本地资料 D:\芯片资料\安路\DR1开发资料（规格书 V1.3、硬件说明书、配件选型表）；我方带宽基线见 docs/budget/budget_30hz_2026-10-12.md。</p>
+</body></html>

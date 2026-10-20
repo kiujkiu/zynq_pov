@@ -9,6 +9,9 @@
   mta.csv          里程碑趋势 (每次评审追加一组行)
   daily_log.csv    每日进展流水 (日期/类型/编号/内容/来源, 人工追加)
   daily_rates.csv  每日三个达成率 (脚本每次生成时写入/更新当天一行)
+  categories.csv   大功能归类 (id,大功能,子功能,在等什么): 交付/KR/风险 → ①数据传递 ②数据处理 ③显示 ④运维保障;
+                   新 id 没写进来就归「未分类」并在页面上提示。③ 的子功能写成「V1 2260 · 双面」(点号前是显示期)。
+                   只影响页面分组和顶部「大功能总览」, 不影响 V0/V1/V2 达成率。
 
 用法:  cmd.exe /c "python mk_progress.py [--date 2026-10-13] [--no-pdf]"   (Windows Python 带 openpyxl)
       或 WSL 里 python3 mk_progress.py —— 没有 openpyxl 时自动转交 cmd.exe 里的 Windows Python。
@@ -690,8 +693,11 @@ def sheet_daily(wb, ctx, today):
     return ws
 
 
-def html_daily(ctx, today):
+def html_daily(ctx, today, mid=''):
+    """mid: 插在达成率趋势图之后的 HTML (按大功能分组的交付明细)"""
     cur = ctx['cur']
+    cats = ctx.get('cats', {})
+    bt = lambda ids: (f'<span class="btag">{btags(cats, ids)}</span> ' if btags(cats, ids) else '')
     o = []
     o.append('<h2>阶段达成率</h2><div style="display:flex;gap:10px">')
     cards = [(f'{P} 达成率', cur[P]['rate'], f'{cur[P]["n"]} / {cur[P]["m"]}', f'KR {cur[P]["kr"][0]}/{cur[P]["kr"][1]} + 交付 {cur[P]["dl"][0]}/{cur[P]["dl"][1]}') for P in STAGES]
@@ -704,6 +710,7 @@ def html_daily(ctx, today):
            ('V1 达成率', [(r['d'], r['v1']) for r in rates], 'ED7D31', False, True),
            ('V2 达成率', [(r['d'], r['v2']) for r in rates], '70AD47', False, True)]
     o.append('<div style="width:55%">' + svg_chart(ser, w=520, h=220, yfmt=lambda v: f'{v:.0%}', title='阶段达成率趋势 (按日期)', yzero=True) + '</div>')
+    o.append(mid)
     o.append('<h2>今天比昨天 (每个 KR 取每天最后一个硬件实测值；绿 = 变好，红 = 变差，蓝 = 新出现)</h2>')
     colors = {'up': '#C6EFCE', 'down': '#FFC7CE', 'new': '#BDD7EE', 'same': '#F2F2F2'}
     if not ctx['changes']:
@@ -712,7 +719,7 @@ def html_daily(ctx, today):
         o.append('<table><tr><th>KR</th><th>变化</th><th>指标</th><th>昨日 → 今日</th><th>V0 / V1 / V2 目标</th></tr>')
         for k, prev, cv, v in ctx['changes']:
             txt = (f'{fmt(prev[1])} ({prev[0]:%m-%d}) → <b>{fmt(cv)}</b>' if prev else f'(无) → <b>{fmt(cv)}</b>')
-            o.append(f'<tr style="background:{colors[v]}"><td>{k["kr_id"]}</td><td class="c">{CH_TXT[v]}</td><td>{esc(k["指标名"])} ({esc(k["单位"])}, {esc(k["方向"])})</td>'
+            o.append(f'<tr style="background:{colors[v]}"><td>{bt(k["kr_id"])}{k["kr_id"]}</td><td class="c">{CH_TXT[v]}</td><td>{esc(k["指标名"])} ({esc(k["单位"])}, {esc(k["方向"])})</td>'
                      f'<td>{txt}</td><td class="c">{esc(k["V0 目标"] or "—")} / {esc(k["V1 目标"] or "—")} / {esc(k["V2 目标"] or "—")}</td></tr>')
         o.append('</table>')
     for lst in OrderedDict.fromkeys(g[0]['清单'] for g in ctx['gates']):
@@ -728,19 +735,308 @@ def html_daily(ctx, today):
     rc = {'开': '#FFC7CE', '监控': '#FFEB9C', '关': '#C6EFCE'}
     for x in ctx['risks']:
         st = x['状态(开/监控/关)']
-        o.append(f'<tr style="background:{rc.get(st, "#fff")}"><td class="c">{esc(x["编号"])}</td><td class="c">{esc(st)}</td><td>{esc(x["风险"])}</td><td>{esc(x["影响"])}</td><td>{esc(x["应对/退路"])}</td><td>{esc(x["负责"])}</td></tr>')
+        o.append(f'<tr style="background:{rc.get(st, "#fff")}"><td class="c" style="white-space:nowrap">{bt(x["编号"])}{esc(x["编号"])}</td><td class="c">{esc(st)}</td><td>{esc(x["风险"])}</td><td>{esc(x["影响"])}</td><td>{esc(x["应对/退路"])}</td><td>{esc(x["负责"])}</td></tr>')
     o.append('</table>')
-    o.append('<h2>每日流水 (daily_log.csv，按天倒序)</h2>')
+    o.append('<h2>每日流水 (daily_log.csv，按天倒序；编号前圈号 = 所属大功能)</h2>')
     lc = {'复验退回': '#FFC7CE', '问题': '#FFEB9C', '交付完成': '#C6EFCE', '复验通过': '#C6EFCE', '里程碑': '#BDD7EE', '决定': '#E4DFEC'}
     last = None
     o.append('<table><tr><th>日期</th><th>类型</th><th>编号</th><th>内容</th><th>来源</th></tr>')
     for e in ctx['log']:
         d = e['日期'] if e['日期'] != last else ''
         last = e['日期']
-        o.append(f'<tr><td class="c" style="white-space:nowrap">{d}</td><td class="c" style="white-space:nowrap;background:{lc.get(e["类型"], "#fff")}">{esc(e["类型"])}</td><td class="c">{esc(e["编号"])}</td>'
+        o.append(f'<tr><td class="c" style="white-space:nowrap">{d}</td><td class="c" style="white-space:nowrap;background:{lc.get(e["类型"], "#fff")}">{esc(e["类型"])}</td><td class="c">{bt(e["编号"])}{esc(e["编号"])}</td>'
                  f'<td>{esc(e["内容"])}</td><td style="color:#555">{esc(e["来源"])}</td></tr>')
     o.append('</table>')
     return '\n'.join(o)
+
+
+# ---------------------------------------------------------------- 大功能总览 (categories.csv)
+BIGS = OrderedDict([
+    ('①', ('数据传递', 'PC 内容 → WiFi → 转子：主机推流、12-bit 通路、相位锁定、延迟、开机即接流')),
+    ('②', ('数据处理', '接收散写 DDR、双缓冲、PL 切片、转速同步/换档/半圈换帧、几何 LUT、DDR 带宽、流畅度')),
+    ('③', ('显示 (按期换后端)', 'V0 2047 / V1 2260 (上行、桥、双面、主控位流) / V2 192×216 (T2 板、1.2G、整机)')),
+    ('④', ('运维保障', '开机/自启、联网自愈、远程升级 (含 JTAG 灌桥)、主控↔桥通信、可靠性验证 (冷启动/长跑)')),
+])
+UNCAT = '未分类'
+UNCAT_SCOPE = 'categories.csv 里还没有映射的项 (新加的交付/KR/风险请补一行)'
+BIG_NOTE = '三期 V0/V1/V2 的 ①②④ 共用，③ 按期换显示后端'
+BIG_ALGO = ('交付完成 = 状态 ✅ 且有完成日期；必须项 = 级别「必须」(加分/可选不计)；KR 达标 = 截至当日最新硬件实测达到该期目标 (与达成率同口径，'
+            '🔵 = 仅仿真/台架达到)；关键待办 = 未完成的必须交付 + 每个 KR 最早未达标的那一期 + 状态「开」的风险；'
+            '「在等什么」取 categories.csv，空着时交付取「分支/提交」、风险取「应对/退路」。本总览不参与 V0/V1/V2 达成率计算。')
+
+
+def big_key(s):
+    """categories.csv 的大功能列 → ①..④ (认开头的圈号或名字), 认不出归未分类"""
+    s = (s or '').strip()
+    if s[:1] in BIGS:
+        return s[:1]
+    for k, (n, _) in BIGS.items():
+        if s and (s in n or n.split()[0] in s):
+            return k
+    return UNCAT
+
+
+def load_cats():
+    """categories.csv → OrderedDict id → {big, sub, wait} (保持表中顺序); 没有该文件时全部未分类"""
+    cats = OrderedDict()
+    for r in read_opt('categories.csv'):
+        if r.get('id'):
+            cats[r['id']] = {'big': big_key(r.get('大功能')), 'sub': r.get('子功能') or '(未填子功能)', 'wait': r.get('在等什么') or ''}
+    return cats
+
+
+def cat_of(cats, i):
+    return cats.get(i) or {'big': UNCAT, 'sub': UNCAT, 'wait': ''}
+
+
+def sub_order(cats):
+    """每个大功能下子功能的顺序 = categories.csv 里首次出现的顺序"""
+    so = OrderedDict()
+    for c in cats.values():
+        lst = so.setdefault(c['big'], [])
+        if c['sub'] not in lst:
+            lst.append(c['sub'])
+    return so
+
+
+def phase_of(sub):
+    """③ 的子功能写成「V1 2260 · 双面」, 点号前是显示期"""
+    return sub.split('·')[0].strip()
+
+
+def is_must(d):
+    return (d.get('级别') or '必须') == '必须'
+
+
+def del_done(d, asof):
+    return bool(d['状态'] == '✅' and d['_f'] and d['_f'] <= asof)
+
+
+def unmapped(cats, dels, krs, risks):
+    return ([d['id'] for d in dels if d['id'] not in cats] + [k['kr_id'] for k in krs if k['kr_id'] not in cats]
+            + [r['编号'] for r in risks if r['编号'] not in cats])
+
+
+def btags(cats, ids):
+    """编号串 (分号分隔) → 大功能圈号, 如 'D11;D39' → '④'"""
+    ks = []
+    for i in (ids or '').replace('；', ';').split(';'):
+        k = cats.get(i.strip(), {}).get('big')
+        if k in BIGS and k not in ks:
+            ks.append(k)
+    return ''.join(sorted(ks, key=list(BIGS).index))
+
+
+def big_overview(cats, dels, krs, by_kr, risks, asof):
+    """四个大功能 (+ 有未分类时多一块) 在 asof 的统计: 交付完成/总数、必须项、各期 KR 达标、子功能、关键待办"""
+    so = sub_order(cats)
+    out = []
+    for key in list(BIGS) + [UNCAT]:
+        name, scope = BIGS.get(key, (UNCAT, UNCAT_SCOPE))
+        ds = [d for d in dels if cat_of(cats, d['id'])['big'] == key]
+        ks = [k for k in krs if cat_of(cats, k['kr_id'])['big'] == key]
+        rs = [r for r in risks if cat_of(cats, r['编号'])['big'] == key]
+        if key == UNCAT and not (ds or ks or rs):
+            continue
+        subs = OrderedDict((s, [0, 0]) for s in so.get(key, []))
+        for d in ds:
+            s = subs.setdefault(cat_of(cats, d['id'])['sub'], [0, 0])
+            s[0] += del_done(d, asof)
+            s[1] += 1
+        phases = OrderedDict()
+        if key == '③':
+            for s, (a, b) in subs.items():
+                if b:
+                    p = phases.setdefault(phase_of(s), [0, 0, []])
+                    p[0] += a
+                    p[1] += b
+                    if '·' in s:
+                        p[2].append((s.split('·', 1)[1].strip(), a, b))
+        krst = OrderedDict()
+        for P in STAGES:
+            st = [x for x in (kr_meets(k, by_kr[k['kr_id']], P, asof) for k in ks) if x is not None]
+            krst[P] = (sum(x == 'ok' for x in st), len(st))
+        todo = [{'icon': d['状态'] or '⬜', 'id': d['id'], 'text': d['名称'], 'wait': cat_of(cats, d['id'])['wait'] or d['分支/提交']}
+                for d in sorted((d for d in ds if is_must(d) and not del_done(d, asof)), key=lambda d: (d['_p'] or dt.date.max, d['id']))]
+        kt = []
+        for k in ks:
+            for i, P in enumerate(STAGES):
+                s = kr_meets(k, by_kr[k['kr_id']], P, asof)
+                if s in ('no', 'sim'):
+                    real = [m for m in by_kr[k['kr_id']] if is_real(m['硬件/阶段']) and m['_d'] <= asof]
+                    cur_ = fmt(real[-1]['_v']) if real else '—'
+                    kt.append((i, {'icon': '🔵' if s == 'sim' else '⬜', 'id': k['kr_id'],
+                                   'text': f'{k["指标名"]} {cur_} → {P} 目标 {fmt(num(k[f"{P} 目标"]))} {k["单位"]}' + ('（仅仿真/台架达标）' if s == 'sim' else ''),
+                                   'wait': cat_of(cats, k['kr_id'])['wait']}))
+                    break
+        todo += [t for _, t in sorted(kt, key=lambda x: x[0])]
+        orisk = [r for r in rs if r['状态(开/监控/关)'] == '开' and (pdate(r['登记日期']) or asof) <= asof]
+        out.append({'key': key, 'name': name, 'scope': scope, 'n': len(ds), 'done': sum(del_done(d, asof) for d in ds),
+                    'must': sum(is_must(d) for d in ds), 'must_done': sum(is_must(d) and del_done(d, asof) for d in ds),
+                    'new': [d['id'] for d in ds if d['状态'] == '✅' and d['_f'] == asof],
+                    'subs': [(s, a, b) for s, (a, b) in subs.items()], 'phases': [(p, a, b, det) for p, (a, b, det) in phases.items()],
+                    'kr': krst, 'todo': todo, 'risks': orisk})
+    return out
+
+
+def mini(a, b, w=64):
+    p = a / b if b else 0
+    c = '#70AD47' if p >= 0.999 else ('#FFC000' if p >= 0.5 else '#ED7D31')
+    return f'<span class="mb" style="width:{w}px"><i style="width:{p * w:.0f}px;background:{c}"></i></span>'
+
+
+def html_overview(ov, unm):
+    o = [f'<h2>大功能总览 <span class="h2s">{esc(BIG_NOTE)}；归类见 categories.csv</span></h2>']
+    if unm:
+        o.append(f'<div class="warn">⚠ 未分类 {len(unm)} 项：{esc("、".join(unm))} —— 请在 categories.csv 补一行 (id,大功能,子功能,在等什么)</div>')
+    for g in ov:
+        mp = pct(g['must_done'] / g['must']) if g['must'] else '—'
+        krs_ = ' · '.join(f'{P} {a}/{b}' for P, (a, b) in g['kr'].items() if b) or '—'
+        new = f'<b class="plus">+</b> 今日新完成 {esc("、".join(g["new"]))}　' if g['new'] else ''
+        o.append(f'<div class="bfn{" unc" if g["key"] == UNCAT else ""}"><div class="bh"><span class="bn">{g["key"] if g["key"] != UNCAT else "?"}</span>'
+                 f'<b>{esc(g["name"])}</b><span class="bs">{esc(g["scope"])}</span><span class="bx">{new}KR 达标 {krs_}</span></div><div class="bb">')
+        o.append(f'<div><div class="kv">{g["done"]}/{g["n"]}</div><div class="kl">交付完成</div><div class="kv">{mp}</div>'
+                 f'<div class="kl">必须项 {g["must_done"]}/{g["must"]}</div></div><div>')
+        if g['phases']:
+            for p, a, b, det in g['phases']:
+                o.append(f'<div class="sr"><span class="sn"><b>{esc(p)}</b></span>{mini(a, b)}<span>{a}/{b}</span></div>')
+                if det:
+                    o.append(f'<div class="sd">{esc(" · ".join(f"{s} {x}/{y}" for s, x, y in det))}</div>')
+        else:
+            for s, a, b in g['subs']:
+                if b:
+                    o.append(f'<div class="sr"><span class="sn">{esc(s)}</span>{mini(a, b)}<span>{a}/{b}</span></div>')
+        o.append('</div><div><div class="tt">关键待办 / 在等什么</div>')
+        if not g['todo'] and not g['risks']:
+            o.append('<div class="ti">✅ 无：必须交付已完成，KR 各期均达标</div>')
+        for t in g['todo']:
+            w = f' <span class="w">— {esc(t["wait"])}</span>' if t['wait'] else ''
+            o.append(f'<div class="ti">{t["icon"]} <b>{esc(t["id"])}</b> {esc(t["text"])}{w}</div>')
+        for x in g['risks']:
+            o.append(f'<div class="ti">⚠ <b>{esc(x["编号"])}</b> {esc(x["风险"])} <span class="w">— {esc(x["应对/退路"])}</span></div>')
+        o.append('</div></div></div>')
+    o.append(f'<div class="algo2">{esc(BIG_ALGO)}</div>')
+    return '\n'.join(o)
+
+
+def html_dels_grouped(ov, cats, dels, asof):
+    """交付清单按 大功能 → 子功能 分组 (子功能顺序同 categories.csv)"""
+    so = sub_order(cats)
+    o = ['<h2 class="pb">交付明细 — 按大功能 / 子功能分组</h2><table class="dg"><tr><th>子功能</th><th>id</th><th style="width:27%">名称</th><th>goal</th><th>期</th>'
+         '<th>阶段 · 级别</th><th>计划</th><th>完成</th><th>状态</th><th>分支/提交</th></tr>']
+    for g in ov:
+        ds = [d for d in dels if cat_of(cats, d['id'])['big'] == g['key']]
+        if not ds:
+            continue
+        o.append(f'<tr class="grp"><td colspan="10">{g["key"] if g["key"] != UNCAT else "⚠"} {esc(g["name"])}　交付完成 {g["done"]}/{g["n"]} · 必须项 {g["must_done"]}/{g["must"]}</td></tr>')
+        bysub = OrderedDict((s, []) for s in so.get(g['key'], []))
+        for d in ds:
+            bysub.setdefault(cat_of(cats, d['id'])['sub'], []).append(d)
+        for s, lst in bysub.items():
+            for i, d in enumerate(lst):
+                st = EMOJI2ST.get(d['状态'], 'idle')
+                pre = (f'<td rowspan="{len(lst)}" class="sbf">{esc(s)}<br><span class="w">{sum(del_done(x, asof) for x in lst)}/{len(lst)}</span></td>' if i == 0 else '')
+                lv = d.get('级别') or '必须'
+                o.append(f'<tr>{pre}<td class="c">{esc(d["id"])}</td><td>{esc(d["名称"])}</td><td class="c">{esc(d["服务的 goal_id"])}</td><td class="c">{esc(d["期"])}</td>'
+                         f'<td class="c">{esc(d.get("阶段", ""))} · {"<b>必须</b>" if lv == "必须" else esc(lv)}</td><td class="c">{d["计划日期"][5:]}</td><td class="c">{d["完成日期"][5:]}</td>'
+                         f'<td class="c {st}">{d["状态"]}</td><td>{esc(d["分支/提交"])}</td></tr>')
+    o.append('</table>')
+    return '\n'.join(o)
+
+
+def sheet_big(wb, ov, cats, dels, krs, risks, by_kr, unm, today):
+    """xlsx 第一页: 大功能总览 + 子功能 + 全部归类"""
+    ws = wb.create_sheet('大功能总览', 0)
+    ws['A1'] = f'POV3D 大功能总览 — {today}  ({BIG_NOTE}；归类见 categories.csv；不参与 V0/V1/V2 达成率)'
+    ws['A1'].font = F(True, 14)
+    if unm:
+        c = ws.cell(row=2, column=1, value=f'⚠ 未分类 {len(unm)} 项：{"、".join(unm)} —— 请在 categories.csv 补一行 (id,大功能,子功能,在等什么)')
+        c.font = F(True, 10, 'C00000')
+        c.fill = PatternFill('solid', fgColor='FFF4CE')
+        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=9)
+    header(ws, 3, ['大功能', '范围', '交付完成/总数', '必须项完成/总数', '必须项完成率', 'KR 达标 V0', 'KR 达标 V1', 'KR 达标 V2', '关键待办与在等什么'],
+           [16, 34, 10, 10, 10, 9, 9, 9, 100])
+    r = 3
+    for g in ov:
+        r += 1
+        put(ws, r, 1, f'{g["key"]} {g["name"]}' if g['key'] != UNCAT else UNCAT, bold=True, fill='FFF4CE' if g['key'] == UNCAT else None)
+        put(ws, r, 2, g['scope'])
+        put(ws, r, 3, f'{g["done"]}/{g["n"]}', align=CENTER)
+        put(ws, r, 4, f'{g["must_done"]}/{g["must"]}', align=CENTER)
+        p = g['must_done'] / g['must'] if g['must'] else None
+        put(ws, r, 5, p, align=CENTER, numfmt='0%', fill=None if p is None else ('C6EFCE' if p >= 0.999 else 'FFEB9C'))
+        for j, P in enumerate(STAGES):
+            a, b = g['kr'][P]
+            put(ws, r, 6 + j, f'{a}/{b}' if b else '—', align=CENTER, fill=None if not b else ('C6EFCE' if a == b else 'FFEB9C'))
+        lines = [f'{t["icon"]} {t["id"]} {t["text"]}' + (f' — {t["wait"]}' if t['wait'] else '') for t in g['todo']]
+        lines += [f'⚠ {x["编号"]} {x["风险"]} — {x["应对/退路"]}' for x in g['risks']]
+        put(ws, r, 9, '\n'.join(lines) or '✅ 无：必须交付已完成，KR 各期均达标')
+        ws.row_dimensions[r].height = max(30, 15 * sum(1 + len(x) // 70 for x in lines) + 4)
+    r += 1
+    ws.cell(row=r, column=1, value=BIG_ALGO).font = F(False, 9, '595959')
+    ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=9)
+    ws.cell(row=r, column=1).alignment = WRAP
+    ws.row_dimensions[r].height = 30
+    # 子功能
+    r += 2
+    ws.cell(row=r, column=1, value='子功能 (交付完成情况；③ 的子功能前缀是显示期)').font = F(True, 12)
+    r += 1
+    header(ws, r, ['大功能', '子功能', '交付完成/总数', '必须项完成/总数', '完成率', '', '', '', '未完成的交付'])
+    so = sub_order(cats)
+    for g in ov:
+        for s, a, b in g['subs']:
+            sd = [d for d in dels if cat_of(cats, d['id'])['big'] == g['key'] and cat_of(cats, d['id'])['sub'] == s]
+            if not sd:
+                continue
+            r += 1
+            must = [d for d in sd if is_must(d)]
+            put(ws, r, 1, f'{g["key"]} {g["name"]}' if g['key'] != UNCAT else UNCAT)
+            put(ws, r, 2, s)
+            put(ws, r, 3, f'{a}/{b}', align=CENTER)
+            put(ws, r, 4, f'{sum(del_done(d, today) for d in must)}/{len(must)}', align=CENTER)
+            put(ws, r, 5, a / b, align=CENTER, numfmt='0%', fill='C6EFCE' if a == b else 'FFEB9C')
+            put(ws, r, 9, '；'.join(f'{d["状态"]} {d["id"]} {d["名称"]}' for d in sd if not del_done(d, today)))
+    # 全部归类
+    r += 2
+    ws.cell(row=r, column=1, value='全部归类 (categories.csv；交付 + KR + 风险)').font = F(True, 12)
+    r += 1
+    header(ws, r, ['大功能', '子功能', '类型', 'id', '名称', '阶段 · 级别', '状态', '完成/实测日期', '在等什么 (空 = 没写)'])
+    items = ([('交付', d['id'], d) for d in dels] + [('KR', k['kr_id'], k) for k in krs] + [('风险', x['编号'], x) for x in risks])
+    bo = list(BIGS) + [UNCAT]
+    def sk(it):
+        c = cat_of(cats, it[1])
+        subs = so.get(c['big'], [])
+        return (bo.index(c['big']), subs.index(c['sub']) if c['sub'] in subs else len(subs), ('交付', 'KR', '风险').index(it[0]))
+    for typ, i, x in sorted(items, key=sk):
+        r += 1
+        c = cat_of(cats, i)
+        put(ws, r, 1, f'{c["big"]} {BIGS[c["big"]][0]}' if c['big'] in BIGS else UNCAT, fill='FFF4CE' if c['big'] == UNCAT else None)
+        put(ws, r, 2, c['sub'])
+        put(ws, r, 3, typ, align=CENTER)
+        put(ws, r, 4, i, align=CENTER)
+        if typ == '交付':
+            st = EMOJI2ST.get(x['状态'], 'idle')
+            put(ws, r, 5, x['名称'])
+            put(ws, r, 6, f'{x.get("阶段", "")} · {x.get("级别") or "必须"}', align=CENTER)
+            put(ws, r, 7, x['状态'], fill=ST[st][1], align=CENTER)
+            put(ws, r, 8, x['_f'], align=CENTER, numfmt='yyyy-mm-dd')
+            put(ws, r, 9, c['wait'])
+        elif typ == 'KR':
+            sts = [kr_meets(x, by_kr[i], P, today) for P in STAGES]
+            real = [m for m in by_kr[i] if is_real(m['硬件/阶段']) and m['_d'] <= today]
+            put(ws, r, 5, f'{x["指标名"]} (最新 {fmt(real[-1]["_v"]) if real else "—"} {x["单位"]})')
+            put(ws, r, 6, '')
+            put(ws, r, 7, ' '.join(f'{P}{({"ok": "✅", "sim": "🔵", "no": "⬜"}).get(s, "—")}' for P, s in zip(STAGES, sts)), align=CENTER)
+            put(ws, r, 8, real[-1]['_d'] if real else None, align=CENTER, numfmt='yyyy-mm-dd')
+            put(ws, r, 9, c['wait'])
+        else:
+            put(ws, r, 5, x['风险'])
+            put(ws, r, 6, '')
+            put(ws, r, 7, x['状态(开/监控/关)'], fill=RISK_FILL.get(x['状态(开/监控/关)']), align=CENTER)
+            put(ws, r, 8, pdate(x['登记日期']), align=CENTER, numfmt='yyyy-mm-dd')
+            put(ws, r, 9, c['wait'] or x['应对/退路'])
+    ws.freeze_panes = 'A4'
+    return ws
 
 
 def safe_path(path):
@@ -854,12 +1150,29 @@ th{background:#1F4E78;color:#fff;font-weight:600}td.c{text-align:center}
 .grid{stroke:#eee}.axis{stroke:#999}
 .pb{page-break-before:always}
 @page{size:A4 landscape;margin:10mm}
+.h2s{font-size:11px;font-weight:400;color:#666;margin-left:6px}
+.warn{background:#FFF4CE;border:1px solid #E0B400;color:#7a5b00;padding:5px 8px;margin:4px 0 8px;font-weight:600}
+.bfn{border:1px solid var(--bd);border-left:5px solid #1F4E78;margin-bottom:6px;break-inside:avoid}.bfn.unc{border-left-color:#E0B400}
+.bh{background:#EEF2F7;padding:3px 8px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.bh .bn{font-size:17px;font-weight:700;color:#1F4E78}.bh b{font-size:14px}.bh .bs{color:#555}.bh .bx{margin-left:auto}.plus{color:#1a9d3c}
+.bb{display:grid;grid-template-columns:96px 320px 1fr;gap:12px;padding:4px 8px}
+.kv{font-size:20px;font-weight:700;line-height:1.15}.kl{color:#666}
+.sr{display:flex;align-items:center;gap:6px;line-height:1.5}.sn{flex:0 0 178px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mb{display:inline-block;height:7px;background:#e6e6e6;flex:none}.mb i{display:block;height:7px}
+.sd{color:#666;font-size:10px;margin:0 0 3px 8px;line-height:1.35}
+.tt{font-weight:700;color:#1F4E78;margin-bottom:1px}.ti{line-height:1.38;padding-left:1.5em;text-indent:-1.5em}.w{color:#666}
+.algo2{color:#555;font-size:10px;margin:2px 0 4px;line-height:1.5}
+.grp td{background:#DDE6F0;font-weight:700;font-size:12px}td.sbf{background:#f7f9fc;font-weight:600;width:96px}
+.dg th,.dg td.c{white-space:nowrap}
+.btag{color:#1F4E78;font-weight:700}
 """
     order = ['bad', 'doing', 'idle', 'ok']
     o = [f'<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>显性目的进度</title><style>{css}</style></head><body>']
     o.append(f'<h1>POV3D 显性目的进度看板 — {today}</h1>')
     o.append(f'<div class="sub">OKR：O = 观众看得到的效果，KR = 可量化指标。状态按「最新硬件实测 vs 当前期 {STAGE_KEY} 目标」自动判定。数据：zynq_pov/docs/progress/*.csv，脚本 mk_progress.py。</div>')
-    o.append(html_daily(ctx, today))
+    cats = ctx['cats']
+    o.append(html_overview(ctx['ov'], ctx['unm']))
+    o.append(html_daily(ctx, today, mid=html_dels_grouped(ctx['ov'], cats, dels, today)))
     # 状态汇总
     cnt = defaultdict(int)
     rows = []
@@ -876,7 +1189,8 @@ th{background:#1F4E78;color:#fff;font-weight:600}td.c{text-align:center}
             if i == 0:
                 pre = (f'<td rowspan="{len(gk)}" class="c">{g["id"]}</td><td rowspan="{len(gk)}"><b>{esc(g["显性目的"])}</b><br><span style="color:#666">{esc(g["实现途径"])}</span></td>'
                        f'<td rowspan="{len(gk)}" class="c {gs}">{ST[gs][0]}</td>')
-            rows.append(f'<tr>{pre}<td>{k["kr_id"]} {esc(k["指标名"])}</td><td class="c">{esc(k["单位"])}</td><td class="c">{cur}</td><td>{when}</td>'
+            tg_ = btags(cats, k['kr_id'])
+            rows.append(f'<tr>{pre}<td>{f"<span class=btag>{tg_}</span> " if tg_ else ""}{k["kr_id"]} {esc(k["指标名"])}</td><td class="c">{esc(k["单位"])}</td><td class="c">{cur}</td><td>{when}</td>'
                         f'<td class="c">{esc(k["V0 目标"])}</td><td class="c">{esc(k["V1 目标"])}</td><td class="c">{esc(k["V2 目标"])}</td><td class="c {s}">{ST[s][0]}</td>'
                         f'<td>{bar(v2_progress(k, show))}</td></tr>')
     summ = ' · '.join(f'{ST[k][0]} {ST[k][2]} {cnt[k]}' for k in ('ok', 'doing', 'idle', 'bad'))
@@ -928,12 +1242,7 @@ th{background:#1F4E78;color:#fff;font-weight:600}td.c{text-align:center}
         o.append(f'<tr><td><span style="color:#{pal[i % len(pal)]}">●</span> {esc(s)}</td>' +
                  ''.join(f'<td class="c">{next((x["_e"].strftime("%m-%d") for x in mta if x["_r"] == r and x["里程碑"] == s), "")}</td>' for r in reviews) + '</tr>')
     o.append('</table>')
-    o.append('<h2>交付清单</h2><table><tr><th>id</th><th>名称</th><th>goal</th><th>期</th><th>计划</th><th>完成</th><th>状态</th><th>分支/提交</th></tr>')
-    for d in dels:
-        st = EMOJI2ST.get(d['状态'], 'idle')
-        o.append(f'<tr><td class="c">{d["id"]}</td><td>{esc(d["名称"])}</td><td class="c">{esc(d["服务的 goal_id"])}</td><td class="c">{esc(d["期"])}</td>'
-                 f'<td class="c">{d["计划日期"][5:]}</td><td class="c">{d["完成日期"][5:]}</td><td class="c {st}">{d["状态"]}</td><td>{esc(d["分支/提交"])}</td></tr>')
-    o.append('</table></body></html>')
+    o.append('<div class="sub" style="margin-top:8px">交付清单已按大功能分组，放在前面「交付明细 — 按大功能 / 子功能分组」。</div></body></html>')
     with open(out, 'w', encoding='utf-8') as f:
         f.write('\n'.join(o))
 
@@ -970,14 +1279,33 @@ tr.up{background:#f0fbf2}tr.down{background:#fff1f1}tr.light td.v,tr.light td.n 
 .bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid #1F4E78;padding:8px 18px 10px;display:flex;align-items:center;gap:12px;z-index:9}
 .bar input[type=range]{flex:1;height:26px}.bar button{font-size:16px;padding:3px 12px;cursor:pointer;border:1px solid #888;background:#f3f3f3;border-radius:4px}
 .bar .lab{font-size:18px;font-weight:700;min-width:130px;text-align:center}.bar .lim{color:var(--mut);font-size:11px}
+.sec{font-size:15px;font-weight:700;margin:12px 0 6px;border-left:4px solid #1F4E78;padding-left:6px}.sec span{font-size:12px;font-weight:400;color:var(--mut);margin-left:6px}
+.warn{background:#FFF4CE;border:1px solid #E0B400;color:#7a5b00;border-radius:4px;padding:6px 10px;margin:0 0 8px;font-weight:600}
+.bfn{background:#fff;border:1px solid var(--bd);border-left:5px solid #1F4E78;border-radius:4px;margin-bottom:8px;overflow:hidden}.bfn.unc{border-left-color:#E0B400}
+.bh{background:#eef2f7;padding:5px 10px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.bh .bn{font-size:19px;font-weight:700;color:#1F4E78}.bh b{font-size:15px}.bh .bs{color:#555;font-size:12px}.bh .bx{margin-left:auto;font-size:12px}
+.bb{display:grid;grid-template-columns:110px minmax(260px,340px) 1fr;gap:14px;padding:7px 10px}
+@media(max-width:900px){.bb{grid-template-columns:1fr}}
+.kv{font-size:24px;font-weight:700;line-height:1.15}.kl{color:var(--mut);font-size:12px}
+.sr{display:flex;align-items:center;gap:6px;line-height:1.6}.sn{flex:0 0 190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sc{font-size:12px}
+.mb{display:inline-block;width:70px;height:8px;background:#e6e6e6;flex:none}.mb i{display:block;height:8px}
+.sd{color:var(--mut);font-size:11px;margin:0 0 4px 10px;line-height:1.4}
+.tt{font-weight:700;color:#1F4E78;margin-bottom:2px}.ti{line-height:1.5;padding-left:1.5em;text-indent:-1.5em}.w{color:#666}
+tr.sh td{background:#f3f6fa;font-weight:600;color:#1F4E78;border-top:1px solid #dde3ea}
+.btag{color:#1F4E78;font-weight:700;margin-right:2px}
 </style></head><body>
 <h1>POV3D 显性目的进度 — 交互看板</h1>
 <div class="sub">生成日期 __TODAY__ · 拖动底部时间滑块 (或按 ← →) 查看任一天的状态；数据内嵌，不联网。数据源 zynq_pov/docs/progress/*.csv，脚本 mk_progress.py。</div>
 <div class="vf" id="vf"></div>
+<div class="sec">大功能总览<span>三期 V0/V1/V2 的 ①②④ 共用，③ 按期换显示后端；随时间滑块和上面的 V0/V1/V2 筛选变化；归类见 categories.csv</span></div>
+<div id="big"></div>
+<div class="algo" id="bigalgo"></div>
+<div class="sec">阶段达成率<span>V0/V1/V2 统一口径，算法见下</span></div>
 <div class="top" id="top"></div>
 <div class="algo">达成率_P = (P 目标已达标的 KR 数 + P 需要的交付里已完成数) ÷ (有 P 目标的 KR 数 + P 需要的交付总数)；只计「必须」项 (灰显的是加分项，不进分子分母)；交付需要是嵌套的：V0 = 阶段 V0，V1 = V0 + V1准备，V2 = V1 + V2。KR 达标 = 截至所选日期的最新<b>硬件实测</b>值达到 P 目标；
 仿真/台架点不算达标，显示为 🔵。图例：✅ 达成　⬜ 未达成　🔵 仅仿真/台架已达成　— 无该期目标/不需要。名称前 <span class="pm plus">+</span> = 所选当天新完成/新达标，<span class="pm minus">−</span> = 当天变差。</div>
 <div id="gates"></div>
+<div class="vf" id="gf"></div>
 <div id="goals"></div>
 <div id="risks"></div>
 <div class="bar"><button id="prev" title="前一天 (←)">◀</button><input type="range" id="sl" min="0" value="0" step="1"><button id="next" title="后一天 (→)">▶</button>
@@ -1056,7 +1384,7 @@ function gatesHtml(d){const lists=[...new Set(DATA.gates.map(g=>g.list))].filter
  return h+'</div>'}
 function risksHtml(d){const rs=DATA.risks.filter(r=>r.date<=d);
  return `<div class="blk"><div class="gh"><b>风险表</b><span>开 ${rs.filter(r=>r.status==='开').length} · 监控 ${rs.filter(r=>r.status==='监控').length} · 关 ${rs.filter(r=>r.status==='关').length}（按登记日期随滑块显示）</span></div><table><tr><th>编号</th><th>状态</th><th>风险</th><th>影响</th><th>应对 / 退路</th><th>负责</th></tr>`+
- rs.map(r=>`<tr class="r-${r.status}"><td class="c">${esc(r.id)}</td><td class="c">${esc(r.status)}</td><td>${esc(r.risk)}</td><td>${esc(r.impact)}</td><td>${esc(r.plan)}</td><td class="c">${esc(r.owner)}</td></tr>`).join('')+'</table></div>'}
+ rs.map(r=>`<tr class="r-${r.status}"><td class="c">${btag(r.id)}${esc(r.id)}</td><td class="c">${esc(r.status)}</td><td>${esc(r.risk)}</td><td>${esc(r.impact)}</td><td>${esc(r.plan)}</td><td class="c">${esc(r.owner)}</td></tr>`).join('')+'</table></div>'}
 function goalsHtml(d){const prev=addDay(d,-1);let h='';
  for(const g of DATA.goals){const ks=DATA.krs.filter(k=>k.goal===g.id&&krVis(k)),ds=DATA.dels.filter(x=>x.goals[0]===g.id&&delVis(x));if(!ks.length&&!ds.length)continue;
   const sub=STG.filter(P=>!FP()||P===FP()).map(P=>{let a=0,b=0;ks.forEach(k=>{const s=krState(k,P,d);if(s!==null){b++;if(s==='ok')a++}});return `${P} ${a}/${b}`}).join(' · ');
@@ -1064,10 +1392,68 @@ function goalsHtml(d){const prev=addDay(d,-1);let h='';
   h+=`<div class="goal"><div class="gh"><b>${g.id}. ${esc(g.name)}</b><span>KR 达标 ${sub} ｜ 必须交付 完成 ${all}/${dm.length}${v1.length?`（V1 准备 ${v1d}/${v1.length}）`:''}</span></div>
   <table><tr><th>名称</th><th>当前值</th><th>V0</th><th>V1</th><th>V2</th><th>完成/实测日期</th></tr>${ks.map(k=>krRow(k,d,prev)).join('')}${ds.map(x=>delRow(x,d)).join('')}</table></div>`}
  return h}
-function render(){const d=dates[cur];$('vf').innerHTML=vfHtml();$('top').innerHTML=cards(cur);$('goals').innerHTML=goalsHtml(d);$('gates').innerHTML=gatesHtml(d);$('risks').innerHTML=risksHtml(d);
+// ---- 大功能 (categories.csv): 只用于分组和总览, 不参与上面的达成率
+const BIGS=DATA.bigs,CATS=DATA.cats,SUBS=DATA.subs,UNC='未分类';
+const catOf=id=>CATS[id]||{big:UNC,sub:UNC,wait:''};
+const isMust=x=>(x.level||'必须')==='必须';
+const phaseOf=s=>s.split('·')[0].trim();
+const btag=id=>{const b=catOf(id).big;return b===UNC?'':`<span class="btag">${b}</span>`};
+const UNM=[...DATA.dels.map(x=>x.id),...DATA.krs.map(k=>k.id),...DATA.risks.map(r=>r.id)].filter(i=>!CATS[i]);
+const BIGALL=[...BIGS,{k:UNC,name:UNC,scope:DATA.uncScope}];
+let G='big';try{if(localStorage.getItem('pov3d_group')==='goal')G='goal'}catch(e){}
+function bigStats(d){const out=[];
+ for(const b of BIGALL){
+  const ds=DATA.dels.filter(x=>catOf(x.id).big===b.k&&delVis(x)),ks=DATA.krs.filter(k=>catOf(k.id).big===b.k&&krVis(k)),rs=DATA.risks.filter(r=>catOf(r.id).big===b.k&&(r.date||d)<=d);
+  if(b.k===UNC&&!ds.length&&!ks.length&&!rs.length)continue;
+  const subs=new Map((SUBS[b.k]||[]).map(s=>[s,[0,0]]));
+  for(const x of ds){const s=catOf(x.id).sub;if(!subs.has(s))subs.set(s,[0,0]);const v=subs.get(s);v[1]++;if(isDone(x,d))v[0]++}
+  const phases=new Map();
+  if(b.k==='③')for(const [s,[a,n]] of subs){if(!n)continue;const p=phaseOf(s);if(!phases.has(p))phases.set(p,[0,0,[]]);const v=phases.get(p);v[0]+=a;v[1]+=n;if(s.includes('·'))v[2].push([s.slice(s.indexOf('·')+1).trim(),a,n])}
+  const kr={};for(const P of STG){if(FP()&&P!==FP())continue;let a=0,n=0;for(const k of ks){const s=krState(k,P,d);if(s===null)continue;n++;if(s==='ok')a++}kr[P]=[a,n]}
+  const pk=x=>x.plan||'9999-99-99';
+  const todo=ds.filter(x=>isMust(x)&&!isDone(x,d)).sort((x,y)=>pk(x)<pk(y)?-1:pk(x)>pk(y)?1:(x.id<y.id?-1:x.id>y.id?1:0))
+   .map(x=>({icon:x.status||'⬜',id:x.id,text:x.name,wait:catOf(x.id).wait||x.note}));
+  const kt=[];for(const k of ks){for(let i=0;i<STG.length;i++){const P=STG[i];if(FP()&&P!==FP())continue;const s=krState(k,P,d);
+   if(s==='no'||s==='sim'){const r=latest(k,d,true);kt.push([i,{icon:s==='sim'?'🔵':'⬜',id:k.id,text:`${k.name} ${r?fmtv(r.v):'—'} → ${P} 目标 ${fmtv(k.t[P])} ${k.unit}`+(s==='sim'?'（仅仿真/台架达标）':''),wait:catOf(k.id).wait}]);break}}}
+  kt.sort((a,b)=>a[0]-b[0]);todo.push(...kt.map(x=>x[1]));
+  out.push({key:b.k,name:b.name,scope:b.scope,n:ds.length,done:ds.filter(x=>isDone(x,d)).length,must:ds.filter(isMust).length,mustDone:ds.filter(x=>isMust(x)&&isDone(x,d)).length,
+   neu:ds.filter(x=>x.status==='✅'&&x.done===d).map(x=>x.id),subs:[...subs],phases:[...phases],kr,todo,risks:rs.filter(r=>r.status==='开')})}
+ return out}
+function mini(a,n){const p=n?a/n:0,c=p>=0.999?'#70AD47':p>=0.5?'#FFC000':'#ED7D31';return `<span class="mb"><i style="width:${(p*100).toFixed(0)}%;background:${c}"></i></span>`}
+function bigHtml(d){let h='';
+ if(UNM.length)h+=`<div class="warn">⚠ 未分类 ${UNM.length} 项：${esc(UNM.join('、'))} —— 请在 categories.csv 补一行 (id,大功能,子功能,在等什么)</div>`;
+ for(const g of bigStats(d)){const mp=g.must?(g.mustDone/g.must*100).toFixed(1).replace(/\.0$/,'')+'%':'—';
+  const krs=Object.entries(g.kr).filter(([P,v])=>v[1]).map(([P,v])=>`${P} ${v[0]}/${v[1]}`).join(' · ')||'—';
+  h+=`<div class="bfn${g.key===UNC?' unc':''}"><div class="bh"><span class="bn">${g.key===UNC?'?':g.key}</span><b>${esc(g.name)}</b><span class="bs">${esc(g.scope)}</span><span class="bx">${g.neu.length?`<span class="pm plus">+</span>当天新完成 ${esc(g.neu.join('、'))}　`:''}KR 达标 ${krs}</span></div><div class="bb">`+
+   `<div><div class="kv">${g.done}/${g.n}</div><div class="kl">交付完成</div><div class="kv">${mp}</div><div class="kl">必须项 ${g.mustDone}/${g.must}</div></div><div>`;
+  if(g.phases.length){for(const [p,[a,n,det]] of g.phases)h+=`<div class="sr"><span class="sn"><b>${esc(p)}</b></span>${mini(a,n)}<span class="sc">${a}/${n}</span></div>`+(det.length?`<div class="sd">${esc(det.map(([s,x,y])=>s+' '+x+'/'+y).join(' · '))}</div>`:'')}
+  else for(const [s,[a,n]] of g.subs){if(n)h+=`<div class="sr"><span class="sn">${esc(s)}</span>${mini(a,n)}<span class="sc">${a}/${n}</span></div>`}
+  if(!g.n)h+='<div class="sim">(当前筛选下没有交付)</div>';
+  h+=`</div><div><div class="tt">关键待办 / 在等什么</div>`;
+  if(!g.todo.length&&!g.risks.length)h+='<div class="ti">✅ 无：必须交付已完成，KR 均达标</div>';
+  for(const t of g.todo)h+=`<div class="ti">${t.icon} <b>${esc(t.id)}</b> ${esc(t.text)}${t.wait?` <span class="w">— ${esc(t.wait)}</span>`:''}</div>`;
+  for(const r of g.risks)h+=`<div class="ti">⚠ <b>${esc(r.id)}</b> ${esc(r.risk)} <span class="w">— ${esc(r.plan)}</span></div>`;
+  h+='</div></div></div>'}
+ return h}
+function gfHtml(){return [['big','按大功能分组'],['goal','按显性目的分组']].map(o=>`<button data-g="${o[0]}" class="${o[0]===G?'on':''}">${o[1]}</button>`).join('')+'<span class="ex">下面的功能列表 (KR + 交付) 怎么分组；两种分组内容相同</span>'}
+function bigListHtml(d){const prev=addDay(d,-1);let h='';
+ for(const b of BIGALL){
+  const ks=DATA.krs.filter(k=>catOf(k.id).big===b.k&&krVis(k)),ds=DATA.dels.filter(x=>catOf(x.id).big===b.k&&delVis(x));if(!ks.length&&!ds.length)continue;
+  const subs=[...(SUBS[b.k]||[])];for(const x of [...ks,...ds]){const s=catOf(x.id).sub;if(!subs.includes(s))subs.push(s)}
+  const dm=ds.filter(isMust),done=ds.filter(x=>isDone(x,d)).length,md=dm.filter(x=>isDone(x,d)).length;
+  const sub=STG.filter(P=>!FP()||P===FP()).map(P=>{let a=0,n=0;ks.forEach(k=>{const s=krState(k,P,d);if(s!==null){n++;if(s==='ok')a++}});return `${P} ${a}/${n}`}).join(' · ');
+  h+=`<div class="goal"><div class="gh"><b>${b.k===UNC?'⚠ ':b.k+' '}${esc(b.name)}</b><span>KR 达标 ${sub} ｜ 交付完成 ${done}/${ds.length} ｜ 必须项 ${md}/${dm.length}</span></div>
+  <table><tr><th>名称</th><th>当前值</th><th>V0</th><th>V1</th><th>V2</th><th>完成/实测日期</th></tr>`;
+  for(const s of subs){const sk=ks.filter(k=>catOf(k.id).sub===s),sd=ds.filter(x=>catOf(x.id).sub===s);if(!sk.length&&!sd.length)continue;
+   h+=`<tr class="sh"><td colspan="6">${esc(s)} <span class="sim">${sd.length?'交付 '+sd.filter(x=>isDone(x,d)).length+'/'+sd.length:''}${sd.length&&sk.length?' · ':''}${sk.length?'KR '+sk.length+' 个':''}</span></td></tr>`+sk.map(k=>krRow(k,d,prev)).join('')+sd.map(x=>delRow(x,d)).join('')}
+  h+='</table></div>'}
+ return h}
+function render(){const d=dates[cur];$('vf').innerHTML=vfHtml();$('big').innerHTML=bigHtml(d);$('top').innerHTML=cards(cur);$('gf').innerHTML=gfHtml();$('goals').innerHTML=G==='goal'?goalsHtml(d):bigListHtml(d);$('gates').innerHTML=gatesHtml(d);$('risks').innerHTML=risksHtml(d);
  const wd='日一二三四五六'[new Date(d+'T00:00:00Z').getUTCDay()];$('lab').textContent=d+' 周'+wd;$('sl').value=cur}
 const sl=$('sl');sl.max=dates.length-1;$('lim').textContent=dates[0].slice(5)+' ~ '+dates[dates.length-1].slice(5);
 $('vf').addEventListener('click',e=>{const f=e.target.dataset&&e.target.dataset.f;if(!f)return;F=f;try{location.hash=f}catch(_){}render()});
+$('gf').addEventListener('click',e=>{const g=e.target.dataset&&e.target.dataset.g;if(!g)return;G=g;try{localStorage.setItem('pov3d_group',g)}catch(_){}render()});
+$('bigalgo').textContent=DATA.bigAlgo;
 window.addEventListener('hashchange',()=>{F=hashF();render()});
 sl.addEventListener('input',()=>{cur=+sl.value;render()});
 const go=n=>{cur=Math.min(dates.length-1,Math.max(0,cur+n));render()};
@@ -1078,8 +1464,9 @@ render();
 """
 
 
-def build_interactive(goals, krs, mets, dels, today, out):
+def build_interactive(goals, krs, mets, dels, today, out, cats=None):
     gates, risks = read_opt('gates.csv'), read_opt('risks.csv')
+    cats = load_cats() if cats is None else cats
     import json
     ds = [m['_d'] for m in mets] + [d['_p'] for d in dels if d['_p']] + [d['_f'] for d in dels if d['_f']]
     start = min(ds)
@@ -1090,7 +1477,10 @@ def build_interactive(goals, krs, mets, dels, today, out):
                  't': {P: num(k[f'{P} 目标']) for P in STAGES}} for k in krs],
         'mets': [{'d': m['日期'], 'kr': m['kr_id'], 'v': m['_v'], 'real': is_real(m['硬件/阶段']), 'i': m['_i']} for m in mets],
         'dels': [{'id': d['id'], 'name': d['名称'], 'goals': d['服务的 goal_id'].split(';'), 'stage': d.get('阶段', ''),
-                  'plan': d['计划日期'], 'done': d['完成日期'], 'status': d['状态'], 'level': d.get('级别', '必须')} for d in dels],
+                  'plan': d['计划日期'], 'done': d['完成日期'], 'status': d['状态'], 'level': d.get('级别', '必须'),
+                  'note': d['分支/提交']} for d in dels],
+        'bigs': [{'k': k, 'name': n, 'scope': s} for k, (n, s) in BIGS.items()],
+        'cats': cats, 'subs': sub_order(cats), 'uncScope': UNCAT_SCOPE, 'bigAlgo': BIG_ALGO,
         'gates': [{'list': g['清单'], 'seq': g['序号'], 'item': g['条目'], 'links': [x.strip() for x in g['关联(交付/KR 编号)'].split(';') if x.strip()], 'status': g['状态']} for g in gates],
         'risks': [{'id': r['编号'], 'risk': r['风险'], 'impact': r['影响'], 'plan': r['应对/退路'], 'owner': r['负责'], 'status': r['状态(开/监控/关)'], 'date': r['登记日期']} for r in risks],
     }
@@ -1145,6 +1535,12 @@ def main():
     ctx = {'cur': compute_rates(krs, mets, dels, today), 'rates': rates, 'by_kr': by_kr,
            'changes': kr_changes(krs, by_kr, today), 'log': read_log(today),
            'gates': gate_states(read_opt('gates.csv'), krs, by_kr, dels, today), 'risks': read_opt('risks.csv')}
+    cats = load_cats()
+    ctx['cats'] = cats
+    ctx['ov'] = big_overview(cats, dels, krs, by_kr, ctx['risks'], today)
+    ctx['unm'] = unmapped(cats, dels, krs, ctx['risks'])
+    if ctx['unm']:
+        print(f'提示: 未分类 {len(ctx["unm"])} 项 (categories.csv 里没有): {", ".join(ctx["unm"])}')
     wb = Workbook()
     sheet_status(wb, goals, krs, by_kr, today)
     sheet_trends(wb, krs, by_kr)
@@ -1152,6 +1548,7 @@ def main():
     sheet_mta(wb, mta)
     sheet_history(wb, krs, mets)
     sheet_daily(wb, ctx, today)
+    sheet_big(wb, ctx['ov'], cats, dels, krs, ctx['risks'], by_kr, ctx['unm'], today)
     base = os.path.join(HERE, f'显性目的进度_{today}')
     xlsx = safe_path(base + '.xlsx')
     try:
@@ -1164,7 +1561,7 @@ def main():
     build_html(goals, krs, by_kr, dels, mta, today, htm, ctx)
     print('写出', xlsx, htm)
     ih = safe_path(os.path.join(HERE, '显性目的进度_交互.html'))
-    build_interactive(goals, krs, mets, dels, today, ih)
+    build_interactive(goals, krs, mets, dels, today, ih, cats)
     print('写出', ih)
     if not a.no_pdf:
         to_pdf(htm, base + '.pdf')

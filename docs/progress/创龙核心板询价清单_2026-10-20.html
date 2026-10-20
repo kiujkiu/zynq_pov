@@ -35,7 +35,7 @@ td,th{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:l
 <h2>C. 要厂家书面答复的技术问题</h2>
 <table><tr><th>#</th><th>问题</th><th>我方背景</th></tr>
 <tr><td>C1</td><td class="red">DDR4 实测带宽：PL 经 HP0/HP1 读 DDR 的实测 GB/s？DDRC 端口按地址还是按 master 分？有无 QoS 配置？</td><td>我方 2 期需 PL 持续读 ≈1.5 GB/s；现 16 bit 板只余 11%</td></tr>
-<tr><td>C2</td><td class="red">2 GB 配置的容量问题：DR1M90 手册写 DDR 最大 1 GB，2 GB 型号如何寻址？</td><td>我方 1 GB 够用，问清避免选错</td></tr>
+<tr><td>C2</td><td>2 GB 型号在 Linux 下内存映射是否已配好（低 1.5 GB + 高位扩展段）？</td><td>芯片本身支持 DDR4 2 GB（UG1214 §14.1.3 表 14-1），已查清；我方 1 GB 够用，只确认软件侧</td></tr>
 <tr><td>C3</td><td>固定方式确认：4 个安装孔用 M2 螺丝 + 底板 M2-L4 贴片螺母（高度 4 mm = B2B 合高）锁紧即可？孔位坐标与推荐扭矩？</td><td>核心板装转子，靠 4 颗螺丝固定（已定，不打胶）</td></tr>
 <tr><td>C4</td><td>Bank 11 / 33 是否完整 24 对差分都可用（无核心板内部占用、无上电强制脚）？Bank 33 VCCO 2.5 V 下 LVDS25 输出是否验证过？</td><td>我方上行 LVDS 用这两组</td></tr>
 <tr><td>C5</td><td>PL 位流加载方式：PS 运行中从 Linux 重载 PL 是否支持？冷启动从 eMMC 自动加载？</td><td>我方无串口远程运维，靠网络换位流</td></tr>

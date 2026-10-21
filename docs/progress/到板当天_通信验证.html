@@ -64,10 +64,10 @@ ol li,ul li{margin:3px 0}
 <h2>三、位流 (路径全部可配)</h2>
 <div class="wrap"><table>
 <tr><th>位流</th><th>缺省名 / 位置</th><th>做什么</th><th>现状</th></tr>
-<tr><td>主控 (带 PRBS 档)</td><td><code>COMM_KIT</code> (缺省 <code>D:\claude_workspace\pov3d\_work\v1_main_1019</code>) / <code>pov_m90_pure_ul800_p1_b12_sb_prbs_io25.bin</code></td><td>全部项目含 C3 PRBS</td><td><span class="warn">待放行构建</span> (第七节; 需先合入 D38 的 POV_IOV 开关)</td></tr>
-<tr><td>主控 (无 PRBS) <b>= 当前缺省</b></td><td>同目录 <code>pov_m90_pure_ul800_p1_b12_sb_io25.bin</code> (md5 <code>2b4f3311…</code>; 2.5V, D27 边带, 光电 U12; io18 备用版 6493e837 板上 2.5V 时会被 P15 拒)</td><td>除 PRBS 外全部; C3 判 FAIL 并给构建命令</td><td><span class="ok">已出</span> (task/d38-faceb b56a8f1, 时序过)</td></tr>
-<tr><td>桥 e60cp (PRBS 计数)</td><td><code>gw5a_bridge/results/gw25S_bridge_p1_e60cp_d166p67/bridge.fs</code></td><td>C3 PRBS 计数经边带读 (0x60..0x6F)</td><td><span class="warn">待放行构建</span></td></tr>
-<tr><td>桥 e60c (退路)</td><td><code>COMM_BRIDGE_DIR=gw5a_bridge/results/gw25S_bridge_p1_e60c_d166p67</code> (md5 7f612855)</td><td>除 PRBS 外全部</td><td>已入库 (D36 投板版)</td></tr>
+<tr><td>主控 (带 PRBS 档)</td><td><code>COMM_KIT</code> (缺省 <code>D:\claude_workspace\pov3d\_work\v1_main_1019</code>) / <code>pov_m90_pure_ul800_p1_b12_sb_prbs_io25.bin</code></td><td>全部项目含 C3 PRBS</td><td><span class="ok">已出</span> (D39b, md5 <code>e7c33e78…</code>, 2.5V 档, 0 违例; 缺省 PRBS 档就是它)</td></tr>
+<tr><td>主控 (无 PRBS, 退路)</td><td>同目录 <code>pov_m90_pure_ul800_p1_b12_sb_io25.bin</code> (md5 <code>2b4f3311…</code>; 2.5V, D27 边带, 光电 U12; io18 备用版 6493e837 板上 2.5V 时会被 P15 拒)</td><td>除 PRBS 外全部; C3 判 FAIL 并给构建命令</td><td><span class="ok">已出</span> (task/d38-faceb b56a8f1, 时序过)</td></tr>
+<tr><td>桥 e60cp (PRBS 计数)</td><td><code>gw5a_bridge/results/gw25_bridge_p1_e60cp_d166p67/bridge.fs</code> (<b>[D60] 起缺省 UG324 真器件版 GW5A-LV25UG324C2/I1</b>, md5 <code>adb761c2…</code>; <code>V1_BR_DEV=25S</code> 切回旧 S 版 <code>gw25S_…</code> <code>6d5b3db3…</code>)</td><td>C3 PRBS 计数经边带读 (0x60..0x6F)</td><td><span class="ok">已出</span> (0 违例, BUILD 20261019)</td></tr>
+<tr><td>桥 e60c (退路)</td><td><code>COMM_BRIDGE_DIR=gw5a_bridge/results/gw25_bridge_p1_e60c_d166p67</code> (md5 <code>c448b650…</code>; 旧 S 版 7f612855 仅 <code>V1_BR_DEV=25S</code>)</td><td>除 PRBS 外全部</td><td>已入库 (D60 UG324 版)</td></tr>
 <tr><td>扫描档</td><td><code>..._sb_prbs_io25</code> 名里 ul800→ul1000/ul1200; 桥 <code>..._e60cp_d166p67_l1000/_l1200</code></td><td><code>--sweep</code></td><td>可选, 待构建 (仅作 PRBS, 不作视频)</td></tr>
 </table></div>
 <p class="sub">每个主控位流旁放 <code>&lt;bin&gt;.md5</code>; 位流电平档取 <code>&lt;bin&gt;.vccio</code> 旁文件 (写 25), 没有就按名字 (<code>_io18</code> = 1.8V, 其余按 2.5V)。与 <code>COMM_VCCIO</code> (缺省 25) 不符 = P15 FAIL, <b>脚本停在 S0 不碰板</b>。也可直接 <code>COMM_MAIN_BIN=文件名</code> / <code>COMM_MAIN_MD5=…</code> 指定。</p>
@@ -99,8 +99,8 @@ bash d39_comm/comm_check.sh --dry-run --inject prbs_err   # 看故障时报告�
 <pre># 主流程 (推荐: 板上 JTAG 灌桥, 不接 PC 下载器; 主控位流缺省取 _work/v1_main_1019, 有 _sb_prbs_io25 就自动用它)
 bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load sram
 
-# PRBS 档位流都还没出时: 用现成的 _sb_io25 + 桥 e60c (其余照测, C3 判 FAIL 并打印构建命令)
-COMM_BRIDGE_DIR=$PWD/gw5a_bridge/results/gw25S_bridge_p1_e60c_d166p67 \
+# (退路) 只想用无 PRBS 的 _sb_io25 + 桥 e60c 时 (其余照测, C3 判 FAIL 并打印构建命令; 缺省 PRBS 档位流都已出, 一般不用)
+COMM_BRIDGE_DIR=$PWD/gw5a_bridge/results/gw25_bridge_p1_e60c_d166p67 \
   bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load sram
 
 # 长跑 (C3 改成 1 h / 8 h; 也可 --prbs-dur 秒) / 只跑某几段 / 从某段起
@@ -129,15 +129,32 @@ bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load sram --sweep</p
 </table></div>
 <p class="sub">报告每行: <code>CHECK 编号 PASS|FAIL|WARN|SKIP | 判据 | 实测</code>; FAIL/WARN 后紧跟"最可能原因 / 下一步" (原因表在 <code>d39_comm/comm_stages.sh</code> 与 <code>v1_bringup/bringup.sh</code> 的 WHY[…])。硬 FAIL 默认停后续 (C3/C5/C8 例外, 照跑后面的边带与恢复项), 直奔 S9 安全恢复; <code>--keep-going</code> 继续。</p>
 
-<h2>七、需要用户放行的构建 (本次只准备, 未运行)</h2>
+<h2>七、位流重编命令 (位流都已出; 只在要重编时用, 需用户放行)</h2>
 <pre># 1) 桥 e60cp (= e60c + 13 lane PRBS 计数, 约 3 min; 判据: run.log 无 ERROR, 0 违例, dclk Fmax ≥ 166.667, run.cst ul_p[12]=R7,T7)
-flock ~/.gw5a_synth.lock bash gw5a_bridge/p1/build_p1.sh e60cp
+P1_DEV=25 flock ~/.gw5a_synth.lock bash gw5a_bridge/p1/build_p1.sh e60cp   # [D60] P1_DEV=25 = ACG525 真器件 UG324 (build_p1.sh 自身缺省仍是 25S, 不带会编成旧 S 版)
 # 2) 主控 PRBS 档 (= _sb + CTRL bit10 PRBS7, 约 20 min; build.sh 自带 flock; 2.5V 档与主会话 _sb_io25 同口径)
 POV_ZERO_OK=1 POV_DEVICE=DR1M90GEG484 POV_PURE=1 POV_UL=800 POV_UL_GEOM=p1 POV_UL_BPC=12 POV_UL_PINS=v3 POV_UL_SB=1 POV_UL_PRBS=1 POV_SPIN_PIN=v3 POV_IOV=25 bash td_pov/build.sh
 #    产物 td_pov/out/pov_m90_pure_ul800_p1_b12_sb_prbs_io25.bin → 拷进 _work/v1_main_1019/ 并写 .md5 (md5sum 格式)
-#    注: 2.5V/1.8V 档以 D38 (task/d38-faceb) 的构建开关为准; 合入 D38 后按它的口径加 POV_UL_PRBS=1 即可
+#    注: 现交付版 e7c33e78 是 D53 加余量源之前编的 (V1 PRBS 档上行余量未重测, D45b 同源 g2 单面当时仅 +0.036 ns); 若通信误码不过先怀疑它, 再按本命令用新源重编
 # 3) (可选, --sweep) 扫描档: 桥 P1_LINE=1000|1200 …build_p1.sh e60cp; 主控同 2) 换 POV_UL=1000|1200 (仅作 PRBS)</pre>
 
-<p class="sub">出处: d39_comm/ (comm_stages.sh / meas.py / prbs.py / verify.sh)、d27_link/SPEC.md (边带协议/寄存器/H-1…H-6)、d33_jtag/README.md、d36_hwsync/REPORT.md §五、d37_io18/REPORT.md、td_pov/pure_ul/C1_BENCH.md、gw5a_bridge/c1_bench/README.md §7.2–§8、v1_bringup/回板当天.md。</p>
+<h2>八、通信通过之后: 灌桥 → 主控位流 → 软件 → 出图 (V1 g2, 单面再双面) [D63 假板彩排核过]</h2>
+<pre># 1) 单面 (缺省 --grid g2: g2 单面主控 4ce589d5 + 桥 e60c c448b650 + lut_p1g2_357 + voxslice 1.2 + 192 网格内容)
+bash v1_bringup/bringup.sh --board &lt;板名&gt; --set d27 --bridge-load sram --no-prbs
+# 2) 双面 (g2 双面主控 b035e0b8 + 面 A 桥 e60c + 面 B 桥 e60cb 1aeb1651, 两器件 JTAG 链)
+bash v1_bringup/bringup.sh --board &lt;板名&gt; --faces AB --bridge-load sram --no-prbs
+# 退路: 老 160x180 网格位流 (v1_main_1019: 单面 2b4f3311 / 双面 92a7f049)
+bash v1_bringup/bringup.sh --board &lt;板名&gt; --set d27 --grid v1 --bridge-load sram
+# 回板前整套假板彩排 (通信 → 灌桥 → 主控 → 出图 → 单面/双面, 含反例; 全过 exit 0)
+bash d63_rehearsal/run.sh</pre>
+<ul>
+<li><code>--no-prbs</code>: 800M PRBS 已在通信验证做完, 出图脚本的 S2 (D28 老 1.2G 发端档, e60c 桥没有 PRBS 计数, 只能人读) 重复, 跳过。</li>
+<li>通信那步桥里灌的是 e60cp (PRBS 计数档), 出图那步 S3b 会重新灌 e60c/e60cb; 两步之间不要 <code>--skip-bridge</code>。</li>
+<li>g2 位流 (D45b/D53, md5 在 <code>_work/d53_out</code>, 取代 D45b 的 1ef6d9c7/a1c29b04) 读 V2 网格 192×216, 日志先看 <code>V1 网格 192×216 (... GEOM_G2 0xc0d8a0b4)</code>; 内容必须 192 网格 (V0 卡上 160 的 walking.pvs 会被逐帧 NAK, 屏全黑); 脚本缺省现渲 walking.glb。</li>
+<li>上电前先看核心板芯片丝印: 桥位流按 C2/I1 编; 若是 ES 等级 dclk 166.67 没有余量 (D60, 只到 152.9 MHz), 下行出错先查它。</li>
+<li>V2 桥/主控通信 (不属本次 V1 回板): <code>comm_check.sh --phase v2 [--v2-bridge p2p|p2|p2b] [--v2-rate 1000]</code>, 桥取 <code>_work/d57_out</code> (D58 复验合并前不换)。</li>
+</ul>
+
+<p class="sub">出处: d39_comm/ (comm_stages.sh / meas.py / prbs.py / verify.sh)、d27_link/SPEC.md (边带协议/寄存器/H-1…H-6)、d33_jtag/README.md、d36_hwsync/REPORT.md §五、d37_io18/REPORT.md、td_pov/pure_ul/C1_BENCH.md、gw5a_bridge/c1_bench/README.md §7.2–§8、v1_bringup/回板当天.md、d63_rehearsal/FINDINGS.md。</p>
 </body>
 </html>

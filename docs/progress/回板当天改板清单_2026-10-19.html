@@ -20,7 +20,7 @@ td,th{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:l
 <tr><td>1</td><td>桥转接板</td><td><span class="r">●</span> 核心板压到 CN3 上时<b>方向不能反</b>。两座焊盘 180° 对称，装反也插得进。建议先在实物上标出方向。</td><td>上电前量：CN3 第 1 脚（FPGA_TCK）与核心板 TCK 导通；VCC3P3 对地不短路。</td></tr>
 <tr><td>2</td><td>SoC 底板</td><td><span class="r">●</span> <b>24V 临时防护</b>（P4：3 脚 24V，4 脚地）。台架用限流电源（0.5–1 A）；线束串 2A 保险丝 + 肖特基二极管（如 SS54）防反接；P4 背面并一颗 TVS（SMBJ26A 一类，先核 TPS56A37 的输入耐压上限）。</td><td>底板 24V 输入没有保险丝、TVS 和防反接。<b>上滑环前必须做完</b>。</td></tr>
 <tr><td>3</td><td>SoC 模块</td><td><span class="r">●</span> 主控 bank33（丝印 BK35，J2）改 <b>2.5V</b>：拔 J2 帽，从底板 H7 或 H9（1 脚 PWR2V5，2 脚地）飞线到 J2 的 bank 供电脚。只验面 A 时 J1 不动。</td><td>加载 LVDS25 位流前量 2.40–2.60 V。位流 IO 标准与 bank 电压不符会伤器件（UG1210 p13）。守"模块先上电、最后断电"。</td></tr>
-<tr><td>3b</td><td>SoC 底板</td><td><span class="r">●</span> <b>R82 由 10Ω 换 2.2kΩ</b>（光电为 3.3V 推挽或自带上拉时）；纯开集无上拉可保持 10Ω（约束已开上拉）。</td><td>10Ω 时 3.3V 光电灌进 2.5V bank 电流过大。类型没确认前按 2.2k 装最安全。</td></tr>
+<tr><td>3b</td><td>SoC 底板</td><td><span class="r">●</span> <b>R82 由 10Ω 换 2.2kΩ</b>（<b>10-22 已确认光电是推挽，必换</b>）。</td><td>10Ω 时 3.3V 光电灌进 2.5V bank 电流过大。推挽输出必须串 2.2k 限流。</td></tr>
 <tr><td>4</td><td>SoC 底板</td><td><span class="g">●</span> R182–R201、R53–R72 空贴（用户已确认）。</td><td>双端接会让摆幅减半，保持空贴。</td></tr>
 </table>
 
@@ -48,8 +48,8 @@ td,th{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:l
 <table><tr><th>#</th><th>问题</th><th>影响</th></tr>
 <tr><td>Q1</td><td>底板 100Ω 贴没贴</td><td>已答：空贴 ✓</td></tr>
 <tr><td>Q2</td><td>主控 IO 电压</td><td>已定：bank33 2.5V（H7/H9 供）✓；面 B（bank11/J1）同理</td></tr>
-<tr><td>Q3</td><td>光电传感器是推挽还是开集输出？</td><td>开集可直接用（约束已开上拉）</td></tr>
-<tr><td>Q4</td><td>10-15 底板没有 CN4 电机口，是故意的吗？</td><td>要用的话从 H2 第 17、18 脚飞线</td></tr>
+<tr><td>Q3</td><td>光电传感器是推挽还是开集输出？</td><td>已答（10-22）：<b>推挽</b> ⇒ R82 必须换 2.2k（第 3b 项）</td></tr>
+<tr><td>Q4</td><td>10-15 底板没有 CN4 电机口，是故意的吗？</td><td>已答（10-22）：这版电机控制在<b>定子端</b>，转子底板不需要 CN4，不用飞线</td></tr>
 <tr><td>Q5</td><td>放行重出位流</td><td>已放行 ✓ 桥四套已出（e60c 7f612855 等，时序全过）；主控 LVDS25 + 光电 U12 正在构建</td></tr>
 </table>
 <p class="small">出处：dr1v90 d36_hwsync/REPORT.md、d35_faceb/REPORT.md；三板检查_2026-10-15.pdf。网表从投板 epro2 机读，主会话已独立复核光电与 CN3/R82/H2.49 连接。</p>

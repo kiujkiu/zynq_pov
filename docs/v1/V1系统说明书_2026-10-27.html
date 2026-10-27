@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V1 系统说明书</title>
+<style>
+:root{
+  --fg:#1d1d1f; --mut:#5f6368; --bd:#d9d9de; --bg:#fff; --th:#f4f4f6; --soft:#f7f8fa;
+  --acc:#2f6fb3; --acc-bg:#eaf1fa; --teal:#1f8a83; --amber:#a35c00; --red:#b3261e; --ok:#1e7a3c;
+}
+@page{
+  size:A4; margin:14mm 13mm 16mm 13mm;
+  @bottom-center{ content:"V1 系统说明书 · 第 " counter(page) " 页 / 共 " counter(pages) " 页"; font-family:"Microsoft YaHei",sans-serif; font-size:8pt; color:#8a8f98; }
+}
+html{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+body{font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",sans-serif;color:var(--fg);background:var(--bg);
+  max-width:900px;margin:24px auto;padding:0 16px;line-height:1.6;font-size:14px}
+h1{font-size:30px;margin:6px 0 4px;letter-spacing:1px}
+h2{font-size:19px;margin:26px 0 10px;padding:4px 0 5px;border-bottom:2px solid var(--acc);color:#16365c}
+h3{font-size:15.5px;margin:18px 0 6px;color:#1d3f66}
+h4{font-size:14px;margin:12px 0 4px}
+p{margin:6px 0}
+ul,ol{margin:6px 0;padding-left:22px}
+li{margin:2px 0}
+table{border-collapse:collapse;width:100%;margin:8px 0}
+td,th{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:left}
+th{background:var(--th);font-weight:700}
+thead{display:table-header-group}
+tr{break-inside:avoid}
+code{font-family:Consolas,"Cascadia Mono","Courier New",monospace;font-size:.9em;background:#f1f2f5;padding:0 3px;border-radius:3px;word-break:break-all}
+pre{font-family:Consolas,"Cascadia Mono","Courier New",monospace;font-size:12px;background:#f5f6f8;border:1px solid #e1e3e8;border-left:3px solid var(--acc);
+  padding:8px 10px;margin:6px 0;white-space:pre-wrap;word-break:break-all;line-height:1.45;break-inside:avoid}
+pre .c{color:#6a737d}
+.small{font-size:12px;color:var(--mut)}
+.mut{color:var(--mut)}
+.r{color:var(--red);font-weight:700} .o{color:var(--amber);font-weight:700} .g{color:var(--ok);font-weight:700} .b{color:var(--acc);font-weight:700}
+.pill{display:inline-block;border-radius:10px;padding:0 8px;font-size:12px;font-weight:700;line-height:1.7;white-space:nowrap}
+.ok{background:#e4f3e8;color:#1e7a3c} .todo{background:#fff1dc;color:#8a5300} .lim{background:#fde7e4;color:#b3261e} .inf{background:#e7effa;color:#2f6fb3} .na{background:#eef0f3;color:#5f6368}
+.box{border:1px solid #cdd9ea;background:var(--acc-bg);border-radius:6px;padding:8px 12px;margin:10px 0;break-inside:avoid}
+.box.warn{border-color:#f0c9c3;background:#fdf2f0}
+.box.amber{border-color:#efd6a8;background:#fdf7ec}
+.box b.t{display:block;margin-bottom:2px}
+.cover{border-bottom:3px solid var(--acc);padding-bottom:12px;margin-bottom:12px}
+.kicker{font-size:13px;color:var(--acc);font-weight:700;letter-spacing:.5px}
+.lead{font-size:15px;color:#333;margin:4px 0 10px}
+.meta td,.meta th{font-size:13px;padding:4px 8px}
+.meta th{width:72px;white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.tile{border:1px solid #d6e0ee;border-radius:6px;padding:8px 10px;background:#fbfcfe;break-inside:avoid}
+.tile .n{font-size:19px;font-weight:700;color:var(--acc);line-height:1.3}
+.tile .d{font-size:12px;color:var(--mut);line-height:1.45}
+.toc{columns:2;column-gap:28px;font-size:13.5px;margin:6px 0}
+.toc a{color:var(--fg);text-decoration:none}
+.toc div{break-inside:avoid;margin:1px 0}
+.toc .sec{font-weight:700;margin-top:5px}
+figure{margin:12px 0;break-inside:avoid}
+figure svg{width:100%;height:auto;display:block;border:1px solid #e3e6eb;border-radius:6px;background:#fff}
+figcaption{font-size:12px;color:var(--mut);margin-top:4px;line-height:1.5}
+.steps{counter-reset:st;list-style:none;padding-left:0}
+.steps>li{counter-increment:st;position:relative;padding:6px 8px 6px 40px;margin:6px 0;border:1px solid #e1e5ec;border-radius:6px;background:#fcfcfd;break-inside:avoid}
+.steps>li::before{content:counter(st);position:absolute;left:9px;top:7px;width:22px;height:22px;border-radius:11px;background:var(--acc);color:#fff;font-weight:700;font-size:12.5px;text-align:center;line-height:22px}
+.steps>li b.h{display:block}
+.k{white-space:nowrap}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pb{break-before:page}
+.nob{break-inside:avoid}
+td.c,th.c{text-align:center}
+.tbl-s td,.tbl-s th{font-size:12.5px;padding:4px 6px}
+.tbl-xs td,.tbl-xs th{font-size:11.5px;padding:3px 5px}
+.grp td{background:#eef2f8;font-weight:700;color:#1d3f66}
+h2,h3,h4{break-after:avoid}
+@media print{
+  body{max-width:none;margin:0;padding:0;font-size:10pt;line-height:1.55}
+  h1{font-size:24pt} h2{font-size:14.5pt;margin-top:14pt} h3{font-size:11.5pt} h4{font-size:10.5pt}
+  pre{font-size:8.6pt} code{font-size:8.8pt}
+  .small,figcaption{font-size:8.5pt}
+  .tile .n{font-size:14pt} .tile .d{font-size:8.5pt}
+  .tbl-s td,.tbl-s th{font-size:9pt} .tbl-xs td,.tbl-xs th{font-size:8.4pt}
+  .toc{font-size:9.6pt}
+  .pill{font-size:8.5pt}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================ 封面 ============================ -->
+<header class="cover">
+  <div class="kicker">POV3D 双面旋转体积显示 · V1（2260 验证板）</div>
+  <h1>V1 系统说明书</h1>
+  <div class="lead">V1 是什么、怎么连、怎么上电、怎么验、出了问题怎么查</div>
+  <table class="meta">
+    <tr><th>版本</th><td>v1.0（按 2026-10-27 实况）</td><th>编写</th><td>[D92]</td></tr>
+    <tr><th>读者</th><td colspan="3">硬件、结构、测试同事。不需要会写代码；文中命令可以照抄（命令在 PC 的 WSL 终端里、在 dr1v90 仓库目录下执行）。</td></tr>
+    <tr><th>当前阶段</th><td colspan="3"><b>V0.1</b>：V1 主控底板和两块桥已到板，<b>灯板还没接</b>（约 11-05 到）。台架主控板 = <b>DR1M90-01</b>。</td></tr>
+    <tr><th>以此为准</th><td colspan="3">上行线速 <b>600 Mbit/s</b>（10-27 定）；两块桥 flash 已烧<b>正式版</b>；主控给两块桥灌位流的 <b>JTAG 菊花链已打通</b>。旧文档里的 800M、A 版桥位流、"灌桥暂用 PC 下载器"等写法都已过时。</td></tr>
+  </table>
+</header>
+
+<div class="box">
+  <b class="t">10-27 实况，一段话</b>
+  主控和面 A 桥之间的高速链路已打通：13 对线、每对 600 Mbit/s，误码测试 10 分钟和 1 小时都是 <b>0 误码</b>；按 V1 正式节拍（每秒 4284 片）连续送片 10 分钟，<b>不丢片、不重训</b>。两块桥的 flash 已烧正式版，主控能经 JTAG 菊花链远程给两块桥灌位流（带校验）。
+  <b>还没做</b>：面 B 通信与两面同时、真内容长跑、8 小时长跑、主控上电自启动；灯板到货（约 11-05）后才能出图。
+</div>
+
+<div class="tiles">
+  <div class="tile"><div class="n">192×216×192</div><div class="d">内容的三维体素网格（与 V2 同一网格）</div></div>
+  <div class="tile"><div class="n">4284 片/秒</div><div class="d">每面：357 片/圈 × 12 转/秒；两面合起来体刷新 24 Hz</div></div>
+  <div class="tile"><div class="n">600 Mbit/s</div><div class="d">每面 13 lane 上行（主控 → 桥），时间只用掉 63%</div></div>
+  <div class="tile"><div class="n">0.7%</div><div class="d">最紧的一环：桥驱动灯板的时间余量</div></div>
+</div>
+
+<h3 style="margin-top:10px">目录</h3>
+<div class="toc">
+  <div class="sec"><a href="#s0">0　怎么读这本说明书</a></div>
+  <div class="sec"><a href="#s1">1　V1 是什么</a></div>
+  <div class="sec"><a href="#s2">2　系统组成与框图</a></div>
+  <div class="sec"><a href="#s3">3　数据流与节拍</a></div>
+  <div class="sec"><a href="#s4">4　板卡清单与接线</a></div>
+  <div>　4.1 接线总表　4.2 面 A / 面 B　4.3 J1/J2 = 2.5 V</div>
+  <div>　4.4 H1/H2 对调　4.5 位号撞名　4.6 上电前核对</div>
+  <div class="sec"><a href="#s5">5　上电顺序与指示灯</a></div>
+  <div class="sec"><a href="#s6">6　远程管理</a></div>
+  <div>　WiFi 登录 · 主控位流 · 桥位流 · JTAG 菊花链 · 烧 flash</div>
+  <div class="sec"><a href="#s7">7　验证流程与判据</a></div>
+  <div>　comm_check · PRBS · tp/content 长跑 · 10-27 实测</div>
+  <div class="sec"><a href="#s8">8　已知限制</a></div>
+  <div class="sec"><a href="#s9">9　故障排查表</a></div>
+  <div class="sec"><a href="#sa">附录 A　位流与文件清单（md5）</a></div>
+  <div class="sec"><a href="#sb">附录 B　寄存器速查</a></div>
+  <div class="sec"><a href="#sc">附录 C　引脚、FPC 脚、测量点</a></div>
+  <div class="sec"><a href="#sd">附录 D　命令速查</a></div>
+  <div class="sec"><a href="#se">附录 E　资料出处与修订记录</a></div>
+</div>
+
+<!-- ============================ 0 ============================ -->
+<h2 id="s0">0　怎么读这本说明书</h2>
+<table class="tbl-s">
+  <thead><tr><th style="width:16%">你是</th><th style="width:42%">先看</th><th>再看</th></tr></thead>
+  <tr><td>硬件同事</td><td>§2 组成、§4 接线（含 H1/H2 对调、位号撞名）、§5 上电</td><td>§8 已知限制（硬件隐患）、§9 排查、附录 C 引脚与测量点</td></tr>
+  <tr><td>结构同事</td><td>§2 组成与框图（转子 / 定子分界）、§4.1 接线总表</td><td>§4.4 为什么 H1/H2 只能对调着装、§8 第 12 条</td></tr>
+  <tr><td>测试同事</td><td>§5 上电、§6 远程管理、§7 验证流程与判据</td><td>§9 排查、附录 A 位流、附录 D 命令速查</td></tr>
+</table>
+<p class="small">约定：<span class="pill ok">已通过</span> = 10-27 在真硬件上验过；<span class="pill todo">待做</span> = 已排期或在做；<span class="pill lim">限制</span> = 已知约束；括号里的 D 编号是内部任务号，方便追溯，可以忽略。</p>
+
+<!-- ============================ 1 ============================ -->
+<h2 id="s1">1　V1 是什么</h2>
+<p><b>POV3D 是"旋转体积显示"。</b>两块 LED 灯板背靠背装在转子上，转子每秒转 12 圈。转子每转过一个小角度，灯板就换成这个角度上的一幅截面图（叫<b>"一片"</b>），一圈 357 片。人眼的视觉暂留把一圈里所有的片叠成一个能从四周看的立体画面。两面灯板同时工作，所以空间里每个位置每秒被刷新 24 次（<b>24 Hz</b>）。</p>
+<p><b>V1 是第一版用正式链路的系统：</b>主控（安路 DR1M90）从 WiFi 收内容、把内容切成片，经两根柔性线（FPC）分别送到两块"桥"（高云 GW5A FPGA），桥再按灯板驱动芯片 ICND2260 的时序把每一片打到灯板上。</p>
+
+<table class="tbl-s">
+  <thead><tr><th style="width:10%">版本</th><th>内容</th><th style="width:26%">状态</th></tr></thead>
+  <tr><td>V0</td><td>2047 试验屏，主控直接驱屏，没有桥</td><td><span class="pill ok">已完成</span></td></tr>
+  <tr><td><b>V0.1</b></td><td>V1 主控底板 + 两块桥，<b>不接灯板</b>，先把整条链路在真硬件上跑通（本说明书描述的就是这个阶段的实况）</td><td><span class="pill todo">进行中</span></td></tr>
+  <tr><td>V1</td><td>再接两块 2260 灯板：每面 160×180 像素，24 Hz × 357 片</td><td><span class="pill todo">灯板约 11-05 到</span></td></tr>
+  <tr><td>V2</td><td>192×216 目标板，30 Hz</td><td><span class="pill na">另文</span></td></tr>
+</table>
+
+<h3>大功能与 10-27 状态</h3>
+<table class="tbl-s">
+  <thead><tr><th style="width:17%">大功能</th><th>一句话</th><th style="width:34%">10-27 状态</th></tr></thead>
+  <tr><td>① 内容进板</td><td>PC 经 WiFi 把内容推给主控，主控写进三维网格</td><td>V0 上长期在用；V1 板上随"真内容长跑"一起验 <span class="pill todo">待做</span></td></tr>
+  <tr><td>② 切片</td><td>主控的 FPGA 按转角从网格里取出每一片</td><td>仿真逐像素 0 错；板上图样源已过，真内容 <span class="pill todo">待跑</span></td></tr>
+  <tr><td>③ 上行传输</td><td>主控 → 桥：每面 13 对差分线，每对 600 Mbit/s</td><td>面 A <span class="pill ok">已通过</span> 0 误码（10 min + 1 h）；面 B <span class="pill todo">待测</span></td></tr>
+  <tr><td>④ 桥驱灯板</td><td>桥 → 灯板：6 条链，每链 2 颗 ICND2260</td><td><span class="pill todo">等灯板</span></td></tr>
+  <tr><td>⑤ 边带管理</td><td>握手、状态回报、命令、复位、看门狗（走 FPC 上几根慢线）</td><td>面 A <span class="pill ok">已通过</span></td></tr>
+  <tr><td>⑥ 远程运维</td><td>WiFi 登录主控；主控给桥灌位流；桥 flash 管理</td><td>菊花链灌桥 <span class="pill ok">已通过</span>；烧 flash 仍要 PC 下载器 <span class="pill lim">限制</span></td></tr>
+  <tr><td>⑦ 转速同步</td><td>光电开关每圈给一个脉冲，定 0° 和片的节拍</td><td>V0 已验；V1 台架用"假转"（主控内部按 12 转/秒定时），真转 <span class="pill todo">待做</span></td></tr>
+</table>
+
+<div class="box nob">
+  <b class="t">读前 9 个词</b>
+  <table class="tbl-s" style="margin:4px 0 0">
+    <tr><td style="width:17%"><b>面 A / 面 B</b></td><td>两块灯板各算一面。面 A 走 FPC1，面 B 走 FPC2。每面配一块桥。</td></tr>
+    <tr><td><b>片</b></td><td>转子在某个角度时灯板显示的一幅 160×180 截面图。每圈每面 357 片。</td></tr>
+    <tr><td><b>体素网格</b></td><td>内容的三维像素格子（192×216×192）。主控从里面"切"出每一片。</td></tr>
+    <tr><td><b>lane / 线速</b></td><td>一对差分线叫一个 lane。每个 lane 每秒传 600 Mbit，叫"线速 600M"。</td></tr>
+    <tr><td><b>位流</b></td><td>FPGA 的固件。主控、桥各有自己的位流。桥位流可以存在 <b>flash</b>（断电保持），也可以临时灌进 <b>SRAM</b>（断电即丢，回到 flash 版）。</td></tr>
+    <tr><td><b>边带</b></td><td>FPC 上高速数据线以外的几根慢线：桥复位、对齐指示、两条串口（主控 ↔ 桥）。</td></tr>
+    <tr><td><b>PRBS</b></td><td>伪随机测试码。用它测每条 lane 有没有错位（误码）。</td></tr>
+    <tr><td><b>换球（hswap）</b></td><td>主控位流里把两个排针座同脚号的引脚互换，用来适配 H1/H2 实物对调（§4.4）。文件名带 <code>_hs</code>。</td></tr>
+    <tr><td><b>BUILD / USERCODE</b></td><td>桥位流的版本号 / 校验和。读出来就知道桥里跑的是哪一版（附录 A）。</td></tr>
+  </table>
+</div>
+
+<!-- ============================ 2 ============================ -->
+<h2 id="s2">2　系统组成与框图</h2>
+<p>整机分<b>转子</b>（随灯板一起转）和<b>定子</b>（不转）两部分。跨转动面<b>没有电线</b>：供电靠无线供电，数据靠 WiFi，角度靠光电对射。</p>
+
+<figure>
+<svg viewBox="0 0 760 548" role="img" aria-label="V1 系统框图">
+  <defs>
+    <marker id="aB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2f6fb3"/></marker>
+    <marker id="aR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c0392b"/></marker>
+    <marker id="aG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+    <marker id="aO" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c27c0e"/></marker>
+    <marker id="aT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f8a83"/></marker>
+  </defs>
+  <style>
+    text{font-family:"Microsoft YaHei","PingFang SC",sans-serif;fill:#1d1d1f}
+    .t{font-size:14px;font-weight:700}
+    .s{font-size:12px;fill:#3c4043}
+    .x{font-size:11.5px;fill:#5f6368}
+    .rl{font-size:12.5px;font-weight:700;fill:#5f6368}
+    .rg{fill:#fafbfc;stroke:#b6bcc6;stroke-dasharray:6 4;stroke-width:1.2}
+  </style>
+  <!-- 区域 -->
+  <rect x="190" y="8" width="562" height="420" rx="10" class="rg"/>
+  <text x="204" y="28" class="rl">转子（随灯板一起转，12 转/秒）</text>
+  <rect x="190" y="442" width="562" height="98" rx="10" class="rg"/>
+  <text x="204" y="461" class="rl">定子（不转）</text>
+  <!-- PC -->
+  <rect x="8" y="44" width="160" height="104" rx="8" fill="#f3f4f6" stroke="#9aa0a6" stroke-width="1.3"/>
+  <text x="20" y="67" class="t">PC</text>
+  <text x="20" y="87" class="s">Windows + WSL</text>
+  <text x="20" y="106" class="s">推内容、跑验证脚本、</text>
+  <text x="20" y="124" class="s">按板名登录主控</text>
+  <line x1="168" y1="96" x2="203" y2="96" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#aG)"/>
+  <text x="170" y="88" class="x">WiFi</text>
+  <!-- 主控 -->
+  <rect x="205" y="44" width="205" height="150" rx="8" fill="#eef4fb" stroke="#2f6fb3" stroke-width="1.6"/>
+  <text x="217" y="66" class="t">主控 · FS03 核心板</text>
+  <text x="217" y="85" class="s">安路 DR1M90（台架板 DR1M90-01）</text>
+  <text x="217" y="106" class="s">Linux：收内容、管理两块桥</text>
+  <text x="217" y="124" class="s">FPGA：切片 → 两路上行发送</text>
+  <text x="217" y="142" class="s">TF 卡启动 · USB WiFi 网卡</text>
+  <text x="217" y="160" class="s">J1/J2：两个 IO bank 的电压</text>
+  <text x="217" y="178" class="s">J11/J12：两个 50 针排针座</text>
+  <!-- 排针 -->
+  <line x1="262" y1="194" x2="262" y2="228" stroke="#2f6fb3" stroke-width="5"/>
+  <line x1="352" y1="194" x2="352" y2="228" stroke="#2f6fb3" stroke-width="5"/>
+  <text x="270" y="215" class="x">H1⇄J12</text>
+  <text x="360" y="215" class="x">H2⇄J11</text>
+  <!-- SoC 底板 -->
+  <rect x="205" y="228" width="205" height="150" rx="8" fill="#f6f8fb" stroke="#6b7a8c" stroke-width="1.6"/>
+  <text x="217" y="250" class="t">SoC 转接板（底板）</text>
+  <text x="217" y="270" class="s">FPC1 → 面 A；FPC2 → 面 B</text>
+  <text x="217" y="288" class="s">P4：24 V 输入</text>
+  <text x="217" y="306" class="s">CN1/CN2：5 V 给两块桥</text>
+  <text x="217" y="324" class="s">H7/H9：2.5 V 给 J1/J2</text>
+  <text x="217" y="342" class="s">CN3：光电开关</text>
+  <text x="217" y="362" class="x">140 × 80 mm</text>
+  <!-- 面 A 桥 -->
+  <rect x="470" y="44" width="132" height="122" rx="8" fill="#eaf6f5" stroke="#1f8a83" stroke-width="1.6"/>
+  <text x="481" y="66" class="t">面 A 桥</text>
+  <text x="481" y="85" class="s">桥转接板 + ACG525</text>
+  <text x="481" y="103" class="s">GW5A-25 · B 版片</text>
+  <text x="481" y="121" class="s">收上行、驱灯板</text>
+  <text x="481" y="139" class="s">flash：e60cp</text>
+  <text x="481" y="157" class="x">5 V ← 底板 CN1</text>
+  <!-- 面 A 灯板 -->
+  <rect x="628" y="44" width="122" height="122" rx="8" fill="#fdf5e8" stroke="#a35c00" stroke-width="1.6"/>
+  <text x="639" y="66" class="t">面 A 灯板</text>
+  <text x="639" y="85" class="s">ICND2260 × 12</text>
+  <text x="639" y="103" class="s">160×180 像素</text>
+  <text x="639" y="121" class="s">0.9375 mm 间距</text>
+  <text x="639" y="139" class="s">60 扫</text>
+  <text x="639" y="157" class="x">约 11-05 到</text>
+  <line x1="602" y1="105" x2="626" y2="105" stroke="#1f8a83" stroke-width="3" marker-end="url(#aT)"/>
+  <!-- 面 B 桥 -->
+  <rect x="470" y="256" width="132" height="122" rx="8" fill="#eaf6f5" stroke="#1f8a83" stroke-width="1.6"/>
+  <text x="481" y="278" class="t">面 B 桥</text>
+  <text x="481" y="297" class="s">桥转接板 + ACG525</text>
+  <text x="481" y="315" class="s">GW5A-25 · B 版片</text>
+  <text x="481" y="333" class="s">收上行、驱灯板</text>
+  <text x="481" y="351" class="s">flash：e60cb</text>
+  <text x="481" y="369" class="x">5 V ← 底板 CN2</text>
+  <!-- 面 B 灯板 -->
+  <rect x="628" y="256" width="122" height="122" rx="8" fill="#fdf5e8" stroke="#a35c00" stroke-width="1.6"/>
+  <text x="639" y="278" class="t">面 B 灯板</text>
+  <text x="639" y="297" class="s">ICND2260 × 12</text>
+  <text x="639" y="315" class="s">160×180 像素</text>
+  <text x="639" y="333" class="s">0.9375 mm 间距</text>
+  <text x="639" y="351" class="s">60 扫</text>
+  <text x="639" y="369" class="x">约 11-05 到</text>
+  <line x1="602" y1="317" x2="626" y2="317" stroke="#1f8a83" stroke-width="3" marker-end="url(#aT)"/>
+  <!-- FPC -->
+  <polyline points="410,264 440,264 440,105 468,105" fill="none" stroke="#2f6fb3" stroke-width="3.2" marker-end="url(#aB)"/>
+  <text x="446" y="210" class="x" style="font-weight:700;fill:#2f6fb3">FPC1</text>
+  <line x1="410" y1="317" x2="468" y2="317" stroke="#2f6fb3" stroke-width="3.2" marker-end="url(#aB)"/>
+  <text x="418" y="310" class="x" style="font-weight:700;fill:#2f6fb3">FPC2</text>
+  <!-- 定子 -->
+  <rect x="210" y="470" width="176" height="56" rx="7" fill="#fdf0ee" stroke="#c0392b" stroke-width="1.3"/>
+  <text x="221" y="492" class="s" style="font-weight:700">无线供电（发射端）</text>
+  <text x="221" y="512" class="x">24 V 2 A；台架用限流电源</text>
+  <rect x="398" y="470" width="150" height="56" rx="7" fill="#f3f4f6" stroke="#9aa0a6" stroke-width="1.3"/>
+  <text x="409" y="492" class="s" style="font-weight:700">电机 + 电机控制器</text>
+  <text x="409" y="512" class="x">在定子端，不接转子电路</text>
+  <rect x="560" y="470" width="180" height="56" rx="7" fill="#fdf6e7" stroke="#c27c0e" stroke-width="1.3"/>
+  <text x="571" y="492" class="s" style="font-weight:700">光电索引标记</text>
+  <text x="571" y="512" class="x">转子上的光电开关对着它</text>
+  <!-- 24V -->
+  <line x1="298" y1="470" x2="298" y2="381" stroke="#c0392b" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#aR)"/>
+  <text x="305" y="412" class="x" style="fill:#c0392b;font-weight:700">24 V → P4</text>
+  <!-- 光电 -->
+  <polyline points="650,470 650,402 386,402 386,381" fill="none" stroke="#c27c0e" stroke-width="2" stroke-dasharray="5 3" marker-end="url(#aO)"/>
+  <text x="430" y="396" class="x" style="fill:#a35c00;font-weight:700">光电：每圈 1 个脉冲（0°）→ CN3</text>
+</svg>
+<figcaption>图 1　V1 系统框图。蓝实线 = 高速数据（FPC 柔性线，每根 70 芯）；青色 = 桥到灯板（桥转接板 CN1/CN2 板对板）；红虚线 = 供电；橙虚线 = 光电；灰虚线 = WiFi。
+V0.1 台架：灯板未接；24 V 用限流电源代替无线供电；主控用"假转"（内部定时 12 转/秒）代替光电。</figcaption>
+</figure>
+
+<h3>部件清单</h3>
+<table class="tbl-s">
+  <thead><tr><th style="width:18%">部件</th><th>型号 / 说明</th><th class="c" style="width:7%">数量</th><th style="width:28%">作用</th></tr></thead>
+  <tr><td>PC</td><td>Windows + WSL；装有 dr1v90 仓库、位流目录 <code>D:\claude_workspace\pov3d\_work\</code>、高云 Programmer</td><td class="c">1</td><td>推内容、跑验证脚本、远程登录</td></tr>
+  <tr><td>主控核心板</td><td>米联客 FS03，安路 <b>DR1M90GEG484</b>；Linux 从 TF 卡启动；USB WiFi 网卡（MT7921AU）；调试串口</td><td class="c">1</td><td>收内容、切片、两路上行、管理桥</td></tr>
+  <tr><td>SoC 转接板（底板）</td><td>DR1M90GEG484 底板，10-15 投板版，140×80 mm。经 H1/H2 插在 FS03 上</td><td class="c">1</td><td>出两路 FPC；24 V 转 5 V / 2.5 V；光电口</td></tr>
+  <tr><td>柔性线</td><td>ICN2260-fpc，70 芯 0.5 mm，翻盖座下接；长度待结构定</td><td class="c">2</td><td>主控 ↔ 桥（数据 + 边带 + JTAG；不走电源）</td></tr>
+  <tr><td>桥转接板</td><td>"高云转接板"10-14 版，140×50 mm。面 A、面 B 硬件完全相同，靠烧的位流区分</td><td class="c">2</td><td>承载桥核心板，接灯板，产生灯板电源</td></tr>
+  <tr><td>桥核心板</td><td>小梅哥 ACG525，高云 <b>GW5A-LV25UG324C2/I1，B 版片</b>（丝印 2544BB0N）</td><td class="c">2</td><td>收上行、按 2260 时序驱灯板</td></tr>
+  <tr><td>灯板</td><td>ICN2260_LED_V01，0.9375 mm 间距，160×180 像素，60 扫；每面 12 颗 ICND2260（6 链 × 每链 2 颗）</td><td class="c">2</td><td>显示（<span class="o">约 11-05 到</span>）</td></tr>
+  <tr><td>光电开关</td><td>推挽输出，3.3 V 供电，接 SoC 转接板 CN3</td><td class="c">1</td><td>每圈 1 个脉冲，定 0°</td></tr>
+  <tr><td>无线供电</td><td>24 V 2 A（48 W），接收端接 SoC 转接板 P4；台架上用限流电源</td><td class="c">1 套</td><td>转子全部用电</td></tr>
+  <tr><td>电机 + 控制器</td><td>在定子端，不经转子电路板</td><td class="c">1 套</td><td>带转子转</td></tr>
+</table>
+<p class="small">主控板有名字：<b>DR1M90-01</b> = V1 台架板。<b>DR1M90-02 是 V0 板</b>，不要拿 V1 的脚本去动它（脚本都要求显式写板名，就是为了防这个）。</p>
+
+<!-- ============================ 3 ============================ -->
+<h2 id="s3">3　数据流与节拍</h2>
+<p>数据从 PC 到灯板经过 6 步（图 2）。前两步两面共用；<b>从"切片"起，面 A、面 B 两路完全独立、同时进行</b>。</p>
+
+<figure>
+<svg viewBox="0 0 760 318" role="img" aria-label="V1 数据流与一片的时间预算">
+  <defs>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+  </defs>
+  <style>
+    text{font-family:"Microsoft YaHei","PingFang SC",sans-serif;fill:#1d1d1f}
+    .t{font-size:13.5px;font-weight:700}
+    .s{font-size:12px;fill:#3c4043}
+    .x{font-size:11.5px;fill:#5f6368}
+    .w{font-size:12px;fill:#fff;font-weight:700}
+  </style>
+  <g>
+    <rect x="6" y="10" width="110" height="92" rx="7" fill="#f3f4f6" stroke="#9aa0a6"/>
+    <text x="16" y="32" class="t">① PC 内容</text><text x="16" y="54" class="s">模型、动画、文字</text><text x="16" y="72" class="s">经 WiFi 推帧</text><text x="16" y="90" class="x">TCP 端口 9500</text>
+    <line x1="116" y1="56" x2="132" y2="56" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a2)"/>
+    <rect x="134" y="10" width="110" height="92" rx="7" fill="#eef4fb" stroke="#2f6fb3"/>
+    <text x="144" y="32" class="t">② 体素网格</text><text x="144" y="54" class="s">192×216×192</text><text x="144" y="72" class="s">存主控内存</text><text x="144" y="90" class="x">双缓冲</text>
+    <line x1="244" y1="56" x2="260" y2="56" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a2)"/>
+    <rect x="262" y="10" width="110" height="92" rx="7" fill="#eef4fb" stroke="#2f6fb3"/>
+    <text x="272" y="32" class="t">③ 切片</text><text x="272" y="54" class="s">每片 160×180</text><text x="272" y="72" class="s">357 片/圈</text><text x="272" y="90" class="x">按查表取像素</text>
+    <line x1="372" y1="56" x2="388" y2="56" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a2)"/>
+    <rect x="390" y="10" width="110" height="92" rx="7" fill="#eef4fb" stroke="#2f6fb3"/>
+    <text x="400" y="32" class="t">④ 上行</text><text x="400" y="54" class="s">13 lane × 600M</text><text x="400" y="72" class="s">时间占 63%</text><text x="400" y="90" class="x">经 FPC 到桥</text>
+    <line x1="500" y1="56" x2="516" y2="56" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a2)"/>
+    <rect x="518" y="10" width="110" height="92" rx="7" fill="#eaf6f5" stroke="#1f8a83"/>
+    <text x="528" y="32" class="t">⑤ 桥</text><text x="528" y="54" class="s">逐 lane 对齐</text><text x="528" y="72" class="s">缓冲、排队</text><text x="528" y="90" class="x">按 2260 时序发</text>
+    <line x1="628" y1="56" x2="644" y2="56" stroke="#6b7280" stroke-width="1.6" marker-end="url(#a2)"/>
+    <rect x="646" y="10" width="110" height="92" rx="7" fill="#fdf5e8" stroke="#a35c00"/>
+    <text x="656" y="32" class="t">⑥ 灯板</text><text x="656" y="54" class="s">6 链 × 2 颗</text><text x="656" y="72" class="s">上限 4313 片/s</text><text x="656" y="90" class="x">点亮这一片</text>
+  </g>
+  <path d="M6,112 v8 h238 v-8" fill="none" stroke="#9aa0a6" stroke-width="1.2"/>
+  <text x="80" y="136" class="x">两面共用一份</text>
+  <path d="M262,112 v8 h494 v-8" fill="none" stroke="#2f6fb3" stroke-width="1.2"/>
+  <text x="400" y="136" class="x" style="fill:#2f6fb3;font-weight:700">从这里起面 A、面 B 各一路，同时进行</text>
+  <!-- 时间预算 -->
+  <text x="6" y="170" class="t">每面一片的时间预算（12 转/秒 × 357 片 = 4284 片/秒）</text>
+  <text x="172" y="198" class="s" text-anchor="end">片周期</text>
+  <rect x="180" y="184" width="560" height="22" rx="3" fill="#e5e7eb"/>
+  <text x="732" y="200" class="s" text-anchor="end" style="font-weight:700">233.4 µs</text>
+  <text x="172" y="234" class="s" text-anchor="end">上行传一片</text>
+  <rect x="180" y="220" width="351" height="22" rx="3" fill="#2f6fb3"/>
+  <text x="539" y="236" class="s" style="font-weight:700;fill:#2f6fb3">146.3 µs · 63%（还空 37%）</text>
+  <text x="172" y="270" class="s" text-anchor="end">桥驱灯板一帧</text>
+  <rect x="180" y="256" width="556" height="22" rx="3" fill="#c27c0e"/>
+  <text x="728" y="272" class="w" text-anchor="end">231.8 µs · 99.3%（只剩 0.7%）</text>
+  <text x="6" y="304" class="x">结论：上行不是瓶颈；最紧的是桥驱灯板这一环，所以转速一高就要减少每圈片数（软件自动"换档"）。</text>
+</svg>
+<figcaption>图 2　V1 数据流（上）与一片的时间预算（下）。条长按同一时间比例画。</figcaption>
+</figure>
+
+<h3>节拍与余量（每面）</h3>
+<table class="tbl-s">
+  <thead><tr><th style="width:17%">环节</th><th style="width:43%">数值</th><th>说明 / 余量</th></tr></thead>
+  <tr><td>体素网格</td><td>192×216×192，体素 0.78125 mm（= 150 × 168.75 × 150 mm）</td><td>与 V2 同一网格（前端统一），内容不用为 V1 另做</td></tr>
+  <tr><td>每片图像</td><td>160×180 像素，每色 12 bit；= 1,036,800 位 = 5400 组 × 192 位</td><td>灯板像素 0.9375 mm，从网格取最近的体素</td></tr>
+  <tr><td>每圈片数</td><td><b>357</b>（奇数，消"漏柱"）；转速高时自动降到 285 / 209</td><td>357 片 ≤ 12.05 转/秒；285 片 ≤ 14.7；209 片 ≤ 20（换档在圈边界生效）</td></tr>
+  <tr><td>转速</td><td>标称 12 转/秒（720 rpm）；设计范围 300–1200 rpm</td><td>台架用"假转"：主控内部按 12 转/秒定时</td></tr>
+  <tr><td>片率</td><td>357 × 12 = <b>4284 片/秒</b>，每片 233.4 µs</td><td>两面同时 ⇒ 体刷新 24 Hz</td></tr>
+  <tr><td>上行（主控 → 桥）</td><td>13 lane（12 数据 + 1 校验）× <b>600 Mbit/s</b>，另有 1 对转发时钟 75 MHz（= 线速 / 8）</td><td>每片 146.3 µs，占 <b>62.7%</b>；800M 主控芯片发不出来，见 §8</td></tr>
+  <tr><td>桥 → 灯板</td><td>6 链 × （3 对数据 + 1 对时钟）LVDS，DCLK 166.67 MHz，60 扫</td><td>每帧 231.84 µs ⇒ 上限 4313 片/秒；余量 <b>0.7%</b>（357 片档最高转速时 0.26%）</td></tr>
+  <tr><td>桥的设计跳片</td><td>每 4296 帧（约 1 秒）刷新一次 2260 寄存器表，那一帧较长，<b>下一片丢掉</b></td><td>每秒 1 片（0.023%），不是欠载，见 §8</td></tr>
+  <tr><td>主控内存读</td><td>两面合计约 595 MB/s</td><td>上限 1786 MB/s 的 33%</td></tr>
+  <tr><td>WiFi</td><td>实测 TCP ≥ 160 Mbit/s（点对点）</td><td>192 网格逐帧内容最高约 44 Mbit/s；静态模型只发位姿，每帧几百字节</td></tr>
+</table>
+
+<!-- ============================ 4 ============================ -->
+<h2 id="s4">4　板卡清单与接线</h2>
+<h3 id="s41">4.1　接线总表</h3>
+<table class="tbl-s">
+  <thead><tr><th class="c" style="width:4%">#</th><th style="width:22%">从 → 到</th><th style="width:18%">连接器</th><th style="width:22%">走什么</th><th>注意</th></tr></thead>
+  <tr><td class="c">1</td><td>FS03 主控 ⇄ SoC 转接板</td><td>FS03 J12/J11 ⇄ 底板 H1/H2（2×25 排针 2.54 mm，高 8.5 mm）</td><td>两个 IO bank 的全部信号 + 地</td><td><b>实物 H1 插 J12、H2 插 J11</b>（结构只能这么装），软件已"换球"吸收，<b>不是装错</b>（§4.4）。两板之间只有 2 根地。</td></tr>
+  <tr><td class="c">2</td><td>SoC 转接板 → 面 A 桥</td><td>底板 <b>FPC1</b> → 柔性线 → 桥转接板 FPC 座</td><td>13 lane + 转发时钟 + 4 根边带 + 4 根 JTAG + 地</td><td><b>FPC1 = 面 A</b>。翻盖锁紧，插到底。FPC 不走电源。</td></tr>
+  <tr><td class="c">3</td><td>SoC 转接板 → 面 B 桥</td><td>底板 <b>FPC2</b> → 柔性线 → 桥转接板 FPC 座</td><td>同上</td><td><b>FPC2 = 面 B</b>。</td></tr>
+  <tr><td class="c">4</td><td>SoC 转接板 → 两块桥 5 V</td><td>底板 CN1 / CN2（B2P-VH：1 = GND，2 = 5 V）→ 各桥板 5 V 入口</td><td>桥和灯板的电</td><td>一块桥一路。桥板再产生 3.8 / 3.3 / 2.8 / 2.5 V，灯板的电经桥板 CN1/CN2 过去。</td></tr>
+  <tr><td class="c">5</td><td>24 V → SoC 转接板</td><td>底板 P4（3 脚 = 24 V，4 脚 = GND）</td><td>转子全部用电</td><td class="r">板上没有保险丝、TVS、防反接：台架用限流电源，0.5–1 A 起；上转子前必须加保护。</td></tr>
+  <tr><td class="c">6</td><td>SoC 转接板 → FS03 两个 bank 电压</td><td>底板 H7、H9（1 = 2.5 V，2 = GND）→ FS03 <b>J1、J2 跳帽中脚</b>（两个帽都拔掉）</td><td>bank11、bank33 的 IO 电压 2.5 V</td><td><b>J1、J2 两个都要</b>（§4.3）。上电后、装位流前量 2.40–2.60 V。</td></tr>
+  <tr><td class="c">7</td><td>光电开关 → SoC 转接板</td><td>底板 CN3（1 = 信号，2 = 3.3 V，3 = GND）</td><td>每圈 1 个脉冲 = 0°</td><td>推挽输出，<b>R82 必须是 2.2 kΩ</b>（原 10 Ω 会把 3.3 V 灌进 2.5 V 口）。</td></tr>
+  <tr><td class="c">8</td><td>桥核心板 → 桥转接板</td><td>ACG525 → 桥转接板 CN3 / CN6（100 脚板对板 ×2）</td><td>—</td><td class="r">两座 180° 对称，装反也插得进：上电前量 CN3 第 1 脚与核心板 TCK 导通、3.3 V 对地不短。</td></tr>
+  <tr><td class="c">9</td><td>桥转接板 → 灯板</td><td>桥转接板 CN1 / CN2（AXK 100 脚板对板）</td><td>6 链下行 + 应答线 + 灯板电源</td><td>灯板要在桥上电前接好。V0.1 不接。</td></tr>
+  <tr><td class="c">10</td><td>PC 下载器 → 桥（只在烧 flash 时）</td><td>桥转接板 <b>H1</b>（6 针：1 GND / 2 TCK / 3 TMS / 4 TDI / 5 TDO / 6 2.5 V）</td><td>高云下载器</td><td>先拔该桥的 FPC（与主控 JTAG 共线会冲突）；烧完拔下载器、插回 FPC、桥断电重上电（§6.5）。</td></tr>
+  <tr><td class="c">11</td><td>主控调试串口 → PC（兜底）</td><td>FS03 调试串口（PC 上是 COM24，115200）</td><td>启动日志、救急命令</td><td>平时不用。看启动时只听不发：发回车会打断自动启动。</td></tr>
+</table>
+
+<h3 id="s42">4.2　FPC1 = 面 A，FPC2 = 面 B</h3>
+<ul>
+  <li>面 A、面 B 的桥转接板和核心板<b>硬件完全一样</b>，区别只在 flash 里烧的位流：面 A 烧 <code>e60cp</code>（或出货档 <code>e60c</code>），面 B 烧 <code>e60cb</code>。<b>板上贴好 A/B 标签</b>，别插混。</li>
+  <li>插混了也能查出来：桥的状态帧里有"面号"（面 A = 0，面 B = 1），<code>sbd info</code> 会打出来。</li>
+  <li>灯板同理：面 A 灯板接面 A 的桥。</li>
+</ul>
+
+<h3 id="s43">4.3　J1、J2 都是 2.5 V</h3>
+<p>FS03 上 J1 管 bank11 的 IO 电压，J2 管 bank33。原厂跳帽只有 3.3 V / 1.8 V 两档，V1 要 2.5 V（高速差分输出 LVDS25 和边带都按 2.5 V 设计）。做法：<b>两个帽都拔掉</b>，从 SoC 转接板 H7/H9 各飞一根 2.5 V 线到两个跳帽的中脚。</p>
+<p>为什么两个都要：因为 H1/H2 对调（§4.4），面 A 进了 bank11、面 B 进了 bank33，两个 bank 都在用。1.8 V 方案已弃用（桥板转换芯片会把 2.5 V 倒灌进主控）。</p>
+<p class="r">位流的 IO 电压档和 bank 实际电压不符会伤器件。所以脚本在装位流前会停下来让人量电压，不在 2.40–2.60 V 就不装。</p>
+
+<h3 id="s44">4.4　H1/H2 对调说明</h3>
+<figure>
+<svg viewBox="0 0 760 262" role="img" aria-label="H1/H2 对调示意">
+  <style>
+    text{font-family:"Microsoft YaHei","PingFang SC",sans-serif;fill:#1d1d1f}
+    .t{font-size:14px;font-weight:700}
+    .s{font-size:11.5px;fill:#3c4043}
+    .h{font-size:12.5px;font-weight:700}
+  </style>
+  <text x="14" y="22" class="t">设计意图</text>
+  <rect x="34" y="32" width="304" height="76" rx="7" fill="#eef4fb" stroke="#2f6fb3"/>
+  <text x="186" y="50" class="h" text-anchor="middle">FS03 主控核心板</text>
+  <rect x="46" y="70" width="128" height="28" rx="4" fill="#fff" stroke="#2f6fb3"/>
+  <text x="110" y="89" class="s" text-anchor="middle">J11 · CEP1 · bank33</text>
+  <rect x="198" y="70" width="128" height="28" rx="4" fill="#fff" stroke="#2f6fb3"/>
+  <text x="262" y="89" class="s" text-anchor="middle">J12 · CEP2 · bank11</text>
+  <rect x="34" y="150" width="304" height="76" rx="7" fill="#f6f8fb" stroke="#6b7a8c"/>
+  <rect x="46" y="158" width="128" height="28" rx="4" fill="#fff" stroke="#6b7a8c"/>
+  <text x="110" y="177" class="s" text-anchor="middle">H1 · 面 A 的线</text>
+  <rect x="198" y="158" width="128" height="28" rx="4" fill="#fff" stroke="#6b7a8c"/>
+  <text x="262" y="177" class="s" text-anchor="middle">H2 · 面 B 的线</text>
+  <text x="186" y="214" class="h" text-anchor="middle">SoC 转接板</text>
+  <line x1="110" y1="158" x2="110" y2="100" stroke="#2f6fb3" stroke-width="3"/>
+  <line x1="262" y1="158" x2="262" y2="100" stroke="#2f6fb3" stroke-width="3"/>
+  <text x="186" y="250" class="s" text-anchor="middle">面 A → bank33，面 B → bank11</text>
+
+  <text x="404" y="22" class="t">实物（现在）</text>
+  <rect x="424" y="32" width="304" height="76" rx="7" fill="#eef4fb" stroke="#2f6fb3"/>
+  <text x="576" y="50" class="h" text-anchor="middle">FS03 主控核心板</text>
+  <rect x="436" y="70" width="128" height="28" rx="4" fill="#fff" stroke="#2f6fb3"/>
+  <text x="500" y="89" class="s" text-anchor="middle">J11 · CEP1 · bank33</text>
+  <rect x="588" y="70" width="128" height="28" rx="4" fill="#fff" stroke="#2f6fb3"/>
+  <text x="652" y="89" class="s" text-anchor="middle">J12 · CEP2 · bank11</text>
+  <rect x="424" y="150" width="304" height="76" rx="7" fill="#f6f8fb" stroke="#6b7a8c"/>
+  <rect x="436" y="158" width="128" height="28" rx="4" fill="#fff" stroke="#6b7a8c"/>
+  <text x="500" y="177" class="s" text-anchor="middle">H1 · 面 A 的线</text>
+  <rect x="588" y="158" width="128" height="28" rx="4" fill="#fff" stroke="#6b7a8c"/>
+  <text x="652" y="177" class="s" text-anchor="middle">H2 · 面 B 的线</text>
+  <text x="576" y="214" class="h" text-anchor="middle">SoC 转接板</text>
+  <line x1="500" y1="158" x2="652" y2="100" stroke="#b3261e" stroke-width="3"/>
+  <line x1="652" y1="158" x2="500" y2="100" stroke="#b3261e" stroke-width="3"/>
+  <text x="576" y="250" class="s" text-anchor="middle" style="fill:#b3261e;font-weight:700">面 A → bank11，面 B → bank33 ⇒ 主控位流用换球版（_hs）</text>
+</svg>
+<figcaption>图 3　H1/H2 对调。脚号是一一对应的（第 n 脚对第 n 脚），只是两个座互换了；软件把两个座同脚号的引脚互换（"换球"）即可。</figcaption>
+</figure>
+<table class="tbl-s">
+  <tr><th style="width:16%">是什么</th><td>SoC 转接板设计时按 H1 → J11（CEP1，bank33）、H2 → J12（CEP2，bank11）画的；实物受结构限制，只能 H1 插 J12、H2 插 J11。</td></tr>
+  <tr><th>后果</th><td>面 A 的全部信号进了 bank11，面 B 进了 bank33；JTAG、边带、光电输入也跟着换了 bank（光电现在进 DR1 的 H22 脚）。</td></tr>
+  <tr><th>处理</th><td>10-26 定：<b>不改板</b>。主控位流一律用换球版（文件名带 <code>_hs</code>）；两个 bank 都供 2.5 V（§4.3）。桥板不受影响。</td></tr>
+  <tr><th>注意</th><td>用不带 <code>_hs</code> 的旧位流必不通；V0 的开机演示位流会在 bank11 上和桥"对驱"，所以 TF 卡上放了 <code>pov/nodisplay</code> 关掉开机演示，<b>不要删</b>。</td></tr>
+  <tr><th>将来</th><td>主控核心板计划更换（创龙 SOM-TLDR1 在评估），新底板按正确方向画，届时不再需要换球。</td></tr>
+</table>
+
+<h3 id="s45">4.5　位号撞名（别拆错、别插错）</h3>
+<table class="tbl-s">
+  <thead><tr><th style="width:15%">位号</th><th style="width:42%">SoC 转接板（底板）上</th><th>桥转接板上（或 FS03 上）</th></tr></thead>
+  <tr><td>H1</td><td>50 针排针，插 FS03（实物插 J12）</td><td>桥转接板：6 针 JTAG 下载座（烧 flash 用）</td></tr>
+  <tr><td>CN1 / CN2</td><td>给两块桥的 5 V 输出（B2P-VH）</td><td>桥转接板：接灯板的 100 脚板对板座</td></tr>
+  <tr><td>CN3</td><td>光电开关口（XH）</td><td>桥转接板：桥核心板座（与 CN6 一对）</td></tr>
+  <tr><td>FPC2</td><td>面 B 的 FPC 座</td><td>桥转接板自己的 FPC 座也叫 FPC2（两块桥都是）</td></tr>
+  <tr><td>R182–R201</td><td>100 Ω 端接，<b class="r">必须空贴</b>（两端端接会让摆幅减半）</td><td>桥转接板：100 Ω 端接（收端，如 R185），<b class="g">保留</b></td></tr>
+  <tr><td>R187–R210</td><td>—</td><td>FS03 上：33 Ω 串联排阻，<b>不是端接</b>，不要当 100 Ω 拆（可选换 0 Ω）</td></tr>
+  <tr><td>J1 / J2</td><td>—</td><td>FS03 上：bank11 / bank33 电压跳帽（V1 拔帽改飞线）</td></tr>
+</table>
+
+<h3 id="s46">4.6　上电前硬件核对（摘要）</h3>
+<p class="small">完整版见 <code>zynq_pov/docs/progress/回板当天改板清单_2026-10-27.pdf</code>（10-27 已按实况更新）；通信验证的操作页见同目录 <code>到板当天_通信验证.pdf</code>。</p>
+<table class="tbl-s">
+  <thead><tr><th style="width:13%">等级</th><th>项目</th></tr></thead>
+  <tr><td class="r">必做</td><td>J1、J2 两个帽拔掉，H7/H9 飞 2.5 V 到两个中脚 · R82 换 2.2 kΩ · 24 V 用限流电源 · 两块桥核心板方向核对（CN3 第 1 脚 ↔ TCK）</td></tr>
+  <tr><td class="g">保持</td><td>SoC 转接板 R182–R201、R53–R72 空贴 · 桥转接板 R182–R201（100 Ω 端接）保留 · 桥板转换芯片 U18/U19 不改（16 脚 2.5 V、15 脚 3.3 V、9 脚低 = 使能）</td></tr>
+  <tr><td class="mut">可选</td><td>桥转接板 R235（复位线下拉）、R223（TCK 下拉）10 kΩ → 2.2 kΩ（10-27 没改，边带复位和 JTAG 都正常）· FS03 上用到的 CEP 线 33 Ω 排阻（R187–R210）换 0 Ω（600M 下 PRBS 1 h 0 误码，不改也行）· 桥转接板 R176–R181 贴 0 Ω（只影响灯板应答回读诊断）</td></tr>
+  <tr><td class="g">不用拆</td><td>桥转接板 R221–R223（TDI/TMS/TCK）、R219（TDO）的 10 kΩ 下拉：软件已适配（§6.4）</td></tr>
+</table>
+
+<!-- ============================ 5 ============================ -->
+<h2 id="s5">5　上电顺序与指示灯</h2>
+<h3>5.1　上电顺序</h3>
+<ol class="steps">
+  <li><b class="h">断电状态下接好所有线</b>
+    按 §4.1：FS03 插好、两根 FPC 锁紧、两路 5 V 线、H7/H9 飞线、光电线。灯板（如有）在桥上电前接好。PC 下载器<b>不要</b>插在桥上。</li>
+  <li><b class="h">先上 24 V（SoC 转接板）</b>
+    板上产生 5 V（经 CN1/CN2 给两块桥）和 2.5 V（经 H7/H9 给主控两个 bank）。两块桥从 flash 自己加载正式版位流（约 3 秒，估算）。
+    此时主控还没放开桥的复位线（桥转接板上 R235 把它拉低），<b>桥停在复位里——这是正常的</b>，等主控来放开。</li>
+  <li><b class="h">再给主控 FS03 上电（TF 卡启动）</b>
+    1–2 秒蓝灯亮；约 10 秒连上 WiFi；约 35 秒能按名字登录。卡上有 <code>pov/nodisplay</code>，不会加载 V0 的开机演示位流。</li>
+  <li><b class="h">PC 上跑脚本</b>
+    脚本装主控位流 → 主控放开桥复位 → 握手（核对桥版本）→ 训练对齐（几十毫秒）→ 开始送片。命令见 §7。</li>
+</ol>
+<div class="box amber">
+  <b class="t">上电先后的理由与待确认</b>
+  主控两个 bank 的 2.5 V 来自 SoC 转接板，FS03 启动时 bank 没电可能起不来（10-21 实测：FS03 上有一个跳帽没装时蓝灯秒亮、串口无输出、不启动，装上即好；当时没记是哪个跳帽）；所以先上 24 V、再上主控。
+  FS03 本身的供电走它自己的电源口（不经 H1/H2）。改板清单第 1 条沿用的"模块先上电、最后断电"出自早期"2.5 V 从 FS03 自己的 3.3 V 降出来"的方案，现在 2.5 V 改由 SoC 转接板供，两种写法要统一。<b>上电先后请硬件同事按台架实际供电接法确认后定稿。</b>
+</div>
+<p><b>断电：</b>先让脚本结束（脚本会自动停止送片、让链路回到训练码）→ 断主控 → 最后断 24 V。</p>
+<p><b>只断一部分会怎样：</b></p>
+<ul>
+  <li><b>主控断电或重启</b>：主控的位流丢失，链路停。重新跑一次脚本即可（桥不用动，脚本加 <code>--skip-bridge</code>）。</li>
+  <li><b>桥断电重上电</b>：桥回到 flash 里的版本，状态帧重新出现；主控上的守护程序会自动重新握手，或重跑脚本。</li>
+</ul>
+
+<h3>5.2　指示灯</h3>
+<table class="tbl-s">
+  <thead><tr><th style="width:19%">灯</th><th style="width:15%">在哪</th><th style="width:31%">正常</th><th>不正常时</th></tr></thead>
+  <tr><td>主控蓝灯（FPGA 配置完成）</td><td>FS03</td><td>上电后 1–2 秒亮（说明从 TF 卡正常启动）</td><td><b>上电立刻亮、串口没字</b>：没从 TF 卡启动 → 查启动拨码（两位都 OFF = TF 卡启动）、查 J1/J2 中脚有没有电（24 V 是否已上、飞线）、TF 卡插好。蓝灯只说明 FPGA 配置完成，不代表 Linux 起来了。</td></tr>
+  <tr><td>主控用户灯（V1 位流心跳）</td><td>FS03 板载用户 LED（8 颗）</td><td>装上 V1 主控位流后"跑马"：一次亮一颗，约 0.34 秒换下一颗，约 2.7 秒一圈</td><td>不动：主控位流没装上或 FPGA 时钟没起来。<span class="o">（灯的实际位置以实物为准）</span></td></tr>
+  <tr><td>桥核心板电源灯</td><td>ACG525</td><td>5 V 到了就亮</td><td>不亮：查底板 CN1/CN2 那一路 5 V 线</td></tr>
+  <tr><td>桥：没有状态灯</td><td>—</td><td colspan="2">桥位流<b>不驱动</b>任何 LED。桥是否在跑、跑的哪一版，一律看 <code>sbd info</code> / <code>sbd stat</code>（§6.3）。</td></tr>
+  <tr><td>灯板（V1，灯板到后）</td><td>灯板</td><td>桥上电后先发 64 帧黑场（约 15 ms）；没有片进来超过 50 ms 自动黑场（停转、拔 FPC、主控掉位流都会黑）</td><td>停转后灯板不黑、定格亮线：桥看门狗没生效 → <b>立即断电</b>，交软件查。</td></tr>
+</table>
+
+<!-- ============================ 6 ============================ -->
+<h2 id="s6">6　远程管理</h2>
+<p>平时不需要人到板边：主控有 WiFi，主控能管两块桥（状态、命令、复位、灌位流）。<b>只有烧桥的 flash 和给桥断电还需要人</b>（远程烧 flash、USB 继电器断电都在做）。</p>
+
+<h3>6.1　网络与登录</h3>
+<ul>
+  <li>主控开机自动连办公网 WiFi，自动起网络守护（掉线自己重连）和名字应答（mDNS）。上电约 35 秒后可以按名字登录。</li>
+  <li>PC 上按板名登录（账号 root / 密码 root）：<code>bash host/dr1ssh.sh dr1m90-01 'uptime'</code>。脚本按 WiFi 网卡 MAC 认板，IP 变了也能找到。</li>
+  <li><b>认板以 WiFi 网卡 MAC 为准</b>：DR1M90-01 = <code>90:de:80:47:b4:16</code>。01 现在插的是 03 的 TF 卡，所以板上主机名显示 dr1m90-03——<b>别被名字骗</b>（主机名跟着卡走）。</li>
+  <li>WiFi 不通时的兜底：接串口 COM24 看 <code>/tmp/autorun.log</code>；"板子能出不能进"时在串口执行 <code>dhcpcd -n wlan0</code>。</li>
+</ul>
+
+<h3>6.2　主控位流</h3>
+<p>主控的位流<b>每次上电都要装</b>（目前不会自动装，上电自启动在做 D85）。验证脚本都会自动装，人不用管。用哪个文件看名字（全表见附录 A）：</p>
+<table class="tbl-s">
+  <thead><tr><th style="width:31%">文件名片段</th><th>含义</th></tr></thead>
+  <tr><td><code>ul600</code></td><td>上行线速 600M（V1 定案）。<span class="r">名字里是 ul800 的都作废</span></td></tr>
+  <tr><td><code>p1_b12</code> / <code>sb</code></td><td>V1 格式、每色 12 bit / 带边带（复位、状态、命令、JTAG）</td></tr>
+  <tr><td><code>hs</code> / <code>io25</code></td><td>换球版（适配 H1/H2 对调）/ IO 电压 2.5 V。<b>V1 必须两个都有</b></td></tr>
+  <tr><td><code>prbs</code></td><td>带误码测试码（通信验证、PRBS、图样源长跑用）</td></tr>
+  <tr><td><code>g2</code> / <code>ab</code></td><td>读 192×216 网格（真内容缺省）/ 双面</td></tr>
+</table>
+
+<h3>6.3　桥位流的两个"家"：flash 和 SRAM</h3>
+<table class="tbl-s">
+  <thead><tr><th style="width:18%"></th><th style="width:41%">flash（金版）</th><th>SRAM（临时）</th></tr></thead>
+  <tr><td>断电后</td><td>保持</td><td>丢失，下次上电回到 flash 版</td></tr>
+  <tr><td>怎么写</td><td>PC 下载器，人到板边，要拔该桥的 FPC（§6.5）</td><td>主控经 JTAG 菊花链远程灌，几秒（§6.4）</td></tr>
+  <tr><td>用途</td><td>开机默认版本</td><td>试新版本、远程升级；不碰 flash，灌坏了断电即恢复</td></tr>
+  <tr><td>现在里面是</td><td>面 A：<b>e60cp</b>（BUILD 26102760，USERCODE E405）<br>面 B：<b>e60cb</b>（BUILD 26102740，USERCODE FA0B）<br><span class="small">10-27 烧，已由主控 JTAG 读回核实</span></td><td>上电后 = flash 版</td></tr>
+</table>
+<p>看桥在跑哪一版（板上命令，在 <code>/root/d10_v1</code> 目录）：</p>
+<pre>./sbd info            <span class="c"># 面 A 桥：版本号 BUILD、协议、几何 GEOM、面号</span>
+./sbd --face b info   <span class="c"># 面 B 桥</span>
+./sbd stat            <span class="c"># 桥状态：对齐、13 lane 掩码、收片数、错误计数（每 0.5 秒一帧）</span>
+./sbd fe              <span class="c"># 上行收端：每条 lane 的眼宽、采样点、极性、是否 dead</span>
+./sbd rd 0x1a         <span class="c"># 桥收到的时钟频率：600M 时应读 c14b4b4b（75/75/75 MHz）</span></pre>
+
+<h3>6.4　JTAG 菊花链：主控给两块桥灌位流</h3>
+<figure>
+<svg viewBox="0 0 760 214" role="img" aria-label="JTAG 菊花链">
+  <defs>
+    <marker id="j1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2f6fb3"/></marker>
+    <marker id="j2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker>
+  </defs>
+  <style>
+    text{font-family:"Microsoft YaHei","PingFang SC",sans-serif;fill:#1d1d1f}
+    .t{font-size:13.5px;font-weight:700}
+    .s{font-size:12px;fill:#3c4043}
+    .x{font-size:11.5px;fill:#5f6368}
+  </style>
+  <rect x="10" y="62" width="150" height="88" rx="8" fill="#eef4fb" stroke="#2f6fb3" stroke-width="1.5"/>
+  <text x="22" y="85" class="t">主控</text>
+  <text x="22" y="105" class="s">JTAG 位敲（FPGA 里）</text>
+  <text x="22" y="124" class="s">TDI / TMS / TCK / TDO</text>
+  <text x="22" y="142" class="x">软件 gw5a_sram</text>
+  <rect x="336" y="14" width="170" height="62" rx="8" fill="#eaf6f5" stroke="#1f8a83" stroke-width="1.5"/>
+  <text x="348" y="38" class="t">面 A 桥 · 位置 0</text>
+  <text x="348" y="60" class="x">IDCODE 0x0001281B</text>
+  <rect x="336" y="136" width="170" height="62" rx="8" fill="#eaf6f5" stroke="#1f8a83" stroke-width="1.5"/>
+  <text x="348" y="160" class="t">面 B 桥 · 位置 1</text>
+  <text x="348" y="182" class="x">IDCODE 0x0001281B</text>
+  <rect x="562" y="92" width="92" height="30" rx="5" fill="#f6f8fb" stroke="#6b7a8c"/>
+  <text x="608" y="112" class="s" text-anchor="middle">底板 R6</text>
+  <!-- TDI -->
+  <polyline points="160,80 240,80 240,36 334,36" fill="none" stroke="#2f6fb3" stroke-width="2.4" marker-end="url(#j1)"/>
+  <text x="246" y="29" class="x" style="fill:#2f6fb3;font-weight:700">TDI（FPC1）</text>
+  <!-- A TDO -> R6 -->
+  <polyline points="506,40 608,40 608,90" fill="none" stroke="#2f6fb3" stroke-width="2.4" marker-end="url(#j1)"/>
+  <text x="516" y="33" class="x" style="fill:#2f6fb3;font-weight:700">TDO（FPC1）</text>
+  <!-- R6 -> B TDI -->
+  <polyline points="608,122 608,168 508,168" fill="none" stroke="#2f6fb3" stroke-width="2.4" marker-end="url(#j1)"/>
+  <text x="616" y="160" class="x" style="fill:#2f6fb3;font-weight:700">TDI（FPC2）</text>
+  <!-- B TDO -> main -->
+  <polyline points="336,184 240,184 240,132 162,132" fill="none" stroke="#2f6fb3" stroke-width="2.4" marker-end="url(#j1)"/>
+  <text x="168" y="202" class="x" style="fill:#2f6fb3;font-weight:700">TDO 回主控（FPC2）</text>
+  <!-- TMS/TCK -->
+  <polyline points="160,106 296,106 296,62 334,62" fill="none" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#j2)"/>
+  <polyline points="296,106 296,150 334,150" fill="none" stroke="#6b7280" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#j2)"/>
+  <text x="166" y="100" class="x">TMS/TCK 两桥并联</text>
+  <text x="664" y="34" class="x">两块桥都插上、</text>
+  <text x="664" y="51" class="x">都上电，链才闭合</text>
+</svg>
+<figcaption>图 4　JTAG 菊花链。主控 TDI → 面 A 桥 → （底板 R6）→ 面 B 桥 → 主控 TDO；TMS/TCK 两桥并联。10-27 打通：链上读到 2 个 0x0001281B，两块桥都"带校验灌 SRAM"和"从 flash 重载"成功。</figcaption>
+</figure>
+<ul>
+  <li><b>前提</b>：两块桥都插上、都上电。任一块不在，整条链断，两面都灌不了。只装面 A 时 TDO 回不来，只能"盲灌"（灌完靠 <code>sbd info</code> 读 BUILD 判断成没成）。</li>
+  <li><b>为什么命令里要加两个 pulldown 选项</b>：桥转接板上 TMS/TDI/TCK（R221–R223）和 TDO（R219）各有 10 kΩ 下拉，空闲时读成 0，工具缺省会当成"桥没上电"而拒绝。加选项前先确认桥有状态帧（<code>sbd info</code>）。</li>
+  <li><b>成功判据</b>：灌完 <code>sbd info</code> 读到的 BUILD = 所灌的版本（e60c 26102720 / e60cp 26102760 / e60cb 26102740）。</li>
+</ul>
+<p>板上命令（在 <code>/root/d74</code> 目录，工具和位流包已放好）：</p>
+<pre><span class="c"># 1) 看链：应列出 2 个 0x0001281B（只读，不改桥）</span>
+./gw5a_sram_d80 --profile d27 --chain 2 --pos 0 --bridge-pulldowns --tdo-pulldown scan-chain
+<span class="c"># 2) 读版本：--pos 0 = 面 A（flash 正式版 USERCODE E405），--pos 1 = 面 B（FA0B）</span>
+./gw5a_sram_d80 --profile d27 --chain 2 --pos 0 --bridge-pulldowns --tdo-pulldown status
+<span class="c"># 3) 灌 SRAM（带校验，末行 GW5A_SRAM: PASS）。例：给面 A 灌 e60c；面 B 用 --pos 1 和 e60cb.gws</span>
+./gw5a_sram_d80 --profile d27 --chain 2 --pos 0 --bridge-pulldowns --tdo-pulldown load ./e60c.gws
+/root/d10_v1/sbd reset ; /root/d10_v1/sbd info     <span class="c"># 复位桥后核 BUILD（e60c 应为 26102720）</span>
+<span class="c"># 4) 回金版：让桥从 flash 重新加载（或者桥断电重上电）</span>
+./gw5a_sram_d80 --profile d27 --chain 2 --pos 0 --bridge-pulldowns --tdo-pulldown reload --expect-usercode E405</pre>
+<p class="small">灌之前先确认没有 sbd 守护在跑（验证脚本会按 PID 自动停；手动操作时它的看门狗会在桥黑着的几秒里去复位桥）。灌 SRAM 不碰 flash：工具把"写 flash""写 OTP"两类指令列为禁止，编译期就排除了。灌失败最坏结果是那块桥黑着，<code>reload</code> 或断电重上电即恢复。要灌的版本和桥当前版本相同时工具会拒绝（USERCODE 一样，判不出灌没灌进去）。</p>
+
+<h3>6.5　烧桥 flash（PC 下载器，需要人）</h3>
+<ol class="steps">
+  <li><b class="h">拔掉这块桥的 FPC</b>桥板保持供电。下载座和主控的 JTAG 是同一组线，不拔会冲突。</li>
+  <li><b class="h">高云下载器接桥转接板 H1（6 针）</b>需要 6 针转接线，第 6 脚作参考电压（2.5 V）。</li>
+  <li><b class="h">PC（Windows）执行烧写</b>
+<pre>programmer_cli.exe --device GW5A-25B --run 54 --fsFile &lt;bridge.fs&gt; --cable-index 1 --location 44 --frequency 2.5MHz</pre>
+    <code>--run 54</code> = 擦 + 写 + 校验。批量烧多块用 <code>d74_bridgemgmt/flash_bridge.sh</code>（每块自动前检、烧、读回 USERCODE）。
+    <span class="r">严禁 --run 9 / 13 / 36</span>：会报 spi flash not found 并把 JTAG 挂死，只能给桥断电恢复。</li>
+  <li><b class="h">收尾：拔下载器 → 插回 FPC → 桥断电重上电</b>不重上电，边带不通。然后 <code>sbd info</code> 核 BUILD 和面号，或用 §6.4 的 <code>status</code> 读 USERCODE。</li>
+</ol>
+<p class="small">已知：<code>flash_bridge.sh</code> 第 4 步（<code>--run 66</code> 再校验）会假报 "Verify failed at address 7"，以重上电后读回的 USERCODE 为准（D81 在查）。出厂固件备份 <code>_work/d74_backup/ACG525_Factory_Firmware_usb.fs</code>（A 版文件头，能否在 B 版片上启动未验证）。flash 内容无法从板上读回成文件。</p>
+
+<h3>6.6　远程给桥断电</h3>
+<p>USB 继电器（串在桥的 5 V 上）在接入中（D89）。接好之前，给桥断电要人去拔底板 CN1/CN2 那路 5 V 线。</p>
+
+<!-- ============================ 7 ============================ -->
+<h2 id="s7">7　验证流程与判据</h2>
+<p>按下面顺序做，前一步过了再做下一步。每个脚本都输出逐项 <code>CHECK 编号 PASS/FAIL/WARN</code>，FAIL 后面紧跟"最可能原因 / 下一步"，末行给总结论。</p>
+<table class="tbl-s">
+  <thead><tr><th class="c" style="width:4%">#</th><th style="width:25%">步骤</th><th>验什么</th><th style="width:27%">10-27 状态</th></tr></thead>
+  <tr><td class="c">1</td><td>上电前硬件核对</td><td>§4.6、§5.1</td><td><span class="pill ok">已通过</span> 01 台架</td></tr>
+  <tr><td class="c">2</td><td>通信专项 comm_check（面 A）</td><td>电平、握手、训练、PRBS 10 min、边带、寄存器、JTAG、故障恢复</td><td>C0–C4 <span class="pill ok">已通过</span>；C6 手动已过；C5、C7 <span class="pill todo">待补跑</span></td></tr>
+  <tr><td class="c">3</td><td>PRBS 长跑</td><td>13 lane 误码，1 h / 8 h</td><td>1 h <span class="pill ok">已通过</span>；8 h <span class="pill todo">今晚</span></td></tr>
+  <tr><td class="c">4</td><td>图样源长跑 tp</td><td>按正式节拍 4284 片/s 送片，桥逐项对账</td><td>10 min <span class="pill ok">已通过</span></td></tr>
+  <tr><td class="c">5</td><td>真内容长跑 content</td><td>网格 → 切片 → 上行 → 桥全链路</td><td><span class="pill todo">待做</span></td></tr>
+  <tr><td class="c">6</td><td>面 B、两面同时</td><td>同 2–5，面 B 与双面</td><td><span class="pill todo">待做</span></td></tr>
+  <tr><td class="c">7</td><td>灯板到后出图</td><td>图样 → 真内容 → 换档 → 光电真转</td><td><span class="pill todo">约 11-05</span></td></tr>
+</table>
+<p class="small">命令以 10-27 合入主线的脚本为准（D78 600M 位流与缺省 + D79 长跑判据 + D80 菊花链）。合入前请用对应任务分支，或按附录 D 的"合入前写法"。</p>
+
+<h3>7.1　通信专项 comm_check</h3>
+<pre><span class="c"># 桥 flash 已是正式版：不重灌桥，直接验（日常用这个）</span>
+bash d39_comm/comm_check.sh --board dr1m90-01 --skip-bridge
+<span class="c"># 要先把桥换成指定版本（主控经 JTAG 灌 SRAM；两块桥都装时要用合入 D80 菊花链参数后的脚本，否则按 §6.4 手动灌）</span>
+bash d39_comm/comm_check.sh --board dr1m90-01 --bridge-load sram
+<span class="c"># 只跑某段 / 从某段起</span>
+bash d39_comm/comm_check.sh --board dr1m90-01 --skip-bridge --only C3
+bash d39_comm/comm_check.sh --board dr1m90-01 --skip-bridge --from C4</pre>
+<table class="tbl-s">
+  <thead><tr><th style="width:12%">阶段</th><th style="width:22%">查什么</th><th>过关标准</th></tr></thead>
+  <tr><td>S0 前置</td><td>位流、工具、md5，能按名字连板</td><td>md5 全对；位流电平档 = 2.5 V（不符直接停，不碰板）</td></tr>
+  <tr><td>C0 电平</td><td>装位流前<b>人工量电压</b>，脚本到点会停下来问</td><td>bank11、bank33 都 2.40–2.60 V；U18/U19 16 脚 2.5 V、15 脚 3.3 V、9 脚低；配置前复位线、TCK ≤ 0.7 V</td></tr>
+  <tr><td>S3 装位流</td><td>主控位流</td><td>识别字对；GEOM = 0xA0B40C19；线速 / pclk = 600 / 150 MHz</td></tr>
+  <tr><td>C1 握手</td><td>桥出复位、版本</td><td>收到桥状态帧；协议主版本 2；GEOM 06023C0C；BUILD = 期望值</td></tr>
+  <tr><td>C2 训练对齐</td><td>闭环训练，图样源送片</td><td>对齐线 10 s 内升起；桥 13 lane 全对齐（1FFF）；不重训、不丢片</td></tr>
+  <tr><td>C3 PRBS</td><td>13 lane 误码</td><td>13 lane 全锁；≥ 600 s 每 lane 0 误码；不掉锁；切回正常码后自动恢复</td></tr>
+  <tr><td>C4 边带</td><td>两条串口、对齐线、复位线</td><td>状态帧连续、帧错 0；20 条命令全收到；拉复位后桥重启并自愈</td></tr>
+  <tr><td>C5 寄存器</td><td>桥寄存器读写</td><td>写读一致；只读拒写；无效地址报错</td></tr>
+  <tr><td>C6 JTAG</td><td>链与灌桥</td><td>两块桥都装：链上 2 个 0x0001281B。<b>注意</b>：脚本的 C6 还没带下拉开关，两桥都插时会误报 FAIL，以 §6.4 手动结果为准（10-27 已过）。只装面 A：读不到 IDCODE 记 WARN（正常）</td></tr>
+  <tr><td>C7 故障恢复</td><td>桥看门狗、重训、守护</td><td>断流进黑场、来片恢复；打断对齐 5 s 内自愈；守护能复位桥</td></tr>
+  <tr><td>S9 收尾</td><td>安全停 + 报告</td><td>上行停止送片；报告在 <code>v1_bringup/runs/&lt;时间&gt;/comm_report.html</code></td></tr>
+</table>
+<p><b>通过标准：报告末行 <code>COMM_CHECK: PASS</code>。</b>10-27（600M，面 A）那次：C0–C4 全过（52 项）；2 项 FAIL 是判据脚本的问题（PR06 按 800M 算拍数、SB01 把缓冲溢出当错误），已修；因 C4 那项误报提前收尾，<b>C5、C7 没跑到，要用修过的脚本补跑</b>。C6 由菊花链手动验过（§6.4）。</p>
+
+<h3>7.2　PRBS 长跑</h3>
+<pre>bash d39_comm/comm_check.sh --board dr1m90-01 --skip-bridge --long 8h      <span class="c"># C3 改成 8 小时（也可 1h）</span></pre>
+<ul>
+  <li>要用 PRBS 档位流：主控 <code>…_sb_hs_prbs_io25.bin</code>（b3af9155），桥 <code>e60cp</code>（面 A flash 里就是它）。</li>
+  <li>判据：13 lane 全程锁定（桥 0x60 读 <code>5052 1FFF</code>）、掉锁 0（0x61 = 0）、每 lane 误码 0。</li>
+  <li>10-27 实测：600 s 每 lane 校验 3.9×10<sup>11</sup> 位、0 误码（误码率 &lt; 7.7×10<sup>-12</sup>）；1 h 12 次采样全锁、0 误码。8 h 待跑。</li>
+</ul>
+
+<h3>7.3　图样源 / 真内容长跑（tp / content）</h3>
+<pre>bash d73_v1content/run.sh dr1m90-01 600 --mode tp             <span class="c"># 10 分钟，图样源（先跑这个）</span>
+bash d73_v1content/run.sh dr1m90-01 1h  --mode content        <span class="c"># 1 小时，真内容</span>
+bash d73_v1content/run.sh dr1m90-01 8h  --mode content --poll 60</pre>
+<ul>
+  <li><b>tp</b> = 主控 FPGA 里的图样源按 4284 片/s 出片，绕开网格和软件，只验"上行 → 桥"。<b>content</b> = 真内容走全链路（板上循环播 192 网格的 walking 动画，假转 12 转/秒）。content 不过先跑 tp，分清是链路还是切片/软件的问题。</li>
+  <li>脚本<b>不装位流、不烧 flash</b>：先用 comm_check 或 bringup 把主控位流装好。tp 用 PRBS 档即可；content 要 g2 档（<code>…_sb_hs_io25_g2.bin</code>）。</li>
+  <li>每 30 秒采一次"主控上行计数 + 桥状态帧"，写 CSV，结束出汇总，末行 <code>D73_V1CONTENT: PASS</code>。</li>
+</ul>
+<table class="tbl-s">
+  <thead><tr><th style="width:21%">判据（硬）</th><th>标准</th></tr></thead>
+  <tr><td>链路一直在线</td><td>主控和桥全程对齐、13 lane 全对齐（1FFF）；掉对齐 0；桥重训 0；桥没重启</td></tr>
+  <tr><td>不丢、不欠</td><td>主控丢片 / 欠载 0；桥 fs_miss 0、丢片 0；桥跳片 skip ≤ 设计值（每 4296 帧 1 片）+ 3</td></tr>
+  <tr><td>节拍准</td><td>平均片率 4284 ± 1%；单窗偏离 &gt; 3% 的窗 ≤ 5%</td></tr>
+  <tr><td>收发对账</td><td>桥收片（显示 + 跳片）= 主控发片（按桥自己的时间轴比，容差约 1 秒的片数）</td></tr>
+  <tr><td>格式无误码</td><td>相位错、格式错 0（注意：12-bit 桥不校验校验 lane，CRC 计数恒 0，误码以 PRBS 为准）</td></tr>
+  <tr><td>安全</td><td>无溢出、无看门狗黑场；结束后上行已停</td></tr>
+  <tr><td>content 另加</td><td>voxslice 全程活着、日志无报错/拒收；触发 ≈ 4284/s、丢片 0</td></tr>
+  <tr><td class="mut">软判据（只记录）</td><td class="mut">resid（已知饱和）、不接灯板时应答错每秒 +1、边带缓冲溢出字节 ovf</td></tr>
+</table>
+
+<h3>7.4　面 B 与两面同时 <span class="pill todo">待做</span></h3>
+<p>comm_check 只走面 A。面 B 与双面用出图脚本 <code>v1_bringup/bringup.sh</code> 的双面档（<code>--faces AB</code>：双面主控位流 + 面 B 桥 e60cb）。面 B 的 flash 和 JTAG 链已就绪；双面档的完整命令等 D78 合入后以 <code>v1_bringup/回板当天.md</code> 为准。</p>
+
+<h3>7.5　灯板到后（约 11-05）<span class="pill todo">待做</span></h3>
+<p>出图脚本 <code>v1_bringup/bringup.sh</code>：S5 测试图（人看屏）→ S6 真内容（人看屏）→ S7 换档 357/285/209 → S8 光电真转（300 rpm 起，升到 1200 再降回）。到货当天的清单另出（D86 在准备）。</p>
+
+<h3>7.6　10-27 实测汇总</h3>
+<table class="tbl-s">
+  <thead><tr><th style="width:20%">项目</th><th style="width:22%">条件</th><th>结果</th></tr></thead>
+  <tr><td>线速摸底</td><td>主控各线速档 + 面 A 桥</td><td>400M 全对 · <b>600M 全对</b> · 700M 边缘丢位 · 750/800M 不行 · 500M 有位流未测</td></tr>
+  <tr><td>通信专项</td><td>600M，面 A，桥 e60cp 26102760</td><td>C0–C4 全过（52 项）；2 项判据脚本问题已修；C6 手动已过；C5、C7 待补跑</td></tr>
+  <tr><td>PRBS 600 s / 1 h</td><td>13 lane</td><td>全锁、0 掉锁、0 误码；600 s 每 lane 3.9×10<sup>11</sup> 位</td></tr>
+  <tr><td>图样源长跑 tp</td><td>600 s，4284 片/s，不接灯板</td><td><b>PASS</b>：发 2,440,454 片，平均 4283.90 片/s；按主控时间轴收发差 17 片（容差 644）；重训、掉对齐、丢片、欠载全 0；设计跳片 568 次（理论 568）</td></tr>
+  <tr><td>菊花链灌桥</td><td>两块桥都在</td><td>链上 2 个 0x0001281B；两块都带校验灌 e60c 成功、从 flash 重载成功</td></tr>
+  <tr><td>桥 flash</td><td>面 A / 面 B</td><td>e60cp（E405）/ e60cb（FA0B），重载读回核实</td></tr>
+</table>
+
+<!-- ============================ 8 ============================ -->
+<h2 id="s8" class="pb">8　已知限制</h2>
+<table class="tbl-s">
+  <thead><tr><th class="c" style="width:4%">#</th><th style="width:20%">限制</th><th style="width:38%">是什么、影响多大</th><th>现在怎么办 / 后续</th></tr></thead>
+  <tr class="grp"><td colspan="4">链路与性能</td></tr>
+  <tr><td class="c">1</td><td><b>DR1 线速上限</b></td><td>主控芯片 DR1 的高速输出串化器实测：400M、600M 全对，700M 边缘丢位，750/800M 只能发出一半的位。V1 原计划 800M 不可行。</td><td>V1 定 <b>600M</b>（占 63%，够用，不用加线）。不能再提速。V2 受影响要另定方案（已整理问安路的问题，D84 在查）。</td></tr>
+  <tr><td class="c">2</td><td><b>桥每秒设计跳 1 片</b></td><td>桥每 4296 帧（约 1 秒）刷新一次 2260 寄存器表并回读一次应答，这一帧比片周期长，下一片整片丢掉（skip +1）。约 0.023%，不是欠载（fs_miss = 0）。</td><td>判据已按设计值放行。对画面的影响待灯板确认。D82 在评估去掉或把刷新挪出视频帧。</td></tr>
+  <tr><td class="c">3</td><td><b>resid 每帧涨约 1 并饱和</b></td><td>桥"帧尾残留字槽"计数上板一直每帧约 +1，16 位很快到 65535。是否意味着每片丢了最后一个字槽（像素）还没定。</td><td>只记录不判。要在接灯板或仿真里核（D82）。</td></tr>
+  <tr><td class="c">4</td><td><b>12-bit 桥不校验校验 lane</b></td><td>出货档的 CRC 计数恒为 0，"CRC 0"不能当没误码的证据。</td><td>误码以 PRBS 档长跑为准（§7.2）。</td></tr>
+  <tr><td class="c">5</td><td><b>桥驱灯板余量 0.7%</b></td><td>序列器每帧 231.84 µs，上限 4313 片/s；4284 片/s 时余量 0.7%，357 片档最高转速时 0.26%。该时长来自仿真，未上硅。</td><td>转速高了软件自动换档减片。灯板到后实测 12 转/秒是否稳。</td></tr>
+  <tr class="grp"><td colspan="4">运维</td></tr>
+  <tr><td class="c">6</td><td>灌桥依赖两块桥都在</td><td>菊花链：任一块没插、没电，链就断，两面都灌不了；只装面 A 只能盲灌。</td><td>两块桥同时装。单块调试用桥板 H1 下载座。</td></tr>
+  <tr><td class="c">7</td><td>flash 只能用 PC 下载器烧</td><td>要人到板边、拔 FPC；主控远程写 flash 未做。</td><td>日常用 SRAM 灌新版；远程烧 flash D81 在做。</td></tr>
+  <tr><td class="c">8</td><td>主控掉电丢位流、无自启动</td><td>每次主控上电后要 PC 跑一次脚本才进入工作状态。</td><td>上电自启动 D85 在做。</td></tr>
+  <tr><td class="c">9</td><td>状态帧可能"旧"</td><td>主控收桥状态的缓冲只有 256 字节，读得慢会读到几十秒前的旧帧。</td><td>新脚本先读空再取。人工 <code>sbd stat</code> 时连读两次看后一次。</td></tr>
+  <tr><td class="c">10</td><td>远程断电未接入</td><td>桥断电要人拔线。</td><td>USB 继电器 D89 在接。</td></tr>
+  <tr><td class="c">11</td><td>flash 批量脚本第 4 步假报</td><td><code>--run 66</code> 报 "Verify failed at address 7"，实际已烧好。</td><td>以重上电后读回 USERCODE 为准（D81 查）。</td></tr>
+  <tr class="grp"><td colspan="4">灯板与硬件</td></tr>
+  <tr><td class="c">12</td><td>灯板相关全未上板</td><td>下行信号、应答回读、画面方向 / 拼接 / 颜色、亮度、停转黑场、光电真转都等灯板（约 11-05）。不接灯板时应答错每秒 +1 是正常现象。</td><td>到货当天按出图脚本做（§7.5）。</td></tr>
+  <tr><td class="c">13</td><td>硬件隐患</td><td>24 V 无保险丝/TVS/防反接；FS03 与底板之间只有 2 根地；桥核心板座可 180° 插反；FS03 每根 CEP 线有 33 Ω 串阻。</td><td>台架限流；上转子前补保护；装板时核方向；串阻可换 0 Ω（可选）。</td></tr>
+</table>
+
+<!-- ============================ 9 ============================ -->
+<h2 id="s9" class="pb">9　故障排查表</h2>
+<p class="small">"编号"是脚本报告里的 CHECK 编号，方便对照。先按顺序看第一条对得上的。</p>
+<table class="tbl-xs">
+  <thead><tr><th style="width:27%">现象</th><th style="width:9%">编号</th><th style="width:25%">最可能原因</th><th>怎么办</th></tr></thead>
+  <tr class="grp"><td colspan="4">上电与联网</td></tr>
+  <tr><td>上电后蓝灯立刻亮、串口没字</td><td>—</td><td>没从 TF 卡启动</td><td>查启动拨码（两位 OFF）；查 J1/J2 中脚有没有 2.5 V（24 V 先上了没、飞线）；TF 卡插好</td></tr>
+  <tr><td>按名字找不到板</td><td>P10</td><td>WiFi 没连上 / 名字应答没起</td><td>上电后等 35 秒再试；仍不行接串口 COM24 看 <code>/tmp/autorun.log</code>；"能出不能进"在串口执行 <code>dhcpcd -n wlan0</code></td></tr>
+  <tr><td>登上去的不是想要的板</td><td>—</td><td>TF 卡在板间挪过，主机名跟卡走</td><td>以 WiFi MAC 认板（dr1ssh.sh 自动核）</td></tr>
+  <tr><td>24 V 电流异常大、板子发烫</td><td>—</td><td>短路或核心板插反</td><td>立即断电；核桥核心板方向（CN3 第 1 脚 ↔ TCK）、3.3 V 对地</td></tr>
+  <tr class="grp"><td colspan="4">装主控位流</td></tr>
+  <tr><td>脚本停在 S0 说位流电平档不符</td><td>P15</td><td>拿错位流（不是 io25）</td><td>换 <code>_hs_…_io25</code> 位流。脚本在加载前就停，不会伤板</td></tr>
+  <tr><td>bank 电压不在 2.40–2.60 V</td><td>M01</td><td>飞线 / 跳帽问题</td><td>断电核 J1/J2 帽已拔、H7/H9 两根飞线；不过不许装位流</td></tr>
+  <tr><td>位流加载失败</td><td>L01</td><td>有进程占着 FPGA 寄存器（V0 演示 / voxslice 在跑）</td><td>让脚本按 PID 停掉演示再装；仍失败重启主控再跑</td></tr>
+  <tr><td>线速 / pclk 不是 600 / 150</td><td>L04</td><td>装了旧的 800M 位流</td><td>换 <code>_work/d78_out</code> 的 ul600 位流</td></tr>
+  <tr class="grp"><td colspan="4">桥握手（边带）</td></tr>
+  <tr><td>收不到桥状态帧（sbd info 无帧）</td><td>B02</td><td>桥没电 / FPC 没插好 / 桥被按在复位 / 刚烧完 flash 没重上电</td><td>量桥 5 V；FPC 翻盖锁紧；<code>sbd info</code> 看复位线 SB_RSTN 是否 1；烧过 flash 的拔下载器、桥断电重上电</td></tr>
+  <tr><td>协议版本 / GEOM 不符</td><td>SV01–02</td><td>桥烧错档</td><td>12-bit 主控配 e60c / e60cp / e60cb；按附录 A 重灌</td></tr>
+  <tr><td>BUILD 不是期望值</td><td>CH02</td><td>桥里还是旧版或别的档</td><td>重灌 SRAM（§6.4）或重烧 flash（§6.5）；BUILD 解读见附录 A</td></tr>
+  <tr><td>面号不对</td><td>—</td><td>面 A / 面 B 桥板装反或烧反</td><td>对照板上 A/B 标签；面 A 应为 0，面 B 应为 1</td></tr>
+  <tr><td>sbd 命令没回应</td><td>SV03 / SB02</td><td>主控 → 桥那条串口不通</td><td>看 RXERR；量 FPC 64/65 一侧电平；核 U19 供电</td></tr>
+  <tr class="grp"><td colspan="4">训练与对齐</td></tr>
+  <tr><td>训练后对齐线不升、lanes ≠ 1FFF</td><td>T05 / U2</td><td>位流不对、时钟档不对、某几条线有问题</td><td>按顺序查：① 主控位流是 <code>_hs</code> + <code>ul600</code>；② 转发时钟档：主控 CTRL 复位值 0x1044、<code>sbd rd 0x1a</code> = c14b4b4b；③ <code>sbd fe</code> 看每条 lane；④ 示波器看 lane0（底板 R117/R118 → 桥 R185）和时钟（桥 R103/R104）</td></tr>
+  <tr><td><code>sbd rd 0x1a</code> 后三字节不是 4B</td><td>—</td><td>桥 PLL 没按 600M 跟上</td><td>转发时钟档不是 2，或主控位流线速不是 600</td></tr>
+  <tr><td><code>sbd fe</code> 某 lane dead</td><td>—</td><td>那条线扫不到眼</td><td>看 0x1b 的"有翻转"位：0 = 线上没信号（查焊接 / FPC 对应脚）；1 = 有信号不干净（量摆幅、共模）；<code>sbd reset</code> 让桥重扫</td></tr>
+  <tr><td><code>sbd fe</code> 13 条全判"反"（inv = 1FFF）</td><td>—</td><td>位序反（不应出现）</td><td>保留现场，交软件</td></tr>
+  <tr><td>眼宽 &lt; 30 档</td><td>—</td><td>信号质量差</td><td>查底板 R182–R201 是否空贴、33 Ω 排阻、FPC 插接</td></tr>
+  <tr class="grp"><td colspan="4">误码与长跑</td></tr>
+  <tr><td>PRBS 不锁</td><td>PR01–02</td><td>位流不带 PRBS 档</td><td>主控用 <code>_prbs_</code> 档（b3af9155），桥用 e60cp</td></tr>
+  <tr><td>PRBS 有误码</td><td>PR04</td><td>单条 lane = 那对线；多条 = 共模 / 地差 / 电源</td><td>报告点名错的 lane；量 M08–M10（共模、地差、摆幅）</td></tr>
+  <tr><td>skip 超过设计值，或 fs_miss &gt; 0</td><td>B5</td><td>真欠载</td><td>记首次出现时间；看片率（L6）、主控欠载、转速档</td></tr>
+  <tr><td>收发片数对不上 / 状态帧不新鲜</td><td>B9 / S5</td><td>读到边带缓冲里的旧帧</td><td>用 10-27 之后的 run.sh（会先读空缓冲）</td></tr>
+  <tr><td>RXERR 在涨</td><td>L3 / SB01</td><td>高 16 位是缓冲满丢的字节，正常</td><td>只要低 16 位帧错 ferr = 0 就算过</td></tr>
+  <tr><td>应答错每秒 +1</td><td>B12</td><td>没接灯板</td><td>正常；接灯板后应为 0</td></tr>
+  <tr><td>resid = 65535</td><td>B11</td><td>已知，见 §8 第 3 条</td><td>软判据，不影响 PASS</td></tr>
+  <tr><td>主控重启后链路不通</td><td>—</td><td>主控位流掉电即丢</td><td>重跑脚本（<code>--skip-bridge</code>，桥不用动）</td></tr>
+  <tr class="grp"><td colspan="4">灌桥与烧 flash</td></tr>
+  <tr><td>gw5a_sram 预检拒绝（TMS/TDI/TDO 读 0）</td><td>—</td><td>转接板 10 kΩ 下拉，正常</td><td>先 <code>sbd info</code> 确认桥有帧，再加 <code>--bridge-pulldowns --tdo-pulldown</code></td></tr>
+  <tr><td>scan-chain 不是 2 个 0x0001281B</td><td>—</td><td>链断</td><td>两块桥都插上、都上电；两根 FPC 插好</td></tr>
+  <tr><td>comm_check 的 C6（JTAG）报 FAIL，两块桥都插着</td><td>JT10 等</td><td>脚本还没带下拉开关，被预检挡住（误报）</td><td>以 §6.4 手动 scan-chain / status 结果为准</td></tr>
+  <tr><td>灌完没状态帧 / BUILD 没变</td><td>JT02 / JT03</td><td>没灌进去</td><td>再灌一次；仍不行 <code>reload</code> 回 flash 或桥断电重上电</td></tr>
+  <tr><td>programmer_cli 报 spi flash not found、JTAG 卡死</td><td>—</td><td>用了 --run 9 / 13 / 36</td><td>桥断电恢复；只用 <code>--run 54</code></td></tr>
+  <tr><td>烧完 flash 边带不通</td><td>—</td><td>下载器还插着 / 没断电重上电</td><td>拔下载器、插回 FPC、桥断电重上电</td></tr>
+  <tr><td>批量脚本第 4 步报 Verify failed at address 7</td><td>—</td><td>已知假报</td><td>以重上电后读回的 USERCODE 为准</td></tr>
+</table>
+
+<!-- ============================ 附录 A ============================ -->
+<h2 id="sa" class="pb">附录 A　位流与文件清单</h2>
+<h3>A.1　主控位流（<code>D:\claude_workspace\pov3d\_work\d78_out\</code>，600M、换球、2.5 V、带边带）</h3>
+<table class="tbl-xs">
+  <thead><tr><th style="width:48%">文件</th><th style="width:19%">用途</th><th>bin md5</th></tr></thead>
+  <tr><td><code>pov_m90_pure_ul600_p1_b12_sb_hs_prbs_io25.bin</code></td><td>通信验证、PRBS、tp 长跑</td><td><code>b3af9155d20ce3bef8bdc7b2f25ef3cc</code></td></tr>
+  <tr><td><code>pov_m90_pure_ul600_p1_b12_sb_hs_io25_g2.bin</code></td><td>真内容 / 单面出图（缺省）</td><td><code>1ccf81115b72a879d19ffbcb54494b66</code></td></tr>
+  <tr><td><code>pov_m90_pure_ul600_p1_b12_sb_hs_ab_io25_g2.bin</code></td><td>双面</td><td><code>fe3723dc249680694302329a9d7ea1a4</code></td></tr>
+  <tr><td><code>pov_m90_pure_ul600_p1_b12_sb_hs_io25.bin</code></td><td>退路：老网格 160×180 单面</td><td><code>4211391de1bbd2079fc7d0574b3fc5e2</code></td></tr>
+  <tr><td><code>pov_m90_pure_ul600_p1_b12_sb_hs_ab_io25.bin</code></td><td>退路：老网格双面</td><td><code>0357bebc756dd1e940398fdf987b3f28</code></td></tr>
+</table>
+<p class="small">构建：<code>POV_PROFILE=v1 POV_ZERO_OK=1</code>（= 换球 + IO 2.5 V + 边带 + 光电 H22 + V1 12-bit + 转发时钟复位档 2）。PRBS 档与 10-27 上板那份逐字节相同。D78 整合中，合主线后以主线 <code>MD5SUMS.txt</code> 为准。</p>
+
+<h3>A.2　桥位流（<code>_work\d76_out\</code>，GW5A-25 B 版片）</h3>
+<table class="tbl-xs">
+  <thead><tr><th style="width:9%">档</th><th style="width:27%">用途</th><th style="width:11%">BUILD</th><th style="width:10%">USERCODE</th><th>bridge.fs md5</th></tr></thead>
+  <tr><td>e60cp</td><td>面 A 通信验证（= e60c + PRBS 误码计数）。<b>面 A flash 现为此档</b></td><td>26102760</td><td>E405</td><td><code>e19f344ad2f325afa7aee88398f98d67</code></td></tr>
+  <tr><td>e60c</td><td>面 A 出货档</td><td>26102720</td><td>2CC4</td><td><code>90b831e7b62ad5b0f0ccf49fd8583468</code></td></tr>
+  <tr><td>e60cb</td><td>面 B（面号 1）。<b>面 B flash 现为此档</b></td><td>26102740</td><td>FA0B</td><td><code>d6de18bc822271b4152b27b75a057a7e</code></td></tr>
+</table>
+<p class="small">目录名 <code>gw25_bridge_p1_&lt;档&gt;_d166p67/bridge.fs</code>，旁边 <code>bridge.expect</code> 写期望 BUILD / GEOM（06023C0C）。<b>BUILD 怎么读</b>：8 位 = 年月日 YYMMDD + 档位位 + 器件位，如 26102760 = 2026-10-27、档位 6（e60cp）、器件 0（25 B 版）；档位 2 = e60c、4 = e60cb。名字解读：e60 = 2260 寄存器表（60 扫）；c = 带边带命令；p = 带 PRBS；b = 面 B。</p>
+
+<h3>A.3　作废，别再用</h3>
+<ul class="small">
+  <li>主控：所有 <code>ul800</code> 档（<code>_work/d53_out</code>、<code>d64_out</code>、<code>d72_out</code> 的 800M 三档）；不带 <code>_hs</code> 的；<code>_work/v1_main_1019</code>、<code>d10_v1bit_out</code>（未换球、800M）。</li>
+  <li>桥：A 版片编的 <code>_work/d65c_out</code>、<code>d65_out</code>、仓库 <code>gw5a_bridge/results/gw25*</code>（实物是 B 版片）；诊断位流 <code>_work/d70_*</code>。</li>
+</ul>
+
+<h3>A.4　板上目录（DR1M90-01）</h3>
+<table class="tbl-xs">
+  <tr><td style="width:22%"><code>/root/d10_v1</code></td><td>comm_check / bringup 推上去的主控加载脚本 <code>m90_pure_ul/load_pov_m90_pure_ul.sh</code>、边带工具 <code>sbd</code>、位流</td></tr>
+  <tr><td><code>/root/d73</code></td><td>长跑 content 模式的 voxslice、LUT、内容（独立目录，不覆盖 d10_v1）</td></tr>
+  <tr><td><code>/root/d74</code></td><td>灌桥工具 <code>gw5a_sram_d80</code>、<code>bridge_sram_load.sh</code>、位流包 <code>e60c.gws / e60cp.gws / e60cb.gws</code></td></tr>
+  <tr><td>TF 卡 <code>pov/nodisplay</code></td><td>关掉 V0 开机演示（防止 V0 位流在 bank11 上和桥对驱）。不要删</td></tr>
+</table>
+
+<!-- ============================ 附录 B ============================ -->
+<h2 id="sb">附录 B　寄存器速查（只列排查常用的）</h2>
+<div class="cols2">
+<div>
+<h4>B.1　主控（板上 <code>devmem 0x8000xxxx 32</code>）</h4>
+<table class="tbl-xs">
+  <thead><tr><th style="width:24%">地址</th><th>含义 / 正常值</th></tr></thead>
+  <tr><td>0x4010</td><td>识别字 'SLP3' = 0x534C5033</td></tr>
+  <tr><td>0x4100</td><td>上行页识别字 'ULK1'</td></tr>
+  <tr><td>0x4104</td><td>{线速, pclk} = {600, 150}</td></tr>
+  <tr><td>0x4108</td><td>上行控制 CTRL；复位值 0x1044（转发时钟档 2）；送片中 (CTRL &amp; 0x10D) = 0x109</td></tr>
+  <tr><td>0x4110</td><td>状态：bit7 对齐、bit3 PLL 锁、bit4 训练中、bit5 PRBS 生效</td></tr>
+  <tr><td>0x411C</td><td>pclk 实测（kHz），≈ 150000</td></tr>
+  <tr><td>0x4158</td><td>GEOM = 0xA0B40C19（160, 180, 12 bit）</td></tr>
+  <tr><td>0x415C</td><td>每片组数 = 5400</td></tr>
+  <tr><td>0x41C0</td><td>边带页 'SBD1'</td></tr>
+  <tr><td>0x41C8</td><td>边带状态：bit0 对齐线 SB_ALIGNED，bit1 复位线 SB_RSTN</td></tr>
+  <tr><td>0x41D8</td><td>{掉对齐次数, 恢复次数}</td></tr>
+  <tr><td>0x41DC</td><td>RXERR = {缓冲溢出字节 ovf, 帧错 ferr}；只看 ferr</td></tr>
+  <tr><td>0x41F0</td><td>JTAG 位敲页 'JTAG'</td></tr>
+  <tr><td>0x4CA8</td><td>网格指纹：0xC0D8A0B4 = 192×216 网格（g2）</td></tr>
+</table>
+</div>
+<div>
+<h4>B.2　桥（板上 <code>./sbd rd &lt;地址&gt;</code>）</h4>
+<table class="tbl-xs">
+  <thead><tr><th style="width:24%">地址</th><th>含义 / 正常值</th></tr></thead>
+  <tr><td>0x0000</td><td>识别字 'GBP1'</td></tr>
+  <tr><td>0x0001</td><td>协议，主版本 = 2</td></tr>
+  <tr><td>0x0002</td><td>BUILD（附录 A）</td></tr>
+  <tr><td>0x0003</td><td>GEOM = 06023C0C（6 链、2 级联、60 扫、12 bit）</td></tr>
+  <tr><td>0x0004</td><td>上电秒数（1 桥秒 ≈ 1.002 s）</td></tr>
+  <tr><td>0x001A</td><td>收端时钟频率计；600M 时 c14b4b4b</td></tr>
+  <tr><td>0x001B</td><td>{有翻转的 lane, 干净训练码的 lane}</td></tr>
+  <tr><td>0x0035</td><td>扫眼：{完成, 扫描中, dead[12:0], inv[12:0]}</td></tr>
+  <tr><td>0x0036</td><td>{自动重扫次数, 扫完次数}</td></tr>
+  <tr><td>0x0037–3E</td><td>每 lane 采样点 / 眼宽（档，≈12.5 ps/档）</td></tr>
+  <tr><td>0x0040</td><td>控制：bit0 黑场、bit1 看门狗、bit2 状态帧</td></tr>
+  <tr><td>0x0041</td><td>断流多少 ms 进黑场（缺省 50）</td></tr>
+  <tr><td>0x0060</td><td>PRBS 锁定 {'PR', 掩码}，全锁 = 0x50521FFF（仅 e60cp）</td></tr>
+  <tr><td>0x0061</td><td>{掉锁次数, 锁定掩码}</td></tr>
+  <tr><td>0x0063+L</td><td>lane L 误码计数</td></tr>
+</table>
+</div>
+</div>
+<p class="small">桥状态帧每 0.5 秒一帧（71 字节，115200 波特），由板上 <code>sbd</code> 解析；完整定义见 dr1v90 <code>d27_link/SPEC.md</code> §3–§5。</p>
+
+<!-- ============================ 附录 C ============================ -->
+<h2 id="sc">附录 C　引脚、FPC 脚、测量点</h2>
+<h3>C.1　换球后的主控引脚（DR1 球号）</h3>
+<table class="tbl-xs">
+  <thead><tr><th style="width:24%">信号</th><th>设计（未换球）</th><th>现在（换球后）</th></tr></thead>
+  <tr><td>面 A 13 lane / 转发时钟</td><td>bank33：D22 F21 G17 A16 C15 B16 E19 G20 G19 F18 D16 A21 E21 / 时钟 D20</td><td><b>bank11</b>：AB10 AA9 AA7 Y6 AB5 W6 T4 AB7 AB2 U6 R6 V7 V5 / 时钟 Y4</td></tr>
+  <tr><td>面 B 13 lane / 转发时钟</td><td>bank11：AA11 Y11 AB10 AB5 W6 Y4 T4 AB7 AB2 U6 R6 V7 V5 / Y6</td><td><b>bank33</b>：D18 B19 D22 C15 B16 D20 E19 G20 G19 F18 D16 A21 E21 / A16</td></tr>
+  <tr><td>面 A 边带：对齐 / 复位 / 桥→主控串口 / 主控→桥串口</td><td>B21 / B22 / C17 / C18</td><td>W11 / W10 / Y9 / Y8</td></tr>
+  <tr><td>面 B 边带（同上顺序）</td><td>W11 / W10 / AA9 / AA8</td><td>B21 / B22 / F21 / F22</td></tr>
+  <tr><td>JTAG TMS / TCK / TDI / TDO</td><td>D18 / C19 / G22 / H22</td><td>AA11 / AB11 / U11 / U12</td></tr>
+  <tr><td>光电输入</td><td>U12</td><td><b>H22</b></td></tr>
+</table>
+<h3>C.2　FPC 脚（SoC 转接板侧，FPC1 与 FPC2 相同）</h3>
+<table class="tbl-xs nob">
+  <tr><td style="width:22%">地</td><td>1 4 7 10 13 16 19 22 25 28 31 34 37 40 43 46 49 52 55 58 61 66 71 72</td></tr>
+  <tr><td>12 条数据 lane（P/N）</td><td>TXP3–TXP14：11/12、14/15、17/18、20/21、23/24、26/27、35/36、38/39、41/42、44/45、47/48、50/51（lane0 = TXP3 = 11/12）</td></tr>
+  <tr><td>校验 lane / 转发时钟</td><td>TXCHK 32/33 · TXCLK 29/30</td></tr>
+  <tr><td>预留（V1 不用）</td><td>TXP0–2：2/3、5/6、8/9 · TXP15–17：53/54、56/57、59/60</td></tr>
+  <tr><td>边带</td><td>62 对齐（网名 DR1V_ACK）· 63 复位（DR1V_RST）· 64 桥→主控串口（DR1V_UART_RX）· 65 主控→桥串口（DR1V_UART_TX）</td></tr>
+  <tr><td>JTAG</td><td>67 TDO（链）· 68 TDI · 69 TMS · 70 TCK</td></tr>
+</table>
+<p class="small">脚号按 10-15 投板版底板网表机读（与创龙底板接口文档一致）。早期文档里边带 / JTAG 有"错一格"的写法（如 TDO 写成 66），以本表为准。柔性线两端金手指第 m 脚对连接器第 71−m 脚，桥板侧脚号与底板侧不同，量桥板时按桥板网名找。</p>
+<h3>C.3　测量点</h3>
+<table class="tbl-xs">
+  <thead><tr><th style="width:26%">量什么</th><th style="width:36%">在哪</th><th>期望</th></tr></thead>
+  <tr><td>bank11 / bank33 电压</td><td>FS03 J1 / J2 中脚对地</td><td>2.40–2.60 V（装位流前）</td></tr>
+  <tr><td>桥板转换芯片 U18 / U19</td><td>16 脚 VCCA、15 脚 VCCB、9 脚 OE</td><td>2.5 V、3.3 V、≤ 0.7 V（OE 低 = 使能）</td></tr>
+  <tr><td>配置前复位线 / TCK</td><td>主控侧 FPC 63 / 70</td><td>≤ 0.7 V（下拉，桥保持复位）</td></tr>
+  <tr><td>配置后复位线</td><td>主控侧 FPC 63</td><td>≈ 2.5 V（主控放开桥）</td></tr>
+  <tr><td>lane0 发端</td><td>SoC 转接板 R117 / R118</td><td>看差分摆幅与共模</td></tr>
+  <tr><td>lane0 收端</td><td>桥转接板 R185（100 Ω 端接）</td><td>共模约 1.25 V；差分摆幅 0.20–0.60 V</td></tr>
+  <tr><td>转发时钟</td><td>桥转接板 R103 / R104</td><td>75 MHz（600M ÷ 8）</td></tr>
+  <tr><td>两板地差</td><td>主控底板地 ↔ 桥板地</td><td>±0.05 V 以内</td></tr>
+</table>
+<p class="small">只有 70 MHz 示波器也可以：用诊断位流让 13 条线全 1 / 全 0 慢翻转，看连通和极性（看不到翻转 = 线 / 焊接问题）。</p>
+
+<!-- ============================ 附录 D ============================ -->
+<h2 id="sd">附录 D　命令速查</h2>
+<h4>PC（WSL，在 dr1v90 仓库根目录）</h4>
+<pre>bash host/dr1ssh.sh dr1m90-01 'uptime'                         <span class="c"># 按板名登录 / 执行命令</span>
+bash d39_comm/comm_check.sh --board dr1m90-01 --skip-bridge     <span class="c"># 通信专项（面 A）</span>
+bash d39_comm/comm_check.sh --board dr1m90-01 --skip-bridge --long 8h   <span class="c"># PRBS 8 小时</span>
+bash d73_v1content/run.sh dr1m90-01 600 --mode tp               <span class="c"># 图样源长跑 10 分钟</span>
+bash d73_v1content/run.sh dr1m90-01 1h --mode content           <span class="c"># 真内容长跑 1 小时</span>
+bash v1_bringup/bringup.sh --board dr1m90-01 --faces AB ...     <span class="c"># 双面 / 灯板到后出图（参数见 回板当天.md）</span>
+bash d39_comm/comm_check.sh --dry-run                           <span class="c"># 不连板的演练，看流程</span></pre>
+<p class="small">合入主线前的写法：comm_check 前面加 <code>COMM_KIT=/mnt/d/claude_workspace/pov3d/_work/d78_out COMM_MAIN_BIN=pov_m90_pure_ul600_p1_b12_sb_hs_prbs_io25.bin COMM_BRIDGE_DIR=/mnt/d/claude_workspace/pov3d/_work/d76_out/gw25_bridge_p1_e60cp_d166p67</code>；长跑脚本用 task/d79-v1content-fix 分支。</p>
+<h4>板上（root）</h4>
+<pre>cd /root/d10_v1
+./sbd info ; ./sbd --face b info ; ./sbd stat ; ./sbd fe ; ./sbd rd 0x1a
+sh m90_pure_ul/load_pov_m90_pure_ul.sh ul stat      <span class="c"># 每秒打印上行片数 / 欠载 / 丢片 / pclk</span>
+sh m90_pure_ul/load_pov_m90_pure_ul.sh ul stop      <span class="c"># 停止送片，线上回训练码</span>
+cd /root/d74 ; ./gw5a_sram_d80 --profile d27 --chain 2 --pos 0 --bridge-pulldowns --tdo-pulldown scan-chain</pre>
+<h4>Windows（烧桥 flash，见 §6.5）</h4>
+<pre>programmer_cli.exe --scan-cables
+programmer_cli.exe --device GW5A-25B --run 54 --fsFile &lt;bridge.fs&gt; --cable-index 1 --location 44 --frequency 2.5MHz</pre>
+
+<!-- ============================ 附录 E ============================ -->
+<h2 id="se">附录 E　资料出处与修订记录</h2>
+<table class="tbl-xs">
+  <thead><tr><th style="width:30%">内容</th><th>出处（dr1v90 仓库分支 / 文件，除另注）</th></tr></thead>
+  <tr><td>线速上限、换球、转发时钟、带宽占用</td><td>task/d72-v1hs <code>d72_v1hs/README.md</code>（3c3d61b）</td></tr>
+  <tr><td>长跑脚本与判据、设计跳片、resid、状态帧滞后</td><td>task/d73-v1content <code>d73_v1content/README.md</code>；task/d79-v1content-fix 同文件 [D79] 节（0cdfa29）</td></tr>
+  <tr><td>B 版桥位流、灌桥、flash 出货与烧写</td><td>task/d74-bridgemgmt <code>d74_bridgemgmt/README.md</code>（579a31b）</td></tr>
+  <tr><td>桥收端扫眼、频率计、寄存器</td><td>task/d76-p1rxfe <code>d76_p1rxfe/README.md</code>、<code>d27_link/SPEC.md</code>（80d1781）</td></tr>
+  <tr><td>JTAG 菊花链</td><td>task/d80-jtag2chain 提交 36287fe</td></tr>
+  <tr><td>边带协议、硬件约束 H-1…H-6</td><td><code>d27_link/SPEC.md</code></td></tr>
+  <tr><td>回板流程、出图步骤</td><td><code>v1_bringup/回板当天.md</code>（task/d77-v1docs 10-26 更新）</td></tr>
+  <tr><td>600M 主控五档位流</td><td>task/d78-v1l600（整合中）<code>_work/d78_out/MD5SUMS.txt</code></td></tr>
+  <tr><td>物理层契约对账</td><td>task/d75-contract-audit <code>d75_contract_audit/REPORT.md</code></td></tr>
+  <tr><td>接口、改板、板检查</td><td>zynq_pov <code>docs/SoC转接板接口_电机控制器口_2026-10-14</code>、<code>docs/创龙核心板转接板接口_2026-10-20</code>、<code>docs/三板检查_2026-10-15</code>、<code>docs/progress/回板当天改板清单_2026-10-27</code>、<code>docs/progress/到板当天_通信验证</code></td></tr>
+  <tr><td>网格与切片</td><td><code>slice/SPEC.md</code> §15（V1 屏读 V2 网格）</td></tr>
+  <tr><td>10-27 上板记录</td><td>comm_check 报告 <code>v1_bringup/runs/20261027_013929</code>；PRBS 1 h 日志；长跑 <code>d73_v1content/runs/20261027_121455_dr1m90-01_tp</code>；flash 日志 <code>d74_flash_logs/20261027_*</code></td></tr>
+</table>
+<table class="tbl-xs">
+  <thead><tr><th style="width:16%">修订</th><th>内容</th></tr></thead>
+  <tr><td>v1.0　2026-10-27</td><td>首版。按 10-27 实况：线速 600M；两块桥 flash 正式版（面 A e60cp / 面 B e60cb）；JTAG 菊花链灌桥已通；V0.1 阶段不接灯板。</td></tr>
+</table>
+
+</body>
+</html>

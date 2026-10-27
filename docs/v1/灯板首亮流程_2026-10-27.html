@@ -1,0 +1,25 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>V1 灯板首亮流程</title>
+<style>body{font-family:"Microsoft YaHei",sans-serif;max-width:820px;margin:20px auto;font-size:13px;line-height:1.55}h1{font-size:20px}h2{font-size:15px;border-bottom:1px solid #999;margin-top:18px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #aaa;padding:3px 6px;vertical-align:top}th{background:#eee}code{background:#f3f3f3;padding:0 3px}.w{background:#fff3cd;padding:6px;border:1px solid #e0b000}</style></head><body>
+<h1>V1 灯板首亮流程 (ICND2260, 11-05 到货当天)</h1>
+<p>一条命令: <code>bash d86_panel_day/灯板首亮.sh &lt;板名&gt; [--load-main 主控位流.bin] [--long 10m]</code>。离线演练: 加 <code>--dry-run --yes</code>。每步打 PASS/FAIL 判据, FAIL 附最可能原因与下一步。</p>
+<div class="w"><b>安全:</b> 灯板断电接线; 灯板这一路电源先限流 1 A; 全程从黑场 + 安全电流(bright 0)起步, 首亮亮度不超 25; 灯板不转无风冷, 温度 &gt; 75 度自动中止; 手边备红外测温枪。</div>
+<h2>第一步 人工确认(脚本会问)</h2>
+<ol><li>灯板在<b>断电</b>时接到桥转接板(CN1/CN2 方向核过), 桥/灯板/主控同一次上电, 不带电插拔。</li><li>电源限流 1 A(安全档全屏白估 20 mA; 出厂电流全白满灰度约 1.07 A + 12 颗 2260 自身电流[待硬件给])。</li><li>SDO-&gt;SDI 级联 0 欧已补; 链首组 0 欧贴、伙伴组不贴; R176-R181 贴没贴(不贴用 <code>--ack-devs 0</code>)。</li><li>无风冷: 全程低亮, 摸背面或红外枪量温。</li></ol>
+<h2>第二步 自动阶段</h2>
+<table><tr><th>阶段</th><th>做什么</th><th>PASS 判据</th></tr>
+<tr><td>P 前置</td><td>连板、位流指纹、没人占板、桥身份</td><td>SLP3/ULK1/SBD1/FMTC, GEOM 12-bit, 桥帧兼容</td></tr>
+<tr><td>A 安全态</td><td>黑场 + 电流安全档, 记桥 uptime</td><td>桥黑场、uptime 不回落</td></tr>
+<tr><td>L 链路</td><td>ul fwd 2 -&gt; train -&gt; ALIGNED -&gt; go</td><td>序列器 RUN, 帧在涨</td></tr>
+<tr><td>K 逐链 ACK</td><td>6 链 x 2 芯片读 0x00</td><td>每链回包 ok&gt;=1, bad=err=tmo=0, 数据 0F3C</td></tr>
+<tr><td>R 读寄存器</td><td>0x04/06/08, 0x2D/3D/4D, 0xFC</td><td>= 期望值(电流=安全档), 温度合理</td></tr>
+<tr><td>B 亮度写入</td><td>黑场下 bright 50, 回读, 写回安全档</td><td>逐链回读 = 新值(写不进 FAIL)</td></tr>
+<tr><td>C 纯色</td><td>白/红/绿/蓝低电平; 亮度 0/17/25 台阶</td><td>上行校验和 = 预测, 桥无错, 人看 6 块, 温度 &lt;= 60</td></tr>
+<tr><td>I 图样</td><td>块号、逐链单块、棋盘、隔行、隔列、灰阶</td><td>逐像素自证 + 人看</td></tr>
+<tr><td>T 真内容</td><td>walking 内容, 假转 12 rps</td><td>触发 ~4284/s, 发片=触发, 无丢片, 无 NAK</td></tr>
+<tr><td>Z 长跑</td><td>d73 run.sh --panel</td><td>ACK 错 = 0, 前后温度</td></tr>
+<tr><td>S 收尾</td><td>停出片源、γ 回默认、安全档、黑场</td><td>全部到位</td></tr></table>
+<h2>失败时</h2>
+<p>某链无 ACK: 查 ACK 上拉/R176-R181/灯板连接器; CRC 错: 查 CRC 位序与 ACK 线毛刺; 亮度写不进: 查写表是否生效/被覆盖; 桥中途复位: 已自动重下黑场并中止, 查供电。退出码 0 全过 / 1 有硬 FAIL / 2 前置不满足。结果在 <code>d86_panel_day/runs/&lt;时间&gt;_&lt;板&gt;/report.txt</code>。</p>
+<h2>要问硬件</h2>
+<ol><li>网表: CN1/CN2 方向与引脚; 面 A/面 B 各接哪块灯板; 级联 0 欧。</li><li>2260 链数(6 链 x 1 串 2)、链号与 P1-P6 对应、每链两芯片先后。</li><li>ACK 通路: R176-R181、ACK_O/ACK_I 上拉、电平转换。</li><li>供电时序: 是否同次上电、RSTN 谁拉、上电顺序、可否带电插拔。</li><li>电流: 灯板限流值、2260 自身电流、是否需风冷。</li></ol>
+</body></html>

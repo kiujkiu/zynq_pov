@@ -63,7 +63,7 @@ blockquote{margin:0;padding:6px 12px;border-left:3px solid var(--rule);color:var
 <body>
 <div class="wrap">
 <header>
-  <h1>关于 DR1M90 PL 侧 LVDS 高速输出（DR1_LOGIC_ODDRx2）的技术问询（更新版）</h1>
+  <h1>关于 DR1M90 PL 侧 LVDS 高速输出（DR1_LOGIC_ODDRx2）的技术问询（更新版）（更新版）</h1>
   <div class="meta">
     <b>致</b><span>上海安路信息科技股份有限公司 技术支持 / FAE</span>
     <b>发自</b><span>POV3D 项目组（联系人与联系方式：＿＿＿＿＿＿＿＿）</span>
@@ -110,7 +110,7 @@ DR1_LOGIC_ODDRx2 #(.ASYNCRST("ENABLE")) u_ser (.q(tx[i]), .pclk(pclk), .sclk(scl
 <tr><td>1.2 Gbps</td><td>无预加重</td><td class="bad">训练码正确，PRBS 不锁，原始字正确率 90.6%，约 3% 误码，像码间串扰</td></tr>
 <tr><td>1.2 Gbps</td><td>bank 级 PRE_EMP = ON</td><td class="ok">13 lane 全锁，10 分钟 0 误码，原始字正确率 100%</td></tr>
 </tbody></table></div>
-<p>我方怀疑 1.0 / 1.2 Gbps 的码间串扰与核心板有关：该板 LVDS 线上串了 33 Ω 排阻（R201–R208 等）。我们自研核心板将不放串阻。预加重开关出处：TD <code>arch/dr1_macro.v</code> 的 <code>DR1_PHY_HR_BANKREF</code>、UG1210 表 1-1。</p>
+<p>核心板面 A 的串阻 R201–R208 已换成 0 Ω，可排除串阻；1.0 / 1.2 Gbps 的码间串扰应来自连接器、FPC、转接板走线一侧，预加重是必需措施。自研核心板 LVDS 线不放串阻，且 LVDS 发送 bank 要能开预加重。预加重开关出处：TD <code>arch/dr1_macro.v</code> 的 <code>DR1_PHY_HR_BANKREF</code>、UG1210 表 1-1。</p>
 </section>
 <section>
 <h2>三、根因（已自行解决）</h2>

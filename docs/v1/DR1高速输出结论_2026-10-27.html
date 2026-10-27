@@ -76,7 +76,7 @@ blockquote{margin:0;padding:6px 12px;border-left:3px solid var(--rule);color:var
 <section><h2>对 V1 / V2 的影响</h2><ul>
 <li><b>V1</b>：用 600 Mbps，不受影响，已长跑验证。</li>
 <li><b>V2</b>：1.2 Gbps 的链路风险从“能不能发”降为“长跑、真帧格式、V2 p2 桥”的工程验证。</li>
-<li><b>核心板</b>：FS03 核心板的 LVDS 线上串了 33 Ω 排阻（R201–R208 等），怀疑是码间串扰来源。自研核心板 LVDS 线不放串阻。</li>
+<li><b>码间串扰来源</b>：FS03 面 A 的 R201–R208 已为 0 Ω，排除串阻；串扰来自连接器 / FPC / 转接板走线一侧，预加重是必需措施。</li><li><b>自研核心板</b>：LVDS 线不放串阻；LVDS 发送 bank 要能开预加重。</li>
 <li><b>代码</b>：所有奇数分频位置都必须按公式 2-5 取值。</li></ul></section>
 <section><h2>下一步</h2><ol>
 <li>1.2 Gbps 加预加重做小时级长跑。</li>

@@ -18,6 +18,7 @@ table{border-collapse:collapse;width:100%;font-size:13px;margin:6px 0}th,td{bord
 code,pre{font-family:Consolas,"Cascadia Mono",monospace;font-size:12.5px;background:var(--code);border-radius:4px}
 code{padding:1px 4px}pre{padding:10px 12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
 .red{color:var(--bad);font-weight:700}.ok{color:var(--ok);font-weight:600}.warn{color:var(--warn);font-weight:600}
+.old{color:var(--mut);text-decoration:line-through}
 ol li,ul li{margin:3px 0}
 .upd{background:#fff3cd;color:#5c4400;border-radius:3px;padding:0 4px;font-size:12px;font-weight:700;white-space:nowrap}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .upd{background:#4a3b00;color:#ffe08a}}
@@ -27,209 +28,220 @@ ol li,ul li{margin:3px 0}
 </head>
 <body>
 <h1>到板当天 · 主控 ↔ 桥 通信验证</h1>
-<div class="sub">[D39] 2026-10-19 初版 · <span class="upd">【10-26 更新】[D77]</span> 按 10-26 实际到板情况改写 · V0.1 阶段 (只验主控 ↔ 桥, 不接灯板; 灯板约 11-05 回) · 口径: 用户 10-26 定<b>不改板</b>, 主控位流一律 <code>POV_HSWAP=1</code>, J1 与 J2 都 2.5 V</div>
+<div class="sub">[D39] 2026-10-19 初版 · [D77] 【10-26 更新】按 10-26 实际到板改写 · <span class="upd">【10-27 更新】[D87]</span> 按 10-27 实况改写: 上行线速定 600M、桥 flash 已烧正式版、两块桥 JTAG 菊花链打通 · V0.1 阶段 (只验主控 ↔ 桥, 不接灯板; 灯板约 11-05 回) · 口径: 不改板, 主控位流一律 <code>POV_HSWAP=1</code>, J1 与 J2 都 2.5 V</div>
 
-<div class="lead"><span class="upd">【10-26 更新】</span> <b>当前结论:</b> 10-26 已到板, 边带双向、握手 C1、13 lane 静态连通与极性、转发时钟 100.000 MHz 都已验证通过; <b>卡在高速接收</b> (桥 IDES8 实际半速采样, 桥上行 PLL 配置问题, D76 修复中), 所以 C2 对齐 / C3 PRBS 要等新桥位流。明早的事: 装好新桥位流 (暂用 PC 下载器) → 用 <code>COMM_UL_FWD=2</code> 重跑 C2/C3。详见下面第零节。</div>
+<div class="lead"><span class="upd">【10-27 更新】</span><b>当前结论:</b> 面 A 主控 ↔ 桥链路在 <b>600M</b> 下已打通 —— comm_check 核心项 (C0–C4) 全过; <b>PRBS 600 s 和 1 h 都是 13 lane 0 误码</b>; 真实帧格式出片 (tp, V1 节拍 4284 片/s) 10 分钟 PASS, 发 244 万片, CRC 0。桥 flash 已烧正式版; 两块桥都插上后 JTAG 菊花链闭合, 主控能带回读校验地灌桥 SRAM、让桥 reload flash, <b>除了改 flash, 不再需要 PC 下载器</b>。<br>
+还没做的: 用修过判据的脚本补跑整套 (C5 寄存器 / C7 故障恢复)、8 h 长跑、真内容出片、面 B 通信; 灯板约 11-05 回来后再出图。详见第零节。</div>
 <div class="lead"><b>一句话 (初版):</b> 人只做硬件前置、接线上电、按提示量几个电压并把读数敲进去; 其余 (装位流 → 握手 → 训练 → PRBS 误码 → 边带 → 寄存器 → JTAG → 故障恢复 → 报告) 由一条命令自动跑完, 每项 PASS/FAIL 并给"最可能原因/下一步"。<br>
-<b>通过标准:</b> 报告末行 <code>COMM_CHECK: PASS</code>; 其中 800M PRBS 13 lane 全锁、连续 ≥ 10 min 每 lane 0 误码。</div>
+<b>通过标准:</b> 报告末行 <code>COMM_CHECK: PASS</code>; 其中 PRBS 13 lane 全锁、连续 ≥ 10 min 每 lane 0 误码。<span class="upd">【10-27 更新】</span>线速按 <b>600M</b> 判 (初版写的 800M 作废)。</div>
 
-<h2>零、<span class="upd">【10-26 更新】</span>到板实况与明早怎么做 (先看这一节)</h2>
+<h2>零、<span class="upd">【10-27 更新】</span>到板实况与接下来怎么做 (先看这一节)</h2>
 <h3>0.1 先讲结论</h3>
 <ul>
-<li><b>硬件一次定型, 不改板</b>: SoC 底板 H1/H2 实物只能插在 FS03 的 J12/J11 (与设计意图相反), 所以主控位流一律 <code>POV_HSWAP=1</code> (CEP1 头座脚 n 的球 ↔ CEP2 头座脚 n 的球): <b>面 A 进 bank11, 面 B 进 bank33</b>; 面 A 上行 PLL 钉在 x0y0z0。⇒ <b class="red">J1 与 J2 都要 2.5 V</b>。</li>
-<li><b>已通的</b>: 电源与电平、边带三线 (UART / ALIGNED / RST) 双向、握手 C1、13 lane 静态连通 + 极性 (用诊断位流)、转发时钟 100.000 MHz。</li>
-<li><b>没通的</b>: 高速接收。桥的 IDES8 实际按半速采样 (桥上行 PLL 配置问题), 不是线、不是电平。D76 在修; 修好前 C2 (对齐) 和 C3 (PRBS) 不会过, 别在它们上浪费时间。</li>
-<li><b>桥位流更新暂用 PC 下载器</b>: 远程由主控灌桥 SRAM 暂不可用 (预检 TMS/TDI 读到 0, 在查因; 面 A 单装 TDO 不回主控 H-3, 只能盲灌)。所以本页命令里的 <code>--bridge-load sram</code> 在查清前<b>不要用</b>, 改 <code>--bridge-load pc</code>。</li>
-<li><b>主控开机演示已关</b> (卡上有 <code>pov/nodisplay</code>), V0 位流不会在 bank11 上和桥对驱; <b>FPC 可以常插</b> (只有 PC 下载器下载桥时才要拔 FPC)。</li>
+<li><b>V1 上行线速定 600M</b> (用户 10-27 拍板)。DR1 的 oDDRx2 实测: 400M、600M 逐位正确; 700M 边缘, 开始丢位; 750M、800M 只发偶数位 (每位发两次)。<b class="red">原 800M 作废</b>, 下文凡写 800M 的地方都按 600M 读。600M 时每片上行 146 µs, 占 V1 片率 (357 片 × 12 rps = 4284 片/s) 的 63%, 够用。桥位流不用为线速改: 桥上行 PLL 跟转发时钟 (线速/8, 600M 时 75 MHz) 走。</li>
+<li><b>面 A 链路已通</b>: 电平、握手、训练对齐、PRBS (600 s 和 1 h 都 0 误码)、边带双向、真实帧格式出片 10 min 都过了, 数字见 0.2。</li>
+<li><b>桥 flash 已烧正式版</b>: 面 A <b>e60cp</b> (md5 e19f344a, USERCODE E405, BUILD 26102760), 面 B <b>e60cb</b> (md5 d6de18bc, USERCODE FA0B, BUILD 26102740)。上电就是它们, 通信验证<b>不用再灌桥</b> (脚本加 <code>--skip-bridge</code>)。</li>
+<li><b>灌桥不再用 PC</b>: 两块桥都插上后 JTAG 菊花链闭合 (TDO 经面 B 转接板回主控), 主控用 <code>gw5a_sram --tdo-pulldown --chain 2 --pos N</code> 带回读校验地灌 SRAM, 也能让桥 reload flash (D80, 命令见 5.2)。<b>只有改 flash 还要 PC 下载器</b>; D81 在做主控远程烧 flash。</li>
+<li><b>转发时钟不用再手动切</b>: D78 新主控位流复位就是 fwd=2 (线速/8)。10-26 版里的几样东西<b>都作废</b>: <code>COMM_UL_FWD=2</code> / <code>ul fwd 2</code> 手动步骤、"桥位流更新暂用 PC 下载器" (<code>--bridge-load pc</code>)、<code>_work/d65c_out</code> 桥位流 (A 版片用的)、D72 的 800M 主控三档。</li>
+<li><b>硬件一次定型, 不改板</b> (10-26 已定, 不变): SoC 底板 H1/H2 与 FS03 J11/J12 对调, 主控位流一律 <code>POV_HSWAP=1</code> (面 A 进 bank11, 面 B 进 bank33), 这就是 V1 的正式做法; <b>J1 与 J2 都 2.5 V</b>。桥转接板 R221–R223 (TDI/TMS/TCK) 和 R219 (TDO) 是 10k 下拉, 由 gw5a_sram 的开关吸收, 不用改。</li>
+<li><b>已知问题 (不挡通信, 在查)</b>: 桥每秒设计性跳 1 片 (每 4296 显示帧刷新一次整表, 那一帧丢 1 片, 约 0.023%), resid 每帧 1 槽 → D82 在查; V2 要的 1.2G 在 DR1 上做不到 → D84 在找出路。</li>
 </ul>
 
-<h3>0.2 验证状态一览</h3>
+<h3>0.2 验证状态一览 (10-27)</h3>
 <div class="wrap"><table>
-<tr><th>项</th><th>10-26 状态</th><th>说明</th></tr>
-<tr><td>电源/电平 (C0)</td><td class="ok">已过</td><td>bank11、bank33 都在 2.40–2.60 V; U18/U19 VCCA 2.5 V</td></tr>
-<tr><td>边带 UART / ALIGNED / RST (C4 的线)</td><td class="ok">双向已过</td><td>脚本整套的 SB01–SB04 还要在新桥位流上正式跑一遍存报告</td></tr>
-<tr><td>握手 / 版本 (C1)</td><td class="ok">全过</td><td>桥出复位、MAGIC/PROTO/GEOM 对</td></tr>
-<tr><td>13 lane 静态连通 + 极性</td><td class="ok">已过</td><td>用诊断位流看的; 极性已核</td></tr>
-<tr><td>转发时钟</td><td class="ok">100.000 MHz</td><td>主控 <code>fwd=2</code> (线速/8); 桥 p1 要的就是 100 MHz</td></tr>
-<tr><td>高速接收 → C2 对齐 / C3 PRBS</td><td class="red">未过</td><td>桥 IDES8 半速采样; <b>等 D76 新桥位流</b> (见 0.4)</td></tr>
-<tr><td>C5 寄存器 / C6 JTAG / C7 故障恢复</td><td class="warn">待新桥位流后整套跑</td><td>C6: 远程灌桥暂不可用, 预期 WARN/FAIL, 见 0.1</td></tr>
+<tr><th>项</th><th>10-27 状态</th><th>说明</th></tr>
+<tr><td>电源/电平 (C0)</td><td class="ok">已过</td><td>bank33 2.506 V, bank11 10-26 已量; U18/U19 VCCA 2.5 V</td></tr>
+<tr><td>握手/版本 (C1)</td><td class="ok">已过</td><td>桥出复位; PROTO 007f0200、BUILD 26102760、GEOM 06023C0C 都对</td></tr>
+<tr><td>训练对齐 + 图样上行 (C2)</td><td class="ok">已过</td><td>SB_ALIGNED 第 1 次就读到, aligned=1; 主控 pclk 实测 150.016 MHz (600M/4); 不丢片</td></tr>
+<tr><td>PRBS 误码 (C3, 600M)</td><td class="ok">已过</td><td>600 s: 13 lane 全锁、0 误码 (每 lane 3.9e11 位, BER &lt; 7.7e-12)、0 掉锁、切回后自愈; <b>1 h 长跑也 0 误码</b></td></tr>
+<tr><td>边带 (C4)</td><td class="ok">已过</td><td>主控→桥 20 条命令 0 坏帧; ALIGNED 线与状态帧一致; RSTN 复位后自愈。当时 SB01 判 FAIL 是判据问题 (涨的是收 FIFO 溢出计数 ovf, 帧错 ferr = 0), D72 已改成只判 ferr</td></tr>
+<tr><td>寄存器 (C5) / 故障恢复 (C7)</td><td class="warn">待补跑</td><td>10-27 那次 C4 被判据误报挡住, C5、C7 没跑到; 用修过判据的脚本补跑 (5.1 第 1 条)</td></tr>
+<tr><td>JTAG (C6)</td><td class="ok">已过 (手动, D80)</td><td>两块桥菊花链: scan-chain 读到 2 个 0x0001281B; 面 A、面 B 各带校验灌 e60c PASS, 再 reload flash 回 E405 / FA0B PASS。<b>脚本里的 C6 还没带下拉开关, 两桥都插时会误报 FAIL</b></td></tr>
+<tr><td>真实帧格式出片 (tp, 4284 片/s)</td><td class="ok">已过</td><td>10 min 发 2,440,454 片, 桥收全; CRC 0、重训 0、掉对齐 0、真欠载 (fs_miss) 0; skip 568 = 设计跳片 (D79 修判据后判 PASS)</td></tr>
+<tr><td>真内容出片 (content) / 8 h 长跑</td><td class="warn">待跑</td><td>content 要 g2 单面主控 1ccf8111 (第三节)</td></tr>
+<tr><td>面 B 通信</td><td class="warn">待测</td><td>第二块桥已插, JTAG 已通, flash 是 e60cb; 双面主控位流 D78 已出</td></tr>
 </table></div>
 
-<h3>0.3 明早按这个顺序做</h3>
+<h3>0.3 接下来按这个顺序做</h3>
 <ol>
-<li><span class="box"></span><b>上电前核硬件</b> (第二节清单, 重点: J1/J2 两个帽都拔、H7/H9 飞线到两个中脚; 桥板 U18/U19 不改)。24 V 限流 0.5–1 A 起。</li>
-<li><span class="box"></span><b>上电后、加载位流前量电平</b>: bank11 (J1 中脚)、bank33 (J2 中脚) 都 2.40–2.60 V; 桥板 U18/U19 的 16 脚 2.5 V、15 脚 3.3 V、9 脚低 (见第四节)。</li>
-<li><span class="box"></span><b>桥位流</b>: 拿 D76 交付的新桥位流 (B 版), 用 PC 下载器灌桥 (第五节 5.2); 下完桥板<b>不断电</b>, 插回 FPC。</li>
-<li><span class="box"></span><b>主控位流</b>: 拿 D72 交付的 hswap 版 (<code>_hs_</code> 档, 见第三节), 脚本跑通信验证时加 <code>COMM_UL_FWD=2</code> (第五节 5.1)。</li>
-<li><span class="box"></span>跑到哪看哪: <b>C1 应当仍全过 → C2 ALIGNED 升起 → C3 PRBS 13 lane 0 误码</b>。C2 不过, 先用示波器看第四节 4.2 的几个点 (70 MHz 示波器 + 诊断位流慢翻转即可看连通)。</li>
-<li><span class="box"></span>通信 PASS 后才进第八节 (灌桥 → 主控 → 出图); V0.1 阶段不接灯板, 出图那几步等灯板约 11-05 回来再做。</li>
+<li><span class="box"></span><b>上电前核硬件</b> (第二节; J1/J2 飞线 10-26 已做, 24 V 限流仍要)。两块桥都插上、都上电 (JTAG 菊花链要两块都在)。</li>
+<li><span class="box"></span><b>位流</b>: 主控用 <code>_work/d78_out</code> 的 600M 换球五档 (第三节, MD5SUMS.txt 已核对); 桥不用动, flash 里就是正式版。</li>
+<li><span class="box"></span><b>补跑整套通信验证</b> (5.1 第 1 条)。重点看 C5、C7; C6 在两桥都插时会误报 FAIL, 以 D80 的手动结果为准 (5.2)。</li>
+<li><span class="box"></span><b>长跑</b>: PRBS 8 h (<code>--long 8h</code>); 出片 1 h / 8 h (<code>d73_v1content/run.sh … --mode content</code>)。</li>
+<li><span class="box"></span><b>面 B 通信</b>: 换双面主控 (g2 双面 fe3723dc), 验面 B 链路与边带 (看板 V0.1-10, 步骤待定)。</li>
+<li><span class="box"></span>灯板约 11-05 回来后进第八节出图 (D86 在准备)。</li>
 </ol>
-
-<h3>0.4 位流谁交付、占位 (明早主会话填)</h3>
-<p class="sub">下列 md5 / 路径<b>现在不填</b>, 以 D72 / D76 交付为准; 页里旧的 D64 / D65c 位流已过时 (不含 hswap、不含 fwd=2、桥是 A 版), <b>别再用</b>。</p>
-<div class="wrap"><table>
-<tr><th>位流</th><th>来源</th><th>路径 / md5</th></tr>
-<tr><td>主控 hswap 版 (含 PRBS 档)</td><td>D72 交付 (缺省 <code>fwd=2</code> 也由 D72 做)</td><td>见 D72 交付 (明早主会话填)</td></tr>
-<tr><td>桥 e60c / e60cp 修复版 (B 版, 修上行 PLL / IDES8)</td><td>D76 交付</td><td>见 D76 交付 (明早主会话填)</td></tr>
-<tr><td>诊断位流 (主控 CKPS 相位档 + 桥原始比特档)</td><td>D70 (已有)</td><td>仅排查用, 路径见 D70 记录</td></tr>
-</table></div>
 
 <h2>一、先讲大步骤</h2>
 <div class="wrap"><table>
 <tr><th>步</th><th>做什么</th><th>谁做</th><th>过关标准</th></tr>
-<tr><td>S0</td><td>前置: 文件/md5、主控位流电平档 == 板 (2.5V)、JTAG 工具、连板、推文件 <span class="upd">【10-26 更新】</span>主控位流须是 hswap 版</td><td>脚本 + 人接线上电</td><td>md5 全对; 位流档 25 (不符直接停, 不碰板)</td></tr>
-<tr><td>C0</td><td>加载位流<b>前</b>的电平测点 (bank33、U18/U19 VCCA、配置前 RSTN/TCK)</td><td><b>人量</b>, 脚本判</td><td><span class="upd">【10-26 更新】</span>bank11 与 bank33 都 2.40–2.60 V 等 (见第四节); 不过不加载</td></tr>
-<tr><td>S1/S3</td><td>停 V0 演示 (<span class="upd">【10-26 更新】</span>卡上已 <code>pov/nodisplay</code>, 开机不再演示); 装主控位流 (<span class="upd">【10-26 更新】</span>桥位流暂由 PC 下载器灌, 不用板上灌桥)</td><td>脚本</td><td>MAGIC/GEOM/pclk 200 MHz; 边带页 SBD1</td></tr>
-<tr><td>C1</td><td>握手/版本: 桥出复位、MAGIC/PROTO/BUILD/GEOM</td><td>脚本</td><td>桥状态帧到、协议主版本 2、GEOM 对、BUILD = 所选桥位流</td></tr>
-<tr><td>C2</td><td>训练与对齐 (闭环, 读 SB_ALIGNED) + 图样源 1250 片/s 上行</td><td>脚本</td><td>SB_ALIGNED 升、aligned=1; 桥 crc 0 / 不重训 / 不丢片 <span class="upd">【10-26 更新】</span><b>待 D76 新桥位流</b></td></tr>
-<tr><td>C3</td><td>PRBS 误码 (800M), 跑的同时量共模/地差/摆幅</td><td>脚本 + <b>人量</b></td><td>13 lane 全锁, ≥ 600 s 每 lane 0 误码, 不掉锁; 切回后自动恢复 <span class="upd">【10-26 更新】</span><b>待 D76 新桥位流</b></td></tr>
-<tr><td>C4</td><td>边带 RSTN / ALIGNED / UART 双向 + 边带高电平</td><td>脚本 + <b>人量</b></td><td>状态帧连续、RXERR 0; 20 条命令 0 坏帧; 复位桥后自愈</td></tr>
-<tr><td>C5</td><td>桥寄存器读写回读</td><td>脚本</td><td>SCRATCH 7 图样相等; 只读拒写; 无效地址 st 1 / 只写区 st 2</td></tr>
-<tr><td>C6</td><td>JTAG IDCODE / 板上灌桥</td><td>脚本</td><td>面 A 单装读不到 IDCODE = WARN (预期); 灌桥 JT01–JT05 过 <span class="upd">【10-26 更新】</span>远程灌桥暂不可用, 本次用 PC 下载器, JT 项预期不过/跳过</td></tr>
-<tr><td>C7</td><td>故障恢复: 桥看门狗黑场、硬件闭环重训、sbd 守护看门狗</td><td>脚本</td><td>断流进黑场/来片退出; 打断对齐 5 s 内自愈; 守护会复位桥</td></tr>
-<tr><td>C8</td><td>(可选 <code>--sweep</code>) 1.0G / 1.2G PRBS 摸底</td><td>脚本</td><td>软判据 (WARN 不挡 1 期)</td></tr>
+<tr><td>S0</td><td>前置: 文件/md5、主控位流电平档 == 板 (2.5V)、JTAG 工具、连板、推文件。<span class="upd">【10-27 更新】</span>主控位流是 <code>_work/d78_out</code> 的 600M 换球版</td><td>脚本 + 人接线上电</td><td>md5 全对; 位流档 25 (不符直接停, 不碰板)</td></tr>
+<tr><td>C0</td><td>加载位流<b>前</b>的电平测点 (bank11/bank33、U18/U19 VCCA、配置前 RSTN/TCK)</td><td><b>人量</b>, 脚本判</td><td>bank11 与 bank33 都 2.40–2.60 V 等 (见第四节); 不过不加载</td></tr>
+<tr><td>S1/S3</td><td>停 V0 演示 (卡上已 <code>pov/nodisplay</code>); 装主控位流。<span class="upd">【10-27 更新】</span>桥不灌, 用 flash 里的正式版 (<code>--skip-bridge</code>)</td><td>脚本</td><td>MAGIC/GEOM 对; <span class="upd">【10-27 更新】</span>0x4104 = {600, 150}, pclk ≈ 150 MHz; 加载自检 CTRL 复位值 0x1044 (= fwd 2); 边带页 SBD1</td></tr>
+<tr><td>C1</td><td>握手/版本: 桥出复位、MAGIC/PROTO/BUILD/GEOM</td><td>脚本</td><td>桥状态帧到、协议主版本 2、GEOM 对、BUILD = 26102760 (面 A flash e60cp)</td></tr>
+<tr><td>C2</td><td>训练与对齐 (闭环, 读 SB_ALIGNED) + 图样源 1250 片/s 上行</td><td>脚本</td><td>SB_ALIGNED 升、aligned=1; 桥 crc 0 / 不重训 / 不丢片 <span class="upd">【10-27】已过</span></td></tr>
+<tr><td>C3</td><td>PRBS 误码 (<span class="upd">【10-27 更新】</span>600M), 跑的同时量共模/地差/摆幅</td><td>脚本 + <b>人量</b></td><td>13 lane 全锁, ≥ 600 s 每 lane 0 误码, 不掉锁; 切回后自动恢复 <span class="upd">【10-27】600 s / 1 h 都过</span></td></tr>
+<tr><td>C4</td><td>边带 RSTN / ALIGNED / UART 双向 + 边带高电平</td><td>脚本 + <b>人量</b></td><td>状态帧连续、帧错 ferr 0 (<span class="upd">【10-27 更新】</span>ovf 只记录); 20 条命令 0 坏帧; 复位桥后自愈</td></tr>
+<tr><td>C5</td><td>桥寄存器读写回读</td><td>脚本</td><td>SCRATCH 7 图样相等; 只读拒写; 无效地址 st 1 / 只写区 st 2 <span class="upd">【10-27】待补跑</span></td></tr>
+<tr><td>C6</td><td>JTAG IDCODE / 板上灌桥</td><td>脚本</td><td><span class="upd">【10-27 更新】</span>两桥菊花链下 IDCODE 读得到 (2 个 0x0001281B); 脚本还没带 <code>--bridge-pulldowns --tdo-pulldown</code>, 预检会被下拉挡住报 FAIL, 以 5.2 手动结果为准</td></tr>
+<tr><td>C7</td><td>故障恢复: 桥看门狗黑场、硬件闭环重训、sbd 守护看门狗</td><td>脚本</td><td>断流进黑场/来片退出; 打断对齐 5 s 内自愈; 守护会复位桥 <span class="upd">【10-27】待补跑</span></td></tr>
+<tr><td>C8</td><td>(可选 <code>--sweep</code>) 1.0G / 1.2G PRBS 摸底</td><td>脚本</td><td><span class="upd">【10-27 更新】</span><b>V1 不做</b>: DR1 的 oDDRx2 750M 起只发偶数位, 1.0G/1.2G 主控发不出; V2 线速出路由 D84 找</td></tr>
 <tr><td>S9</td><td>安全恢复 + 报告 <code>runs/&lt;时间&gt;/comm_report.html</code></td><td>脚本</td><td>上行 run=0; 恢复 V0 = 重启板子</td></tr>
 </table></div>
 
 <h2>二、硬件前置 (上电前逐项打勾)</h2>
 <ol>
-<li><span class="box"></span><b class="red">bank11 与 bank33 都改 2.5V</b> <span class="upd">【10-26 更新】</span>: 因 hswap (面 A 进 bank11, 面 B 进 bank33), SoC 底板 FS03 <b>J1、J2 两个帽都拔掉</b>, 从底板 <b>H7/H9</b> (1 脚 = PWR2V5, 2 脚 = GND; 已确认专供 J1/J2) 飞线到<b>两个跳帽的中脚</b>供 2.5V。上电后、加载位流前量 bank11 (J1 中脚)、bank33 (J2 中脚) 都 = <b>2.40–2.60 V</b> (测点 M01a/M01b, 不过脚本不加载)。<span class="sub">(初版只改 J2, J1 不动, 已作废。)</span></li>
+<li><span class="box"></span><b class="red">bank11 与 bank33 都 2.5V</b>: 因 hswap (面 A 进 bank11, 面 B 进 bank33), SoC 底板 FS03 <b>J1、J2 两个帽都拔掉</b>, 从底板 <b>H7/H9</b> (1 脚 = PWR2V5, 2 脚 = GND; 专供 J1/J2) 飞线到<b>两个跳帽的中脚</b>供 2.5V (10-26 已做)。上电后、加载位流前量 bank11 (J1 中脚)、bank33 (J2 中脚) 都 = <b>2.40–2.60 V</b>。<span class="sub">(初版只改 J2, 已作废。)</span></li>
 <li><span class="box"></span><b>24V 用限流电源</b>: 先 0.5–1 A 限流起 (底板 24V 无保险/TVS/防反接, d36 §五)。</li>
-<li><span class="box"></span><b>SoC 底板 R182–R201 空贴</b> (已确认): 否则双端接摆幅减半; FPC1.11–12 应开路。<span class="upd">【10-26 更新】</span><b class="red">位号撞名, 别拆错</b>: FS03 板上的 R187–R210 是 <b>33 Ω 串联排阻</b> (信号串联, 不是端接, 不要当 100 Ω 拆); 桥转接板上的 R182–R201 才是 100 Ω 端接 (<b>保留</b>, 如 R185)。要空贴的只有 <b>SoC 底板</b> R182–R201。</li>
-<li><span class="box"></span><b class="red">桥转接板核心板方向</b>: GW5A 核心板 P1 压 CN3 不可装反 (两座 180° 对称, 装反也插得进) —— 上电前量 CN3.1 与核心板 TCK 导通、VCC3P3 对地不短; 看核心板丝印记下 A/B 版 (<span class="upd">【10-26 更新】</span>实物是 <b>GW5A-25 B 版</b>, 丝印 <b>2544BB0N</b>; 桥位流按 B 版编)。</li>
-<li><span class="box"></span>桥板<b>不改</b>: U18/U19 (SN74AVC4T774, TSSOP) <b>VCCA(16 脚)</b> 保持 PWR2V5 = 2.5 V (测点 M02a/M02b), <b>VCCB(15 脚)</b> = 3.3 V, <b>OE(9 脚)</b> 低有效、由 R208/R233 (10 kΩ) 下拉到低 = 使能; R236 保持上拉。</li>
+<li><span class="box"></span><b>SoC 底板 R182–R201 空贴</b> (已确认): 否则双端接摆幅减半; FPC1.11–12 应开路。<b class="red">位号撞名, 别拆错</b>: FS03 上的 R187–R210 是 <b>33 Ω 串联排阻</b> (不是端接); 桥转接板上的 R182–R201 才是 100 Ω 端接 (<b>保留</b>, 如 R185)。要空贴的只有 <b>SoC 底板</b> R182–R201。</li>
+<li><span class="box"></span><b class="red">桥转接板核心板方向</b>: GW5A 核心板 P1 压 CN3 不可装反 (两座 180° 对称, 装反也插得进) —— 上电前量 CN3.1 与核心板 TCK 导通、VCC3P3 对地不短。实物是 <b>GW5A-25 B 版</b> (丝印 2544BB0N, UG324C2/I1), 桥位流按 B 版编。</li>
+<li><span class="box"></span>桥板<b>不改</b>: U18/U19 (SN74AVC4T774, TSSOP) <b>VCCA(16 脚)</b> = PWR2V5 = 2.5 V, <b>VCCB(15 脚)</b> = 3.3 V, <b>OE(9 脚)</b> 低有效、由 R208/R233 (10 kΩ) 下拉到低 = 使能; R236 保持上拉。<span class="upd">【10-27 更新】</span>R221–R223 (TDI/TMS/TCK) 与 R219 (TDO) 的 10k 下拉<b>保留</b>, 软件已适配 (5.2)。</li>
 <li><span class="box"></span>R82 改 2.2k (光电口; 本次通信测试不用, 同次改)。</li>
-<li><span class="box"></span>只上面 A: FPC 桥 ↔ 主控 (FPC1); 2260 灯板<b>V0.1 阶段不接</b> (灯板约 11-05 回)。桥板 5V 上电。<span class="upd">【10-26 更新】</span>主控卡上已 <code>pov/nodisplay</code> (开机演示关), V0 位流不再在 bank11 上和桥对驱, <b>FPC 可以常插</b>; 只有 PC 下载器下载桥位流时才拔 FPC。</li>
-<li><span class="box"></span>桥位流怎么进桥 <span class="upd">【10-26 更新】</span>: <b class="red">暂用 PC 下载器</b> (<code>--bridge-load pc</code>, 接桥板 H1 座, 下载时<b>须拔 FPC</b>, 因 JTAG 经 U18, d36)。主控经 FPC 67–69 远程灌桥 SRAM (<code>--bridge-load sram</code>) 暂不可用: 预检 TMS/TDI 读到 0, 查因中; 面 A 单装 TDO 不回主控 (H-3) 只能盲灌。查清前不要用 sram 档。</li>
-<li><span class="box"></span>(可选) 要在 C6 读到 IDCODE: 底板 R6.2 飞线到 R5.2 (≈75 mm), 否则面 A 单装 TDO 悬空, C6 记 WARN (预期)。<span class="upd">【10-26 更新】</span>本次桥位流走 PC 下载器, 此项可不做。</li>
-<li><span class="box"></span>工具: 万用表 (直流电压); 示波器 + 差分探头 (或两通道相减) 量摆幅; PC 能按板名连上主控 (WiFi); PC 上有 Gowin Programmer (<code>programmer_cli.exe</code>) 和下载器 (FT2CH)。<span class="upd">【10-26 更新】</span>70 MHz 示波器也够用 (见第四节 4.2)。</li>
+<li><span class="box"></span><span class="upd">【10-27 更新】</span><b>两块桥都插上</b>: 面 A 桥接 FPC1、面 B 桥接 FPC2, 桥板 5V 都上电 (JTAG 菊花链要两块都在; 通信验证脚本目前只走面 A)。2260 灯板 <b>V0.1 阶段不接</b> (灯板约 11-05 回)。主控卡上已 <code>pov/nodisplay</code> (开机演示关), <b>FPC 常插</b>; 只有用 PC 下载器改 flash 时才拔那块桥的 FPC。</li>
+<li><span class="box"></span><span class="upd">【10-27 更新】</span><b>桥位流怎么进桥</b>: 平时<b>什么都不用做</b> —— flash 里就是正式版 (面 A e60cp / 面 B e60cb), 上电自带。要换桥 SRAM 里的位流, 由主控经 JTAG 菊花链灌 (5.2, 带回读校验, 灌完可让桥 reload flash 回正式版)。<b>只有改 flash 才用 PC 下载器</b> (接 H1 座、拔该桥 FPC, Arora V <code>--run 54</code>, 5.3); D81 在做主控远程烧 flash, 做完下载器只作兜底。</li>
+<li><span class="box"></span><span class="upd">【10-27 更新】</span><b>不用再飞 R6.2→R5.2</b>: 两块桥都插上后 TDO 经面 B 回主控, IDCODE 读得到。这根线只在"只装面 A 又要读 TDO"时才需要。</li>
+<li><span class="box"></span>工具: 万用表 (直流电压); 示波器 + 差分探头 (或两通道相减) 量摆幅, 70 MHz 示波器也够用 (见 4.2); PC 能按板名连上主控 (WiFi)。PC 下载器 (FT2CH) + Gowin Programmer (<code>programmer_cli.exe</code>) 只在改 flash 时要。</li>
 </ol>
 
-<h2>三、位流 (路径全部可配) <span class="upd">【10-26 更新】</span></h2>
-<p><b>先讲结论:</b> 页里旧的 D64 主控位流 (c66710ec / 3c704794) 和 D65c 桥位流 (f559ff4d / 6e1461c1) <b>全部作废用于通信验证</b>: 主控不是 hswap 版, 缺省转发时钟不是 fwd=2, 桥是按 A 版/旧上行 PLL 编的。明早用下面两个新交付, md5 与路径由主会话填。</p>
+<h2>三、位流 (路径全部可配) <span class="upd">【10-27 更新】</span></h2>
+<p><b>先讲结论:</b> 主控用 D78 按 600M 重编的换球五档 (<code>_work/d78_out</code>, 全部 0 违例, <code>MD5SUMS.txt</code> 已逐个核对); 桥用 D76 的 B 版位流 (<code>_work/d76_out</code>), 面 A、面 B 的 flash 里已经是正式版。旧的 <code>d64_out</code> / <code>d53_out</code> (800M、未换球)、<code>d72_out</code> 的 800M 三档、<code>d65c_out</code> / <code>d65_out</code> (A 版片桥) <b>全部别再用</b>。</p>
 <div class="wrap"><table>
-<tr><th>位流</th><th>来源 / 位置</th><th>做什么</th><th>现状</th></tr>
-<tr><td>主控 hswap 版 (带 PRBS 档)</td><td>D72 交付, 暂定目录 <code>D:\claude_workspace\pov3d\_work\d72_out</code>, 文件名带 <code>_hs_</code> (如 <code>..._sb_hs_prbs_io25.bin</code>); md5: <b>见 D72/D76 交付 (明早主会话填)</b></td><td>全部项目含 C3 PRBS; <code>POV_HSWAP=1</code> (面 A → bank11), 面 A 上行 PLL 钉 x0y0z0, 2.5 V 档</td><td><span class="warn">交付以 D72 为准</span> (缺省 fwd 改 2 由 D72 做; 在此之前用 <code>COMM_UL_FWD=2</code>)</td></tr>
-<tr><td>主控 hswap 版 (无 PRBS, 退路)</td><td>同目录 <code>..._sb_hs_io25.bin</code>; md5 <b>见 D72 交付 (明早主会话填)</b></td><td>除 PRBS 外全部</td><td><span class="warn">交付以 D72 为准</span></td></tr>
-<tr><td>桥 e60cp (PRBS 计数, B 版, 修上行 PLL)</td><td>D76 交付 (暂定目录 <code>_work/d76_out/gw25_bridge_p1_e60cp_d166p67</code>); md5 <b>见 D76 交付 (明早主会话填)</b></td><td>C3 PRBS 计数经边带读 (0x60..0x6F)</td><td><span class="red">D76 修复中</span> (旧桥 IDES8 半速采样, 高速收不到)</td></tr>
-<tr><td>桥 e60c (退路)</td><td>D76 交付 (同上, <code>..._e60c_d166p67</code>); md5 <b>见 D76 交付 (明早主会话填)</b></td><td>除 PRBS 外全部</td><td><span class="red">D76 修复中</span></td></tr>
-<tr><td>诊断位流</td><td>D70 (主控 <code>POV_UL_CKPS=1</code> 相位/码型档; 桥 <code>P1_DIAG=1</code> 原始比特档, BUILD 20261026), 排查用</td><td>示波器看静态连通/慢翻转; 查桥采样</td><td>已有, 仅排查</td></tr>
-<tr><td>扫描档</td><td><code>..._sb_hs_prbs_io25</code> 名里 ul800→ul1000/ul1200; 桥 <code>..._l1000/_l1200</code></td><td><code>--sweep</code></td><td>可选, 800M 通后再说</td></tr>
+<tr><th>位流</th><th>文件 (目录见下)</th><th>md5</th><th>用途</th></tr>
+<tr><td>主控 PRBS 档 (通信验证)</td><td><code>pov_m90_pure_ul600_p1_b12_sb_hs_prbs_io25.bin</code></td><td><b>b3af9155</b></td><td>comm_check 全部项, 含 C3 PRBS; 与 D72 上板跑过 PRBS 600 s / 1 h 的那份同 env、同 md5</td></tr>
+<tr><td>主控 g2 单面</td><td><code>pov_m90_pure_ul600_p1_b12_sb_hs_io25_g2.bin</code></td><td><b>1ccf8111</b></td><td>真内容出片 / 出图缺省 (V2 网格 192×216)</td></tr>
+<tr><td>主控 g2 双面</td><td><code>pov_m90_pure_ul600_p1_b12_sb_hs_ab_io25_g2.bin</code></td><td><b>fe3723dc</b></td><td>面 B 通信 / 双面出图</td></tr>
+<tr><td>主控 v1 网格单面 (退路)</td><td><code>pov_m90_pure_ul600_p1_b12_sb_hs_io25.bin</code></td><td>4211391d</td><td>无 PRBS; 老 160×180 网格</td></tr>
+<tr><td>主控 v1 网格双面 (退路)</td><td><code>pov_m90_pure_ul600_p1_b12_sb_hs_ab_io25.bin</code></td><td>0357bebc</td><td>老网格双面</td></tr>
+<tr><td>桥 e60cp (<b>面 A flash 正式版</b>)</td><td><code>gw25_bridge_p1_e60cp_d166p67/bridge.fs</code></td><td><b>e19f344a</b> (USERCODE E405, BUILD 26102760)</td><td>= e60c + 13 lane PRBS 计数; 通信验证与出片都用它</td></tr>
+<tr><td>桥 e60cb (<b>面 B flash 正式版</b>)</td><td><code>gw25_bridge_p1_e60cb_d166p67/bridge.fs</code></td><td><b>d6de18bc</b> (USERCODE FA0B, BUILD 26102740)</td><td>= e60c + 状态帧 face=1</td></tr>
+<tr><td>桥 e60c</td><td><code>gw25_bridge_p1_e60c_d166p67/bridge.fs</code></td><td>90b831e7 (USERCODE 2CC4, BUILD 26102720)</td><td>无 PRBS 计数; D80 拿它试过菊花链灌 SRAM</td></tr>
+<tr><td>诊断位流</td><td>D70 / D72 的 <code>diag/</code> (主控相位/码型档、桥原始比特档)</td><td>—</td><td>排查用</td></tr>
 </table></div>
-<p class="sub">桥位流按 <b>GW5A-25 B 版</b> 编 (<code>build_p1.sh</code> 缺省 <code>DVER=B</code>, D74/D75); 文件头 Device Version 应为 B。每个主控位流旁放 <code>&lt;bin&gt;.md5</code>; 位流电平档取 <code>&lt;bin&gt;.vccio</code> 旁文件 (写 25), 没有就按名字 (<code>_io18</code> = 1.8V, 其余按 2.5V)。与 <code>COMM_VCCIO</code> (缺省 25) 不符 = P15 FAIL, <b>脚本停在 S0 不碰板</b>。也可直接 <code>COMM_MAIN_BIN=文件名</code> / <code>COMM_MAIN_MD5=…</code> / <code>COMM_BRIDGE_DIR=…</code> 指定。出厂桥固件已备份: <code>_work/d74_backup/ACG525_Factory_Firmware_usb.fs</code> (+ MD5SUMS.txt)。</p>
+<p class="sub">主控目录 <code>D:\claude_workspace\pov3d\_work\d78_out</code> (WSL <code>/mnt/d/claude_workspace/pov3d/_work/d78_out</code>), 每份旁有 <code>.md5</code>; 构建 = <code>POV_PROFILE=v1 POV_ZERO_OK=1</code> (换球 hswap + IO 2.5V + 边带 + 光电 H22 + p1 12-bit + fwd 复位 2, 线速 600), PRBS 档另加 <code>POV_UL_PRBS=1 POV_ULUNC=0.25</code>, 双面加 <code>POV_UL_FACES=ab</code>, g2 加 <code>POV_GRID=v2</code> (<code>d78_v1l600/build_all.sh</code>, 分支 task/d78-v1l600)。桥目录 <code>_work/d76_out</code> (<code>MD5SUMS.txt</code>), 器件 GW5A-LV25UG324C2/I1 version B, 带逐 lane IODELAY 扫眼与极性自判 (D76)。<b>D78 合入主线后</b>, comm_check / bringup 的缺省就指这两个目录; 合入前用 <code>COMM_KIT</code> / <code>COMM_BRIDGE_DIR</code> 显式给 (5.1)。主控位流电平档取 <code>&lt;bin&gt;.vccio</code> 旁文件, 没有就按名字 (<code>_io18</code> = 1.8V, 其余 2.5V), 与 <code>COMM_VCCIO</code> (缺省 25) 不符 = P15 FAIL, 脚本停在 S0 不碰板。出厂桥固件备份在 <code>_work/d74_backup/</code>。</p>
 
-<h2>四、电平人工测点 (脚本到点会停下来问, 读数敲进去, 自动判并记入 meas.json) <span class="upd">【10-26 更新】</span></h2>
+<h2>四、电平人工测点 (脚本到点会停下来问, 读数敲进去, 自动判并记入 meas.json)</h2>
 <h3>4.1 万用表测点</h3>
-<p class="sub">读数单位 V, 也可写 <code>350mV</code>; 量不到输 <code>s</code> (记 WARN)。也可事先放环境变量 <code>MEAS_M01_bank33=2.49</code> 等, 脚本直接取。</p>
+<p class="sub">读数单位 V, 也可写 <code>350mV</code>; 量不到输 <code>s</code> (记 WARN)。也可事先放环境变量 <code>MEAS_M01_bank33=2.49</code> 等, 脚本直接取。<span class="upd">【10-27 更新】</span>JTAG 在 FPC1 上的脚号以 D74 网表机读为准: <b>TDO 67 / TDI 68 / TMS 69 / TCK 70</b>; 下表 M04/M07 和脚本提示里写的 69/66 是早期表格错了一格。</p>
 <div class="wrap"><table>
 <tr><th>测点</th><th>何时</th><th>量什么</th><th>在哪量 / 怎么量</th><th>判据</th></tr>
-<tr><td>M01_bank33</td><td>C0 上电后/加载位流前</td><td>主控 bank33 VCCIO (hswap 下为<b>面 B</b>, 2.5V)</td><td>J2 帽已拔、H7/H9 飞线供 2.5V; 万用表量 FS03 <b>J2 中脚</b>对 GND</td><td>2.40–2.60 V 为 PASS</td></tr>
-<tr><td>M01a_bank11 <span class="upd">新</span></td><td>C0 上电后/加载位流前</td><td>主控 bank11 VCCIO (hswap 下为<b>面 A</b>, 2.5V)</td><td>J1 帽已拔、H7/H9 飞线供 2.5V; 量 FS03 <b>J1 中脚</b>对 GND。脚本里若暂无此测点, 人工记入 meas 备注 (环境变量 <code>MEAS_M01a_bank11=2.49</code> 也可)</td><td>2.40–2.60 V 为 PASS</td></tr>
+<tr><td>M01_bank33</td><td>C0 上电后/加载位流前</td><td>主控 bank33 VCCIO (hswap 下为<b>面 B</b>, 2.5V)</td><td>J2 帽已拔、H7/H9 飞线供 2.5V; 万用表量 FS03 <b>J2 中脚</b>对 GND (10-27 实测 2.506 V)</td><td>2.40–2.60 V 为 PASS</td></tr>
+<tr><td>M01a_bank11</td><td>C0 上电后/加载位流前</td><td>主控 bank11 VCCIO (hswap 下为<b>面 A</b>, 2.5V)</td><td>J1 帽已拔、H7/H9 飞线供 2.5V; 量 FS03 <b>J1 中脚</b>对 GND。脚本里若暂无此测点, 人工记入 meas 备注 (环境变量 <code>MEAS_M01a_bank11=2.49</code> 也可)</td><td>2.40–2.60 V 为 PASS</td></tr>
 <tr><td>M02a_u18_vcca</td><td>C0 上电后/加载位流前</td><td>桥板 U18 VCCA (= PWR2V5, 桥板不改)</td><td>桥板 U18 (SN74AVC4T774, TSSOP) <b>第 16 脚 VCCA</b> 对 GND</td><td>2.40–2.60 V 为 PASS</td></tr>
 <tr><td>M02b_u19_vcca</td><td>C0 上电后/加载位流前</td><td>桥板 U19 VCCA (= PWR2V5, 桥板不改)</td><td>桥板 U19 (SN74AVC4T774, TSSOP) <b>第 16 脚 VCCA</b> 对 GND</td><td>2.40–2.60 V 为 PASS</td></tr>
-<tr><td>M02c/d_vccb、M02e/f_oe <span class="upd">新</span></td><td>C0 上电后/加载位流前</td><td>U18、U19 的 <b>15 脚 VCCB</b> 与 <b>9 脚 OE</b></td><td>15 脚对 GND 期望 3.3 V (VCCB = 3.3 V 侧); 9 脚 OE 低有效, R208 / R233 (10 kΩ) 下拉, 期望 ≈0 V (= 转换器使能); 若 OE 为高, 转换器关闭, 边带/上行都不通</td><td>15 脚 3.15–3.45 V; 9 脚 ≤ 0.7 V (人工记录, 脚本暂不判)</td></tr>
+<tr><td>M02c/d_vccb、M02e/f_oe</td><td>C0 上电后/加载位流前</td><td>U18、U19 的 <b>15 脚 VCCB</b> 与 <b>9 脚 OE</b></td><td>15 脚对 GND 期望 3.3 V; 9 脚 OE 低有效, R208 / R233 (10 kΩ) 下拉, 期望 ≈0 V (= 转换器使能); 若 OE 为高, 转换器关闭, 边带/上行都不通</td><td>15 脚 3.15–3.45 V; 9 脚 ≤ 0.7 V (人工记录, 脚本暂不判)</td></tr>
 <tr><td>M03_rstn_pre</td><td>C0 上电后/加载位流前</td><td>配置前 SB_RSTN (DR1V_RST) 电平</td><td>主控 PL 还没加载时, 量 FPC63 (主控侧) 对 GND; 期望低 (R235 下拉 = 桥保持复位)</td><td>-0.10–0.70 V 为 PASS</td></tr>
-<tr><td>M04_tck_pre</td><td>C0 上电后/加载位流前</td><td>配置前 TCK 电平</td><td>主控 PL 还没加载时, 量 FPC69 (TCK, 主控侧) 对 GND; 期望低 (R223 下拉)</td><td>-0.10–0.70 V 为 PASS</td></tr>
+<tr><td>M04_tck_pre</td><td>C0 上电后/加载位流前</td><td>配置前 TCK 电平</td><td>主控 PL 还没加载时, 量 TCK (FPC1 <b>70</b> 脚, 主控侧) 对 GND; 期望低 (R223 下拉)</td><td>-0.10–0.70 V 为 PASS</td></tr>
 <tr><td>M05_ack_hi</td><td>C4 边带 (桥已对齐)</td><td>SB_ALIGNED / ACK 高电平 (桥→主控)</td><td>桥已对齐时量 FPC62 (主控侧, DR1V_ACK) 对 GND; 期望 ≈2.5 V</td><td>1.70–2.65 V 为 PASS</td></tr>
 <tr><td>M06_uart_hi</td><td>C4 边带</td><td>UART_RX (桥→主控 B2S) 空闲高电平</td><td>量 FPC64 (主控侧 DR1V_UART_RX) 对 GND, 空闲为高, 期望 ≈2.5 V</td><td>1.70–2.65 V 为 PASS</td></tr>
-<tr><td>M07_tdo_hi</td><td>C4 边带</td><td>TDO (桥→主控) 高电平</td><td>量 FPC66 (主控侧 TDO) 对 GND; 只装面 A 且没飞 R6.2→R5.2 时 TDO 悬空, 可输 s 跳过</td><td>1.70–2.65 V 为 PASS</td></tr>
+<tr><td>M07_tdo_hi</td><td>C4 边带</td><td>TDO (桥→主控) 高电平</td><td>量 TDO (FPC1 <b>67</b> 脚, 主控侧) 对 GND。<span class="upd">【10-27 更新】</span>两块桥都插时 TDO 空闲被面 B 转接板 R219 (10k) 拉到 0 V, 这是正常的, 输 <code>s</code> 跳过</td><td>1.70–2.65 V 为 PASS</td></tr>
 <tr><td>M08_vcm</td><td>C3 PRBS 跑着时</td><td>桥收端共模 VCM</td><td>PRBS 跑着时, 在桥板接收端 (lane0 的 P、N 两脚, 100Ω 端接处) 分别量对 GND 直流, 取平均; 期望约 1.25 V</td><td>0.90–1.40 V 为 PASS; 0.40–0.90 WARN, 1.40–2.25 WARN</td></tr>
 <tr><td>M09_gnd</td><td>C3 PRBS 跑着时</td><td>两板地差</td><td>主控底板 GND 与桥板 GND 之间直流电压 (表笔两头都接地)</td><td>-0.05–0.05 V 为 PASS; -0.10–0.10 WARN</td></tr>
 <tr><td>M10_vod</td><td>C3 PRBS 跑着时</td><td>差分摆幅 VOD (绝对值)</td><td>PRBS 跑着时, 桥收端 lane0 P−N 差分 (示波器差分探头或两通道相减), 取眼图幅度</td><td>0.20–0.60 V 为 PASS; 0.60–0.90 WARN</td></tr>
-<tr><td>M11_rstn_post</td><td>C4 边带</td><td>配置后 SB_RSTN 高电平</td><td>主控 D27 位流加载后量 FPC63 (主控侧) 对 GND; 期望高 ≈2.5 V (主控驱动 1, 桥出复位)</td><td>1.70–2.65 V 为 PASS</td></tr>
+<tr><td>M11_rstn_post</td><td>C4 边带</td><td>配置后 SB_RSTN 高电平</td><td>主控位流加载后量 FPC63 (主控侧) 对 GND; 期望高 ≈2.5 V (主控驱动 1, 桥出复位)</td><td>1.70–2.65 V 为 PASS</td></tr>
 </table></div>
 
-<h3>4.2 示波器测点 <span class="upd">【10-26 更新】</span></h3>
+<h3>4.2 示波器测点</h3>
 <div class="wrap"><table>
 <tr><th>测什么</th><th>在哪量</th><th>怎么看</th></tr>
-<tr><td>lane0 发端 / 链路</td><td>SoC 底板 <b>R117 / R118</b> (lane0 的 P / N)</td><td>主控发出的差分摆幅与共模 (注意 SoC 底板 R182–R201 要空贴, 这里不是端接)</td></tr>
+<tr><td>lane0 发端 / 链路</td><td>SoC 底板 <b>R117 / R118</b> (lane0 的 P / N)</td><td>主控发出的差分摆幅与共模 (SoC 底板 R182–R201 空贴, 这里不是端接)</td></tr>
 <tr><td>lane0 收端</td><td>桥板 <b>R185</b> (100 Ω 端接, 在桥转接板上, 保留)</td><td>桥收到的摆幅 VOD (M10) 与共模 VCM (M08)</td></tr>
-<tr><td>转发时钟</td><td>桥板 <b>R103 / R104</b> (时钟对)</td><td>fwd=2 应为 <b>100.000 MHz</b> (线速/8); 已测过</td></tr>
+<tr><td>转发时钟</td><td>桥板 <b>R103 / R104</b> (时钟对)</td><td>fwd=2 = 线速/8: <span class="upd">【10-27 更新】</span><b>600M 时 75.000 MHz</b> (10-26 量到的 100.000 MHz 是 800M 档)</td></tr>
 </table></div>
-<p class="sub"><b>70 MHz 示波器也可用</b>: 高速 800 Mbit/s 看不清眼图, 但用<b>诊断位流 + 码型全 1 / 全 0 慢翻转</b> (D70 的 CKPS 诊断档, 码型/取反寄存器 0x4188) 就能看每条线的连通、极性和电平; 看不到翻转 = 线/焊接问题, 看得到而 PRBS 收不到 = 桥采样问题 (目前的情况)。</p>
+<p class="sub"><b>70 MHz 示波器也可用</b>: 600 Mbit/s 看不清眼图, 但用诊断位流 + 码型全 1 / 全 0 慢翻转 (D70 的 CKPS 诊断档, 码型/取反寄存器 0x4188) 能看每条线的连通、极性和电平; 看不到翻转 = 线/焊接问题, 看得到而 PRBS 收不到 = 采样/发端问题。</p>
 
-<h2>五、命令</h2>
-<h3>回板前 (今天就能做)</h3>
+<h2>五、命令 <span class="upd">【10-27 更新】</span></h2>
+<h3>回板前 (离线就能做)</h3>
 <pre>bash d39_comm/verify.sh                 # 离线验收: 判据单元 + 假板演练 + 全部故障注入 + 端到端仿真 (约 30 min; --quick 跳过仿真)
 bash d39_comm/comm_check.sh --dry-run   # 看一遍流程 (假板, 不连板)
 bash d39_comm/comm_check.sh --dry-run --inject prbs_err   # 看故障时报告长什么样; 全部注入键: bash v1_bringup/bringup.sh --list-inject</pre>
-<h3>到板当天 <span class="upd">【10-26 更新】</span></h3>
-<p class="sub">5.1 通信验证主命令 (过渡期: 缺省 fwd 还没改成 2, 所以带 <code>COMM_UL_FWD=2</code>; D72 做完缺省后可去掉。<code>sbd up</code> 已改读-改-写保留 fwd, 不会被冲掉, D70。桥位流暂走 PC 下载器, 用 <code>--bridge-load pc</code>。)</p>
-<pre># 主流程 [10-26]: 桥位流用 PC 下载器 (脚本提示时拔 FPC -> 下载 -> 桥板不断电 -> 插回 FPC), fwd=2
-#   主控位流 / 桥位流路径用 COMM_MAIN_BIN / COMM_KIT / COMM_BRIDGE_DIR 指到 D72 / D76 交付 (见第三节, 路径明早填)
-COMM_UL_FWD=2 COMM_KIT=&lt;D72 交付目录&gt; COMM_BRIDGE_DIR=&lt;D76 交付 e60cp 目录&gt; \
-  bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load pc
+<h3>5.1 到板 (10-27 起)</h3>
+<p class="sub">桥位流一律 <code>--skip-bridge</code> (flash 里就是 e60cp 26102760, 正是通信验证要的那份; 脚本自己的板上灌桥 S3b 还没带两桥菊花链的开关)。不再加 <code>COMM_UL_FWD=2</code>。线速由脚本按主控位流名 <code>_ul600_</code> 取, C3 前再以 0x4104 实读为准 (D72)。</p>
+<pre># 0) 位流目录: D78 合入主线前要显式给, 合入后这就是缺省, 可省略
+export COMM_KIT=/mnt/d/claude_workspace/pov3d/_work/d78_out
+export COMM_MAIN_BIN=pov_m90_pure_ul600_p1_b12_sb_hs_prbs_io25.bin
+export COMM_BRIDGE_DIR=/mnt/d/claude_workspace/pov3d/_work/d76_out/gw25_bridge_p1_e60cp_d166p67
 
-# (退路) 无 PRBS 的主控 hs 档 + 桥 e60c (其余照测, C3 判 FAIL 并打印构建命令)
-COMM_UL_FWD=2 COMM_MAIN_BIN=&lt;D72 无 PRBS 档文件名&gt; COMM_BRIDGE_DIR=&lt;D76 交付 e60c 目录&gt; \
-  bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load pc
+# 1) 整套通信验证 (补跑 C5 / C7; C6 两桥都插时会误报, --keep-going 让 C7 照跑)
+bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load sram --skip-bridge --keep-going
 
-# (查清远程灌桥之后才用) 板上 JTAG 灌桥: --bridge-load sram   (10-26 预检 TMS/TDI 读 0, 暂不可用)
+# 2) PRBS 长跑 1 h / 8 h (也可 --prbs-dur 秒)
+bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load sram --skip-bridge --long 8h
 
-# 长跑 (C3 改成 1 h / 8 h; 也可 --prbs-dur 秒) / 只跑某几段 / 从某段起
-COMM_UL_FWD=2 bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load pc --long 8h
-COMM_UL_FWD=2 bash d39_comm/comm_check.sh --board &lt;板名&gt; --only C3 --skip-bridge
-COMM_UL_FWD=2 bash d39_comm/comm_check.sh --board &lt;板名&gt; --from C4 --skip-bridge
-# 加线速扫描 1.0G / 1.2G (需扫描档位流)
-COMM_UL_FWD=2 bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load pc --sweep</pre>
-<h3>5.2 桥位流下载 / 烧 flash (PC 下载器, Arora V) <span class="upd">【10-26 更新】</span></h3>
-<pre># 都在 Windows 侧用 Gowin Programmer 命令行; 下载前拔 FPC, 接 H1 座; flash 型号 GD 0xC84018
-# 下载到 SRAM (掉电丢; 通信验证用这个, comm_check --bridge-load pc 内部就是它)
-programmer_cli.exe --device GW5A-25B --run 2 --fsFile &lt;bridge.fs&gt; --cable-index 1 --location 44 --frequency 2.5MHz
-# 烧 flash (掉电保持; 出货/批量时用): 必须 Arora V 操作 --run 54
+# 3) 只跑某几段 / 从某段起
+bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load sram --skip-bridge --only C3
+bash d39_comm/comm_check.sh --board &lt;板名&gt; --bridge-load sram --skip-bridge --from C4
+
+# 4) 按 V1 节拍出片 (4284 片/s) 长跑: d73_v1content/run.sh (分支 task/d79-v1content-fix, D79 修过判据)
+bash d73_v1content/run.sh &lt;板名&gt; 600 --mode tp                    # 10 min 图样源 (10-27 PASS)
+bash d73_v1content/run.sh &lt;板名&gt; 600 --mode content               # 10 min 真内容 (主控要 g2 单面 1ccf8111)
+bash d73_v1content/run.sh &lt;板名&gt; 8h --mode content --poll 60      # 8 h</pre>
+<p class="sub">入口等价于 <code>bash v1_bringup/bringup.sh --comm-only …</code>。必须显式 <code>--board</code> (不设默认, 防误动 V0 板)。日志/报告在 <code>v1_bringup/runs/&lt;时间&gt;/</code>: <code>comm_report.html</code> (可 Edge 打 PDF)、<code>meas.json</code>、<code>prbs_*.csv</code>。不写 TF 卡、不写桥 flash、不按名字杀进程; 恢复 V0 = 重启板子 (<code>--reboot</code>)。出片长跑的报告在 <code>d73_v1content/runs/</code>, 末行 <code>D73_V1CONTENT: PASS</code>。</p>
+
+<h3>5.2 桥 SRAM 灌装 / 回 flash: 主控经 JTAG 菊花链 (D80, 不用 PC)</h3>
+<pre># 在主控板上 (root)。目录里放 gw5a_sram (= d33_jtag/gw5a_sram_aarch64, D80 版, task/d80-jtag2chain) 和 bridge.gws
+#   (PC 上打包: python3 d33_jtag/tools/fs_pack.py pack &lt;bridge.fs&gt; -o bridge.gws)
+# 先确认两块桥都上电、都有状态帧 (sbd info / sbd --face b info): 下拉开关放开后, 预检已分不出"桥没上电"
+J="./gw5a_sram --profile d27 --bridge-pulldowns --tdo-pulldown --chain 2"
+$J scan-chain                                   # 应读到 CHAIN n=2, 两个 0x0001281B (pos0 = 面 A, pos1 = 面 B)
+$J --pos 0 status                               # 面 A 现状: flash 正式版 USERCODE 0000E405
+$J --pos 0 load bridge.gws                      # 灌面 A 的 SRAM, 带回读校验 (掉电即丢)
+$J --pos 0 reload --expect-usercode E405        # 让面 A 从 flash 重新配置, 回正式版
+# 面 B: 换 --pos 1, flash 正式版 USERCODE FA0B
+# 脚本写法: BRIDGE_PD=1 BRIDGE_TDOPD=1 CHAIN=2 POS=0 sh bridge_sram_load.sh &lt;目录&gt;
+#           (面 B: CHAIN=2 POS=1 SBD_FACE=b PACK=&lt;目录&gt;/bridge_b.gws ...)</pre>
+<p class="sub"><code>--bridge-pulldowns</code>: 桥转接板 R221–R223 把 TDI/TMS/TCK 拉低, 预检读 0 是正常的 (D74); <code>--tdo-pulldown</code>: 两桥都插时面 B 转接板 R219 把 TDO 拉低 (D80)。10-27 dr1m90-01 上实测: 面 A、面 B 各带校验灌 e60c PASS, 再 reload 回 E405 / FA0B PASS。灌坏了也不怕: reload 或给桥板断电重上电即回 flash 正式版。</p>
+
+<h3>5.3 烧桥 flash (掉电保持): 暂时还要 PC 下载器 (Arora V)</h3>
+<pre># Windows 侧 Gowin Programmer 命令行; 烧之前拔那块桥的 FPC, 下载器接它的 H1 座; flash 型号 GD 0xC84018
 programmer_cli.exe --device GW5A-25B --run 54 --fsFile &lt;bridge.fs&gt; --cable-index 1 --location 44 --frequency 2.5MHz
-# 批量脚本 (dr1v90 分支 task/d74-bridgemgmt): bash d74_bridgemgmt/flash_bridge.sh &lt;bridge.fs&gt;</pre>
-<p><b class="red">严禁 --run 9 / 13 / 36</b>: 在 GW5A (Arora V) 上会报 <code>spi flash not found</code> 并让 JTAG 挂死, 只能给桥板断电才恢复。烧 flash 前同样要<b>拔 FPC、接 H1</b>。出厂固件备份在 <code>_work/d74_backup/</code> (<code>ACG525_Factory_Firmware_usb.fs</code>), 烧坏可恢复 (恢复版文件头是 Version A, 需 <code>--allow-version A</code>)。</p>
-<p class="sub">入口等价于 <code>bash v1_bringup/bringup.sh --comm-only …</code>。必须显式 <code>--board</code> (不设默认, 防误动 V0 板)。日志/报告在 <code>v1_bringup/runs/&lt;时间&gt;/</code>: <code>comm_report.html</code> (可 Edge 打 PDF)、<code>meas.json</code>、<code>prbs_800.csv</code>。不写 TF 卡、不写桥 flash、不按名字杀进程; 恢复 V0 = 重启板子 (<code>--reboot</code>)。</p>
+# 批量脚本 (烧 + 校验 + 读回 USERCODE): bash d74_bridgemgmt/flash_bridge.sh &lt;bridge.fs&gt;   (dr1v90 task/d74-bridgemgmt)</pre>
+<p><b class="red">严禁 --run 9 / 13 / 36</b>: 在 GW5A (Arora V) 上会报 <code>spi flash not found</code> 并让 JTAG 挂死, 只能给桥板断电才恢复。出厂固件备份在 <code>_work/d74_backup/</code> (<code>ACG525_Factory_Firmware_usb.fs</code>, 文件头是 Version A, 需 <code>--allow-version A</code>)。D81 在做主控远程烧 flash, 做完后这一节只作兜底。</p>
 
 <h2>六、判据速查与常见失败</h2>
 <div class="wrap"><table>
 <tr><th>编号</th><th>判据</th><th>失败先做什么</th></tr>
 <tr><td>P15_vccio</td><td>主控位流电平档 == 板 (2.5V)</td><td>换对档位流 / 写 .vccio 旁文件; 不加载</td></tr>
-<tr><td>M01–M04</td><td><span class="upd">【10-26 更新】</span>bank11 与 bank33 都 2.40–2.60 V; U18/U19 VCCA(16) 2.5V、VCCB(15) 3.3V、OE(9) 低; 配置前 RSTN/TCK ≤ 0.7 V</td><td>断电改 J1+J2 / H7-H9 飞线 (两个帽都拔); OE 高查 R208/R233; RSTN/TCK 高 = R235/R223 建议 10k→2.2k</td></tr>
+<tr><td>M01–M04</td><td>bank11 与 bank33 都 2.40–2.60 V; U18/U19 VCCA(16) 2.5V、VCCB(15) 3.3V、OE(9) 低; 配置前 RSTN/TCK ≤ 0.7 V</td><td>断电查 J1+J2 / H7-H9 飞线 (两个帽都拔); OE 高查 R208/R233; RSTN/TCK 高可把 R235/R223 由 10k 换 2.2k (<span class="upd">【10-27】</span>保持 10k 时边带复位与 JTAG 都正常, 只是可选)</td></tr>
+<tr><td>L04_pclk</td><td><span class="upd">【10-27 更新】</span>线速/pclk 按位流名: 600M → 600/150, pclk ≈ 150000 kHz</td><td>装错位流 (800M 老档 pclk 200 MHz)</td></tr>
 <tr><td>B02/SV01–03</td><td>桥出复位、PROTO 主版本 2、GEOM 对、sbd 读得到</td><td>sbd info 看 SB_RSTN; FPC 61–65; 桥烧对档 (12-bit 配 e60c/e60cp)</td></tr>
-<tr><td>CH02_build</td><td>桥 BUILD = 所选桥位流 (e60cp 20261019)</td><td>桥还是金版/旧版: 重灌或重烧</td></tr>
-<tr><td>T05/T03</td><td>train 后 SB_ALIGNED 升; go 后 aligned=1</td><td><span class="upd">【10-26 更新】</span>先确认 <code>COMM_UL_FWD=2</code> 与桥位流是 D76 修复版 (旧桥 IDES8 半速采样, 必不过); 再查差分对/FPC、共模摆幅 (M08/M10)、线速档 800M</td></tr>
-<tr><td>PR01/PR02</td><td>主控/桥位流带 PRBS</td><td>放行第七节构建命令</td></tr>
-<tr><td>PR03–PR06</td><td>13 lane 全锁, ≥600 s 每 lane 0 误码, 不掉锁</td><td>报告点名错 lane (真误码 ≈ 计数/3); 单条 = 那对线; 普遍 = 共模/地差/电源</td></tr>
-<tr><td>SB01–SB04</td><td>B2S 帧连续 RXERR 0; S2B 0 坏帧; ALIGNED 线与状态一致; RSTN 复位后自愈</td><td>FPC64/65/62/63 与 U19/U18; 量 M05/M06/M11</td></tr>
+<tr><td>CH02_build</td><td>桥 BUILD = 所选桥位流 (<span class="upd">【10-27 更新】</span>e60cp 26102760)</td><td>桥上跑的不是这份: 用 5.2 reload 回 flash 正式版或重灌</td></tr>
+<tr><td>T05/T03</td><td>train 后 SB_ALIGNED 升; go 后 aligned=1</td><td><span class="upd">【10-27 更新】</span>先确认主控是 <code>d78_out</code> 600M 档 (加载自检 CTRL 复位 0x1044 = fwd 2)、桥 BUILD 26102760; 再查差分对/FPC、共模摆幅 (M08/M10)</td></tr>
+<tr><td>PR01/PR02</td><td>主控/桥位流带 PRBS</td><td>主控用 b3af9155、桥用 e60cp; 要重编见第七节</td></tr>
+<tr><td>PR03–PR06</td><td>13 lane 全锁, ≥600 s 每 lane 0 误码, 不掉锁; PR06 期望拍数 = 线速/8 × 时长 (<span class="upd">【10-27 更新】</span>按实际线速, D72 已修; 10-27 那次按 800M 期望判 FAIL 是误报)</td><td>报告点名错 lane (真误码 ≈ 计数/3); 单条 = 那对线; 普遍 = 共模/地差/电源</td></tr>
+<tr><td>SB01–SB04</td><td>B2S 帧连续、帧错 ferr 0 (<span class="upd">【10-27 更新】</span>RXERR 高 16 位 ovf 只记录, D72); S2B 0 坏帧; ALIGNED 线与状态一致; RSTN 复位后自愈</td><td>FPC64/65/62/63 与 U19/U18; 量 M05/M06/M11</td></tr>
 <tr><td>RG01–RG04</td><td>寄存器读写回读</td><td>同 SB01/SB02 先排除线</td></tr>
-<tr><td>JT10</td><td>IDCODE 0x0001281B (面 A 单装 = WARN)</td><td>R6.2→R5.2 飞线; 怪值查 FPC 67–69</td></tr>
-<tr><td>JT01–JT05</td><td>板上灌桥成功 (盲灌靠桥状态帧判)</td><td><span class="upd">【10-26 更新】</span>远程灌桥暂不可用 (预检 TMS/TDI 读 0), 本次用 <code>--bridge-load pc</code>, 不跑 JT 项; 桥板断电重上电回到 flash 里的固件</td></tr>
+<tr><td>JT10</td><td>IDCODE 0x0001281B</td><td><span class="upd">【10-27 更新】</span>两桥都插时脚本 probe-tdo 没带 <code>--bridge-pulldowns --tdo-pulldown</code>, 预检被下拉挡住报 FAIL = 误报; 用 5.2 的 <code>scan-chain</code> 核 (应 2 个 0x0001281B)</td></tr>
+<tr><td>JT01–JT05</td><td>板上灌桥成功</td><td><span class="upd">【10-27 更新】</span>脚本的 S3b 还没带菊花链开关, 通信验证用 <code>--skip-bridge</code>; 要灌就按 5.2 手动, 灌完 reload 或断电回 flash 正式版</td></tr>
 <tr><td>WD01–WD03</td><td>桥看门狗、硬件重训、守护看门狗</td><td>见报告原因行</td></tr>
 </table></div>
 <p class="sub">报告每行: <code>CHECK 编号 PASS|FAIL|WARN|SKIP | 判据 | 实测</code>; FAIL/WARN 后紧跟"最可能原因 / 下一步" (原因表在 <code>d39_comm/comm_stages.sh</code> 与 <code>v1_bringup/bringup.sh</code> 的 WHY[…])。硬 FAIL 默认停后续 (C3/C5/C8 例外, 照跑后面的边带与恢复项), 直奔 S9 安全恢复; <code>--keep-going</code> 继续。</p>
 
-<h2>七、位流重编命令 (只在要重编时用, 需用户放行) <span class="upd">【10-26 更新】</span></h2>
-<p class="sub">下面命令是 10-19 初版写法, 供参考; 实际 hswap 主控 (加 <code>POV_HSWAP=1</code>, D70 起 <code>td_pov/build.sh</code> 支持) 与 B 版桥 (<code>build_p1.sh</code> 缺省 <code>DVER=B</code>) 的现行构建命令以 D72 / D76 交付说明为准。</p>
-<pre># 1) 桥 e60cp (= e60c + 13 lane PRBS 计数, 约 3 min; 判据: run.log 无 ERROR, 0 违例, dclk Fmax ≥ 166.667, run.cst ul_p[12]=R7,T7)
-P1_DEV=25 P1_OUT_ROOT=/mnt/d/claude_workspace/pov3d/_work/d65c_out flock ~/.gw5a_synth.lock bash gw5a_bridge/p1/build_p1.sh e60cp   # [D60] P1_DEV=25 = ACG525 真器件 UG324 (build_p1.sh 自身缺省仍是 25S); [D65c] 结果落 d65c_out (六档一起: bash d65_p1dclk/tools/final.sh)
-# 2) 主控 PRBS 档 (= _sb + CTRL bit10 PRBS7, 约 20 min; build.sh 自带 flock; 2.5V 档与主会话 _sb_io25 同口径)
-POV_ZERO_OK=1 POV_DEVICE=DR1M90GEG484 POV_PURE=1 POV_UL=800 POV_UL_GEOM=p1 POV_UL_BPC=12 POV_UL_PINS=v3 POV_UL_SB=1 POV_UL_PRBS=1 POV_SPIN_PIN=v3 POV_IOV=25 bash td_pov/build.sh
-#    产物 td_pov/out/pov_m90_pure_ul800_p1_b12_sb_prbs_io25.bin → 拷进 _work/d64_out/ 并写 .md5 (md5sum 格式)
-#    注: 现交付版 c66710ec 是 D64 按 D53 加余量源重编的 (取代 D53 前的 e7c33e78; 名义上行余量 +0.965 ns); 交付那份是加 POV_ULUNC=0.3 编的 (默认 0.25 第一次布线 aclk hold -0.166 ns 与上行无关, 加 0.3 重布线 0 违例), 照命令编不过就加 POV_ULUNC=0.3
-# 3) (可选, --sweep) 扫描档: 桥 P1_LINE=1000|1200 …build_p1.sh e60cp; 主控同 2) 换 POV_UL=1000|1200 (仅作 PRBS)</pre>
+<h2>七、位流重编命令 (只在要重编时用, 需用户放行) <span class="upd">【10-27 更新】</span></h2>
+<pre># 1) 主控五档 @600M (换球 + fwd 复位 2; 约 17–25 min/档, 串行, 时序不过自动换 POV_ULUNC 再试; 产物进 _work/d78_out 并重写 MD5SUMS.txt)
+bash d78_v1l600/build_all.sh                    # 全部五档; 只编某几档: bash d78_v1l600/build_all.sh prbs g2   (档名 prbs single ab g2 g2ab)
+#    单档等价写法 (PRBS 档): POV_PROFILE=v1 POV_ZERO_OK=1 POV_UL_PRBS=1 POV_ULUNC=0.25 bash td_pov/build.sh
+#    POV_PROFILE=v1 = 换球 POV_HSWAP=1 + IO 2.5V + 边带 + 光电 v3 + p1 12-bit + fwd 2, 线速 600 (profile 下给 800 会被拒)
+# 2) 桥 (B 版, 带逐 lane 扫眼; 约 8 min/档, 产物进 _work/d76_out)
+bash d76_p1rxfe/tools/build_d76.sh e60cp        # e60c / e60cb 同</pre>
+<p class="sub">脚本分别在 dr1v90 分支 task/d78-v1l600 与 task/d76-p1rxfe, 合入主线前从分支取。初版的 800M 构建命令 (<code>POV_UL=800</code>、桥 <code>P1_DEV=25 P1_OUT_ROOT=…/d65c_out</code>) 已作废。</p>
 
-<h2>八、通信通过之后: 灌桥 → 主控位流 → 软件 → 出图 (V1 g2, 单面再双面) [D63 假板彩排核过] <span class="upd">【10-26 更新】</span>V0.1 阶段不做</h2>
-<p class="sub"><b>V0.1 阶段 (不接灯板) 只做到通信验证为止</b>; 下面出图两步等灯板约 11-05 回来再做。另: 其中的位流 md5 和 <code>--bridge-load sram</code> 都是 10-21 写法, 已过时 (主控要 hswap 版 + fwd=2, 桥要 B 版 D76, 灌桥暂用 pc), 届时以届时的交付为准。</p>
-<pre># 1) 单面 (缺省 --grid g2: g2 单面主控 4ce589d5 + 桥 e60c 6e1461c1 [D65c] + lut_p1g2_357 + voxslice 1.2 + 192 网格内容)
-bash v1_bringup/bringup.sh --board &lt;板名&gt; --set d27 --bridge-load sram --no-prbs
-# 2) 双面 (g2 双面主控 b035e0b8 + 面 A 桥 e60c + 面 B 桥 e60cb 8153eac2 [D65c], 两器件 JTAG 链)
-bash v1_bringup/bringup.sh --board &lt;板名&gt; --faces AB --bridge-load sram --no-prbs
-# 退路: 老 160x180 网格位流 (_work/d64_out, D64 按 D53 源重编: 单面 3c704794 / 双面 6ff753bb; 取代 v1_main_1019 的 2b4f3311 / 92a7f049)
-bash v1_bringup/bringup.sh --board &lt;板名&gt; --set d27 --grid v1 --bridge-load sram
-# 回板前整套假板彩排 (通信 → 灌桥 → 主控 → 出图 → 单面/双面, 含反例; 全过 exit 0)
+<h2>八、通信通过之后: 出图 (V1 g2, 单面再双面) <span class="upd">【10-27 更新】</span>等灯板约 11-05 回 (D86 在准备)</h2>
+<p class="sub"><b>V0.1 阶段 (不接灯板) 只做到通信验证 + 出片长跑为止</b>; 出图等灯板回来。届时步骤以 D86 的灯板日准备为准, 下面是框架 (D63 假板彩排核过)。</p>
+<pre># 1) 单面 (缺省 --grid g2: g2 单面主控 1ccf8111 + 192 网格内容 + lut_p1g2_357 + voxslice ≥1.2)
+bash v1_bringup/bringup.sh --board &lt;板名&gt; --set d27 --skip-bridge --no-prbs
+# 2) 双面 (g2 双面主控 fe3723dc; 面 A 桥 flash e60cp / 面 B 桥 flash e60cb, 都已烧好)
+bash v1_bringup/bringup.sh --board &lt;板名&gt; --faces AB --skip-bridge --no-prbs
+# 回板前整套假板彩排 (通信 → 主控 → 出图 → 单面/双面, 含反例; 全过 exit 0)
 bash d63_rehearsal/run.sh</pre>
 <ul>
-<li><code>--no-prbs</code>: 800M PRBS 已在通信验证做完, 出图脚本的 S2 (D28 老 1.2G 发端档, e60c 桥没有 PRBS 计数, 只能人读) 重复, 跳过。</li>
-<li>通信那步桥里灌的是 e60cp (PRBS 计数档), 出图那步 S3b 会重新灌 e60c/e60cb; 两步之间不要 <code>--skip-bridge</code>。</li>
-<li>g2 位流 (D45b/D53, md5 在 <code>_work/d53_out</code>, 取代 D45b 的 1ef6d9c7/a1c29b04) 读 V2 网格 192×216, 日志先看 <code>V1 网格 192×216 (... GEOM_G2 0xc0d8a0b4)</code>; 内容必须 192 网格 (V0 卡上 160 的 walking.pvs 会被逐帧 NAK, 屏全黑); 脚本缺省现渲 walking.glb。</li>
-<li>上电前先看核心板芯片丝印: 桥位流按 C2/I1 编; 若是 ES 等级 dclk 166.67 没有余量 (D60, 只到 152.9 MHz), 下行出错先查它。</li>
-<li>[D65] 桥位流已换 dclk 余量加厚版 (<code>_work/d65_out</code>, <code>MD5SUMS.txt</code>; e60c 6969a7e5 / e60cb 7cc48c05 / e60cp f0aba00b / e60 3da9f328): 六档逐拍等价改写, 寄存器 / 协议 / 引脚 / BUILD_ID 与 D60 版相同, 脚本和判据不用改; 退路 <code>V1_BR_DEV=25d60</code> (D60 入库版)。说明见 <code>d65_p1dclk/README.md</code>。</li>
-<li>[D65c] 桥位流缺省再换成 D65c 版 (<code>_work/d65c_out</code>, <code>MD5SUMS.txt</code>; e60c 6e1461c1 / e60cb 8153eac2 / e60cp f559ff4d / e60 cc67e9ba): 换常量重编也稳 —— 六档交付构建 dclk ≥ +0.407 ns, 换常量重编 30 次全部 ≥ +0.215 ns (D65 定版最差 +0.009)。PRBS 档 e60cp 位流内容与 D65 定版逐位相同, 其余五档是 D65b 再加厚; 寄存器 / 协议 / 引脚 / BUILD_ID 不变, 脚本和判据不用改; 退路 <code>V1_BR_DEV=25d65</code> (D65 定版 <code>_work/d65_out</code>)。说明见 <code>d65_p1dclk/README.md</code> [D65c] 节。</li>
-<li>V2 桥/主控通信 (不属本次 V1 回板): <code>comm_check.sh --phase v2 [--v2-bridge p2p|p2|p2b] [--v2-rate 1000]</code>, 桥取 <code>_work/d57_out</code> (D58 复验合并前不换)。</li>
+<li>位流: D78 合入主线前要显式指过去 —— 单面 <code>D27_KIT</code> / <code>D27_MAIN_BIN</code>, 双面 <code>D38_KIT</code> / <code>D38_MAIN_BIN</code> 指 <code>_work/d78_out</code> 的 g2 档; 桥 <code>BRIDGE_DIR</code> (双面再加 <code>BRIDGE_B_DIR</code>) 指 <code>_work/d76_out</code> 的 e60cp / e60cb 目录 (BUILD 判据才对得上 flash)。合入后缺省就是这些。<code>--set cur</code> (现役套: 800M、未换球、A 版 e60) 在 V1 上作废。</li>
+<li>桥: flash 里已是正式版, 一般不用灌, 所以用 <code>--skip-bridge</code>; e60cp 包含 e60c 的全部功能 (多了 PRBS 计数), 面 A 出图也能用。要换桥位流按 5.2 手动灌。</li>
+<li><code>--no-prbs</code>: PRBS 已在通信验证做完, 出图脚本的 S2 (D28 老 1.2G 发端档) 重复, 跳过。</li>
+<li>内容必须 192 网格 (V0 卡上 160 网格的 walking.pvs 会被逐帧 NAK, 屏全黑); 日志先看 <code>V1 网格 192×216 (... GEOM_G2 0xc0d8a0b4)</code>; 脚本缺省现渲 walking.glb。</li>
+<li>核心板芯片已确认 GW5A-LV25 <b>UG324C2/I1 B 版</b> (丝印 2544BB0N, 非 ES), 桥位流就按它编。</li>
+<li>V2 桥/主控通信 (不属本次 V1): <code>comm_check.sh --phase v2 …</code>。<span class="upd">【10-27 更新】</span>V2 的 1.2G 在 DR1 上发不出 (oDDRx2 750M 起只发偶数位), 出路由 D84 找。</li>
 </ul>
 
-<p class="sub">出处: d39_comm/ (comm_stages.sh / meas.py / prbs.py / verify.sh)、d27_link/SPEC.md (边带协议/寄存器/H-1…H-6)、d33_jtag/README.md、d36_hwsync/REPORT.md §五、d37_io18/REPORT.md、td_pov/pure_ul/C1_BENCH.md、gw5a_bridge/c1_bench/README.md §7.2–§8、v1_bringup/回板当天.md、d63_rehearsal/FINDINGS.md; 【10-26 更新】出处: dr1v90 task/d70-v1comm (hswap / fwd / 诊断档)、task/d74-bridgemgmt (B 版 / flash 烧写 / d74_bridgemgmt/README.md)、用户 10-26 到板实测。</p>
+<p class="sub">出处: d39_comm/ (comm_stages.sh / meas.py / prbs.py / verify.sh)、d27_link/SPEC.md、d33_jtag/README.md、d36_hwsync/REPORT.md §五、td_pov/pure_ul/C1_BENCH.md、v1_bringup/回板当天.md、d63_rehearsal/FINDINGS.md; 【10-26 更新】dr1v90 task/d70-v1comm、task/d74-bridgemgmt、用户 10-26 到板实测; <span class="upd">【10-27 更新】</span>出处: dr1v90 task/d72-v1hs (d72_v1hs/README.md: DR1 oDDRx2 线速实测表、fwd 统一、600M comm_check 报告 runs/20261027_013929)、task/d78-v1l600 (_work/d78_out/MD5SUMS.txt, build_all.sh 日志 0 违例)、task/d76-p1rxfe (_work/d76_out)、task/d79-v1content-fix (d73_v1content/README.md D79 节, tp 10 min PASS)、task/d80-jtag2chain (两桥菊花链上板记录)、d74_bridgemgmt/README.md §2.1 (FPC1 JTAG 脚号)、用户 10-27 拍板 600M。</p>
 </body>
 </html>

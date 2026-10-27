@@ -63,11 +63,11 @@ blockquote{margin:0;padding:6px 12px;border-left:3px solid var(--rule);color:var
 <body>
 <div class="wrap">
 <header>
-  <h1>关于 DR1M90 PL 侧 LVDS 高速输出（DR1_LOGIC_ODDRx2）的技术问询（更新版）（更新版）</h1>
+  <h1>关于 DR1M90 PL 侧 LVDS 高速输出（DR1_LOGIC_ODDRx2）的技术问询（10-27 晚更正版）</h1>
   <div class="meta">
     <b>致</b><span>上海安路信息科技股份有限公司 技术支持 / FAE</span>
     <b>发自</b><span>POV3D 项目组（联系人与联系方式：＿＿＿＿＿＿＿＿）</span>
-    <b>日期</b><span>2026-10-27（上板后更新）</span>
+    <b>日期</b><span>2026-10-27（晚更正版：此前 1.2G 0 误码系判据错误）</span>
     <b>器件</b><span>DR1M90GEG484，按速度等级 -2 编译（芯片丝印等级待核）</span>
     <b>软件</b><span>TD 5.9.1（TD_5.9.1_DR1_2025.1_151.508，V5.9.151508，2025-02-21 构建）；另装有 TD 2026.1 SP2</span>
     <b>硬件</b><span>米联客 MLKPAI-FS03 DR1 核心板 + 自制转接板；接收端为 Gowin GW5A，LVDS 输入，100 Ω 端接</span>
@@ -75,10 +75,10 @@ blockquote{margin:0;padding:6px 12px;border-left:3px solid var(--rule);color:var
 </header>
 
 <div class="lead">
-  <p><b>更新说明</b>：10-27 上板后，原先的主问题（700/750/800 Mbps 丢位）已自行解决，原因见第三节。1.2 Gbps 也已跑通。本函只保留尚未解决的问题（第五节）。</p>
-  <p><b>已解决</b>：奇数 PLL 分频时 <code>CLKC0_DUTY_INT</code> 错填为 DIV/2，应按 UG1206 §2.5.4 公式 2-5 取 INT(DIV/2)+1。改后 800 Mbps（DIV 5）2 分钟 0 误码；偶数分频 800 Mbps 10 分钟 0 误码；600 Mbps 1 小时 0 误码。</p>
-  <p><b>现状</b>：1.0 Gbps 有 3 条 lane 约 1% 误码；1.2 Gbps 不加预加重时约 3% 误码，开 bank 级 <code>PRE_EMP=ON</code> 后 13 lane 全锁，10 分钟 0 误码。</p>
-  <p><b>仍请协助</b>：SCLK 高于 375 MHz 时的时钟网、1250 Mbps 的签核方法、预加重与 VOD 的推荐设置、奇数分频 DUTY50 的实际行为（第五节 Q1–Q5）。</p>
+  <p><b>更正说明（10-27 晚）</b>：此前版本称“1.2 Gbps 开预加重后 10 分钟 0 误码”，该结论<b>系判据错误</b>：当时看的桥寄存器 0x61 实为 {高 16 位掉锁次数, 低 13 位锁在 PRBS31 的 lane 掩码}，并非误码计数。正确判据为：全锁（0x60 低 13 位 = 1fff）、掉锁次数不增长、逐 lane 误码计数全 0 且已校验量在增长。以下数据已按正确判据更正。</p>
+  <p><b>已解决</b>：奇数 PLL 分频时 <code>CLKC0_DUTY_INT</code> 错填为 DIV/2，应按 UG1206 §2.5.4 公式 2-5 取 INT(DIV/2)+1。改后 800 Mbps（DIV 5）与偶数分频 800 Mbps 均能全锁（误码未按 lane 计数复核）；600 Mbps 1 小时全程锁定无掉锁。</p>
+  <p><b>现状（正确判据，13 lane，每档 120 s，1.2 G 为 60 s）</b>：600 Mbps PRBS7 无误码；1.0 Gbps + 预加重 PRBS7、PRBS31 均无误码，真内容 10 分钟通过；<b>1.2 Gbps + 预加重：PRBS7 零星误码（约 1e-10 量级），PRBS31 13 条 lane 中 12 条大量误码（BER 约 2e-4），真内容 30 分钟失败</b>。判为码型相关码间串扰，非切片 / 软件 / 桥时序问题。我方决定 V1 正式用 1.0 Gbps，V2 改为 1.0 Gbps × 16 lane，1.2 Gbps 作提升项，待贵方答复后再评估。</p>
+  <p><b>仍请协助</b>：SCLK 高于 375 MHz 时的时钟网、1250 Mbps 的签核方法、预加重与 VOD 的推荐设置、奇数分频 DUTY50 的实际行为（Q1–Q5），以及新增的 <b>Q6 引脚级 VOD 被静默忽略</b>、<b>Q7 1.2 Gbps 下码型相关误码的推荐发送设置与签核方法</b>（第五节）。</p>
 </div>
 <section>
 <h2>一、设计接法</h2>
@@ -86,7 +86,7 @@ blockquote{margin:0;padding:6px 12px;border-left:3px solid var(--rule);color:var
   <li><b>时钟</b>：板载 25 MHz 晶振 → <code>DR1_PHY_PLL</code>。REFCLK_DIV = 1，FBCLK_DIV = SCLK/25，CLKC0 外反馈（FBKCLK = "CLKC0_EXT"），CLKC0_DIV 取"VCO ≤ 2000 MHz 的最大整数"，CLKC0_CPHASE = DIV−1（0°），CLKC0_DUTY50 = "ENABLE"，<b>CLKC0_DUTY_INT：最初写成 DIV/2（奇数分频时错误，现已改为 INT(DIV/2)+1，见第三节）</b>。
       PLL 的 clkc[0] 直接作为 ODDRx2 的 <code>sclk</code>；<code>pclk</code> 由 <code>DR1_PHY_LCLK #(.DIV("2"), .LCLK("DIV2TO8"))</code> 对 sclk 二分频得到。</li>
   <li><b>串化</b>：每 lane 一个 <code>DR1_LOGIC_ODDRx2 #(.ASYNCRST("ENABLE"))</code>，<code>q</code> 直连顶层 LVDS25 端口，不经 OBUFDIFF。共 13 条数据 lane，外加 1 条随路时钟（线速/8，同样由 ODDRx2 产生）。</li>
-  <li><b>I/O</b>：bank 11（bank 33 上也试过），IOSTANDARD = LVDS25，VCCIO = 2.5 V，1.2 Gbps 档开了 bank 级预加重（PRE_EMP=ON）；未用 ODELAY。</li>
+  <li><b>I/O</b>：bank 11（bank 33 上也试过），IOSTANDARD = LVDS25，VCCIO = 2.5 V，1.0 / 1.2 Gbps 档开了 bank 级预加重（PRE_EMP=ON，.bit 与不开相差 63 字节，确认生效）；未用 ODELAY；引脚级 VOD 设置无效（见 Q6）。</li>
   <li><b>与官方 IP 的对比</b>：TD 自带的 DR1 High Speed IO IP（<code>ip/depot/HSIOF9F0D0P0_1.0/DR1_High_Speed_IO/RTL/DR1_High_Speed_IO.v</code>，5.9.1 和 2026.1 两个版本相同）也是 <code>assign sclk = clk_in;</code>，pclk 用 <code>DR1_PHY_LCLK</code>（DIV2TO8，DIV 2）产生，和我们的接法同构。</li>
   <li><b>时序</b>：TD 报告 0 违例。pclk 域额外加了 0.25 ns 的 setup 不确定度。</li>
 </ul>
@@ -99,26 +99,30 @@ DR1_PHY_LCLK #(.CEMD("SYNC"), .CLKSEL("ORG"), .DIV("2"), .LCLK("DIV2TO8")) u_lcl
 DR1_LOGIC_ODDRx2 #(.ASYNCRST("ENABLE")) u_ser (.q(tx[i]), .pclk(pclk), .sclk(sclk), .d0(..), .d1(..), .d2(..), .d3(..), .rst(~lock));</pre>
 </section><section>
 <h2>二、实测结果（10-27，面 A，接收端 GW5A）</h2>
+<p><b>判据（更正）</b>：桥 sbd 0x60 低 13 位 = 1fff（全锁）；0x61 高 16 位（掉锁次数）不增长；每 lane 误码计数 0x63..0x6F 全为 0（计数约等于 3 × 真实误码数）；0x62（已校验量）在增长。此前用 0x61 当误码计数是错误的。</p>
 <div class="tbl"><table>
-<thead><tr><th>线速</th><th>配置</th><th>结果</th></tr></thead>
+<thead><tr><th>线速</th><th>配置</th><th>PRBS7</th><th>PRBS31</th><th>备注</th></tr></thead>
 <tbody>
-<tr><td>400 / 600 Mbps</td><td>偶数分频（DIV 8 / 6）</td><td class="ok">600 Mbps：PRBS 1 小时 0 误码</td></tr>
-<tr><td>700 / 750 / 800 Mbps（旧）</td><td>DIV 5，DUTY_INT = 2</td><td class="bad">丢位；800 Mbps 只输出偶数位，每位占两个时隙，训练字 0x35 收成 0xE7 / 0x7E / 0x9F</td></tr>
-<tr><td>800 Mbps</td><td>偶数分频 DIV 4</td><td class="ok">10 分钟 0 误码</td></tr>
-<tr><td>800 Mbps</td><td>DIV 5，DUTY_INT = 3（公式 2-5）</td><td class="ok">2 分钟 0 误码</td></tr>
-<tr><td>1.0 Gbps</td><td>无预加重</td><td>10/13 lane 0 误码；lane 2 / 8 / 12 约 1% 误码，原始字正确率 97.5–99%</td></tr>
-<tr><td>1.2 Gbps</td><td>无预加重</td><td class="bad">训练码正确，PRBS 不锁，原始字正确率 90.6%，约 3% 误码，像码间串扰</td></tr>
-<tr><td>1.2 Gbps</td><td>bank 级 PRE_EMP = ON</td><td class="ok">13 lane 全锁，10 分钟 0 误码，原始字正确率 100%</td></tr>
+<tr><td>400 / 600 Mbps</td><td>偶数分频（DIV 8 / 6）</td><td class="ok">600M：120 s，0 误码</td><td>—</td><td>600M 另有 1 小时全程锁定、无掉锁（旧判据）</td></tr>
+<tr><td>700 / 750 / 800 Mbps（旧）</td><td>DIV 5，DUTY_INT = 2</td><td class="bad" colspan="2">丢位；800 Mbps 只输出偶数位，每位占两个时隙，训练字 0x35 收成 0xE7 / 0x7E / 0x9F</td><td>根因见第三节</td></tr>
+<tr><td>800 Mbps</td><td>偶数分频 DIV 4</td><td colspan="2">全锁（10 分钟；误码未按 lane 计数复核）</td><td>旧称“0 误码”，更正</td></tr>
+<tr><td>800 Mbps</td><td>DIV 5，DUTY_INT = 3（公式 2-5）</td><td colspan="2">全锁（2 分钟；误码未按 lane 计数复核）</td><td>旧称“0 误码”，更正</td></tr>
+<tr><td>1.0 Gbps</td><td>无预加重</td><td colspan="2">10/13 lane 正常；lane 2 / 8 / 12 约 1% 误码，原始字正确率 97.5–99%</td><td>早期测量</td></tr>
+<tr><td>1.0 Gbps</td><td>bank 级 PRE_EMP = ON</td><td class="ok">120 s，0 误码</td><td class="ok">120 s，0 误码</td><td>真内容 10 分钟通过（帧格式错 0，片率 4284.11/s）；V1 正式档</td></tr>
+<tr><td>1.2 Gbps</td><td>无预加重</td><td class="bad" colspan="2">训练码正确，PRBS 不锁，原始字正确率 90.6%，约 3% 误码</td><td>早期测量</td></tr>
+<tr><td>1.2 Gbps</td><td>bank 级 PRE_EMP = ON</td><td class="bad">60 s 零星误码：lane 0/6/7/12 计数 3/24/3/42（约 1e-10 量级）</td><td class="bad">60 s，13 lane 中 12 条大量误码；lane 8 / 12 计数约 4.7e7，BER 约 2e-4；仅 lane 3 为 0</td><td>真内容（主控 f26b43ff + 桥 l1200）30 分钟失败；帧格式错首个 30 s 即上万后饱和；旧称“10 分钟 0 误码”作废</td></tr>
 </tbody></table></div>
-<p>核心板面 A 的串阻 R201–R208 已换成 0 Ω，可排除串阻；1.0 / 1.2 Gbps 的码间串扰应来自连接器、FPC、转接板走线一侧，预加重是必需措施。自研核心板 LVDS 线不放串阻，且 LVDS 发送 bank 要能开预加重。预加重开关出处：TD <code>arch/dr1_macro.v</code> 的 <code>DR1_PHY_HR_BANKREF</code>、UG1210 表 1-1。</p>
+<p><b>1.2 Gbps 失败的定位</b>：tp 图样同样失败，说明不是切片或软件；桥按 160 MHz 过约束重编（pclk 余量 0.25% → +0.42 ns）后仍同样失败，桥时序基本排除；判为<b>码型相关码间串扰</b>（长串 0 + 孤立 1 在 0.83 ns UI 下来不及翻转）。链路：DR1 → 核心板 → 板间连接器 → V1 底板 → FPC → 桥转接板 → GW5A。扫眼眼宽：600M 为 0x54–0x5c，1.0G 为 0x30–0x38，1.2G 为 0x24–0x2c。DS1200 表 3-22 LVDS25 输出上限 1250 Mbps，1.2 Gbps 已用到 96%。</p>
+<p><b>VOD</b>：引脚级 <code>VOD = 350M</code> 编出的位流与不加时逐字节相同，TD 静默忽略、无告警；<code>VOD = 400M</code> 则报 USR-8059（只认 200M / 250M / 300M / 350M）。预加重生效。详见 Q6。</p>
+<p>核心板面 A 的串阻 R201–R208 已换成 0 Ω，可排除串阻；码间串扰应来自连接器、FPC、转接板走线一侧，预加重是必需措施。自研核心板 LVDS 线不放串阻，且 LVDS 发送 bank 要能开预加重。预加重开关出处：TD <code>arch/dr1_macro.v</code> 的 <code>DR1_PHY_HR_BANKREF</code>、UG1210 表 1-1。</p>
 </section>
 <section>
 <h2>三、根因（已自行解决）</h2>
 <ul>
   <li><b>原因</b>：奇数 PLL 输出分频时，<code>CLKC0_DUTY_INT</code> 应按 UG1206 §2.5.4 公式 2-5 取 INT(DIV/2)+1，我们写成了 DIV/2。失败的 700 / 750 / 800 Mbps 三档都是 DIV 5，DUTY_INT 填了 2，应为 3。</li>
-  <li><b>验证</b>：全仓代码改正后，800 Mbps 奇数分频（DIV 5、DUTY_INT 3）2 分钟 0 误码。偶数分频 800 Mbps 同样通过。</li>
+  <li><b>验证</b>：全仓代码改正后，800 Mbps 奇数分频（DIV 5、DUTY_INT 3）2 分钟全锁，偶数分频 800 Mbps 同样全锁（误码未按 lane 计数复核）。</li>
   <li><b>TD 的表现</b>：TD 对错误配置没有警告，静态时序仍按 50% 占空比推导，报告 0 违例。这一点见 Q1。</li>
-  <li><b>1.2 Gbps</b>：根因与占空比无关，现象是码间串扰，开 bank 级预加重后消除。</li>
+  <li><b>1.2 Gbps</b>：根因与占空比无关。开预加重后 PRBS7 近乎干净，但 PRBS31 与真内容仍大量误码，判为码型相关码间串扰，预加重不足以消除（第二节）。</li>
 </ul>
 </section>
 <section>
@@ -151,7 +155,7 @@ DR1_LOGIC_ODDRx2 #(.ASYNCRST("ENABLE")) u_ser (.q(tx[i]), .pclk(pclk), .sclk(scl
     <ul>
       <li>TD 时序报告不覆盖 IOL 内部 PCLK→SCLK 的交接和 SCLK→PAD。高速 ODDRx2 应怎样确认余量？有没有专用约束或报告命令？</li>
       <li>DS1200 表 3-22 的 1250 Mbps 是否在 PL HR bank 用 <code>DR1_LOGIC_ODDRx2</code>（SCLK 625 MHz）实测？是否区分速度等级和 bank？对同时翻转 lane 数、端接、VCCIO、抖动有何附加条件？</li>
-      <li>我方 1.2 Gbps 仅在预加重开启后才稳定，这是否符合预期？</li>
+      <li>我方 1.2 Gbps 开预加重后 PRBS7 近乎干净、PRBS31 仍有 BER 约 2e-4，这是否符合预期？1250 Mbps 的上限在什么条件下可达？</li>
     </ul></li>
   <li><b>Q4 预加重与 VOD 的推荐设置。</b>
     <ul>
@@ -164,19 +168,29 @@ DR1_LOGIC_ODDRx2 #(.ASYNCRST("ENABLE")) u_ser (.q(tx[i]), .pclk(pclk), .sclk(scl
       <li>是否有 DR1 PL 侧 LVDS 发送 1 Gbps 以上的官方参考设计、应用笔记或板级设计指南（含串阻、走线等长与阻抗要求）？</li>
       <li>加密的仿真模型（<code>sim_release/dr1/dr1_phy_pll.v</code>、<code>dr1_logic_io.v</code>）能否提供开源仿真器可用的功能模型，或书面说明 PLL 占空比与 oDDRx2 的时序行为？</li>
     </ul></li>
+  <li><b>Q6 引脚级 VOD 被静默忽略（新增）。</b>
+    <ul>
+      <li>在引脚级约束 <code>VOD = 350M</code> 编出的位流与不加该约束时逐字节相同，TD 无任何告警；<code>VOD = 400M</code> 则报 USR-8059，提示只认 200M / 250M / 300M / 350M。正确写法是什么？是否应为 bank 级属性？</li>
+      <li>HR bank 的 LVDS25 输出可设的最大 VOD 是多少？预加重有哪些档位，当前 <code>PRE_EMP=ON</code> 对应哪一档？</li>
+    </ul></li>
+  <li><b>Q7 1.2 Gbps 下码型相关误码（新增）。</b>
+    <ul>
+      <li>现象：1.2 Gbps + 预加重，PRBS7 近乎干净（约 1e-10 量级），PRBS31 13 lane 中 12 条 BER 约 2e-4，真内容失败；1.0 Gbps + 预加重全部通过。请问推荐的发送设置（预加重、VOD、驱动强度等）是什么？</li>
+      <li>1250 Mbps 的签核方法是什么？能否提供 DR1 LVDS 输出的眼图数据或 IBIS 模型，便于我们对连接器 / FPC / 转接板通道做仿真？</li>
+    </ul></li>
 </ol>
-<p>已不再需要回答的原问题：原 Q5 的 PLL 推荐配置（600 Mbps 偶数分频已 1 小时 0 误码，800 Mbps 两种分频均通过）。</p>
+<p>已不再需要回答的原问题：原 Q5 的 PLL 推荐配置（600 Mbps 偶数分频已 1 小时全程锁定，800 Mbps 两种分频均能全锁）。</p>
 </section>
 <section>
 <h2>六、可提供的材料</h2>
 <ul>
-  <li>TD 工程与位流：400 / 500 / 600 / 700 / 750 / 800 Mbps 各档，以及 1.0 / 1.2 Gbps 档（含预加重）。</li>
+  <li>TD 工程与位流：400 / 500 / 600 / 700 / 750 / 800 Mbps 各档，以及 1.0 / 1.2 Gbps 档（含预加重；另有加 / 不加引脚级 VOD 的逐字节相同的位流对）。</li>
   <li>TD 布线库的 PLL 与 pad 属性报告（report_cells -attributes）。</li>
-  <li>上板 PRBS / 训练码原始字记录。</li>
+  <li>上板 PRBS7 / PRBS31 逐 lane 误码计数、训练码原始字记录、扫眼结果。</li>
   <li>核心板与转接板的相关原理图片段。</li>
 </ul>
 <p>如需远程会议或现场支持，请与上面的联系人约时间。谢谢！</p>
-</section><div class="foot">POV3D 项目组 · 2026-10-27 · 本函所列现象均为实测。原始数据与位流可提供。</div>
+</section><div class="foot">POV3D 项目组 · 2026-10-27（晚更正版）· 本函所列现象均为实测。原始数据与位流可提供。</div>
 </div>
 </body>
 </html>

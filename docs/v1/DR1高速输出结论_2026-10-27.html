@@ -53,36 +53,54 @@ blockquote{margin:0;padding:6px 12px;border-left:3px solid var(--rule);color:var
   h2{break-after:avoid}
 }
 </style></head><body><div class="wrap">
-<header><h1>DR1 高速输出上板结论（2026-10-27）</h1>
+<header><h1>DR1 高速输出上板结论（2026-10-27 晚更正版）</h1>
 <div class="meta"><b>板</b><span>dr1m90-01，面 A，GW5A 桥接收</span><b>分支</b><span>task/d84-dr1hsio，D84 提交 b20d569</span></div></header>
 <div class="lead">
-<p><b>一句话</b>：DR1 主控到 GW5A 桥的 LVDS 高速输出已经跑通。V1 用 600 Mbps（已定，1 小时 0 误码）；V2 需要的 1.2 Gbps 在“DR1 发、GW5A 收”这一层已可行：加预加重后 13 lane 全锁，10 分钟 0 误码。</p></div>
+<p><b>更正说明（10-27 晚）</b>：此前所有 PRBS“0 误码”都是看桥 sbd 寄存器 0x61 判的，判据错误。0x61 = {高 16 位掉锁次数, 低 13 位锁在 PRBS31 的 lane 掩码}，不是误码计数。所以旧结论里“1.2 Gbps 加预加重 10 分钟 0 误码”不成立。</p>
+<p><b>一句话</b>：DR1 主控到 GW5A 桥的 LVDS 高速输出，<b>1.0 Gbps + 预加重已按正确判据过 PRBS7 / PRBS31 与 10 分钟真内容，作为 V1 正式档</b>；1.2 Gbps + 预加重 PRBS7 仅零星误码，但 <b>PRBS31 有 12/13 条 lane 大量误码（BER 约 2e-4）</b>，真内容 30 分钟失败，判为码型相关码间串扰，1.2 Gbps 暂不可用。<b>V2 改为 1.0 Gbps × 16 lane</b>（原 1.2 Gbps × 12），1.2 Gbps 作提升项。</p></div>
+<section><h2>判据（更正）</h2>
+<p>正确的“无误码”要同时满足：桥 sbd <code>0x60</code> 低 13 位 = <code>1fff</code>（13 lane 全锁）；<code>0x61</code> 高 16 位（掉锁次数）不增长；每 lane 误码计数 <code>0x63..0x6F</code> 全为 0（计数约等于 3 × 真实误码数）；<code>0x62</code>（已校验量）在增长，证明确实在比对。旧判据只看了前两项里的“锁”，没有看逐 lane 误码计数。</p></section>
 <section><h2>时间线</h2><ul>
 <li>上午：400 / 600 Mbps 正常，700 / 750 / 800 Mbps 丢位，800 Mbps 只输出偶数位。</li>
-<li>查到根因：PLL 奇数分频时 DUTY_INT 配错。全仓改正，800 Mbps 偶数分频和奇数分频都通过。</li>
-<li>继续上 1.0 Gbps：3 条 lane 约 1% 误码。上 1.2 Gbps：约 3% 误码，PRBS 不锁。</li>
-<li>打开 bank 级预加重后，1.2 Gbps 13 lane 全锁，10 分钟 0 误码。</li></ul></section>
-<section><h2>根因</h2><p>奇数 PLL 分频时，<code>CLKC0_DUTY_INT</code> 要取 INT(DIV/2)+1（UG1206 §2.5.4 公式 2-5），代码里写成了 DIV/2。700 / 750 / 800 Mbps 三档都是 DIV 5，全部踩中。TD 对这种配置不报警，时序也报 0 违例，所以只能上板才发现。</p></section>
-<section><h2>各档结果</h2><div class="tbl"><table>
-<thead><tr><th>档</th><th>主控 md5</th><th>桥</th><th>结果</th></tr></thead><tbody>
-<tr><td>600M 偶数分频</td><td>b3af9155</td><td>e60cp</td><td class="ok">PRBS 1 h 0 误码</td></tr>
-<tr><td>800M 偶数分频 dev</td><td>cc0e8f76</td><td>e60cp</td><td class="ok">10 min 0 误码</td></tr>
-<tr><td>800M 奇数分频 + 公式修正 dfx</td><td>7bf52f06</td><td>e60cp</td><td class="ok">2 min 0 误码</td></tr>
-<tr><td>1.0G dev</td><td>95adc1c9</td><td>l1000（26102792）</td><td>10/13 lane 0 误码；lane 2/8/12 约 1% 误码，原始字 97.5–99%</td></tr>
+<li>查到根因：PLL 奇数分频时 DUTY_INT 配错。全仓改正，800 Mbps 偶数分频和奇数分频都能锁定。</li>
+<li>继续上 1.0 Gbps：3 条 lane 约 1% 误码。上 1.2 Gbps：约 3% 误码，PRBS 不锁。打开 bank 级预加重后 13 lane 全锁（当时误判为 0 误码）。</li>
+<li>晚上发现判据错误，按逐 lane 误码计数复测；再用 1.2 Gbps 真内容（主控 f26b43ff + 桥 l1200）跑 30 分钟，失败；排除切片 / 软件 / 桥时序后，确认 1.2 Gbps 为码型相关码间串扰。</li></ul></section>
+<section><h2>根因一：奇数分频占空比（已解决）</h2><p>奇数 PLL 分频时，<code>CLKC0_DUTY_INT</code> 要取 INT(DIV/2)+1（UG1206 §2.5.4 公式 2-5），代码里写成了 DIV/2。700 / 750 / 800 Mbps 三档都是 DIV 5，全部踩中。TD 对这种配置不报警，时序也报 0 违例，所以只能上板才发现。</p></section>
+<section><h2>旧结果表（按旧判据，仅作记录）</h2><div class="tbl"><table>
+<thead><tr><th>档</th><th>主控 md5</th><th>桥</th><th>旧结果 → 更正后能说明的内容</th></tr></thead><tbody>
+<tr><td>600M 偶数分频</td><td>b3af9155</td><td>e60cp</td><td>旧称“PRBS 1 h 0 误码” → 只能说明 <b>1 h 全程锁定、无掉锁</b></td></tr>
+<tr><td>800M 偶数分频 dev</td><td>cc0e8f76</td><td>e60cp</td><td>旧称“10 min 0 误码” → <b>全锁（误码未按 lane 计数复核）</b></td></tr>
+<tr><td>800M 奇数分频 + 公式修正 dfx</td><td>7bf52f06</td><td>e60cp</td><td>旧称“2 min 0 误码” → <b>全锁（误码未按 lane 计数复核）</b></td></tr>
+<tr><td>1.0G dev</td><td>95adc1c9</td><td>l1000（26102792）</td><td>10/13 lane 正常；lane 2/8/12 约 1% 误码，原始字 97.5–99%</td></tr>
 <tr><td>1.2G dev</td><td>b17184f8</td><td>l1200（26102791）</td><td class="bad">训练码正确；PRBS 不锁，原始字 90.6%，约 3% 误码（码间串扰）</td></tr>
-<tr><td><b>1.2G + 预加重</b></td><td><b>ff2ddf32</b></td><td>l1200</td><td class="ok"><b>13 lane 全锁，10 min 0 误码，原始字 100%</b></td></tr>
-</tbody></table></div>
-<p>预加重开关：<code>POV_UL_PREEMP=1</code>（bank 级 <code>PRE_EMP=ON</code>）；VOD 开关：<code>POV_UL_VOD</code>。</p></section>
+<tr><td>1.2G + 预加重</td><td>ff2ddf32</td><td>l1200</td><td>旧称“13 lane 全锁，10 min 0 误码，原始字 100%” → <b>仅 13 lane 全锁，0 误码结论作废</b></td></tr>
+</tbody></table></div></section>
+<section><h2>按正确判据的复测（逐 lane 误码计数，13 lane）</h2><div class="tbl"><table>
+<thead><tr><th>档</th><th>PRBS7</th><th>PRBS31</th><th>说明</th></tr></thead><tbody>
+<tr><td>600M</td><td class="ok">120 s，0 误码</td><td>—</td><td>每档 120 s</td></tr>
+<tr><td>1.0G + 预加重</td><td class="ok">120 s，0 误码</td><td class="ok">120 s，0 误码</td><td>V1 正式档</td></tr>
+<tr><td>1.2G + 预加重</td><td class="bad">60 s 零星误码：lane 0/6/7/12 计数 3/24/3/42，约 1e-10 量级</td><td class="bad">60 s，13 lane 中 12 条大量误码；lane 8/12 计数约 4.7e7，BER 约 2e-4；仅 lane 3 为 0</td><td>1.2G 每项 60 s</td></tr>
+</tbody></table></div></section>
+<section><h2>1.2 Gbps 真内容与定位</h2><ul>
+<li><b>真内容 30 分钟（主控 f26b43ff + 桥 l1200）失败</b>：桥帧格式 phase_err / fmt_err 在首个 30 s 内即上万并饱和；tp 图样同样失败，所以不是切片或软件问题。</li>
+<li><b>桥时序基本排除</b>：桥按 160 MHz 过约束重编（pclk 余量由 0.25% 提到 +0.42 ns），现象不变。</li>
+<li><b>结论：码型相关码间串扰</b>。长串 0 加孤立 1，在 0.83 ns UI 下来不及翻转，所以 PRBS7 近乎干净而 PRBS31 / 真内容失败。链路为 DR1 → 核心板 → 板间连接器 → V1 底板 → FPC → 桥转接板 → GW5A。</li>
+<li><b>眼宽（扫眼）</b>：600M 为 0x54–0x5c；1.0G 为 0x30–0x38；1.2G 为 0x24–0x2c。</li>
+<li><b>器件上限</b>：DS1200 表 3-22 给 LVDS25 输出上限 1250 Mbps，1.2 Gbps 已用到其 96%，没有余量。</li>
+<li><b>1.0G + 预加重真内容 10 分钟 PASS</b>：帧格式错 0，片率 4284.11 /s。注意：UL12 模式下桥的 CRC 计数写死为 0，真内容只能看见校验 lane 的错，数据 lane 要靠 PRBS 判。</li></ul></section>
+<section><h2>预加重与 VOD 设置</h2><ul>
+<li>预加重开关：<code>POV_UL_PREEMP=1</code>（bank 级 <code>PRE_EMP=ON</code>）。生效：加与不加编出的 .bit 相差 63 字节。</li>
+<li><b>VOD 设置无效</b>：引脚级 <code>VOD = 350M</code> 编出的位流与不加时逐字节相同，TD 静默忽略，没有告警；<code>VOD = 400M</code> 则报 USR-8059（只认 200M / 250M / 300M / 350M）。所以此前对 <code>POV_UL_VOD</code> 的任何“调整”都没有作用，已列入安路问询（Q6）。</li></ul></section>
 <section><h2>对 V1 / V2 的影响</h2><ul>
-<li><b>V1</b>：用 600 Mbps，不受影响，已长跑验证。</li>
-<li><b>V2</b>：1.2 Gbps 的链路风险从“能不能发”降为“长跑、真帧格式、V2 p2 桥”的工程验证。</li>
-<li><b>码间串扰来源</b>：FS03 面 A 的 R201–R208 已为 0 Ω，排除串阻；串扰来自连接器 / FPC / 转接板走线一侧，预加重是必需措施。</li><li><b>自研核心板</b>：LVDS 线不放串阻；LVDS 发送 bank 要能开预加重。</li>
-<li><b>代码</b>：所有奇数分频位置都必须按公式 2-5 取值。</li></ul></section>
+<li><b>V1</b>：正式档 1.0 Gbps + 预加重（今晚 1.0G PRBS31 逐 lane 8 h 长跑正在进行）。600 Mbps 作为保底档。</li>
+<li><b>V2</b>：改为 <b>1.0 Gbps × 16 lane</b>（原 1.2 Gbps × 12）；1.2 Gbps 作提升项，待自研板和安路答复后再评估。</li>
+<li><b>码间串扰来源</b>：FS03 面 A 的 R201–R208 已为 0 Ω，排除串阻；串扰来自连接器 / FPC / 转接板走线一侧，预加重是必需措施。</li>
+<li><b>自研核心板</b>：LVDS 线不放串阻；LVDS 发送 bank 要能开预加重；板间连接器和 FPC 的 LVDS 通道要按 1.2 Gbps 以上做信号完整性设计。</li>
+<li><b>代码</b>：所有奇数分频位置都必须按公式 2-5 取值；以后判误码一律看逐 lane 计数，不再用 0x61。</li></ul></section>
 <section><h2>下一步</h2><ol>
-<li>1.2 Gbps 加预加重做小时级长跑。</li>
-<li>换成真帧格式再测。</li>
-<li>做 V2 p2 桥并验证。</li>
-<li>1.0 Gbps 的 3 条 lane 1% 误码，试预加重和 VOD。</li>
-<li>向安路问询剩余问题：SCLK 超 375 MHz 的时钟网、1250 Mbps 签核、预加重与 VOD 推荐值、奇数分频 DUTY50 行为（已更新问询函）。</li></ol></section>
-<div class="foot">POV3D 项目组 · 2026-10-27 · 数据：d84_dr1hsio/README.md</div>
+<li>等 1.0 Gbps PRBS31 逐 lane 8 h 长跑结果。</li>
+<li>桥 UL12 模式恢复 CRC（设计说明 ul12_crc_design.md，D99，约 1 天）。</li>
+<li>V2 核心板按 x16 调整（D103 进行中）。</li>
+<li>向安路问询：已更新问询函，新增 Q6（VOD 被静默忽略）和 Q7（1.2 Gbps 码型相关误码的推荐发送设置与签核）。</li></ol></section>
+<div class="foot">POV3D 项目组 · 2026-10-27（晚更正版）· 数据：d84_dr1hsio/README.md</div>
 </div></body></html>

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DR1M90 LVDS 技术问询</title>
+<style>
+/* 正式问询函: 摘要 → 设计 → 实测 → 我方分析 → 问题清单 → 附件。A4 打印 */
+:root{
+  --bg:#f6f7f5; --paper:#ffffff; --fg:#1d2420; --muted:#5d6a63; --rule:#d5dbd6;
+  --accent:#1f5f8a; --accent-soft:#e3edf5; --red:#b3261e; --red-soft:#fbe9e7;
+  --amber:#8a5a00; --amber-soft:#fbf0d9; --code:#eef1ee;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono","Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141917; --paper:#1b211e; --fg:#e4ebe7; --muted:#9aa8a0; --rule:#33403a;
+  --accent:#7fb7e0; --accent-soft:#1d2c38; --red:#ff8a80; --red-soft:#3a1f1d;
+  --amber:#f2c46b; --amber-soft:#3a2f17; --code:#232b27; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --paper:#1b211e; --fg:#e4ebe7; --muted:#9aa8a0; --rule:#33403a;
+  --accent:#7fb7e0; --accent-soft:#1d2c38; --red:#ff8a80; --red-soft:#3a1f1d;
+  --amber:#f2c46b; --amber-soft:#3a2f17; --code:#232b27; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.65;margin:0}
+.wrap{max-width:900px;margin:0 auto;padding:26px 16px 44px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:6px;border-bottom:2px solid var(--fg);padding-bottom:12px}
+h1{font-size:1.5rem;margin:0;letter-spacing:.02em}
+.meta{display:grid;grid-template-columns:max-content 1fr;gap:2px 14px;color:var(--muted);font-size:.86rem}
+.meta b{color:var(--fg);font-weight:600}
+h2{font-size:1.08rem;margin:0;padding-bottom:2px;border-bottom:1px solid var(--rule)}
+p{margin:0}
+section{display:flex;flex-direction:column;gap:9px}
+.lead{background:var(--paper);border:1px solid var(--rule);border-left:4px solid var(--accent);padding:12px 16px;border-radius:4px;display:flex;flex-direction:column;gap:6px}
+.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--rule);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{border-bottom:1px solid var(--rule);padding:6px 9px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.bad{color:var(--red);font-weight:600}
+.ok{color:#1f6f54;font-weight:600}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ok{color:#6cc4a1}}
+code{font-family:var(--f-mono);background:var(--code);padding:0 4px;border-radius:3px;font-size:.84em}
+pre{font-family:var(--f-mono);background:var(--code);padding:9px 12px;border-radius:4px;font-size:.76rem;line-height:1.5;margin:0;white-space:pre-wrap;word-break:break-all}
+ul,ol{margin:0;padding-left:22px}
+li{margin:2px 0}
+ol.q{list-style:none;padding-left:0}
+ol.q>li{margin:6px 0}
+ol.q>li>b:first-child{color:var(--accent)}
+blockquote{margin:0;padding:6px 12px;border-left:3px solid var(--rule);color:var(--muted);font-size:.86rem;background:var(--paper)}
+.foot{color:var(--muted);font-size:.8rem;border-top:1px solid var(--rule);padding-top:10px}
+@media print{
+  @page{size:A4;margin:14mm 13mm}
+  body{background:#fff;font-size:12.5px}
+  .wrap{padding:0;max-width:none}
+  tr,li,pre,blockquote{break-inside:avoid}
+  .tbl{overflow:visible}
+  table{font-size:.82rem}
+  h2{break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>关于 DR1M90 PL 侧 LVDS 高速输出（DR1_LOGIC_ODDRx2）的技术问询（更新版）</h1>
+  <div class="meta">
+    <b>致</b><span>上海安路信息科技股份有限公司 技术支持 / FAE</span>
+    <b>发自</b><span>POV3D 项目组（联系人与联系方式：＿＿＿＿＿＿＿＿）</span>
+    <b>日期</b><span>2026-10-27（上板后更新）</span>
+    <b>器件</b><span>DR1M90GEG484，按速度等级 -2 编译（芯片丝印等级待核）</span>
+    <b>软件</b><span>TD 5.9.1（TD_5.9.1_DR1_2025.1_151.508，V5.9.151508，2025-02-21 构建）；另装有 TD 2026.1 SP2</span>
+    <b>硬件</b><span>米联客 MLKPAI-FS03 DR1 核心板 + 自制转接板；接收端为 Gowin GW5A，LVDS 输入，100 Ω 端接</span>
+  </div>
+</header>
+
+<div class="lead">
+  <p><b>更新说明</b>：10-27 上板后，原先的主问题（700/750/800 Mbps 丢位）已自行解决，原因见第三节。1.2 Gbps 也已跑通。本函只保留尚未解决的问题（第五节）。</p>
+  <p><b>已解决</b>：奇数 PLL 分频时 <code>CLKC0_DUTY_INT</code> 错填为 DIV/2，应按 UG1206 §2.5.4 公式 2-5 取 INT(DIV/2)+1。改后 800 Mbps（DIV 5）2 分钟 0 误码；偶数分频 800 Mbps 10 分钟 0 误码；600 Mbps 1 小时 0 误码。</p>
+  <p><b>现状</b>：1.0 Gbps 有 3 条 lane 约 1% 误码；1.2 Gbps 不加预加重时约 3% 误码，开 bank 级 <code>PRE_EMP=ON</code> 后 13 lane 全锁，10 分钟 0 误码。</p>
+  <p><b>仍请协助</b>：SCLK 高于 375 MHz 时的时钟网、1250 Mbps 的签核方法、预加重与 VOD 的推荐设置、奇数分频 DUTY50 的实际行为（第五节 Q1–Q5）。</p>
+</div>
+<section>
+<h2>一、设计接法</h2>
+<ul>
+  <li><b>时钟</b>：板载 25 MHz 晶振 → <code>DR1_PHY_PLL</code>。REFCLK_DIV = 1，FBCLK_DIV = SCLK/25，CLKC0 外反馈（FBKCLK = "CLKC0_EXT"），CLKC0_DIV 取"VCO ≤ 2000 MHz 的最大整数"，CLKC0_CPHASE = DIV−1（0°），CLKC0_DUTY50 = "ENABLE"，<b>CLKC0_DUTY_INT：最初写成 DIV/2（奇数分频时错误，现已改为 INT(DIV/2)+1，见第三节）</b>。
+      PLL 的 clkc[0] 直接作为 ODDRx2 的 <code>sclk</code>；<code>pclk</code> 由 <code>DR1_PHY_LCLK #(.DIV("2"), .LCLK("DIV2TO8"))</code> 对 sclk 二分频得到。</li>
+  <li><b>串化</b>：每 lane 一个 <code>DR1_LOGIC_ODDRx2 #(.ASYNCRST("ENABLE"))</code>，<code>q</code> 直连顶层 LVDS25 端口，不经 OBUFDIFF。共 13 条数据 lane，外加 1 条随路时钟（线速/8，同样由 ODDRx2 产生）。</li>
+  <li><b>I/O</b>：bank 11（bank 33 上也试过），IOSTANDARD = LVDS25，VCCIO = 2.5 V，1.2 Gbps 档开了 bank 级预加重（PRE_EMP=ON）；未用 ODELAY。</li>
+  <li><b>与官方 IP 的对比</b>：TD 自带的 DR1 High Speed IO IP（<code>ip/depot/HSIOF9F0D0P0_1.0/DR1_High_Speed_IO/RTL/DR1_High_Speed_IO.v</code>，5.9.1 和 2026.1 两个版本相同）也是 <code>assign sclk = clk_in;</code>，pclk 用 <code>DR1_PHY_LCLK</code>（DIV2TO8，DIV 2）产生，和我们的接法同构。</li>
+  <li><b>时序</b>：TD 报告 0 违例。pclk 域额外加了 0.25 ns 的 setup 不确定度。</li>
+</ul>
+<pre>DR1_PHY_PLL #(.FBKCLK("CLKC0_EXT"), .FEEDBK_MODE("NORMAL"), .PLL_FEED_TYPE("EXTERNAL"), .FIN("25.0"), .REFCLK_DIV(1),
+              .FBCLK_DIV(SCLK/25), .CLKC0_DIV(C0_DIV), .CLKC0_CPHASE(C0_DIV-1), .CLKC0_FPHASE(0),
+              .CLKC0_DUTY_INT(C0_DIV/2), .CLKC0_DUTY50("ENABLE"), .LPF_RES(3), .LPF_CAP(2), .ICP_CUR(11), .GMC_GAIN(1),
+              .INTPI(VCO&lt;=1000?0:VCO&lt;=1500?1:2), .HIGH_SPEED_EN("DISABLE"), ...) u_pll (... .fbclk(clkc[0]) ...);
+assign sclk = clkc[0];
+DR1_PHY_LCLK #(.CEMD("SYNC"), .CLKSEL("ORG"), .DIV("2"), .LCLK("DIV2TO8")) u_lclk_pclk (.clkin(sclk), .clkout(pclk), ...);
+DR1_LOGIC_ODDRx2 #(.ASYNCRST("ENABLE")) u_ser (.q(tx[i]), .pclk(pclk), .sclk(sclk), .d0(..), .d1(..), .d2(..), .d3(..), .rst(~lock));</pre>
+</section><section>
+<h2>二、实测结果（10-27，面 A，接收端 GW5A）</h2>
+<div class="tbl"><table>
+<thead><tr><th>线速</th><th>配置</th><th>结果</th></tr></thead>
+<tbody>
+<tr><td>400 / 600 Mbps</td><td>偶数分频（DIV 8 / 6）</td><td class="ok">600 Mbps：PRBS 1 小时 0 误码</td></tr>
+<tr><td>700 / 750 / 800 Mbps（旧）</td><td>DIV 5，DUTY_INT = 2</td><td class="bad">丢位；800 Mbps 只输出偶数位，每位占两个时隙，训练字 0x35 收成 0xE7 / 0x7E / 0x9F</td></tr>
+<tr><td>800 Mbps</td><td>偶数分频 DIV 4</td><td class="ok">10 分钟 0 误码</td></tr>
+<tr><td>800 Mbps</td><td>DIV 5，DUTY_INT = 3（公式 2-5）</td><td class="ok">2 分钟 0 误码</td></tr>
+<tr><td>1.0 Gbps</td><td>无预加重</td><td>10/13 lane 0 误码；lane 2 / 8 / 12 约 1% 误码，原始字正确率 97.5–99%</td></tr>
+<tr><td>1.2 Gbps</td><td>无预加重</td><td class="bad">训练码正确，PRBS 不锁，原始字正确率 90.6%，约 3% 误码，像码间串扰</td></tr>
+<tr><td>1.2 Gbps</td><td>bank 级 PRE_EMP = ON</td><td class="ok">13 lane 全锁，10 分钟 0 误码，原始字正确率 100%</td></tr>
+</tbody></table></div>
+<p>我方怀疑 1.0 / 1.2 Gbps 的码间串扰与核心板有关：该板 LVDS 线上串了 33 Ω 排阻（R201–R208 等）。我们自研核心板将不放串阻。预加重开关出处：TD <code>arch/dr1_macro.v</code> 的 <code>DR1_PHY_HR_BANKREF</code>、UG1210 表 1-1。</p>
+</section>
+<section>
+<h2>三、根因（已自行解决）</h2>
+<ul>
+  <li><b>原因</b>：奇数 PLL 输出分频时，<code>CLKC0_DUTY_INT</code> 应按 UG1206 §2.5.4 公式 2-5 取 INT(DIV/2)+1，我们写成了 DIV/2。失败的 700 / 750 / 800 Mbps 三档都是 DIV 5，DUTY_INT 填了 2，应为 3。</li>
+  <li><b>验证</b>：全仓代码改正后，800 Mbps 奇数分频（DIV 5、DUTY_INT 3）2 分钟 0 误码。偶数分频 800 Mbps 同样通过。</li>
+  <li><b>TD 的表现</b>：TD 对错误配置没有警告，静态时序仍按 50% 占空比推导，报告 0 违例。这一点见 Q1。</li>
+  <li><b>1.2 Gbps</b>：根因与占空比无关，现象是码间串扰，开 bank 级预加重后消除。</li>
+</ul>
+</section>
+<section>
+<h2>四、相关手册条目（供对照）</h2>
+<div class="tbl"><table>
+<thead><tr><th>文档</th><th>位置</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>DS1200 v1.0（2024.07）</td><td>表 3-22，第 48 页</td><td>PL I/O 输出：LVDS25（VCCIO 2.5 V）1250 Mbps，LVDS18 1250 Mbps。注 1："上述 I/O 标准能否工作在最高频率需要实际软件中的 Timing Report 为准"</td></tr>
+<tr><td>DS1200 v1.0</td><td>表 3-16 / 3-17，第 45 页</td><td>-2：GCLK 628、IOCLK 680、LCLK 375、MLCLK 680 MHz；skew：IOCLK 0.04 ns、LCLK 0.11 ns。没有占空比失真指标</td></tr>
+<tr><td>UG1210 v0.1（2024.01）</td><td>表 2-1，第 4 页；§3.1.2，第 21–23 页</td><td>PL 侧只有 HR bank（0 / 11 / 31 / 32 / 33）；IOL 只有 oDDRx1 / oDDRx2 / oDDRx2L（4:1），1250 Mbps 对应 SCLK 625 MHz</td></tr>
+<tr><td>UG1211 v1.1（2025.05）</td><td>§19 / §21 / §23</td><td>DR1_PHY_LCLK："DIV1 模式 … duty 无限接近 50%"；MLCLK "能将时钟信号输出到 IOCLK、LCLK 模块"；IOCLK "支持高速输入/输出接口串并转换，如 LVDS 的接收"</td></tr>
+<tr><td>UG1206 v0.1（2024.01）</td><td>§2.5.4，第 19–20 页</td><td>公式 2-4 / 2-5 / 2-6（见第三节）</td></tr>
+</tbody></table></div>
+</section><section>
+<h2>五、仍请教的问题</h2>
+<ol class="q">
+  <li><b>Q1 奇数分频 DUTY50 的实际行为。</b>
+    <ul>
+      <li><code>CLKCx_DUTY_INT</code> 表示高电平还是低电平的 VCO 周期数？</li>
+      <li><code>DUTY50 = "ENABLE"</code>、DIV 为奇数而 DUTY_INT 不等于 INT(DIV/2)+1 时，硬件实际输出占空比是多少？</li>
+      <li>TD 能否对这类配置给出警告，并让 derive_pll_clocks 推导出真实占空比？</li>
+    </ul></li>
+  <li><b>Q2 SCLK 超过 375 MHz 时应走哪种时钟网。</b>
+    <ul>
+      <li>DS1200 -2 的 LCLK 上限 375 MHz，IOCLK / MLCLK 为 680 MHz。400–625 MHz 的 SCLK 应走哪种网？官方 High Speed IO IP 的"sclk = clk_in 直连"在此范围是否仍适用？</li>
+      <li>TD 映射后 pad 属性为 <code>OSCLKSWI=SIG</code>，怎样查看某个 pad 的 osclk 实际来自哪一路？例化 <code>DR1_PHY_IOCLK</code> 后日志出现 PHY-1015，这是否说明已走 IOCLK？</li>
+      <li>IOL 的 oDDRx2 对 SCLK 有没有最小高、低电平宽度或占空比要求？各时钟网的占空比失真是多少？</li>
+    </ul></li>
+  <li><b>Q3 1250 Mbps 的签核方法与适用条件。</b>
+    <ul>
+      <li>TD 时序报告不覆盖 IOL 内部 PCLK→SCLK 的交接和 SCLK→PAD。高速 ODDRx2 应怎样确认余量？有没有专用约束或报告命令？</li>
+      <li>DS1200 表 3-22 的 1250 Mbps 是否在 PL HR bank 用 <code>DR1_LOGIC_ODDRx2</code>（SCLK 625 MHz）实测？是否区分速度等级和 bank？对同时翻转 lane 数、端接、VCCIO、抖动有何附加条件？</li>
+      <li>我方 1.2 Gbps 仅在预加重开启后才稳定，这是否符合预期？</li>
+    </ul></li>
+  <li><b>Q4 预加重与 VOD 的推荐设置。</b>
+    <ul>
+      <li>LVDS25 在 1.0–1.25 Gbps 下，bank 级 <code>PRE_EMP</code> 与 VOD 档位推荐怎么设？预加重量值是多少？</li>
+      <li>预加重是 bank 级开关，同 bank 内所有 lane 同时生效，对低速 lane 有无副作用？</li>
+      <li>接收端是 100 Ω 端接的 Gowin GW5A，板上线长约数厘米，有无按线长和损耗选择预加重的参考表？</li>
+    </ul></li>
+  <li><b>Q5 参考资料与模型。</b>
+    <ul>
+      <li>是否有 DR1 PL 侧 LVDS 发送 1 Gbps 以上的官方参考设计、应用笔记或板级设计指南（含串阻、走线等长与阻抗要求）？</li>
+      <li>加密的仿真模型（<code>sim_release/dr1/dr1_phy_pll.v</code>、<code>dr1_logic_io.v</code>）能否提供开源仿真器可用的功能模型，或书面说明 PLL 占空比与 oDDRx2 的时序行为？</li>
+    </ul></li>
+</ol>
+<p>已不再需要回答的原问题：原 Q5 的 PLL 推荐配置（600 Mbps 偶数分频已 1 小时 0 误码，800 Mbps 两种分频均通过）。</p>
+</section>
+<section>
+<h2>六、可提供的材料</h2>
+<ul>
+  <li>TD 工程与位流：400 / 500 / 600 / 700 / 750 / 800 Mbps 各档，以及 1.0 / 1.2 Gbps 档（含预加重）。</li>
+  <li>TD 布线库的 PLL 与 pad 属性报告（report_cells -attributes）。</li>
+  <li>上板 PRBS / 训练码原始字记录。</li>
+  <li>核心板与转接板的相关原理图片段。</li>
+</ul>
+<p>如需远程会议或现场支持，请与上面的联系人约时间。谢谢！</p>
+</section><div class="foot">POV3D 项目组 · 2026-10-27 · 本函所列现象均为实测。原始数据与位流可提供。</div>
+</div>
+</body>
+</html>

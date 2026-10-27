@@ -1,0 +1,88 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>DR1 高速输出结论</title><style>
+/* 正式问询函: 摘要 → 设计 → 实测 → 我方分析 → 问题清单 → 附件。A4 打印 */
+:root{
+  --bg:#f6f7f5; --paper:#ffffff; --fg:#1d2420; --muted:#5d6a63; --rule:#d5dbd6;
+  --accent:#1f5f8a; --accent-soft:#e3edf5; --red:#b3261e; --red-soft:#fbe9e7;
+  --amber:#8a5a00; --amber-soft:#fbf0d9; --code:#eef1ee;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono","Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141917; --paper:#1b211e; --fg:#e4ebe7; --muted:#9aa8a0; --rule:#33403a;
+  --accent:#7fb7e0; --accent-soft:#1d2c38; --red:#ff8a80; --red-soft:#3a1f1d;
+  --amber:#f2c46b; --amber-soft:#3a2f17; --code:#232b27; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --paper:#1b211e; --fg:#e4ebe7; --muted:#9aa8a0; --rule:#33403a;
+  --accent:#7fb7e0; --accent-soft:#1d2c38; --red:#ff8a80; --red-soft:#3a1f1d;
+  --amber:#f2c46b; --amber-soft:#3a2f17; --code:#232b27; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.65;margin:0}
+.wrap{max-width:900px;margin:0 auto;padding:26px 16px 44px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-direction:column;gap:6px;border-bottom:2px solid var(--fg);padding-bottom:12px}
+h1{font-size:1.5rem;margin:0;letter-spacing:.02em}
+.meta{display:grid;grid-template-columns:max-content 1fr;gap:2px 14px;color:var(--muted);font-size:.86rem}
+.meta b{color:var(--fg);font-weight:600}
+h2{font-size:1.08rem;margin:0;padding-bottom:2px;border-bottom:1px solid var(--rule)}
+p{margin:0}
+section{display:flex;flex-direction:column;gap:9px}
+.lead{background:var(--paper);border:1px solid var(--rule);border-left:4px solid var(--accent);padding:12px 16px;border-radius:4px;display:flex;flex-direction:column;gap:6px}
+.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--rule);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{border-bottom:1px solid var(--rule);padding:6px 9px;text-align:left;vertical-align:top}
+th{background:var(--accent-soft);font-weight:600}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.bad{color:var(--red);font-weight:600}
+.ok{color:#1f6f54;font-weight:600}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ok{color:#6cc4a1}}
+code{font-family:var(--f-mono);background:var(--code);padding:0 4px;border-radius:3px;font-size:.84em}
+pre{font-family:var(--f-mono);background:var(--code);padding:9px 12px;border-radius:4px;font-size:.76rem;line-height:1.5;margin:0;white-space:pre-wrap;word-break:break-all}
+ul,ol{margin:0;padding-left:22px}
+li{margin:2px 0}
+ol.q{list-style:none;padding-left:0}
+ol.q>li{margin:6px 0}
+ol.q>li>b:first-child{color:var(--accent)}
+blockquote{margin:0;padding:6px 12px;border-left:3px solid var(--rule);color:var(--muted);font-size:.86rem;background:var(--paper)}
+.foot{color:var(--muted);font-size:.8rem;border-top:1px solid var(--rule);padding-top:10px}
+@media print{
+  @page{size:A4;margin:14mm 13mm}
+  body{background:#fff;font-size:12.5px}
+  .wrap{padding:0;max-width:none}
+  tr,li,pre,blockquote{break-inside:avoid}
+  .tbl{overflow:visible}
+  table{font-size:.82rem}
+  h2{break-after:avoid}
+}
+</style></head><body><div class="wrap">
+<header><h1>DR1 高速输出上板结论（2026-10-27）</h1>
+<div class="meta"><b>板</b><span>dr1m90-01，面 A，GW5A 桥接收</span><b>分支</b><span>task/d84-dr1hsio，D84 提交 b20d569</span></div></header>
+<div class="lead">
+<p><b>一句话</b>：DR1 主控到 GW5A 桥的 LVDS 高速输出已经跑通。V1 用 600 Mbps（已定，1 小时 0 误码）；V2 需要的 1.2 Gbps 在“DR1 发、GW5A 收”这一层已可行：加预加重后 13 lane 全锁，10 分钟 0 误码。</p></div>
+<section><h2>时间线</h2><ul>
+<li>上午：400 / 600 Mbps 正常，700 / 750 / 800 Mbps 丢位，800 Mbps 只输出偶数位。</li>
+<li>查到根因：PLL 奇数分频时 DUTY_INT 配错。全仓改正，800 Mbps 偶数分频和奇数分频都通过。</li>
+<li>继续上 1.0 Gbps：3 条 lane 约 1% 误码。上 1.2 Gbps：约 3% 误码，PRBS 不锁。</li>
+<li>打开 bank 级预加重后，1.2 Gbps 13 lane 全锁，10 分钟 0 误码。</li></ul></section>
+<section><h2>根因</h2><p>奇数 PLL 分频时，<code>CLKC0_DUTY_INT</code> 要取 INT(DIV/2)+1（UG1206 §2.5.4 公式 2-5），代码里写成了 DIV/2。700 / 750 / 800 Mbps 三档都是 DIV 5，全部踩中。TD 对这种配置不报警，时序也报 0 违例，所以只能上板才发现。</p></section>
+<section><h2>各档结果</h2><div class="tbl"><table>
+<thead><tr><th>档</th><th>主控 md5</th><th>桥</th><th>结果</th></tr></thead><tbody>
+<tr><td>600M 偶数分频</td><td>b3af9155</td><td>e60cp</td><td class="ok">PRBS 1 h 0 误码</td></tr>
+<tr><td>800M 偶数分频 dev</td><td>cc0e8f76</td><td>e60cp</td><td class="ok">10 min 0 误码</td></tr>
+<tr><td>800M 奇数分频 + 公式修正 dfx</td><td>7bf52f06</td><td>e60cp</td><td class="ok">2 min 0 误码</td></tr>
+<tr><td>1.0G dev</td><td>95adc1c9</td><td>l1000（26102792）</td><td>10/13 lane 0 误码；lane 2/8/12 约 1% 误码，原始字 97.5–99%</td></tr>
+<tr><td>1.2G dev</td><td>b17184f8</td><td>l1200（26102791）</td><td class="bad">训练码正确；PRBS 不锁，原始字 90.6%，约 3% 误码（码间串扰）</td></tr>
+<tr><td><b>1.2G + 预加重</b></td><td><b>ff2ddf32</b></td><td>l1200</td><td class="ok"><b>13 lane 全锁，10 min 0 误码，原始字 100%</b></td></tr>
+</tbody></table></div>
+<p>预加重开关：<code>POV_UL_PREEMP=1</code>（bank 级 <code>PRE_EMP=ON</code>）；VOD 开关：<code>POV_UL_VOD</code>。</p></section>
+<section><h2>对 V1 / V2 的影响</h2><ul>
+<li><b>V1</b>：用 600 Mbps，不受影响，已长跑验证。</li>
+<li><b>V2</b>：1.2 Gbps 的链路风险从“能不能发”降为“长跑、真帧格式、V2 p2 桥”的工程验证。</li>
+<li><b>核心板</b>：FS03 核心板的 LVDS 线上串了 33 Ω 排阻（R201–R208 等），怀疑是码间串扰来源。自研核心板 LVDS 线不放串阻。</li>
+<li><b>代码</b>：所有奇数分频位置都必须按公式 2-5 取值。</li></ul></section>
+<section><h2>下一步</h2><ol>
+<li>1.2 Gbps 加预加重做小时级长跑。</li>
+<li>换成真帧格式再测。</li>
+<li>做 V2 p2 桥并验证。</li>
+<li>1.0 Gbps 的 3 条 lane 1% 误码，试预加重和 VOD。</li>
+<li>向安路问询剩余问题：SCLK 超 375 MHz 的时钟网、1250 Mbps 签核、预加重与 VOD 推荐值、奇数分频 DUTY50 行为（已更新问询函）。</li></ol></section>
+<div class="foot">POV3D 项目组 · 2026-10-27 · 数据：d84_dr1hsio/README.md</div>
+</div></body></html>

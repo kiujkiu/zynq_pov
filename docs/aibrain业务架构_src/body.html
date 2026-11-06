@@ -1,0 +1,203 @@
+<div class="wrap">
+<header>
+  <div class="eyebrow">业务架构 · 第一版 · 2026-11-05 · V1 验证机 + V2 产品机</div>
+  <h1>aibrain 业务架构 v1</h1>
+  <p class="lead">aibrain 是旋转体积 3D 显示器：两面 LED 屏背靠背高速旋转，在空中叠出能四周观看的立体画面。这份架构从用户使用产品的完整经历出发，把每一步要做到位的能力和差距列出来。目的只有一个：找出要做的事。</p>
+  <p class="v8n">状态只认真硬件实测：V0 过了不算 V1 过。软件和仿真已就绪、等真硬件的，一律标「待上板」。产品价值按三条写：1 m 清晰、裸眼 3D、自动播放与推流；分辨率和帧率从 1 m 观看距离倒算。</p>
+  <div class="meta" id="meta"></div>
+</header>
+
+<div class="modebar" role="group" aria-label="L2 步骤下显示的内容和版本筛选">
+  <span class="mb-l">L2 步骤下显示</span>
+  <button type="button" data-mode="flow" aria-pressed="true">业务流程</button>
+  <button type="button" data-mode="metric" aria-pressed="false">验收标准</button>
+  <button type="button" data-mode="work" aria-pressed="false">开发任务</button>
+  <span class="mb-l sep">版本</span>
+  <button type="button" data-prod="all" aria-pressed="true">全部</button>
+  <button type="button" data-prod="v1" aria-pressed="false">V1 验证机</button>
+  <button type="button" data-prod="v2" aria-pressed="false">V2 产品机</button>
+  <span class="mb-l sep">负责线</span>
+  <button type="button" data-line="all" aria-pressed="true">全部</button>
+  <button type="button" data-line="软件" aria-pressed="false">软件</button>
+  <button type="button" data-line="硬件" aria-pressed="false">硬件</button>
+  <button type="button" data-line="结构" aria-pressed="false">结构</button>
+  <span class="mb-n" id="mbn"></span>
+</div>
+
+<section>
+  <div class="sec-h"><span class="num">01</span><h2>分层逻辑</h2>
+    <p>三层：① 产品价值与卖点，② 业务流程（步骤下挂子任务），③ 支撑能力。</p></div>
+  <div class="tw"><table class="deftable">
+    <thead><tr><th></th><th>① 产品价值与卖点</th><th>② 业务流程（含子任务）</th><th class="dsup">③ 支撑能力</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">定位</th><td>客户为什么买</td><td>用户使用产品的完整经历；每个步骤下面挂子任务</td><td class="dsup">方案的核心技术：用户看不见，但产品靠它成立</td></tr>
+      <tr><th scope="row">视角</th><td>用户</td><td>步骤是用户视角，子任务是研发视角</td><td class="dsup">研发</td></tr>
+      <tr><th scope="row">回答的问题</th><td>产品给用户什么价值</td><td>用户按什么顺序做什么；每一步要把哪些子任务做到位</td><td class="dsup">这个方案难在哪，我们攻到哪一步了</td></tr>
+      <tr><th scope="row">判定标准</th><td>用户愿意为它买单，能对外讲</td><td>步骤：能说成「用户……」，有先后顺序；子任务：这一步做好要靠它</td><td class="dsup">跨多个步骤的技术难点，写具体能力，不写板子型号</td></tr>
+      <tr><th scope="row">组织方式</th><td>按卖点</td><td>阶段 → 步骤 → 子任务</td><td class="dsup">数据链路、3D 内容与重建、切片与抖动兼容、高帧率屏幕、色深与画质、电机控制板、结构与动平衡、供应策略、量产与研发闭环</td></tr>
+      <tr><th scope="row">标签</th><td>—</td><td>步骤：服务的卖点、V1 / V2、软件 / 硬件 / 结构；子任务：现状、GAP</td><td class="dsup">软件 / 硬件 / 机械 / 跨线、对应岗位、招聘要求、AI 分工、能否外采</td></tr>
+      <tr><th scope="row">衡量</th><td>卖点兑现度：链上最弱的一环</td><td>步骤的实测指标；子任务的 GAP</td><td class="dsup">实测指标和余量</td></tr>
+      <tr><th scope="row">研发拿它做什么</th><td>对齐做什么，验收对外承诺</td><td>找出要做的事：每个子任务的 GAP 就是待办</td><td class="dsup">集中攻关，管风险和技术债</td></tr>
+    </tbody>
+  </table></div>
+  <div class="rules">
+    <div class="rule"><h3>版本口径</h3><p>V1 验证机：每面 160×180，24 Hz，357 片。V2 产品机：每面 192×216，30 Hz，605 片。没标的步骤两版都要。</p></div>
+    <div class="rule"><h3>达标只认真机</h3><p>仿真过、进桥过都不算上屏过。子任务未达标时，步骤不能标达标。</p></div>
+    <div class="rule"><h3>写能力，不写组件</h3><p>子任务写「断线恢复」「转速门控」这样的能力，具体位流和寄存器留在研发文档。</p></div>
+    <div class="rule"><h3>每项有依据</h3><p>现状都能回到实测记录或决策记录；查不到的标「未盘点」，不估。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">02</span><h2>全链路总图</h2>
+    <p>点任意卖点、步骤或支撑能力，会亮出和它相关的其他块；点步骤，详情栏先列近期排期和验收标准，再列开发任务、全部子任务和 GAP。再点一次或按 Esc 清除。</p></div>
+  <div class="arch">
+    <div class="board" id="board">
+      <div class="lyr" data-c="1"><div class="lyr-l"><span class="n">①</span><b>产品价值与卖点</b><small>客户为什么买</small></div><div class="sps" id="sps"></div></div>
+      <div class="down"><span>卖点在这些环节里兑现</span></div>
+      <div class="lyr" data-c="2"><div class="lyr-l"><span class="n">②</span><b>业务流程</b><small><em>定位</em>用户使用产品的完整经历；步骤下挂子任务</small><small><em>判定</em>能说成「用户……」，有先后顺序，用户能感知到</small></div><div><div class="stages" id="stages"></div><div class="cores" id="stepmods"></div></div></div>
+      <div class="down strong"><span>L3 · 撑起这些步骤的团队能力</span></div>
+      <div class="lyr sup" data-c="3"><div class="lyr-l"><span class="n">③</span><b>支撑能力</b><small><em>定位</em>要组建的团队能力</small><small><em>判定</em>能写进招聘要求的专业技能，不按版本或板子分</small></div><div class="sups" id="sups"></div></div>
+    </div>
+    <aside class="detail" id="detail" aria-live="polite"></aside>
+  </div>
+  <div class="legend" id="legend"></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">03</span><h2>软件、硬件、结构现状</h2>
+    <p>三条线截至 11-05 的最新状态。顶栏「负责线」可以只看其中一条，其他线的卡片会淡下去。</p></div>
+  <div class="cards lines">
+    <div class="cd"><h3>软件</h3>
+      <p><b>已稳：</b>实时推流、断网自愈、主控升级回滚、24 小时长跑；V1 双面链路 1.0G 真内容 1 小时全过。</p>
+      <p><b>最新：</b>11-04 手机配网、配对、手机遥控装到 02 板，服务端规则实测过。11-05 电机固件带转子 300 rpm 调好，上位机加了一键烧录。</p>
+      <p><b>下一步：</b>真手机验收（11-10）；已上板的分支合回主线；灯板到后上屏；修电机起步和低速问题。</p></div>
+    <div class="cd"><h3>硬件</h3>
+      <p><b>已稳：</b>V1 主控底板和桥转接板各 10 片，两块桥 flash 已烧正式版。</p>
+      <p><b>最新：</b>11-05 V2 桥板硬件交付包已出（只摆件，未走线）。11-04 V2 底板 v1 只摆件。CZ06 复刻 ≈82%、桥核心模块 ≈65%，都暂停存档。</p>
+      <p><b>下一步：</b>确认 V1 灯板到货；核 120P 连接器；V2 灯板补接插件和板框；桥板和底板走线；重排下单日期。</p></div>
+    <div class="cd"><h3>结构</h3>
+      <p><b>已稳：</b>V0 转子真转 1 小时；结构交付包已写清三条产品要求和任务表。</p>
+      <p><b>最新：</b>11-06 基础动平衡：不带屏转子 900 rpm 振动降约 75%，最高到 1200 rpm，AI 主导、人装拆配重。11-05 出 V1.0 / V1.1 整机 STEP 和 47 个零件，只用 OCC 校验过。11-04 三板结构包里桥板还是 4 座旧版。</p>
+      <p><b>下一步：</b>按 2 座版重出三板包；在 SolidWorks 打开确认；结构工程师给产品形态结论和排期；实测固有频率。</p></div>
+  </div>
+  <h3 class="tbl">团队组建：岗位和 AI 分工</h3>
+  <p class="tblnote">每个能力组对应一类岗位，卡片写的是这个岗位要会什么。AI 分工按现在的做法和项目记录判断，岗位和招聘建议是初稿，待定。「AI 接管」不等于已达标，也不等于不用人：有人把关才算数。</p>
+  <div id="aisum"></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">04</span><h2>核心技术：3D 内容怎么变成空中的画面</h2>
+    <p>一帧内容从电脑到屏幕要过这 10 步，每一步都是方案要自己做的技术。</p></div>
+  <div class="tw"><table>
+    <thead><tr><th style="width:130px">技术</th><th>具体做法</th><th>难点</th><th style="width:250px">实测</th><th style="width:170px">现状</th></tr></thead>
+    <tbody>
+      <tr><td><b>1. 点云重建</b></td><td>模型或动画每帧采样，三角形撒点，写进 192×216×192 体素网格</td><td>动画要吃满体积又不能抖；内容要避开中轴</td><td>bonsai 11.9 万体素，Robot 3.5 万体素</td><td>模型已过；真实物体重建效果一般</td></tr>
+      <tr><td><b>2. 压缩</b></td><td>只发非空体素：索引差分编码加颜色，再 lz4-HC；静态模型常驻板上，每帧只发位姿</td><td>压缩比和解压速度要同时够</td><td>bonsai 约 160 KB/帧，15 fps 约 20 Mbit/s；位姿 108–472 B/帧</td><td>已过；骨骼动画还发体素</td></tr>
+      <tr><td><b>3. 传输</b></td><td>WiFi TCP 推流，最新帧优先，断线自动重连</td><td>转子上只有无线；网络一抖不能积压</td><td>≥160 Mbit/s；延迟 p50 41 ms、p99 103 ms</td><td>局域网已过；互联网未建</td></tr>
+      <tr><td><b>4. 解压</b></td><td>板上 lz4 解压，再解成内容表，收包线程绑定 CPU0</td><td>和屏刷新抢内存带宽，带载解码速度减半；Zynq 上是主瓶颈</td><td>解压 2.3 ms/帧，解表 2.9 ms/帧；Zynq 时 zlib 约 120 ms</td><td>已过</td></tr>
+      <tr><td><b>5. 散写与换帧</b></td><td>把体素写进网格，双缓冲，脏格表只清上一帧的点，每圈零位切换</td><td>写网格不能打断正在读的切片</td><td>换帧上限 2×转速；真转 646 rpm 18.9 fps</td><td>V0 已过</td></tr>
+      <tr><td><b>6. 切片</b></td><td>PL 按角度查表，每列取一根 216 像素的柱，实时出片；两面几何都写进查找表</td><td>每片 110 µs 窗口内读完；DDR 读量 1,505 MB/s，上限 1,786 MB/s</td><td>纯取片实测每片均 93.5 µs，最慢 154.8 µs；和黄金模型 18 组 × 2,500 万像素 0 不符</td><td>V0 上板；V1 进桥已过，待上屏</td></tr>
+      <tr><td><b>7. 转速与抖动兼容</b></td><td>光电定 0° 估转速，相位锁定，半圈换帧，每圈片数随转速换档</td><td>转速在变，片位置不能滑；300–1200 rpm 都要能显示</td><td>滑格 22% → 0.12%；646 rpm 1 小时 0 漏帧</td><td>V0 已过；V1 待真转</td></tr>
+      <tr><td><b>8. 颜色处理</b></td><td>γ 校正加抖动量化；2047 出 3 bit，2260 出 12 bit</td><td>低灰过渡；色深测量手机照片测不了</td><td>链路 12 bit 对拍一致；显示 3 bit</td><td>待真屏；校准未开始</td></tr>
+      <tr><td><b>9. 高速上行</b></td><td>主控普通 IO 跑 1.0G，V1 每面 13 lane，V2 16 数据 lane</td><td>主控没有 SERDES；1.2G 码型串扰不可用</td><td>1.0G 8 小时 0 误码；双面真内容 1 小时全过</td><td>V1 已过；V2 待新板</td></tr>
+      <tr><td><b>10. 高帧率上屏</b></td><td>桥把片转成 mini-LVDS 驱动 2260，V2 用 16 组 48 扫</td><td>发帧率不能超过芯片显示帧率；同步序列和校验都踩过坑；V1 余量 0.7%</td><td>V2 需求 9,075 片/秒，芯片 12,520 fps（单颗）</td><td>待灯板</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">05</span><h2>按 1 米倒算的指标</h2>
+    <p>显示体 Φ150 × 169 mm，1 m 外约占 8.6° × 9.6° 视角。以下是几何和估算，真屏量出来后替换。</p></div>
+  <h3 class="tbl">清晰度：1 m 处一个像素要多小</h3>
+  <div class="tw"><table>
+    <thead><tr><th>档位</th><th>像素间距</th><th>1 m 处视角</th><th>每面像素</th><th>每圈片数</th><th>每面数据量（15 转/秒）</th><th>结论</th></tr></thead>
+    <tbody>
+      <tr><td><b>及格线（建议目标）</b></td><td>≤1.0 mm</td><td>3.4′</td><td>150×169</td><td>471</td><td>6.4 Gbit/s</td><td>LED 行业经验：间距 1 mm 对应 1 m 视距</td></tr>
+      <tr><td><b>好</b></td><td>≤0.58 mm</td><td>2′</td><td>258×290</td><td>810</td><td>32.7 Gbit/s</td><td>是 V2 的 2.4 倍，现有上行不够</td></tr>
+      <tr><td><b>看不出像素</b></td><td>≤0.29 mm</td><td>1′</td><td>516×580</td><td>1,620</td><td>261.7 Gbit/s</td><td>是 V2 的 19 倍，不现实</td></tr>
+      <tr class="gr"><td colspan="7">现有两版</td></tr>
+      <tr><td><b>V1 验证机</b></td><td>径向 0.94 / 切向 1.32 mm</td><td>3.2′ / 4.5′</td><td>160×180</td><td>357</td><td>—</td><td>径向过线，切向没过</td></tr>
+      <tr><td><b>V2 产品机</b></td><td>径向 0.78 / 切向 0.78 mm</td><td>2.7′ / 2.7′</td><td>192×216</td><td>605</td><td>13.5 Gbit/s</td><td>两个方向都过及格线，有 22% 余量</td></tr>
+    </tbody>
+  </table></div>
+  <p class="hint">切向间距 = 2π × 75 mm ÷ 每圈片数。数据量按 36 bit/像素。</p>
+  <div class="cards lines">
+    <div class="cd"><h3>帧率</h3><p>视距不直接决定帧率，闪烁才决定。体帧率 = 2 × 转速：V1 24 Hz、V2 30 Hz。转速上限 1200 rpm 时最高 40 Hz，60 Hz 要 1800 rpm，超出范围。</p><p>30 Hz 在室内会不会闪，只能 1 m 处人眼实测，V0 的 21.7 Hz 可以先做参考。内容刷新 V2 为 15 fps，半圈换帧可到 30 fps。</p></div>
+    <div class="cd"><h3>室内亮度</h3><p>感知亮度 = 面板亮度 × 2N ÷ 每圈片数，N 是一条视线上点亮的体素数。</p><p>按规格 600 nits：V2 空心物体（N=2）约 4 nits，N=10 约 20 nits，N=30 约 60 nits；V1 片数少，分别约 7、34、101 nits。<b>片数越多越暗</b>，清晰和亮度互相抵消。</p><p>300 lux、罩内 5% 反射时黑底约 4.8 nits，10:1 约需 43 nits。反射压到 2% 只需 17 nits；灰罩透过率 50% 时罩内约需 22 nits。</p></div>
+    <div class="cd"><h3>垂直可视</h3><p><b>+80°：</b>V1 灯板规格 165°，半角 82.5°，只留 2.5° 余量，边缘亮度要实测。顶部不能有任何东西。</p><p><b>−20°：</b>V2 方案屏下 9 mm 是 140×80 底板，转起来扫过半径约 81 mm。−20° 时轴心处下沿约 20 mm、远侧约 48 mm 被挡（屏高 169 mm）。要全看到，得缩小底板或抬高屏。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">06</span><h2>版本迭代节奏</h2>
+    <p>V1 11-27 交付，V2 12-16 交付。红色卡片是 V1 冲刺要动的，黄色卡片是 V2 冲刺要动的。下面的 V2 节点来自 10-27 的倒排甘特图，当时按 12-15 验收倒排，关键路径浮动约 0；之后核心板和桥板方案都变过，这些节点要重排。</p></div>
+  <div class="cgoals" id="goals"></div>
+  <div class="cadence" id="cadence"></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">07</span><h2>要做的事</h2>
+    <p>L2 每个步骤下有 GAP 的子任务，按处理方式分三组，组内按流程顺序排。「补差距」可以直接排期；「等上板」要等真硬件；「先盘点」要先摸清差多少。</p></div>
+  <div class="todo-sum" id="todo-sum"></div>
+  <div id="todo"></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">08</span><h2>每个卖点兑现到哪了</h2>
+    <p>每个卖点链上有差距的子任务，以及撑着这些步骤的支撑短板。上标「隐含」的子任务卖点里没写，但做不好卖点就不成立。</p></div>
+  <div class="chains" id="chains"></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">09</span><h2>这一版怎么来的</h2>
+    <p>结构参考业务架构的通用三层写法，内容全部来自本项目记录。</p></div>
+  <div class="cards">
+    <div class="cd"><h3>卖点</h3><p>三个产品价值按项目负责人 11-05 的思路写。上电、配网、长期稳定不算卖点，放在流程里当门槛。</p></div>
+    <div class="cd"><h3>流程</h3><p>按用户从开箱到长期使用的顺序写，配网和推流步骤对应 11-04 的工况表。</p></div>
+    <div class="cd"><h3>现状</h3><p>来自进度看板、V1 系统说明书、风险表和电机严测记录，截至 11-05。没有用估计值填空。</p></div>
+    <div class="cd"><h3>V1 / V2 和负责线标签</h3><p>顶栏可以只看一版或一条线，其他卡片会淡下去。L3 支撑能力两版共用，写的是团队要具备的专业能力。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">10</span><h2>需要你定的</h2>
+    <p>图里按括号里的默认处理。</p></div>
+  <div class="cards">
+    <div class="cd"><h3>1. 「1 米清晰」的线画在哪</h3><p>及格线是 1.0 mm（3.4 角分）。V2 过线，要到 2 角分数据量得翻 2.4 倍。（默认：按及格线。）</p></div>
+    <div class="cd"><h3>2. 室内亮度目标</h3><p>暂定 300 lux 下 10:1。要更亮的环境，要求还会升高。（默认：按暂定值，上屏实测后再定。）</p></div>
+    <div class="cd"><h3>3. 互联网推送到什么程度</h3><p>11-04 定互联网首版只做控制和内容下发。这次的「互联网推送」是否包括实时推流？（默认：只下发内容，实时放后面。）</p></div>
+    <div class="cd"><h3>4. −20° 仰角要不要全看到</h3><p>按 V2 方案下沿会被挡。全看到要改底板或抬高屏，高度和重心都受影响。（默认：先按允许轻微遮挡，等结构评估。）</p></div>
+    <div class="cd"><h3>5. V1 灯板到了没有</h3><p>计划约 11-05 回，记录里没有到货。（默认：未到，相关步骤标待上板。）</p></div>
+    <div class="cd"><h3>6. 12-16 V2 交付还成立吗</h3><p>10-27 的排期要 11-16 下单。现在 V2 桥板和底板还没走线，灯板缺接插件和板框，结构接口也没冻结。（默认：按 12-16 交付，中间节点标为要重排。）</p></div>
+    <div class="cd"><h3>7. 客户是谁</h3><p>展厅、零售和开发者的开箱流程和内容需求不一样。（默认：按桌面展示写。）</p></div>
+    <div class="cd"><h3>8. 手机传内容和互动玩法做不做</h3><p>手机传内容待评估，游戏已暂停。（默认：都不进 V1。）</p></div>
+    <div class="cd"><h3>9. 桥板和灯板的接口</h3><p>2 个 120P 座沿下边并排是当前方案，结构和灯板都要照它走。（默认：按 11-05 交付包。）</p></div>
+    <div class="cd"><h3>10. 主机 App 进不进产品</h3><p>仓库里的 RK3588 主机 App 带人脸检测和音频，8 月后没更新。（默认：不进 V1，标未盘点。）</p></div>
+    <div class="cd"><h3>11. 目标还没定的指标</h3><p>起步异常比例、噪声、转稳全亮时间、固有频率余量都没有目标。（默认：标目标待定。）</p></div>
+    <div class="cd"><h3>12. 成本和交期目标</h3><p>供应策略一项价格和交期都没录入，要你或采购给目标 BOM 和最长可接受交期。（默认：标目标待定。）</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">11</span><h2>清单</h2>
+    <p>每个步骤下的全部子任务，以及 L3 支撑能力的完整依据。</p></div>
+  <h3 class="tbl">② 业务流程 · 子任务</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:170px">子任务</th><th style="width:150px">现状</th><th style="width:300px">GAP · 要做什么</th><th>依据</th></tr></thead>
+    <tbody id="tbody-c"></tbody>
+  </table></div>
+  <h3 class="tbl">③ 支撑能力</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:160px">能力</th><th style="width:260px">招聘要求</th><th style="width:140px">现状</th><th style="width:110px">AI 分工</th><th>依据</th><th style="width:240px">支撑哪些步骤</th></tr></thead>
+    <tbody id="tbody-s"></tbody>
+  </table></div>
+</section>
+
+<footer>
+  <div><b>技术架构</b>：<a href="aibrain-L1-技术架构_2026-11-05.html">L1 技术架构</a> · <a href="aibrain-L2-设备架构_2026-11-05.html">L2 设备架构</a> · <a href="aibrain-L2-主机与云端架构_2026-11-05.html">L2 主机与云端</a></div>
+  <div><b>依据</b>：显性目的进度看板（截至 11-04）、V1 系统说明书（10-27）、配网与推流工况表（11-04）、P0.9375 COB 规格书、V2 倒排甘特图（10-27）、结构交付包（10-28）、风险表、项目技术记录库（05–11 月）、电机严测记录（11-05）、各板进度表（11-04）、V2 桥板硬件交付包（11-05）、结构模型 STEP 版（11-05）。</div>
+  <div><b>算法</b>：第 05 节数字由 calc_1m.py 算出；亮度和遮挡是估算，V2 亮度暂用 V1 灯板规格。</div>
+  <div><b>状态</b>：达标＝真硬件实测达到目标；有差距＝有数据，未达目标；不达标＝有数据，明显影响产品；看不见＝没有测量数据可判断；未盘点＝有实现或有要求，没核过；部分有＝要求的只做了一部分；未建＝还没有；待上板＝软件或仿真已就绪，要真硬件出结论；系统外＝不在项目范围。</div>
+</footer>
+</div>

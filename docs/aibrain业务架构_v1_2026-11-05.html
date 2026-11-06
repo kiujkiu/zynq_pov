@@ -1,0 +1,1434 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>aibrain 业务架构 v1</title><style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style><style>
+
+:root{
+  --bg:#e8eaeb; --surface:#ffffff; --surface-2:#f4f5f6;
+  --ink:#000000e6; --ink-2:#00000099; --ink-3:#0000005c;
+  --line:#00000014; --line-2:#00000026;
+  --accent:#0077e0; --accent-soft:#0077e01a;
+  --miss:#d92d20; --miss-soft:#fde8e7;
+  --near:#b54a00; --near-soft:#fff0e0;
+  --sp2:#8a6400; --sp2-soft:#fdf2c2;
+  --ok:#157f52; --ok-soft:#e3f5ec;
+  --blind:#5b5f66; --blind-soft:#f1f2f4;
+  --under:#eef0f3;
+  --A:#b4442a; --A-s:#f7ebe5;
+  --B:#3d6e54; --B-s:#e6f0ea;
+  --C:#3a5c8a; --C-s:#e7edf5;
+  --D:#6c4f93; --D-s:#efe9f5;
+  --Lv1:#2a5da8; --Lv2:#126b5d; --Lv3:#5a4fa0; --onc:#ffffff;
+  --pn:#0b6e8a; --pn-s:#dff1f6; --pc:#a3266b; --pc-s:#fbe6f0;
+  --font-sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#000000; --surface:#1c1c1c; --surface-2:#242526;
+  --ink:#ffffffe6; --ink-2:#ffffffa6; --ink-3:#ffffff66;
+  --line:#ffffff1f; --line-2:#ffffff33;
+  --accent:#4fa8ff; --accent-soft:#4fa8ff24;
+  --miss:#ff6b63; --miss-soft:#3a1715;
+  --near:#ffa45c; --near-soft:#3a2614;
+  --sp2:#e8c55a; --sp2-soft:#302810;
+  --ok:#4cd187; --ok-soft:#13301f;
+  --blind:#b4b8bf; --blind-soft:#2a2b2d;
+  --under:#151617;
+  --A:#f19274; --A-s:#2e1912;
+  --B:#82c7a0; --B-s:#14251b;
+  --C:#94b4e6; --C-s:#141f31;
+  --D:#bea2e6; --D-s:#251c33;
+  --Lv1:#7fa8e8; --Lv2:#6cc4b2; --Lv3:#ada4e8; --onc:#0d1117; --pn:#6cd0ea; --pn-s:#0f2a33; --pc:#f08bbf; --pc-s:#33141f;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#000000; --surface:#1c1c1c; --surface-2:#242526;
+  --ink:#ffffffe6; --ink-2:#ffffffa6; --ink-3:#ffffff66;
+  --line:#ffffff1f; --line-2:#ffffff33;
+  --accent:#4fa8ff; --accent-soft:#4fa8ff24;
+  --miss:#ff6b63; --miss-soft:#3a1715;
+  --near:#ffa45c; --near-soft:#3a2614;
+  --sp2:#e8c55a; --sp2-soft:#302810;
+  --ok:#4cd187; --ok-soft:#13301f;
+  --blind:#b4b8bf; --blind-soft:#2a2b2d;
+  --under:#151617;
+  --A:#f19274; --A-s:#2e1912;
+  --B:#82c7a0; --B-s:#14251b;
+  --C:#94b4e6; --C-s:#141f31;
+  --D:#bea2e6; --D-s:#251c33;
+  --Lv1:#7fa8e8; --Lv2:#6cc4b2; --Lv3:#ada4e8; --onc:#0d1117; --pn:#6cd0ea; --pn-s:#0f2a33; --pc:#f08bbf; --pc-s:#33141f;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:1600px;margin:0 auto;display:grid;gap:44px}
+.wrap>*,section>*{min-width:0}
+h1,h2,h3{text-wrap:balance;margin:0;font-weight:620;letter-spacing:-.01em}
+h1{font-size:32px;line-height:1.2}
+h2{font-size:21px;line-height:1.35}
+h3{font-size:15px;line-height:1.4}
+p{margin:0}
+ul{margin:0;padding-left:20px;display:grid;gap:6px}
+b{font-weight:620}
+
+header{display:grid;gap:12px}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;color:var(--ink-2);text-transform:uppercase}
+.lead{font-size:16px;color:var(--ink-2);max-width:74ch}
+.meta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2)}
+section{display:grid;gap:14px}
+.sec-h{display:grid;gap:4px}
+.sec-h .num{font-family:var(--font-mono);font-size:12px;color:var(--ink-3)}
+.sec-h p{color:var(--ink-2);max-width:78ch;overflow-wrap:anywhere}
+
+[data-x="A"]{--x:var(--A);--xs:var(--A-s)}
+[data-x="B"]{--x:var(--B);--xs:var(--B-s)}
+[data-x="C"]{--x:var(--C);--xs:var(--C-s)}
+[data-x="D"]{--x:var(--D);--xs:var(--D-s)}
+
+
+.ltable{display:grid;gap:6px}
+.lrow{display:grid;grid-template-columns:150px minmax(0,1.1fr) minmax(0,1.6fr);gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;align-items:baseline}
+.lrow.sup{background:var(--under);border-style:dashed;border-color:var(--line-2)}
+.lrow b{font-size:15px}
+.lrow .n{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3);margin-right:6px}
+.lrow .q{font-size:13.5px}
+.lrow .c{font-size:13px;color:var(--ink-2)}
+.rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.rule{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:10px 14px;display:grid;gap:4px;align-content:start}
+.rule h3{font-size:14.5px}
+.rule p{font-size:13.5px;color:var(--ink-2)}
+
+
+.arch{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:12px;align-items:start}
+.board{background:var(--surface-2);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:6px;min-width:0}
+.lyr{display:grid;grid-template-columns:132px minmax(0,1fr);gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px}
+.lyr.sup{background:var(--under);border:1px dashed var(--line-2)}
+.lyr>*{min-width:0}
+.lyr-l{display:grid;gap:2px;align-content:start}
+.lyr-l .n{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3)}
+.lyr-l b{font-size:15px;line-height:1.35}
+.lyr-l small{font-size:11.5px;color:var(--ink-3);line-height:1.45}
+.lyr-l small+small{margin-top:4px}
+.lyr-l small em{font-style:normal;display:block;font-size:10.5px;color:var(--ink-2);font-weight:600}
+.down{font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:8px;padding:0 6px;text-align:center}
+.down::before,.down::after{content:"";flex:1;border-top:1px dashed var(--line-2);min-width:16px}
+.down.strong{color:var(--accent);font-weight:600}
+.down.strong::before,.down.strong::after{border-top:2px dashed var(--accent)}
+
+.sps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sp{font:inherit;text-align:left;cursor:pointer;color:var(--ink);background:var(--xs);border:1px solid var(--line);border-top:3px solid var(--x);border-radius:10px;padding:9px 11px;display:grid;gap:5px;align-content:start;min-width:0;transition:opacity .15s}
+.sp .k{display:flex;flex-wrap:wrap;justify-content:space-between;gap:0 8px;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.04em;color:var(--x)}
+.sp .k span:first-child{white-space:nowrap}
+.sp .h{font-size:15px;font-weight:620;line-height:1.35}
+.pane-l1{display:none}
+body[data-mode="work"] .pane-l1{display:grid;gap:5px;border-top:1px solid var(--line-2);padding-top:6px}
+.l1s{display:grid;gap:3px;font-size:11.5px;line-height:1.4;padding:5px 7px;border-radius:6px;border-left:3px solid var(--ok);background:var(--surface)}
+.l1s b{font-size:12px;font-weight:600}
+.l1s.r{background:var(--miss-soft);border-left-color:var(--miss)}
+.l1s.y{background:var(--sp2-soft);border-left-color:var(--sp2)}
+.l1s.g .l1t{color:var(--ok)}
+.l1t{display:grid;gap:1px;color:var(--ink-2)}
+.l1t i{font-style:normal;color:var(--ink);font-weight:500}
+.l1t .s1{color:var(--miss);font-weight:600}
+.l1t .s2{color:var(--sp2);font-weight:600}
+.sp .wk{display:grid;gap:4px;border-top:1px solid var(--line-2);padding-top:6px;font-size:11.5px;color:var(--ink-2);line-height:1.4}
+.sp .wk b{color:var(--ink)}
+.sp:hover{border-color:var(--line-2);border-top-color:var(--x)}
+.bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line);gap:1px}
+.seg{display:block;height:100%}
+
+.stages{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.stage{display:grid;gap:5px;align-content:start;min-width:0}
+.st-h{font-size:12.5px;font-weight:620;color:var(--ink);display:flex;align-items:center;gap:4px;padding:0 2px}
+.st-h::after{content:"→";color:var(--ink-3);font-weight:400;margin-left:auto}
+.stage:last-child .st-h::after{content:""}
+
+.cores{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.sups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.sups .cg.wide{grid-column:span 2}
+.sups .cg.wide .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cg{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:7px;display:grid;gap:5px;align-content:start;min-width:0}
+.sups .cg{background:var(--surface)}
+.cg-h{display:grid;gap:3px;line-height:1.35}
+.cg-t{display:flex;align-items:baseline;gap:6px;font-size:13px;font-weight:620}
+.code{font-family:var(--font-mono);font-size:11px;color:var(--accent);font-weight:600}
+.cg-n{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-3)}
+.cg-n .bar{flex:1}
+.cg-h small{font-size:11px;color:var(--ink-3)}
+.cg .tiles{display:grid;gap:5px}
+.sups .cg .tiles{grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
+
+.tile{font:inherit;text-align:left;cursor:pointer;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 7px;display:grid;gap:1px;align-content:start;min-width:0;transition:opacity .15s}
+.sups .tile{background:var(--surface-2)}
+.tile:hover{border-color:var(--line-2)}
+.tile:focus-visible,.sp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tt{display:flex;align-items:flex-start;justify-content:space-between;gap:4px}
+.tn{font-size:13px;font-weight:600;line-height:1.35}
+.ts{font-size:11px;color:var(--ink-3);line-height:1.4}
+.tag{font-family:var(--font-mono);font-size:9.5px;line-height:1.5;color:var(--ink-2);background:var(--line);border-radius:3px;padding:0 4px;margin-right:4px;white-space:nowrap;display:inline-block}
+.tag.dg-core{background:var(--accent);color:var(--surface);font-weight:600}
+.tag.c-hw{background:var(--ink-2);color:var(--surface);font-weight:600}
+.tag.p-note,.tag.p-case{font-family:var(--font-sans);font-weight:650;border-radius:99px;padding:0 6px;line-height:1.45}
+.tcase{font-size:11px;font-weight:600;color:var(--pc);margin-top:2px;line-height:1.4}
+.tag.p-note{background:var(--pn-s);color:var(--pn)}
+.tag.p-case{background:var(--pc-s);color:var(--pc)}
+body[data-prod="v1"] .tile:not([data-p~="v1"]),body[data-prod="v2"] .tile:not([data-p~="v2"]),
+body[data-prod="v1"] .cg[data-p]:not([data-p~="v1"]),body[data-prod="v2"] .cg[data-p]:not([data-p~="v2"]){opacity:.2}
+.modebar .mb-l.sep{margin-left:10px}
+.tag.c-app{background:transparent;color:var(--accent);border:1px solid var(--accent);font-weight:600;line-height:1.3}
+.tag.dg-parity{background:transparent;border:1px solid var(--line-2)}
+.tag.dg-commodity{background:transparent;border:1px dashed var(--line-2);color:var(--ink-3)}
+.dgl{list-style:none;padding:0;display:grid;gap:4px}
+.dgl li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:13.5px}
+.dgl .dot{position:relative;top:1px}
+.dgl .sh{font-size:12px;color:var(--ink-3);text-align:right}
+.dgl .g,.cd h3 .g{font-size:11.5px;color:var(--ink-3);font-weight:400}
+.sp .cl{display:grid;gap:2px}
+.sp .cl span{font-size:12px;color:var(--ink-2);line-height:1.45;padding-left:11px;position:relative}
+.sp .cl span::before{content:"+";position:absolute;left:0;color:var(--x)}
+.tst{font-size:11px;line-height:1.35;display:flex;flex-wrap:wrap;align-items:center;gap:3px 4px;margin-top:3px;color:var(--ink-2)}
+.tst .tag{margin-right:0}
+
+.stages .tile,.sups .tile{padding:7px 9px;gap:2px;align-content:start;text-align:left}
+.stages .tile .tn,.sups .tile .tn{font-size:13.5px;font-weight:650;line-height:1.35}
+.stages .tile .tt,.sups .tile .tt{margin-bottom:1px}
+.stages .tile .ts,.sups .tile .ts{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.stages{gap:6px} .stage{gap:6px}
+.board .sups .cg .tiles,.board .sups .cg.wide .tiles{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+.tsv{display:inline-flex;align-items:center;gap:5px;min-width:0}
+.tile[data-s="ok"] .tst{color:var(--ok)}
+.tile[data-s="near"] .tst{color:var(--near)}
+.tile[data-s="miss"] .tst{color:var(--miss)}
+.tile[data-s="miss"],.sups .tile[data-s="miss"],.tile[data-s="focus"]{background:var(--miss-soft)}
+.tile[data-s="sp2"]{background:var(--sp2-soft)}
+.tsp2{font-size:11px;font-weight:600;color:var(--sp2);margin-top:2px;line-height:1.4}
+.detail .tfocus,.detail .tsp2{font-size:12.5px;margin:0}
+.lg-sp2{width:16px;height:11px;border-radius:3px;background:var(--sp2-soft);border:1px solid var(--sp2)}
+.ctrack.sp2 .cline li:first-child{border-top-color:var(--sp2)}
+.ctrack.case .cline li,.ctrack.case .cline li:first-child,.ctrack.case .cline li:last-child{border-top-color:var(--pc)}
+.tfocus{font-size:11px;font-weight:600;color:var(--miss);margin-top:2px;line-height:1.4}
+.lg-focus{width:16px;height:11px;border-radius:3px;background:var(--miss-soft);border:1px solid var(--miss)}
+.tile[data-s="blind"]{border-style:dashed;border-color:var(--line-2)}
+.tile[data-s="plan"],.sups .tile[data-s="plan"]{background:transparent;border:1px dashed var(--ink-3)}
+.tile[data-s="plan"] .tn,.tile[data-s="ext"] .tn{color:var(--ink-2)}
+.tile[data-s="ext"],.tile[data-s="hw"]{background:var(--surface-2)}
+.sups .tile[data-s="ext"],.sups .tile[data-s="hw"]{background:var(--surface)}
+
+.bdg{display:inline-flex;gap:2px;flex:none;padding-top:1px}
+.bdg i{font-style:normal;font-family:var(--font-mono);font-size:9.5px;font-weight:600;line-height:1;min-width:14px;height:14px;padding:0 2px;display:inline-grid;place-items:center;border-radius:3px;background:var(--x);color:var(--surface)}
+.bdg i.imp{background:transparent;color:var(--x);border:1px dashed var(--x)}
+.bdg .gate{font-size:10px;color:var(--ink-3);white-space:nowrap;line-height:14px}
+
+.board.focusing [data-id]:not(.on){opacity:.28}
+.board [data-id].sel{outline:2px solid var(--accent);outline-offset:1px}
+
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none;background:var(--line-2)}
+.dot.ok{background:var(--ok)} .dot.near{background:var(--near)} .dot.miss{background:var(--miss)}
+.dot.blind{background:transparent;border:1.5px dashed var(--blind)}
+.dot.unk{background:var(--ink-3);opacity:.45}
+.dot.part{background:linear-gradient(90deg,var(--ink-2) 50%,transparent 50%);border:1.5px solid var(--ink-2)}
+.dot.plan{background:transparent;border:1.5px dashed var(--miss)}
+.dot.hw{border-radius:2px;background:repeating-linear-gradient(45deg,var(--ink-3) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--ink-3)}
+.dot.ext{border-radius:2px;background:transparent;border:1.5px solid var(--ink-3)}
+.seg.ok{background:var(--ok)} .seg.near{background:var(--near)} .seg.miss{background:var(--miss)}
+.seg.blind{background:repeating-linear-gradient(90deg,var(--blind) 0 3px,transparent 3px 5px)}
+.seg.unk{background:var(--ink-3);opacity:.5}
+.seg.part{background:var(--ink-2);opacity:.6}
+.seg.plan{background:repeating-linear-gradient(90deg,var(--ink-2) 0 3px,transparent 3px 5px)}
+.seg.calm{background:var(--ink-3)}
+.seg.hw{background:repeating-linear-gradient(45deg,var(--ink-3) 0 2px,transparent 2px 4px)}
+.seg.ext{background:var(--line-2)}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2);align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+
+.detail{background:var(--surface);border:1px solid var(--line-2);border-radius:12px;padding:14px 16px;display:grid;gap:10px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;align-content:start}
+.crumb{font-size:11.5px;color:var(--ink-3);font-family:var(--font-mono);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.x{font:inherit;font-size:12px;cursor:pointer;background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:1px 8px}
+.dhead{display:grid;gap:4px}
+.dhead h3{font-size:17px}
+.dhead .sub{color:var(--ink-3);font-size:12.5px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:2px 10px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);justify-self:start}
+.dsec{display:grid;gap:4px}
+.dl{font-size:12px;color:var(--ink-3)}
+.detail p{font-size:13.5px}
+.dlist{list-style:none;padding:0;display:grid;gap:3px}
+.lnk{font:inherit;font-size:13px;cursor:pointer;background:none;border:0;padding:2px 0;color:var(--ink);text-align:left;display:flex;align-items:baseline;gap:6px;width:100%}
+.lnk .dot{position:relative;top:1px}
+.lnk:hover .nm{text-decoration:underline}
+.lnk .sh{color:var(--ink-3);font-size:12px;margin-left:auto;text-align:right}
+.go{display:flex;flex-wrap:wrap;gap:6px}
+.go button{font:inherit;font-size:12.5px;cursor:pointer;border:1px solid var(--line);background:var(--xs,var(--surface-2));color:var(--x,var(--ink));border-radius:8px;padding:3px 10px;font-weight:600}
+.hint{font-size:13px;color:var(--ink-2)}
+
+
+.chains{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ch{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--x);border-radius:12px;padding:12px 14px;display:grid;gap:8px;align-content:start}
+.ch .k{font-family:var(--font-mono);font-size:11.5px;color:var(--x)}
+.ch h3{font-size:16px}
+.srow sup{font-size:10px;color:var(--ink-3);margin-left:1px}
+.ch p{font-size:13.5px;color:var(--ink-2)}
+.srows{display:grid;gap:4px}
+.srow{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;font-size:13px;align-items:baseline}
+.srow .sl{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-2);white-space:nowrap}
+.srow.su{border-top:1px dashed var(--line-2);padding-top:6px;margin-top:2px}
+.srow.su .sl{color:var(--accent)}
+
+
+.cadence{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px}
+.ctrack{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:10px;align-content:start;min-width:0}
+.ctrack h3{font-size:14.5px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+.ctrack .who{font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.cline{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cline li{border-top:3px solid var(--line-2);padding-top:7px;display:grid;gap:2px;min-width:0}
+.cline li:first-child{border-top-color:var(--accent)}
+.cline li:last-child{border-top-color:var(--ok)}
+.cline .when{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2)}
+.cline .what{font-size:13.5px;font-weight:600;line-height:1.45}
+@media (max-width:760px){.cadence{grid-template-columns:1fr}}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:10px}
+.cd{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:4px;align-content:start}
+.cd h3{font-size:14.5px}
+.cd p{font-size:13.5px;color:var(--ink-2)}
+.olist{list-style:none;padding:0;display:grid;gap:4px}
+.olist li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:13.5px}
+.olist .dot{position:relative;top:1px}
+.olist .sh{font-size:12px;color:var(--ink-3);text-align:right}
+
+
+.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:980px;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+th{font-size:12px;font-weight:600;color:var(--ink-2);background:var(--surface-2)}
+td.nm b{display:block;font-size:13.5px}
+td.nm span{font-size:12px;color:var(--ink-3)}
+td.st{white-space:nowrap}
+td .ts{margin-top:3px}
+tr.gr td{background:var(--surface-2);font-weight:620;font-size:13px;color:var(--ink-2)}
+h3.tbl{font-size:15px;margin-top:6px}
+.modebar{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--line-2);margin-top:-28px}
+.modebar .mb-l{font-size:12.5px;font-weight:620;color:var(--ink-2);margin-right:4px}
+.modebar button{font:inherit;font-size:13px;cursor:pointer;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);border-radius:99px;padding:3px 12px}
+.modebar button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.modebar .mb-n{font-size:12px;color:var(--ink-3)}
+.pane-task,.pane-metric{display:none;margin:0;font-size:12.5px;line-height:1.5}
+.pane-task{gap:4px}
+.pane-task ol{margin:0;padding-left:18px;display:grid;gap:5px}
+.pane-task li,.dtask li{display:grid;gap:2px}
+.ipds{display:flex;flex-wrap:wrap;gap:3px 6px;min-width:0}
+.ipd{font-size:11px;line-height:1.4;color:var(--accent);text-decoration:none;border:1px solid var(--line-2);border-radius:4px;padding:0 5px;max-width:100%;overflow-wrap:anywhere}
+.ipd:hover{text-decoration:underline}
+.ipd.none{color:var(--ink-3);border-style:dashed}
+.pt-h{font-size:11.5px;font-weight:600;color:var(--ink-2);border-top:1px dashed var(--line-2);padding-top:6px;margin-top:2px}
+.pane-metric{list-style:none;padding:0;gap:6px}
+.detail .pane-metric{display:grid}
+.detail .pane-metric li{background:var(--surface-2)}
+.pane-metric li{display:grid;gap:1px;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:5px 7px}
+.sups .pane-metric li{background:var(--surface-2)}
+.pane-metric b{font-size:12.5px;font-weight:600}
+.pane-metric .mv{display:flex;flex-wrap:wrap;gap:0 6px;color:var(--ink-2);font-size:12px}
+.pane-metric .mg{color:var(--ok);font-weight:600}
+.pane-metric .mg.tbd{color:var(--near);font-weight:400}
+body[data-mode="metric"] .pane-cap{display:none}
+.cg-h[data-id]{cursor:pointer;border-radius:6px}
+.cg-h[data-id]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cg-t .tag{margin-left:6px}
+body[data-mode="work"] .pane-task{display:grid}
+body[data-mode="metric"] .pane-metric{display:grid}
+.deftable{min-width:880px}
+.deftable thead th{font-size:13px;color:var(--ink);white-space:nowrap}
+.deftable th[scope=row]{width:108px;white-space:nowrap;font-size:12.5px;color:var(--ink);background:var(--surface-2)}
+.deftable td{font-size:13px;line-height:1.55}
+.deftable .dsup{background:var(--under)}
+
+
+footer{display:grid;gap:6px;font-size:12.5px;color:var(--ink-2);border-top:1px solid var(--line-2);padding-top:16px}
+
+
+.arch{grid-template-columns:minmax(0,1fr)}
+.arch:not(.open) .detail{display:none}
+@media (min-width:1181px){
+  .detail{position:fixed;top:max(12px,env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:12px;width:min(400px,34vw);max-height:none;z-index:20;box-shadow:0 10px 40px #00000040}
+}
+@media (max-width:1180px){
+  .arch{grid-template-columns:1fr}
+  .detail{top:auto;bottom:0;max-height:44vh;z-index:5;box-shadow:0 -6px 24px #0000002e;padding-bottom:max(14px,env(safe-area-inset-bottom,0px))}
+}
+@media (max-width:1000px){
+  .sps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cores{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .sups{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stages{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .stage:nth-child(3) .st-h::after{content:""}
+  .chains,.rules{grid-template-columns:1fr}
+  .lrow{grid-template-columns:130px minmax(0,1fr)}
+  .lrow .c{grid-column:2}
+}
+@media (max-width:760px){
+  h1{font-size:26px}
+  .lyr{grid-template-columns:1fr}
+  .lyr-l{grid-template-columns:auto auto 1fr;gap:6px;align-items:baseline}
+  .lyr-l small{grid-column:1/-1}
+  .lyr-l small+small{margin-top:0}
+}
+@media (max-width:560px){
+  .sps{grid-template-columns:1fr}
+  .cores,.stages,.sups{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stage .st-h::after{content:""}
+  .lrow{grid-template-columns:1fr;gap:2px}
+  .lrow .c{grid-column:auto}
+  .srow{grid-template-columns:1fr;gap:2px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.lyr{grid-template-columns:132px minmax(0,1fr) auto}
+.lyr-fold{font:inherit;font-size:11.5px;cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);color:var(--ink-2);border-radius:6px;padding:1px 8px;align-self:start;white-space:nowrap}
+.lyr-fold:hover{border-color:var(--ink-3);color:var(--ink)}
+.lyr.collapsed>:not(.lyr-l):not(.lyr-fold){display:none}
+.lyr.collapsed{grid-template-columns:minmax(0,1fr) auto}
+.lyr.collapsed .lyr-l{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lyr.collapsed .lyr-l small{display:none}
+.lyr.collapsed .lyr-l::after{content:"已收起";font-size:11.5px;color:var(--ink-3)}
+@media (max-width:760px){.lyr{position:relative;grid-template-columns:1fr}.lyr.collapsed{grid-template-columns:1fr}.lyr-fold{position:absolute;top:8px;right:8px}}
+#stepmods{display:none}
+body:not([data-mode="flow"]) #stepmods{display:grid}
+body:not([data-mode="flow"]) #stages{display:none}
+.tile .tgap{font-size:11px;color:var(--ink-2);line-height:1.45;margin-top:2px}
+.tile[data-s="ok"] .tgap{color:var(--ok)}
+.sc-n{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-3)}
+.sc-n .bar{flex:1}
+.slist,.dsubs{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.slist li,.dsubs li{display:grid;gap:1px;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:5px 7px;font-size:12px}
+.slist li[data-s="miss"]{background:var(--miss-soft)}
+.sl-h{display:flex;align-items:baseline;gap:6px}
+.sl-h .dot{position:relative;top:1px}
+.sl-h b{font-size:12.5px;font-weight:600}
+.sl-h .sh{margin-left:auto;color:var(--ink-3);font-size:11px;text-align:right}
+.gap{color:var(--ink-2);line-height:1.45}
+.dsubs .ev{color:var(--ink-3);font-size:11.5px;line-height:1.45}
+.dtask{margin:0;padding-left:18px;display:grid;gap:3px;font-size:12.5px;color:var(--ink-2)}
+.todo-sum{display:flex;flex-wrap:wrap;gap:10px}
+.tsum{display:grid;gap:0;min-width:120px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 14px;color:var(--ink);text-decoration:none}
+.tsum b{font-size:24px;font-weight:650;line-height:1.2}
+.tsum span{font-size:12.5px;color:var(--ink-2)}
+table.todo{min-width:860px}
+
+.lyr[data-c="1"]{--c:var(--Lv1)} .lyr[data-c="2"]{--c:var(--Lv2)} .lyr[data-c="3"]{--c:var(--Lv3)}
+.board{background:transparent;border:0;border-radius:0;padding:0;gap:0}
+.board .lyr,.board .lyr.sup{--cb:color-mix(in oklab,var(--c) 10%,var(--surface));--cw:color-mix(in oklab,var(--c) 4%,var(--surface));--cl:color-mix(in oklab,var(--c) 28%,var(--surface));
+  position:relative;display:flex;gap:0;padding:0;border-radius:12px;overflow:hidden;border:1px solid var(--cl);background:var(--cw)}
+.board .lyr-l{width:44px;flex:none;background:var(--c);color:var(--onc);writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 0 40px}
+.board .lyr-l .n{color:inherit;opacity:.85;font-size:13px}
+.board .lyr-l b{font-size:16px;font-weight:700;letter-spacing:.4em}
+.board .lyr-l small{display:none}
+.board .lyr>:nth-child(2){flex:1;min-width:0;padding:12px}
+.board .lyr-fold{position:absolute;left:3px;bottom:8px;width:38px;padding:1px 0;font-size:10.5px;text-align:center;background:transparent;color:var(--onc);border-color:color-mix(in oklab,var(--onc) 45%,transparent)}
+.board .lyr-fold:hover{color:var(--onc);border-color:var(--onc)}
+.board .lyr.collapsed .lyr-l{writing-mode:horizontal-tb;width:auto;flex:1;justify-content:flex-start;padding:8px 90px 8px 14px}
+.board .lyr.collapsed .lyr-l::after{color:inherit;opacity:.75}
+.board .lyr.collapsed .lyr-fold{left:auto;right:10px;bottom:auto;top:7px;width:auto;padding:1px 8px}
+.board .down{position:relative;justify-content:center;padding:10px 0;gap:0}
+.board .down::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--ink-3);border:0;min-width:0}
+.board .down::after{display:none}
+.board .down span{position:relative;padding:4px 16px;border-radius:14px;background:var(--ink);color:var(--surface);font-size:12.5px;font-weight:600;line-height:18px}
+.board .down.strong span{background:var(--accent)}
+.board .stages{gap:6px}
+.board .stage{background:var(--cb);border-radius:8px;padding:6px;gap:6px}
+.board .st-h{font-size:13px;font-weight:700;color:var(--c);letter-spacing:.04em;padding:0 2px}
+.board .sups{gap:8px}
+.board .sups .cg,.board .cores .cg{background:var(--cb);border:0;border-radius:8px;padding:8px;gap:8px}
+.board .cg-t .code{color:var(--c)}
+.board .stages .tile,.board .sups .tile{background:var(--surface);border:1px solid var(--cl);border-radius:7px}
+.board .stages .tile:hover,.board .sups .tile:hover{border-color:var(--c)}
+.board .stages .tile[data-s="focus"],.board .sups .tile[data-s="miss"]{background:var(--miss-soft);border-color:color-mix(in oklab,var(--miss) 35%,var(--surface))}
+.board .stages .tile[data-s="sp2"]{background:var(--sp2-soft);border-color:color-mix(in oklab,var(--sp2) 40%,var(--surface))}
+.board .sups .tile[data-s="plan"],.board .sups .tile[data-s="blind"]{border-style:dashed}
+.board .sups .tile[data-s="ext"],.board .sups .tile[data-s="hw"]{background:var(--surface-2)}
+@media (max-width:760px){
+  .board .lyr{flex-direction:column}
+  .board .lyr-l{writing-mode:horizontal-tb;width:auto;justify-content:flex-start;padding:8px 90px 8px 14px}
+  .board .lyr-fold{left:auto;right:10px;bottom:auto;top:7px;width:auto;padding:1px 8px}
+}
+.ist{display:inline-flex;align-items:center;font-size:10.5px;line-height:1.4;border-radius:4px;padding:0 5px;margin-left:4px;white-space:nowrap;border:1px solid currentColor}
+.ist[data-g="completed"]{color:var(--ok)} .ist[data-g="started"]{color:#b07d00} .ist[data-g="unstarted"]{color:var(--ink-3)} .ist[data-g="cancelled"]{color:var(--ink-3);text-decoration:line-through}
+.ist[data-a="验收通过"]{color:var(--ok);font-weight:600} .ist[data-a="验收未通过"]{color:#d92d20;font-weight:600} .ist[data-a="进行中"]{color:#b07d00}
+.v8n{margin:6px 0 0;padding:6px 10px;border-left:3px solid var(--accent);background:var(--accent-soft, #0077e01a);border-radius:0 6px 6px 0;font-size:13px;max-width:980px}
+
+.tag.c-st{background:transparent;color:var(--B);border:1px solid var(--B);font-weight:600;line-height:1.3}
+.tile.offline{opacity:.25}
+.cards.lines{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.cards.lines .cd p{margin:0 0 8px}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.modebar{position:static!important}.detail{display:none!important}.arch{display:block!important}}
+@page{size:A3 landscape;margin:10mm}
+@media print{.modebar,.lyr-fold{display:none!important}.tw,.board,.arch{overflow:visible!important}.tile,.sp,.cd,.ctrack,.ch,tr{break-inside:avoid}.sec-h{break-after:avoid}section{padding-top:12px}}
+.sups{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+@media (max-width:900px){.sups{grid-template-columns:1fr!important}}
+@media print{.sups{grid-template-columns:repeat(5,minmax(0,1fr))!important}.stages{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+
+/* 支撑能力按线分组 + AI 分工 */
+.supline{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:6px 2px 2px;border-bottom:1px solid var(--line-2)}
+.supline b{font-size:15px}.supline small,.supline span{font-size:12px;color:var(--ink-2)}
+.supline small{color:var(--ink-3)}
+.supline .aibar{margin-left:auto;width:160px}
+.tai{display:inline-block;width:max-content;font-size:10.5px;line-height:1.5;font-weight:600;border-radius:99px;padding:0 6px;white-space:nowrap}
+.tai.a-ai{background:var(--ok);color:var(--surface)}
+.tai.a-co{background:var(--ok-soft);color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+.tai.a-hu{background:transparent;color:var(--ink-3);box-shadow:inset 0 0 0 1px var(--line-2)}
+.aibar{display:flex;height:7px;border-radius:99px;overflow:hidden;gap:1px;background:var(--line)}
+.aibar i.a-ai{background:var(--ok)}.aibar i.a-co{background:color-mix(in oklab,var(--ok) 40%,var(--surface))}.aibar i.a-hu{background:var(--ink-3)}
+.aisum-k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}
+.aisum-k h3{display:flex;align-items:center;gap:6px;font-size:14px}
+.tblnote{font-size:13px;color:var(--ink-2);margin:4px 0 6px}
+.aitbl{width:100%;border-collapse:collapse;font-size:13px}
+.aitbl th,.aitbl td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.aitbl td.aic{min-width:120px}.aitbl td.aic span{font-size:11px;color:var(--ink-3)}
+@media (max-width:760px){.aisum-k{grid-template-columns:1fr}.supline .aibar{margin-left:0}}
+@media print{.aitbl tr,.supline{break-inside:avoid}.supline{break-after:avoid}.aibar i,.tai{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.supband{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
+.supband .cg.wide{grid-column:auto}
+@media print{.aisum-k{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+.lyr.sup>.sups{min-width:0;width:100%;grid-column:1/-1}
+@media print{.sups .tile,.supline{break-inside:avoid}.sups .cg{break-inside:auto}}
+
+.hire{display:inline-block;font-size:11px;font-weight:600;line-height:1.5;padding:0 6px;border-radius:4px;white-space:nowrap}
+.hire.h-先招{background:var(--accent);color:var(--surface)}
+.hire.h-可兼{background:var(--accent-soft);color:var(--accent)}
+.hire.h-外协{box-shadow:inset 0 0 0 1px var(--accent);color:var(--accent)}
+.hire.h-后招{box-shadow:inset 0 0 0 1px var(--line-2);color:var(--ink-3)}
+
+.vis{display:grid;gap:1px;font-size:11.5px;color:var(--ink-2);line-height:1.35;border-top:1px solid var(--line-2);padding-top:6px}
+.vis .vr{display:grid;grid-template-columns:1.25fr 1fr .9fr .9fr;gap:6px;align-items:end}
+.vis .vh{font-size:10.5px;color:var(--ink-3)}
+.vis .pass{font-weight:700;color:var(--ink)}
+.vis .vn{font-size:10.5px;color:var(--ink-3);margin-top:2px}
+@media print{.sps{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+
+.cgoals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.cgoal{display:flex;gap:18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ok);border-radius:12px;padding:12px 16px;break-inside:avoid;min-width:0}
+.cgoal.sp2{border-left-color:var(--warn,#8a6d00)}
+.cgd{flex:none;display:flex;flex-direction:column;gap:2px}
+.cgd span{font-size:12px;color:var(--ink-2)}
+.cgd b{font-size:24px;line-height:1.1}
+.cgoal ul{margin:0;padding-left:18px;font-size:14px;line-height:1.6}
+@media screen and (max-width:760px){.cgoals{grid-template-columns:1fr}}
+</style></head><body>
+<div class="wrap">
+<header>
+  <div class="eyebrow">业务架构 · 第一版 · 2026-11-05 · V1 验证机 + V2 产品机</div>
+  <h1>aibrain 业务架构 v1</h1>
+  <p class="lead">aibrain 是旋转体积 3D 显示器：两面 LED 屏背靠背高速旋转，在空中叠出能四周观看的立体画面。这份架构从用户使用产品的完整经历出发，把每一步要做到位的能力和差距列出来。目的只有一个：找出要做的事。</p>
+  <p class="v8n">状态只认真硬件实测：V0 过了不算 V1 过。软件和仿真已就绪、等真硬件的，一律标「待上板」。产品价值按三条写：1 m 清晰、裸眼 3D、自动播放与推流；分辨率和帧率从 1 m 观看距离倒算。</p>
+  <div class="meta" id="meta"></div>
+</header>
+
+<div class="modebar" role="group" aria-label="L2 步骤下显示的内容和版本筛选">
+  <span class="mb-l">L2 步骤下显示</span>
+  <button type="button" data-mode="flow" aria-pressed="true">业务流程</button>
+  <button type="button" data-mode="metric" aria-pressed="false">验收标准</button>
+  <button type="button" data-mode="work" aria-pressed="false">开发任务</button>
+  <span class="mb-l sep">版本</span>
+  <button type="button" data-prod="all" aria-pressed="true">全部</button>
+  <button type="button" data-prod="v1" aria-pressed="false">V1 验证机</button>
+  <button type="button" data-prod="v2" aria-pressed="false">V2 产品机</button>
+  <span class="mb-l sep">负责线</span>
+  <button type="button" data-line="all" aria-pressed="true">全部</button>
+  <button type="button" data-line="软件" aria-pressed="false">软件</button>
+  <button type="button" data-line="硬件" aria-pressed="false">硬件</button>
+  <button type="button" data-line="结构" aria-pressed="false">结构</button>
+  <span class="mb-n" id="mbn"></span>
+</div>
+
+<section>
+  <div class="sec-h"><span class="num">01</span><h2>分层逻辑</h2>
+    <p>三层：① 产品价值与卖点，② 业务流程（步骤下挂子任务），③ 支撑能力。</p></div>
+  <div class="tw"><table class="deftable">
+    <thead><tr><th></th><th>① 产品价值与卖点</th><th>② 业务流程（含子任务）</th><th class="dsup">③ 支撑能力</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">定位</th><td>客户为什么买</td><td>用户使用产品的完整经历；每个步骤下面挂子任务</td><td class="dsup">方案的核心技术：用户看不见，但产品靠它成立</td></tr>
+      <tr><th scope="row">视角</th><td>用户</td><td>步骤是用户视角，子任务是研发视角</td><td class="dsup">研发</td></tr>
+      <tr><th scope="row">回答的问题</th><td>产品给用户什么价值</td><td>用户按什么顺序做什么；每一步要把哪些子任务做到位</td><td class="dsup">这个方案难在哪，我们攻到哪一步了</td></tr>
+      <tr><th scope="row">判定标准</th><td>用户愿意为它买单，能对外讲</td><td>步骤：能说成「用户……」，有先后顺序；子任务：这一步做好要靠它</td><td class="dsup">跨多个步骤的技术难点，写具体能力，不写板子型号</td></tr>
+      <tr><th scope="row">组织方式</th><td>按卖点</td><td>阶段 → 步骤 → 子任务</td><td class="dsup">数据链路、3D 内容与重建、切片与抖动兼容、高帧率屏幕、色深与画质、电机控制板、结构与动平衡、供应策略、量产与研发闭环</td></tr>
+      <tr><th scope="row">标签</th><td>—</td><td>步骤：服务的卖点、V1 / V2、软件 / 硬件 / 结构；子任务：现状、GAP</td><td class="dsup">软件 / 硬件 / 机械 / 跨线、对应岗位、招聘要求、AI 分工、能否外采</td></tr>
+      <tr><th scope="row">衡量</th><td>卖点兑现度：链上最弱的一环</td><td>步骤的实测指标；子任务的 GAP</td><td class="dsup">实测指标和余量</td></tr>
+      <tr><th scope="row">研发拿它做什么</th><td>对齐做什么，验收对外承诺</td><td>找出要做的事：每个子任务的 GAP 就是待办</td><td class="dsup">集中攻关，管风险和技术债</td></tr>
+    </tbody>
+  </table></div>
+  <div class="rules">
+    <div class="rule"><h3>版本口径</h3><p>V1 验证机：每面 160×180，24 Hz，357 片。V2 产品机：每面 192×216，30 Hz，605 片。没标的步骤两版都要。</p></div>
+    <div class="rule"><h3>达标只认真机</h3><p>仿真过、进桥过都不算上屏过。子任务未达标时，步骤不能标达标。</p></div>
+    <div class="rule"><h3>写能力，不写组件</h3><p>子任务写「断线恢复」「转速门控」这样的能力，具体位流和寄存器留在研发文档。</p></div>
+    <div class="rule"><h3>每项有依据</h3><p>现状都能回到实测记录或决策记录；查不到的标「未盘点」，不估。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">02</span><h2>全链路总图</h2>
+    <p>点任意卖点、步骤或支撑能力，会亮出和它相关的其他块；点步骤，详情栏先列近期排期和验收标准，再列开发任务、全部子任务和 GAP。再点一次或按 Esc 清除。</p></div>
+  <div class="arch">
+    <div class="board" id="board">
+      <div class="lyr" data-c="1"><div class="lyr-l"><span class="n">①</span><b>产品价值与卖点</b><small>客户为什么买</small></div><div class="sps" id="sps"></div></div>
+      <div class="down"><span>卖点在这些环节里兑现</span></div>
+      <div class="lyr" data-c="2"><div class="lyr-l"><span class="n">②</span><b>业务流程</b><small><em>定位</em>用户使用产品的完整经历；步骤下挂子任务</small><small><em>判定</em>能说成「用户……」，有先后顺序，用户能感知到</small></div><div><div class="stages" id="stages"></div><div class="cores" id="stepmods"></div></div></div>
+      <div class="down strong"><span>L3 · 撑起这些步骤的团队能力</span></div>
+      <div class="lyr sup" data-c="3"><div class="lyr-l"><span class="n">③</span><b>支撑能力</b><small><em>定位</em>要组建的团队能力</small><small><em>判定</em>能写进招聘要求的专业技能，不按版本或板子分</small></div><div class="sups" id="sups"></div></div>
+    </div>
+    <aside class="detail" id="detail" aria-live="polite"></aside>
+  </div>
+  <div class="legend" id="legend"></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">03</span><h2>软件、硬件、结构现状</h2>
+    <p>三条线截至 11-05 的最新状态。顶栏「负责线」可以只看其中一条，其他线的卡片会淡下去。</p></div>
+  <div class="cards lines">
+    <div class="cd"><h3>软件</h3>
+      <p><b>已稳：</b>实时推流、断网自愈、主控升级回滚、24 小时长跑；V1 双面链路 1.0G 真内容 1 小时全过。</p>
+      <p><b>最新：</b>11-04 手机配网、配对、手机遥控装到 02 板，服务端规则实测过。11-05 电机固件带转子 300 rpm 调好，上位机加了一键烧录。</p>
+      <p><b>下一步：</b>真手机验收（11-10）；已上板的分支合回主线；灯板到后上屏；修电机起步和低速问题。</p></div>
+    <div class="cd"><h3>硬件</h3>
+      <p><b>已稳：</b>V1 主控底板和桥转接板各 10 片，两块桥 flash 已烧正式版。</p>
+      <p><b>最新：</b>11-05 V2 桥板硬件交付包已出（只摆件，未走线）。11-04 V2 底板 v1 只摆件。CZ06 复刻 ≈82%、桥核心模块 ≈65%，都暂停存档。</p>
+      <p><b>下一步：</b>确认 V1 灯板到货；核 120P 连接器；V2 灯板补接插件和板框；桥板和底板走线；重排下单日期。</p></div>
+    <div class="cd"><h3>结构</h3>
+      <p><b>已稳：</b>V0 转子真转 1 小时；结构交付包已写清三条产品要求和任务表。</p>
+      <p><b>最新：</b>11-06 基础动平衡：不带屏转子 900 rpm 振动降约 75%，最高到 1200 rpm，AI 主导、人装拆配重。11-05 出 V1.0 / V1.1 整机 STEP 和 47 个零件，只用 OCC 校验过。11-04 三板结构包里桥板还是 4 座旧版。</p>
+      <p><b>下一步：</b>按 2 座版重出三板包；在 SolidWorks 打开确认；结构工程师给产品形态结论和排期；实测固有频率。</p></div>
+  </div>
+  <h3 class="tbl">团队组建：岗位和 AI 分工</h3>
+  <p class="tblnote">每个能力组对应一类岗位，卡片写的是这个岗位要会什么。AI 分工按现在的做法和项目记录判断，岗位和招聘建议是初稿，待定。「AI 接管」不等于已达标，也不等于不用人：有人把关才算数。</p>
+  <div id="aisum"></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">04</span><h2>核心技术：3D 内容怎么变成空中的画面</h2>
+    <p>一帧内容从电脑到屏幕要过这 10 步，每一步都是方案要自己做的技术。</p></div>
+  <div class="tw"><table>
+    <thead><tr><th style="width:130px">技术</th><th>具体做法</th><th>难点</th><th style="width:250px">实测</th><th style="width:170px">现状</th></tr></thead>
+    <tbody>
+      <tr><td><b>1. 点云重建</b></td><td>模型或动画每帧采样，三角形撒点，写进 192×216×192 体素网格</td><td>动画要吃满体积又不能抖；内容要避开中轴</td><td>bonsai 11.9 万体素，Robot 3.5 万体素</td><td>模型已过；真实物体重建效果一般</td></tr>
+      <tr><td><b>2. 压缩</b></td><td>只发非空体素：索引差分编码加颜色，再 lz4-HC；静态模型常驻板上，每帧只发位姿</td><td>压缩比和解压速度要同时够</td><td>bonsai 约 160 KB/帧，15 fps 约 20 Mbit/s；位姿 108–472 B/帧</td><td>已过；骨骼动画还发体素</td></tr>
+      <tr><td><b>3. 传输</b></td><td>WiFi TCP 推流，最新帧优先，断线自动重连</td><td>转子上只有无线；网络一抖不能积压</td><td>≥160 Mbit/s；延迟 p50 41 ms、p99 103 ms</td><td>局域网已过；互联网未建</td></tr>
+      <tr><td><b>4. 解压</b></td><td>板上 lz4 解压，再解成内容表，收包线程绑定 CPU0</td><td>和屏刷新抢内存带宽，带载解码速度减半；Zynq 上是主瓶颈</td><td>解压 2.3 ms/帧，解表 2.9 ms/帧；Zynq 时 zlib 约 120 ms</td><td>已过</td></tr>
+      <tr><td><b>5. 散写与换帧</b></td><td>把体素写进网格，双缓冲，脏格表只清上一帧的点，每圈零位切换</td><td>写网格不能打断正在读的切片</td><td>换帧上限 2×转速；真转 646 rpm 18.9 fps</td><td>V0 已过</td></tr>
+      <tr><td><b>6. 切片</b></td><td>PL 按角度查表，每列取一根 216 像素的柱，实时出片；两面几何都写进查找表</td><td>每片 110 µs 窗口内读完；DDR 读量 1,505 MB/s，上限 1,786 MB/s</td><td>纯取片实测每片均 93.5 µs，最慢 154.8 µs；和黄金模型 18 组 × 2,500 万像素 0 不符</td><td>V0 上板；V1 进桥已过，待上屏</td></tr>
+      <tr><td><b>7. 转速与抖动兼容</b></td><td>光电定 0° 估转速，相位锁定，半圈换帧，每圈片数随转速换档</td><td>转速在变，片位置不能滑；300–1200 rpm 都要能显示</td><td>滑格 22% → 0.12%；646 rpm 1 小时 0 漏帧</td><td>V0 已过；V1 待真转</td></tr>
+      <tr><td><b>8. 颜色处理</b></td><td>γ 校正加抖动量化；2047 出 3 bit，2260 出 12 bit</td><td>低灰过渡；色深测量手机照片测不了</td><td>链路 12 bit 对拍一致；显示 3 bit</td><td>待真屏；校准未开始</td></tr>
+      <tr><td><b>9. 高速上行</b></td><td>主控普通 IO 跑 1.0G，V1 每面 13 lane，V2 16 数据 lane</td><td>主控没有 SERDES；1.2G 码型串扰不可用</td><td>1.0G 8 小时 0 误码；双面真内容 1 小时全过</td><td>V1 已过；V2 待新板</td></tr>
+      <tr><td><b>10. 高帧率上屏</b></td><td>桥把片转成 mini-LVDS 驱动 2260，V2 用 16 组 48 扫</td><td>发帧率不能超过芯片显示帧率；同步序列和校验都踩过坑；V1 余量 0.7%</td><td>V2 需求 9,075 片/秒，芯片 12,520 fps（单颗）</td><td>待灯板</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">05</span><h2>按 1 米倒算的指标</h2>
+    <p>显示体 Φ150 × 169 mm，1 m 外约占 8.6° × 9.6° 视角。以下是几何和估算，真屏量出来后替换。</p></div>
+  <h3 class="tbl">清晰度：1 m 处一个像素要多小</h3>
+  <div class="tw"><table>
+    <thead><tr><th>档位</th><th>像素间距</th><th>1 m 处视角</th><th>每面像素</th><th>每圈片数</th><th>每面数据量（15 转/秒）</th><th>结论</th></tr></thead>
+    <tbody>
+      <tr><td><b>及格线（建议目标）</b></td><td>≤1.0 mm</td><td>3.4′</td><td>150×169</td><td>471</td><td>6.4 Gbit/s</td><td>LED 行业经验：间距 1 mm 对应 1 m 视距</td></tr>
+      <tr><td><b>好</b></td><td>≤0.58 mm</td><td>2′</td><td>258×290</td><td>810</td><td>32.7 Gbit/s</td><td>是 V2 的 2.4 倍，现有上行不够</td></tr>
+      <tr><td><b>看不出像素</b></td><td>≤0.29 mm</td><td>1′</td><td>516×580</td><td>1,620</td><td>261.7 Gbit/s</td><td>是 V2 的 19 倍，不现实</td></tr>
+      <tr class="gr"><td colspan="7">现有两版</td></tr>
+      <tr><td><b>V1 验证机</b></td><td>径向 0.94 / 切向 1.32 mm</td><td>3.2′ / 4.5′</td><td>160×180</td><td>357</td><td>—</td><td>径向过线，切向没过</td></tr>
+      <tr><td><b>V2 产品机</b></td><td>径向 0.78 / 切向 0.78 mm</td><td>2.7′ / 2.7′</td><td>192×216</td><td>605</td><td>13.5 Gbit/s</td><td>两个方向都过及格线，有 22% 余量</td></tr>
+    </tbody>
+  </table></div>
+  <p class="hint">切向间距 = 2π × 75 mm ÷ 每圈片数。数据量按 36 bit/像素。</p>
+  <div class="cards lines">
+    <div class="cd"><h3>帧率</h3><p>视距不直接决定帧率，闪烁才决定。体帧率 = 2 × 转速：V1 24 Hz、V2 30 Hz。转速上限 1200 rpm 时最高 40 Hz，60 Hz 要 1800 rpm，超出范围。</p><p>30 Hz 在室内会不会闪，只能 1 m 处人眼实测，V0 的 21.7 Hz 可以先做参考。内容刷新 V2 为 15 fps，半圈换帧可到 30 fps。</p></div>
+    <div class="cd"><h3>室内亮度</h3><p>感知亮度 = 面板亮度 × 2N ÷ 每圈片数，N 是一条视线上点亮的体素数。</p><p>按规格 600 nits：V2 空心物体（N=2）约 4 nits，N=10 约 20 nits，N=30 约 60 nits；V1 片数少，分别约 7、34、101 nits。<b>片数越多越暗</b>，清晰和亮度互相抵消。</p><p>300 lux、罩内 5% 反射时黑底约 4.8 nits，10:1 约需 43 nits。反射压到 2% 只需 17 nits；灰罩透过率 50% 时罩内约需 22 nits。</p></div>
+    <div class="cd"><h3>垂直可视</h3><p><b>+80°：</b>V1 灯板规格 165°，半角 82.5°，只留 2.5° 余量，边缘亮度要实测。顶部不能有任何东西。</p><p><b>−20°：</b>V2 方案屏下 9 mm 是 140×80 底板，转起来扫过半径约 81 mm。−20° 时轴心处下沿约 20 mm、远侧约 48 mm 被挡（屏高 169 mm）。要全看到，得缩小底板或抬高屏。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">06</span><h2>版本迭代节奏</h2>
+    <p>V1 11-27 交付，V2 12-16 交付。红色卡片是 V1 冲刺要动的，黄色卡片是 V2 冲刺要动的。下面的 V2 节点来自 10-27 的倒排甘特图，当时按 12-15 验收倒排，关键路径浮动约 0；之后核心板和桥板方案都变过，这些节点要重排。</p></div>
+  <div class="cgoals" id="goals"></div>
+  <div class="cadence" id="cadence"></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">07</span><h2>要做的事</h2>
+    <p>L2 每个步骤下有 GAP 的子任务，按处理方式分三组，组内按流程顺序排。「补差距」可以直接排期；「等上板」要等真硬件；「先盘点」要先摸清差多少。</p></div>
+  <div class="todo-sum" id="todo-sum"></div>
+  <div id="todo"></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">08</span><h2>每个卖点兑现到哪了</h2>
+    <p>每个卖点链上有差距的子任务，以及撑着这些步骤的支撑短板。上标「隐含」的子任务卖点里没写，但做不好卖点就不成立。</p></div>
+  <div class="chains" id="chains"></div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">09</span><h2>这一版怎么来的</h2>
+    <p>结构参考业务架构的通用三层写法，内容全部来自本项目记录。</p></div>
+  <div class="cards">
+    <div class="cd"><h3>卖点</h3><p>三个产品价值按项目负责人 11-05 的思路写。上电、配网、长期稳定不算卖点，放在流程里当门槛。</p></div>
+    <div class="cd"><h3>流程</h3><p>按用户从开箱到长期使用的顺序写，配网和推流步骤对应 11-04 的工况表。</p></div>
+    <div class="cd"><h3>现状</h3><p>来自进度看板、V1 系统说明书、风险表和电机严测记录，截至 11-05。没有用估计值填空。</p></div>
+    <div class="cd"><h3>V1 / V2 和负责线标签</h3><p>顶栏可以只看一版或一条线，其他卡片会淡下去。L3 支撑能力两版共用，写的是团队要具备的专业能力。</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">10</span><h2>需要你定的</h2>
+    <p>图里按括号里的默认处理。</p></div>
+  <div class="cards">
+    <div class="cd"><h3>1. 「1 米清晰」的线画在哪</h3><p>及格线是 1.0 mm（3.4 角分）。V2 过线，要到 2 角分数据量得翻 2.4 倍。（默认：按及格线。）</p></div>
+    <div class="cd"><h3>2. 室内亮度目标</h3><p>暂定 300 lux 下 10:1。要更亮的环境，要求还会升高。（默认：按暂定值，上屏实测后再定。）</p></div>
+    <div class="cd"><h3>3. 互联网推送到什么程度</h3><p>11-04 定互联网首版只做控制和内容下发。这次的「互联网推送」是否包括实时推流？（默认：只下发内容，实时放后面。）</p></div>
+    <div class="cd"><h3>4. −20° 仰角要不要全看到</h3><p>按 V2 方案下沿会被挡。全看到要改底板或抬高屏，高度和重心都受影响。（默认：先按允许轻微遮挡，等结构评估。）</p></div>
+    <div class="cd"><h3>5. V1 灯板到了没有</h3><p>计划约 11-05 回，记录里没有到货。（默认：未到，相关步骤标待上板。）</p></div>
+    <div class="cd"><h3>6. 12-16 V2 交付还成立吗</h3><p>10-27 的排期要 11-16 下单。现在 V2 桥板和底板还没走线，灯板缺接插件和板框，结构接口也没冻结。（默认：按 12-16 交付，中间节点标为要重排。）</p></div>
+    <div class="cd"><h3>7. 客户是谁</h3><p>展厅、零售和开发者的开箱流程和内容需求不一样。（默认：按桌面展示写。）</p></div>
+    <div class="cd"><h3>8. 手机传内容和互动玩法做不做</h3><p>手机传内容待评估，游戏已暂停。（默认：都不进 V1。）</p></div>
+    <div class="cd"><h3>9. 桥板和灯板的接口</h3><p>2 个 120P 座沿下边并排是当前方案，结构和灯板都要照它走。（默认：按 11-05 交付包。）</p></div>
+    <div class="cd"><h3>10. 主机 App 进不进产品</h3><p>仓库里的 RK3588 主机 App 带人脸检测和音频，8 月后没更新。（默认：不进 V1，标未盘点。）</p></div>
+    <div class="cd"><h3>11. 目标还没定的指标</h3><p>起步异常比例、噪声、转稳全亮时间、固有频率余量都没有目标。（默认：标目标待定。）</p></div>
+    <div class="cd"><h3>12. 成本和交期目标</h3><p>供应策略一项价格和交期都没录入，要你或采购给目标 BOM 和最长可接受交期。（默认：标目标待定。）</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-h"><span class="num">11</span><h2>清单</h2>
+    <p>每个步骤下的全部子任务，以及 L3 支撑能力的完整依据。</p></div>
+  <h3 class="tbl">② 业务流程 · 子任务</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:170px">子任务</th><th style="width:150px">现状</th><th style="width:300px">GAP · 要做什么</th><th>依据</th></tr></thead>
+    <tbody id="tbody-c"></tbody>
+  </table></div>
+  <h3 class="tbl">③ 支撑能力</h3>
+  <div class="tw"><table>
+    <thead><tr><th style="width:160px">能力</th><th style="width:260px">招聘要求</th><th style="width:140px">现状</th><th style="width:110px">AI 分工</th><th>依据</th><th style="width:240px">支撑哪些步骤</th></tr></thead>
+    <tbody id="tbody-s"></tbody>
+  </table></div>
+</section>
+
+<footer>
+  <div><b>技术架构</b>：<a href="aibrain-L1-技术架构_2026-11-05.html">L1 技术架构</a> · <a href="aibrain-L2-设备架构_2026-11-05.html">L2 设备架构</a> · <a href="aibrain-L2-主机与云端架构_2026-11-05.html">L2 主机与云端</a></div>
+  <div><b>依据</b>：显性目的进度看板（截至 11-04）、V1 系统说明书（10-27）、配网与推流工况表（11-04）、P0.9375 COB 规格书、V2 倒排甘特图（10-27）、结构交付包（10-28）、风险表、项目技术记录库（05–11 月）、电机严测记录（11-05）、各板进度表（11-04）、V2 桥板硬件交付包（11-05）、结构模型 STEP 版（11-05）。</div>
+  <div><b>算法</b>：第 05 节数字由 calc_1m.py 算出；亮度和遮挡是估算，V2 亮度暂用 V1 灯板规格。</div>
+  <div><b>状态</b>：达标＝真硬件实测达到目标；有差距＝有数据，未达目标；不达标＝有数据，明显影响产品；看不见＝没有测量数据可判断；未盘点＝有实现或有要求，没核过；部分有＝要求的只做了一部分；未建＝还没有；待上板＝软件或仿真已就绪，要真硬件出结论；系统外＝不在项目范围。</div>
+</footer>
+</div>
+
+<script>
+const S = {miss:'不达标', plan:'未建', blind:'看不见', near:'有差距', part:'部分有', unk:'未盘点', hw:'待上板', ok:'达标', ext:'系统外'};
+const ORDER = Object.keys(S);
+
+const SP = [
+  {id:'A', k:'清晰', en:'CLEAR AT 1 METER', h:'1 米外看得清。',
+   claims:['1 m 观看：像素不大于 1.0 mm，约 3.4 角分','V2：每面 192×216、每圈 605 片，两个方向都是 0.78 mm','V2：30 Hz 体帧率，12 bit 色深，几何不变形'],
+   vis:{head:['点距','完全看不到颗粒（1′）','基本看不出（2′）','及格线（3.4′）'], rows:[['V2 0.78 mm','2.7 m','1.3 m','0.79 m'],['V1 径向 0.93 mm','3.2 m','1.6 m','0.95 m'],['V1 切向 1.32 mm','4.5 m','2.3 m','1.3 m']], note:'到转轴的距离，按视力 1.0 几何计算，待真屏实看。'},
+   note:'清晰线按 LED 行业「间距 1 mm 对应 1 m 视距」的经验定，待确认。算法见第 05 节。',
+   verdict:'V2 的设计数字过线：1 m 处两个方向都是 2.7 角分。V1 径向 3.2 角分过线，切向 1.32 mm 约 4.5 角分没过，只能作验证机。这些都是几何计算，实屏还没出图；V0 只到 3 bit。30 Hz 会不会闪要人眼实测。'},
+  {id:'B', k:'裸眼', en:'GLASSES-FREE 3D', h:'裸眼 3D，室内看得见，四周上下都能看。',
+   claims:['裸眼立体，不戴眼镜','室内灯光下看得清：300 lux 下对比度 ≥10:1（暂定）','水平 360°，垂直 −20° 到 +80°（桌面放置）'],
+   note:'产品放在桌面。亮度为估算，要实测；V2 LED 规格书还没有。',
+   verdict:'裸眼和水平 360° 在 V0 上已成立。室内亮度是最大的未知：按 V1 灯板规格 600 nits 估算，空心物体只有 4–7 nits，300 lux 下 10:1 约需 43 nits。垂直范围也有两处要结构确认：+80° 只比 LED 165° 视角留 2.5° 余量，−20° 时转子底板会挡住下沿。'},
+  {id:'C', k:'播放', en:'AUTO PLAY AND STREAM', h:'自动播放，也能当 3D 显示器。',
+   claims:['上电自动播放','WiFi 连上后当 3D 显示器，推什么显示什么','局域网和互联网都能推送'],
+   note:'手机实时推流放 V2；互联网部分尚未开工。',
+   verdict:'自动播放和局域网推流最成熟：V0 真转 1 小时 0 漏帧，延迟 p50 41 ms。手机遥控和配网服务端已过，还差真手机验收。缺口是「3D 显示器」还没有给用户的接入方式，互联网推送还没开工。'}
+];
+
+const STAGES = [
+  {id:'g1', n:'开箱安装', t:[
+    ['s_unbox','拆箱取机','打开包装，解除运输锁定，取出整机','plan','产品形态未定',[],'gate'],
+    ['s_place','放好接电','放到桌上接上电源，不用接别的线','part','样机可用 · 底座未定',[],'gate'],
+    ['s_safe','确认安全','知道罩子盖好才会转，开罩自动停','plan','开罩停机未建',[],'gate']
+  ]},
+  {id:'g2', n:'上电', t:[
+    ['s_boot','上电自动播放','一上电，屏上自动亮起并播放内容','hw','V0 12.4 秒 · V1 待灯板',['C']],
+    ['s_spin','转稳全亮','电机起转，转稳后画面全亮','near','电机严测有未过项',[],'gate'],
+    ['s_idle','停转不刺眼','没转或转速不稳时，屏自动低亮','hw','V0 已过 · V1 待灯板',[],'gate']
+  ]},
+  {id:'g3', n:'联网配对', t:[
+    ['s_wifi','手机配网','扫贴纸连设备热点，在中文页面选 WiFi、输密码','part','02 板过 · 手机验收未完',['C']],
+    ['s_find','找到设备','手机或电脑在局域网里找到这台设备','part','电脑过 · 手机待测',['C']],
+    ['s_pair','配对授权','输入屏幕上的配对码，以后自动连','part','贴纸路径过 · 屏幕码待测',['C']],
+    ['s_direct','现场直连','没有路由器时，手机或电脑直接连设备','hw','5 GHz 直连待测',['C']]
+  ]},
+  {id:'g4', n:'放内容', t:[
+    ['s_play','手机选内容','打开手机网页，选内容、暂停、调亮度','part','服务端过 · 待真手机',['C']],
+    ['s_push','局域网推流','同一网络里，电脑现算的画面实时显示到设备上','hw','V0 真转过 · V1 待上屏',['C']],
+    ['s_mon','当 3D 显示器用','WiFi 连上后，在自己的软件里把 3D 内容送到设备上','part','研发工具可用 · 无用户接入',['C']],
+    ['s_lib','内容够看','开机就有足够多可放的内容','unk','10 类 · 未正式验收',['C']],
+    ['s_upload','手机传内容','把自己的内容从手机传到设备上','plan','待评估',['C']],
+    ['s_game','互动玩法','用手机当手柄，在立体画面里玩','part','已暂停',[],'extra'],
+    ['s_remote','互联网推送','不在现场，经互联网把内容推到设备上','plan','V2 · 未开工',['C']]
+  ]},
+  {id:'g5', n:'观看', t:[
+    ['s_view','四周看立体像','绕着设备走，从任何方向都看到立体画面','hw','V0 已成像 · V1 待上屏',['B']],
+    ['s_angle','上下都能看','桌面放置，从下方 20° 到上方 80° 都能看','near','+80° 余量小 · −20° 被挡',['B']],
+    ['s_clear','1 米看清细节','站在 1 米外，能看清人物和文字的细节','hw','V2 设计过线 · 实屏待测',['A']],
+    ['s_color','看到丰富颜色','颜色过渡平滑，不是几档色块','hw','链路 12 bit · 实屏待测',['A']],
+    ['s_fps','看到流畅画面','画面不闪、不卡、不撕裂','hw','V1 24 Hz 待实转',['A']],
+    ['s_geom','立体不变形','方的是方的，两面对得上，没有重影','hw','V0 已核 · V1 待校准',['A','B*']],
+    ['s_float','只看到悬浮的光','看不到柱子和机构，只有罩子里的光','plan','结构评估中',['B*']],
+    ['s_bright','室内看得清','普通室内灯光下也看得清','blind','估算偏暗 · 没有实测',['B']],
+    ['s_quiet','安静不晃','放在桌上不晃，听不到异响','near','不带屏到 1200 rpm',[],'gate']
+  ]},
+  {id:'g6', n:'长期使用', t:[
+    ['s_long','连开一整天','展厅开一整天，不用人管','hw','V0 24 小时过 · V1 待整机',[],'gate'],
+    ['s_heal','断网自己恢复','WiFi 掉了或路由器重启后自己连回来','ok','断线恢复 16 秒',[],'gate'],
+    ['s_ota','远程升级','不拆机就能升级，失败自动回到旧版','part','主控过 · 桥未接进回滚',[],'gate'],
+    ['s_status','看设备状态','能看到转速、在线状态和错误原因','part','电脑可看 · 手机待验',[],'gate']
+  ]}
+];
+
+const CORES = [
+  {step:'s_unbox', t:[
+    ['k_pack','包装与运输锁定','防运输冲击 · 转子锁定','plan','未建','产品要求「运输时有锁定」写在结构交付包，还没有方案。'],
+    ['k_module','转子模块化','出厂配平 · 整体拆装','plan','未建','理想形态要求出厂配平一次、转子整体拆装，结构还没给结论。']
+  ]},
+  {step:'s_place', t:[
+    ['k_base','产品底座','低矮哑黑 · 单一电源入口','plan','未建','理想形态是低矮哑黑底座加圆罩；现有样机是 4 根立柱加顶部轴承。'],
+    ['k_power','整机供电','24 V 2 A 输入','ok','样机在用','转子靠无线供电，24 V 2 A = 48 W，样机一直在用。']
+  ]},
+  {step:'s_safe', t:[
+    ['k_interlock','开罩停机','开罩检测 · 自动停转','plan','未建','理想形态要求开罩自动停机，目前没有检测和联动。'],
+    ['k_shell','罩子兜得住','零件脱落飞不出来','plan','未验证','900 rpm 下半径 90 mm 处约 80 g，罩子要同时当安全壳，没有验证。']
+  ]},
+  {step:'s_boot', t:[
+    ['k_bootfast','快速启动','复位到第一片亮起','ok','V0 12.4 秒','V0 串口 3 次实测 12.4 秒，目标 ≤12.5 秒。'],
+    ['k_bootv1','V1 自动出图','自启动 · 灌桥 · 上屏','hw','自启动已合','主控上电自启动已合主线，上屏要等灯板。'],
+    ['k_bootcontent','开机内容','默认立方体动图','ok','已定','用户定开机内容保持立方体动图，其他内容临时推或临时播。'],
+    ['k_bootstate','启动状态显示','停转时把屏当状态屏','plan','待排期','Backlog B1：用 0° 片显示启动阶段和错误信息，只记录未开工。']
+  ]},
+  {step:'s_spin', t:[
+    ['k_start','无感起转','判极 · 起步锁定','near','约 1/3 起步异常','判极本身全对、不反转；约 1/3 起步记「判极前转动」24–80°e。严测 S1 25/30。'],
+    ['k_speed','稳速','速度环 · 转速波动','near','不带屏到 1200 rpm','带转子 300 rpm 波动 1.3–2.2 rpm；11-06 配平后不带屏跑到 1200 rpm 无故障。低速翻角检出慢，单次角度阶跃 21/32。带屏转速未测。'],
+    ['k_gate','转速门控','转稳才全亮','hw','V0 已过','V0 上转速门控上板通过；V1 要配光电和新转子再测。'],
+    ['k_rpmrange','转速范围','300–1200 rpm 都能显示','hw','软件已支持','片数换档、高转速估速已做完；D61 光电估转速待真转验证。']
+  ]},
+  {step:'s_idle', t:[
+    ['k_lowlum','停转低亮','低亮显示 0° 片','hw','V0 已过','V0 上板通过，4 次起停无故障；V1 灯板功耗不同，要重测。'],
+    ['k_fault','异常保护','转速丢失自动降亮','unk','未盘点','转速门控覆盖了停转；转动中突然丢光电信号的行为没有单独验收。']
+  ]},
+  {step:'s_wifi', t:[
+    ['k_ap','热点与配置页','贴纸二维码 · 中文页面','part','手机配成功 1 次','11-04 手机连设备热点配好 WiFi，试连 6 秒，板回到目标网络；错误提示已移到连接按钮旁；是否自动弹页待确认。'],
+    ['k_fallback','失败回退','密码错 · 找不到 WiFi','part','02 板过','真驱动实测找不到网和密码错都回旧网、配置不变；手机页面上的错误提示没走过。'],
+    ['k_cfgpower','掉电安全','配到一半断电','unk','未核','工况 W3、R1 要求不留坏配置；上板记录里没有断电测试。'],
+    ['k_phones','机型覆盖','iPhone · 华为 · 小米 · OPPO/vivo','plan','真手机记录很少','D144 要求四类手机；11-04 真手机配网成功一次，并按 iPhone 上的问题改了错误提示位置。']
+  ]},
+  {step:'s_find', t:[
+    ['k_mdns','按名字找板','重启后多久能找到','ok','19.8 秒','V0 实测 19.8 秒，目标 ≤21 秒。'],
+    ['k_dnssd','局域网发现','手机 · Windows 自动发现','hw','待测','Windows 侧服务发现和手机发现都没实测。'],
+    ['k_manualip','手动输入地址','路由器屏蔽发现时','unk','未盘点','工况 L3 要求能手动输 IP，上板记录里没写。']
+  ]},
+  {step:'s_pair', t:[
+    ['k_code','屏幕配对码','6 位码显示在屏上','hw','待测','本轮走的是贴纸密码路径；屏幕码没实测。默认转动时不显示配对码，未定。'],
+    ['k_enforce','未配对不能推','授权开关','part','已验 · 默认未开','开关打开时未配对被拒、配对后可推；02 板上开关现在是关的，等 D144 后开。'],
+    ['k_multi','多主机规则','第二台被拒 · 管理员接管','ok','02 板过','用户角色不能打断推流，管理员接管后 8 秒内重推被拒，之后可推。'],
+    ['k_revoke','撤销设备','手机丢失或换人','unk','未核','工况 M3 要求能撤销；PC 临时身份撤销做过，手机路径没走。']
+  ]},
+  {step:'s_direct', t:[
+    ['k_5g','5 GHz 直连','无路由器推流','hw','待测','工况 N1；AP 和 STA 同信道并行已测过，5 GHz 直连推流没测。'],
+    ['k_24g','退回 2.4 GHz','5 GHz 起不来时','hw','待测','工况 N2，没有上板记录。']
+  ]},
+  {step:'s_play', t:[
+    ['k_remote','遥控页面','选内容 · 暂停 · 亮度','part','服务端过','02 板上切内容和亮度接口过；真手机打开页面没测。'],
+    ['k_spinremote','转动中遥控','转动时实际效果','hw','待测','D145 只在没转时测过，转动实测没做。'],
+    ['k_rights','控制权分开','遥控和推流互不抢','ok','02 板过','推流时用户可调亮度、不可打断；暂停、继续、换内容都过。']
+  ]},
+  {step:'s_push', t:[
+    ['k_latency','端到端延迟','p50 · p99','ok','p50 41 ms','V0 假转 583 rpm p50 41 ms（目标 ≤70），p99 103 / 80.5 ms（目标 ≤120）。'],
+    ['k_rate','实转刷新率','观众实际看到的','ok','18.9 fps','V0 真转 646 rpm 1 小时 18.2–18.95 fps，超过 V1 12 / V2 15 的目标。'],
+    ['k_wifi','WiFi 带宽','实际可用','ok','≥160 Mbit/s','点对点 TCP 推流方向 ≥160 Mbit/s，目标 62。'],
+    ['k_model','低码流内容','只发位姿','ok','≤0.13 Mbit/s','静态模型常驻板上，每帧只发位姿，板端结果和主机逐字节一致。'],
+    ['k_pushv1','V1 上屏推流','真内容到灯板','hw','进桥已过','双面 1.0G 真内容进桥 1 小时全过，灯板上屏没做。']
+  ]},
+  {step:'s_mon', t:[
+    ['k_sdk','用户接入方式','工具 · 插件 · 接口说明','plan','未建','现在靠研发推流工具和命令行；给用户的软件、插件或接口说明都没有。'],
+    ['k_stream','内容格式','体素 · 模型 · 位姿','part','研发格式','体素流和模型帧都在跑，是内部格式，没有公开定义。'],
+    ['k_autoswitch','自动切换','来推流就接上，停了回默认','ok','02 板过','开机 30 秒推流首响应 0.04 秒；推流停止保持最后一帧，超时回默认内容。']
+  ]},
+  {step:'s_lib', t:[
+    ['k_count','内容数量','V1 5 个 · V2 10 个','unk','10 类未验收','10 类内容实转轮播用户看过，没跑正式上板验收。'],
+    ['k_quality','内容适配','在体积屏上好看','unk','未盘点','哪些内容适合这种屏没有标准，靠人看。']
+  ]},
+  {step:'s_upload', t:[
+    ['k_upeval','手机传内容方案','传什么 · 什么格式','plan','待评估','11-04 用户定 V1 先做遥控，传内容待评估。']
+  ]},
+  {step:'s_game', t:[
+    ['k_gamectl','手机手柄','低延迟操作','part','暂停','贪吃蛇、管道射击做过，管道射击上板试过；用户嫌难，暂停，分支未合主线。']
+  ]},
+  {step:'s_remote', t:[
+    ['k_cloud','互联网内容推送','远程控制 · 内容下发','plan','放 V2','11-04 定互联网首版只做远程控制和内容下发，实时推流放后面。'],
+    ['k_cloudlive','互联网实时推流','跨网低延迟','plan','未排期','局域网延迟 41 ms 的结论不能套到互联网，没有方案。']
+  ]},
+  {step:'s_view', t:[
+    ['k_3d','体积成像','转出立体像','ok','V0 已成像','07-28 首次出立体图，V0 双面偏心屏真转可看。'],
+    ['k_dual','两面同时显示','面 A + 面 B','hw','链路已过','双面上行 1 小时全过，两面灯板同时显示没做。'],
+    ['k_blind','中心盲区','转轴处看不到的柱','unk','未盘点','V0 用偏心屏消掉中心 Φ13.4 盲柱；V1、V2 的盲区没出结论。']
+  ]},
+  {step:'s_angle', t:[
+    ['k_h360','水平 360°','绕一圈都能看','hw','V0 已成像','V0 可四周观看；屏面转到和视线平行时 LED 是侧着看到的，V1 要实测这个方向的亮度。'],
+    ['k_up80','俯视 +80°','LED 发光角','near','余量 2.5°','V1 灯板规格 165°，半角 82.5°，只比 +80° 多 2.5°，边缘亮度没测；V2 LED 规格书还没有。'],
+    ['k_down20','仰视 −20°','底部遮挡','near','下沿被挡','按 V2 方案屏下 9 mm 是 140×80 底板估算：−20° 时轴心处下沿约 20 mm、远侧约 48 mm 被挡。'],
+    ['k_topfree','顶部无遮挡','俯视看不到机构','plan','未建','现有样机顶部有立柱和轴承架，挡俯视；产品方向是全部去掉。']
+  ]},
+  {step:'s_clear', t:[
+    ['k_1mv1','V1 的 1 米清晰度','径向 · 切向','near','切向没过线','径向 0.94 mm（3.2 角分）过线；切向 1.32 mm（4.5 角分）没过，要 471 片/圈才过，V1 是 357 片。'],
+    ['k_1mv2','V2 的 1 米清晰度','径向 · 切向','hw','设计过线','两个方向都是 0.78 mm，约 2.7 角分；几何计算，实屏未验证。'],
+    ['k_resv1','V1 分辨率','160×180 · 357 片','hw','待上屏','仿真过，LUT 和节拍已就绪，等灯板。'],
+    ['k_resv2','V2 分辨率','192×216 · 605 片','plan','待新板','前端已统一到 V2 网格，V2 灯板、桥和核心板都没投板。'],
+    ['k_map','面板映射','灯板像素排布','near','缺 4 项信息','风险 R10：1 期面板映射缺 4 项信息，桥表无法定稿，状态仍开。']
+  ]},
+  {step:'s_color', t:[
+    ['k_12bit','12 bit 链路','主机到灯板驱动','hw','链路已验','V0 上 32 bit 像素路径和 PL、CPU 对拍一致，桥到 2260 模型仿真 0 错；真 2260 没出图。'],
+    ['k_2260','驱动芯片握手','2260 回 ACK','near','从未收到合法 ACK','风险 R4：2260 从未收到合法 ACK，疑物理通路，要靠验证板查。'],
+    ['k_gamma','颜色校准','Gamma · 白平衡','plan','未建','没有实屏，校准流程还没开始。']
+  ]},
+  {step:'s_fps', t:[
+    ['k_24hz','V1 24 Hz','12 转/秒 × 357 片','hw','进桥已过','4284 片/秒真内容进桥 CRC 0、不欠载；实转没做。'],
+    ['k_margin','V1 节拍余量','桥驱灯板时间','near','余量 0.7%','最紧一环只剩 0.7%，时钟偏差会丢帧；退路是降到 22 Hz，用户定保持 24 Hz。'],
+    ['k_30hz','V2 30 Hz','15 转/秒 × 605 片','plan','仿真过','上行 1.0G×16 仿真和时序已过，占 87.8%，待新板。'],
+    ['k_ddr','V2 内存带宽','偶发慢读','near','余量约 11%','2 期 30 Hz 余量约 11%，偶发慢读 133 µs 超过 110 µs 片窗。'],
+    ['k_loss','丢片率','1 小时窗口','ok','0.0012%','V0 8 小时内最差一小时 0.0012%，目标 ≤0.1%。']
+  ]},
+  {step:'s_geom', t:[
+    ['k_lut','几何查找表','逐字节复现','ok','V0 已核','生成器逐字节复现 2047 查找表，左右镜像用户实转核实并更正。'],
+    ['k_cal','转起来校准','V1 357 片几何','hw','工具已就绪','校准工具和 V1 查找表已做，要真转。'],
+    ['k_flex','离心变形','屏面鼓包 · 位移','blind','没有实测','像素 0.78 mm，屏面在离心力下的变形没有测过。']
+  ]},
+  {step:'s_float', t:[
+    ['k_cant','无柱悬臂','底部主轴 · 无顶部固定','plan','有条件可行','去掉顶部定心后固有频率下降，初判有条件可行，等结构结论。'],
+    ['k_hide','藏起机构','不发光部分压到下方','plan','未建','V2 目标屏下沿比 V1 降约 44 mm，是估算，还没实物。']
+  ]},
+  {step:'s_bright', t:[
+    ['k_nits','室内亮度','300 lux · 10:1','blind','估算 4–20 nits','V2 按规格 600 nits：空心物体约 4 nits，视线上 10 个体素约 20 nits；300 lux、5% 反射下 10:1 约需 43 nits。估算，没有实测。'],
+    ['k_peak','LED 峰值亮度','规格书 · 驱动电流','blind','V2 规格缺','达到 10:1 约要面板 1,300–6,500 nits；V2 LED 规格书和 2260 可用电流都没核。'],
+    ['k_lum','功率预算','48 W 封顶','near','满白要 130 W+','记录是满白 130 W 以上、上屏可用约 29 W，亮度按内容封顶；COB 规格按 335 W/m² 算两面只要 17 W，两个数对不上，要核。'],
+    ['k_ar','压反光','圆罩减反 · 罩内哑黑','plan','未建','普通亚克力每面反射约 4%，镀膜目标 <1%，以镀膜厂为准。']
+  ]},
+  {step:'s_quiet', t:[
+    ['k_vib','振动','动平衡 · 共振','near','900 rpm 约 2.7 mg','11-06 不带屏转子配平后，地面 900 rpm 约 2.7 mg，1200 rpm 低于 7 mg；放不稳支撑时 1000 rpm 到 47 mg，原因未定。估算固有频率 15–27 Hz 压在工作转速带上。'],
+    ['k_noise','噪声','电机声 · 风声','near','用户嫌吵','11-05 起步调试时用户反馈吵，没有分贝数据。'],
+    ['k_heat','密闭散热','罩内温升','blind','没有数据','现役靠旋转风冷，罩起来可能散不出去，没有测过。']
+  ]},
+  {step:'s_long', t:[
+    ['k_soft24','软件链路长跑','无人值守','ok','24 小时','02 板 24 小时 10/10 过；03 板 9/10，是 WiFi 项没过。'],
+    ['k_spin1h','整机实转','有人值守','ok','V0 1 小时','646 rpm 1 小时板端漏、迟、丢、撕裂都是 0。'],
+    ['k_link8h','V1 链路长跑','误码 · 重训','ok','8 小时 0 误码','1.0G PRBS31 8 小时 13 lane 全锁 0 误码。'],
+    ['k_v1soak','V1 整机长跑','上屏 + 实转','hw','待整机','要灯板和转子都到位。'],
+    ['k_bga','抗振可靠性','高转速后板子还能起','miss','疑 BGA 振裂','10-30 跑 1220 rpm 后原核心板卡在 PL 加载，压住主芯片才能起，此板不再上转子。']
+  ]},
+  {step:'s_heal', t:[
+    ['k_reconnect','断线恢复','掉线到回来','ok','16 秒','断线恢复从 68–75 秒降到 16 秒，目标 ≤30 秒。'],
+    ['k_rebind','网络自愈','能出不能进时重绑','ok','回归过','网络自愈回归 19/0，自检 22/0。']
+  ]},
+  {step:'s_ota', t:[
+    ['k_rollback','主控升级回滚','坏包自动回滚','ok','V0 已过','断网、坏升级包连续 3 次自动回滚并找回。'],
+    ['k_bridgesram','远程灌桥','桥临时位流','ok','实测成功','主控经 JTAG 菊花链给两块桥灌 SRAM 带校验已过。'],
+    ['k_bridgeflash','桥 flash 远程更新','断电后仍是新版','part','远程写已过','10-29 远程写 flash 上板过，面 A 14 秒、面 B 34 秒，断电后从新版起；还没接进 OTA 回滚，新桥板首烧仍要下载器。']
+  ]},
+  {step:'s_status', t:[
+    ['k_telemetry','遥测','转速 · 错误计数','ok','电脑可用','转子遥测和网络状态上板可用。'],
+    ['k_mobilestate','手机看状态','电机未转 · 带宽不足','hw','待真手机','工况 L6、L7 要主机和手机看到原因，真手机没测。'],
+    ['k_errmsg','错误说人话','用户能看懂','unk','未盘点','配网错误有原因分类，其他错误的用户提示没盘点。']
+  ]}
+];
+
+const SUPS = [
+  {code:'S1', g:'嵌入式 Linux 与驱动', s:'主控系统、驱动和远程运维', line:'软件', role:'嵌入式 Linux 工程师', hire:'先招', aido:'写驱动和服务、远程上板、查问题', hudo:'定系统方案，查 AI 查不出的板级问题', t:[
+    ['u_kernel','Linux 内核与驱动','设备树 · DMA · PS/PL 通信','hw','待新板实测','主控 Linux 上跑收包、解码和散写，V0 真转过；新底板上的收包和散写待上板。','贯穿全部',['s_push','s_boot'],[]],
+    ['u_bootst','启动与文件系统','Bootloader · 只读根 · 掉电安全','part','卡只读未合主线','重启丢配置、热重启认不到卡、冷启动都修过；10-31 出过卡事故，卡只读方案未合主线，V2 走 eMMC。','贯穿全部',['s_boot','s_long'],[]],
+    ['u_wifi','WiFi 与网络栈','无线驱动 · TCP 调优','ok','≥160 Mbit/s','05 月 ESP32 转 SDIO 只有 0.34 fps，卡在串行解析和 WiFi 模组；换到 Linux 直连 WiFi 后，DR1M90 点对点 TCP ≥160 Mbit/s。','放内容',['s_push','s_mon','s_direct'],[]],
+    ['u_mem','内存带宽与实时性','QoS · 带载分析','near','余量约 11%','QoS 开机默认后带载迟到 4.1% → 0；V2 余量约 11%，偶发慢读 133 µs 超过 110 µs 片窗。','观看',['s_fps'],[]],
+    ['u_rotorops','OTA 与远程运维','升级回滚 · 守护 · 遥测','ok','6/6 验收','不接串口找回、守护、WiFi、推流、稳定 6 项过；主控升级可回滚。','贯穿全部',['s_ota','s_heal','s_status'],[]]
+  ]},
+  {code:'S2', g:'网络与数据传输', s:'压缩、解压、传输，撑住动图数据', line:'软件', role:'网络 / 流媒体工程师', hire:'可兼', aido:'写编解码和传输、测吞吐', hudo:'定码流格式和互联网方案', t:[
+    ['u_codec','压缩与解码','lz4 · 带载性能','ok','压缩 22.8×','实测 lz4-HC 压缩比 22.8×，解压比 zlib 快 4 倍。带载时解码带宽腰斩（215 → 111–131 MB/s），外推的 48 fps 上板只有 10–11 fps，这是 Zynq 上的主瓶颈。','放内容',['s_push','s_lib'],[]],
+    ['u_motion','动态码流设计','增量 · 位姿 · 体素表','part','动画仍发体素','静态模型常驻板上，码流 6–44 → ≤0.13 Mbit/s；骨骼动画还是逐帧体素表。','放内容',['s_push','s_lib','s_remote'],[]],
+    ['u_flow','实时传输与流控','最新帧优先 · 重连','ok','接收 8.7 倍','去掉板端接收窗锁定后收包 2.83 → 24.7 MB/s；网络一抖后最新帧优先，积压不再累积。','放内容',['s_push','s_mon'],[]],
+    ['u_net','公网穿透与鉴权','NAT · 中继 · 安全','plan','未建','局域网方案没有穿透、鉴权和跨网抖动处理。','放内容',['s_remote'],[]]
+  ]},
+  {code:'S3', g:'3D 图形与点云', s:'把 3D 内容变成转子能显示的点', line:'软件', role:'图形算法工程师', hire:'先招', aido:'写转换和渲染，批量出内容', hudo:'看效果好不好，定内容标准', t:[
+    ['u_voxel','体素化与点云','网格采样 · 纹理','ok','192×216×192','glb 模型撒点进网格，修过纹理翻转和透明丢失。','放内容',['s_lib','s_view'],[]],
+    ['u_anim','骨骼动画','逐帧归一 · 循环平滑','ok','实转可播','骨骼动画逐帧归一并做循环平滑，既吃满体积又不抖。','放内容',['s_lib'],[]],
+    ['u_scan','三维重建','扫描 · 多视图重建','near','效果一般','10-30 用户看过扫描模型，效果不如程序生成的几何内容。','放内容',['s_lib','s_clear'],[]],
+    ['u_depth','体显示渲染','遮挡 · 深度 · 中轴盲区','near','中轴显示差','Zynq 时代加 z-buffer 后立体感明显提升；现在的体素路线下，前后遮挡效果没有重新评估。中轴附近显示差，目前靠内容不穿过中心规避。','观看',['s_view','s_geom','s_lib'],[]],
+    ['u_raster','实时渲染','主机出帧 · 板上栅格','ok','p99 22 ms','主机出帧 p99 22 ms；板上 2 线程栅格 192 网格约 32 ms。','放内容',['s_push','s_mon'],[]]
+  ]},
+  {code:'S4', g:'实时同步与抖动兼容', s:'转速在变，画面不能歪、不能卡', line:'软件', role:'实时控制工程师', hire:'可兼', aido:'写同步算法、跑多转速验收', hudo:'真转时在场操作', t:[
+    ['u_phase','角度同步','光电 · 相位锁定','ok','滑格 ≤0.19%','推流相位锁定后滑格 583 rpm 5.2% → 0.19%，900 rpm 22% → 0.12%。V1 光电要真转再验。','观看',['s_geom','s_fps'],[]],
+    ['u_rpm','变速自适应','估速 · 换档','hw','待真转','半圈换帧把 583 rpm 的 8 fps 提上来，小数节拍去掉 600 rpm 帧率台阶，每圈片数随转速换档；高转速光电估速待真转。','观看',['s_fps','s_spin'],[]],
+    ['u_smooth','卡顿度量与治理','指标 · 拦截 · 回归','ok','1 小时 0 漏帧','8 小时假转漏过 583 rpm 卡顿后，改为多转速点验收；真转 646 rpm 1 小时漏、迟、丢、撕裂都是 0。','观看',['s_fps','s_long'],[]]
+  ]},
+  {code:'S5', g:'显示画质', s:'后续把颜色和亮度做上去', line:'软件', role:'显示画质工程师', hire:'后招', aido:'做灰阶链路和校准工具', hudo:'人眼看真屏，定校准标准', t:[
+    ['u_depth12','灰阶与色深','BCM · 12 bit','hw','显示 3 bit','屏从 1 bit 到 3 bit 行内 BCM；12 bit 链路对拍一致，真屏没出图。','观看',['s_color'],[]],
+    ['u_gamma','Gamma 与低灰校正','映射 · 抖动','plan','未建','2047 用 γ 加抖动补 3 bit；2260 的 γ 到 12 bit 映射要真屏校。手机照片测不了色深，要专门的测法。','观看',['s_color'],[]],
+    ['u_uniform','亮色度一致性校准','逐点校正 · 批次','plan','未建','两面灯板和批次差异没有校准流程。','观看',['s_color','s_geom'],[]]
+  ]},
+  {code:'S6', g:'电机控制', s:'无感起转、稳速、可烧录', line:'软件', role:'电机控制工程师', hire:'先招', aido:'调固件、做上位机和烧录', hudo:'真转时在场，判断异响和安全', t:[
+    ['u_foc','无感 FOC 算法','HFI · 判极 · 切换','near','严测部分未过','零速逻辑、HFI 冲击、切换随机过；判极扰动 S1 25/30，低速翻角和换向反转事件没过。','上电',['s_spin'],[]],
+    ['u_speed','速度环与负载调参','死区补偿 · 阻尼','near','不带屏到 1200 rpm','死区补偿线性区重调后消掉极限环，300 rpm 波动 1.3–2.2 rpm；11-06 配平后不带屏跑到 1200 rpm 无故障，带屏未测。','上电',['s_spin','s_quiet'],[]],
+    ['u_motortool','MCU 固件与上位机','Cortex-M · 调试工具','ok','烧录 2.3 秒','上位机加了 J-Link 烧录页，不用 Keil，实测 2.3 秒。','上电',['s_spin'],[]]
+  ]},
+  {code:'S7', g:'应用与设备安全', s:'手机、电脑、云和设备权限', line:'软件', role:'全栈 / 应用工程师', hire:'后招', aido:'写页面、接口和配对', hudo:'定产品取舍，真手机验收', t:[
+    ['u_web','手机与 Web 前端','配网 · 遥控 · 兼容','hw','待真手机','11-04 手机配网、配对、遥控装到 02 板，服务端规则实测过；四类手机还没验收。','联网',['s_wifi','s_pair','s_play'],[]],
+    ['u_auth','设备安全','配对 · 授权 · 身份','part','授权默认未开','配对机制已做；授权开关默认关，系统默认口令还在。','联网',['s_wifi','s_pair'],[]],
+    ['u_acct','云服务后端','账号 · 设备管理','plan','未建','V1 不做账号。','联网',['s_remote'],[]],
+    ['u_hostapp','主机端开发','3D 查看 · 推流客户端','unk','定位未定','带 3D 查看、音频热力图、人脸检测，8 月后没更新，是否进产品没有记录。','放内容',['s_push','s_game'],[]]
+  ]},
+  {code:'S8', g:'FPGA 设计', s:'片流处理和屏幕驱动的逻辑', line:'硬件', role:'FPGA 工程师', hire:'先招', aido:'写 RTL、跑仿真和时序、远程上板', hudo:'定架构，真屏和高速链路把关', t:[
+    ['u_slice','实时数据流水线','RTL · DMA · 查表切片','hw','待上屏','从 CPU 切片换到 PL 实时片流，开机默认走 PL；V1 仿真逐像素 0 错，真内容进桥已过。','观看',['s_fps','s_clear','s_view'],[]],
+    ['u_highfps','时序设计与收敛','约束 · 跨时钟 · 余量','hw','一圈余量 0.7%','V1 一圈时序只剩 0.7%；V2 用 16 组 48 扫，芯片 12,520 fps 对需求 9,075 片/秒，只在单颗上验证过。','观看',['s_fps'],[]],
+    ['u_uplink','高速 IO 与链路校准','LVDS · 无 SERDES · 训练','ok','1.0G 1 小时过','主控没有 SERDES，靠普通 IO 跑 1.0G：13 lane 8 小时 0 误码，1.2G 码型串扰不可用。V2 改 1.0G×16，待新板。','观看',['s_fps','s_clear'],[]],
+    ['u_2260','LED 驱动协议','mini-LVDS · 扫描时序','hw','待灯板','单颗到 9 颗全亮踩过同步序列、校验算法、发帧率超显示帧率三个坑；ACK 回读至今没通过，真灯板没上屏。','观看',['s_fps','s_color','s_view'],[]],
+    ['u_port','多厂商工具链','Vivado · TD · 高云','ok','迁移过','换工具链后踩过 3 bit 乱码、读写不同义寄存器、产物不一致；现在回归全过。','贯穿全部',['s_view','s_boot'],[]],
+    ['u_fpgaver','逻辑仿真验证','Testbench · 对拍 · 回归','ok','逐像素 0 错','切片逻辑仿真逐像素 0 错，全链路仿真和回归脚本已有。','贯穿全部',['s_fps'],[]]
+  ]},
+  {code:'S9', g:'数字硬件设计', s:'FPGA、内存、存储和高速接口，从原理到 Layout', line:'硬件', role:'硬件工程师（数字）', hire:'先招', aido:'生成原理图、对手册、评审', hudo:'定方案，回板调试，对结果负责', t:[
+    ['u_fpgahw','FPGA 硬件设计','Bank 规划 · 配置 · 上电时序 · BGA','hw','DRC 0 · 未回板','桥 FPGA 型号之间有 40 个球不同，换料要重核；主控 IO 为防倒灌定 2.5 V；桥核心模块出线 229/229、DRC 0，未回板。','贯穿全部',['s_fps','s_boot'],[]],
+    ['u_ddr','DDR 设计','DDR3L/4 · 拓扑 · 端接 · 等长','near','地址命令未完','CZ06 复刻 DDR 数据组、端接和 VREF 定版，地址命令未完；32 bit 带宽没实测。内存方案从 DDR4 改到 DDR3L 重来过。','观看',['s_fps'],[]],
+    ['u_flash','Flash 与存储','QSPI · eMMC · TF','part','eMMC 未回板','桥 flash 远程写已上板；TF 卡出过事故，改 eMMC 的硬件没回板。','贯穿全部',['s_boot','s_ota','s_long'],[]],
+    ['u_hsif','高速接口与信号完整性','LVDS · FPC · 串扰','near','1.2G 串扰不可用','上行 1.0G 8 小时 0 误码，1.2G 码型串扰不可用；下行共时钟要看眼图再定。','观看',['s_fps','s_clear'],[]],
+    ['u_sch','硬件系统设计','架构 · 选型 · 原理图','hw','ERC 0 · 待回板','V2 桥板、底板原理图 ERC 0。早期模型自报通过，原生网表却有 203 个单脚网，之后放行只认原生 ERC 和网表。','贯穿全部',['s_clear','s_fps','s_boot'],[]],
+    ['u_rf','射频与天线','WiFi · 旋转体天线','unk','天线未定','转子上 WiFi 是唯一通路，USB 供电时射频上电会拉复位；天线位置待定。','放内容',['s_push','s_long'],[],'可外采']
+  ]},
+  {code:'S10', g:'电源与功率硬件', s:'DC-DC、电源完整性、无线供电和电机驱动，从原理到 Layout', line:'硬件', role:'硬件工程师（电源）', hire:'先招', aido:'算参数、评审原理图和 PCB', hudo:'选方案、实测纹波和温升', t:[
+    ['u_dcdc','DC-DC 与 LDO 设计','拓扑 · 环路 · 电感 · 热','near','跌落踩过','屏一亮把板子拉重启的电压跌落踩过；桥板 3 颗 BL8028 未回板，灯板 5 V 降压还是占位封装。','上电',['s_boot','s_bright'],[]],
+    ['u_pdn','电源完整性','分区 · 去耦 · 平面','near','CZ06 90%','CZ06 复刻平面 DRC 0，28 个去耦焊盘未接。r7E 核心板单层供电过窄没过，之后改成先定电源、再走信号。','贯穿全部',['s_boot','s_fps'],[]],
+    ['u_wpt','无线供电','线圈 · 谐振 · 效率','part','现役 48 W','无线供电现役 48 W，V2 估算峰值约 117 W，功率不够；光电 V1 要改推挽接法。','上电',['s_spin','s_boot'],[],'可外采'],
+    ['u_motorhw','电机驱动硬件','三相桥 · 采样 · 保护','near','采样非开尔文','10-23 版连通和网表一致性核过；三路电流采样不是开尔文接法，采样线割地平面。','上电',['s_spin'],[]],
+    ['u_power','功耗预算','峰值 · 内容封顶','near','48 W 封顶','屏一亮把板子拉重启的电压跌落踩过；亮度只能按内容封顶，130 W 记录和规格书 17 W 要核。','观看',['s_bright','s_boot'],[]]
+  ]},
+  {code:'S11', g:'LED 显示硬件', s:'高密度灯板和光学指标', line:'硬件', role:'LED 显示硬件工程师', hire:'外协', aido:'审查灯板工程、算亮度', hudo:'灯板设计、打样和实测', t:[
+    ['u_ledhw','高密度灯板设计','小间距 · 驱动 IC · 拼接','part','拼板未画','单颗 2260 模块 48×36 像素，24 块拼成 192×216；缺接插件和板框，864 个盲孔不能激光打，要板厂 HDI 叠层。','观看',['s_clear','s_fps'],[]],
+    ['u_ledmeas','亮度与光学测量','亮度 · 发光角 · 对比度','blind','没有实测','按规格算感知亮度约 4–20 nits，室内 10:1 需约 43 nits，都没有实测。','观看',['s_bright','s_angle'],[]]
+  ]},
+  {code:'S12', g:'PCB Layout', s:'把原理图变成能下单的板子', line:'硬件', role:'Layout 工程师', hire:'先招', aido:'摆件、扇出、走线脚本，跑原生 ERC/DRC', hudo:'定接口，看走线质量，最终验收', t:[
+    ['u_place','布局规划','分块 · 接口定位 · 紧凑堆叠','part','桥和底板已摆','桥板、底板已摆件，CZ06 复刻 1:1 摆件偏差 0；桥到灯板的座位是对外接口，待确认。','贯穿全部',['s_clear','s_fps'],[]],
+    ['u_fanout','BGA 扇出','通道规划 · 过孔策略','hw','DRC 0 · 未回板','桥核心模块 229/229、CZ06 复刻 98%，原生 DRC 0，都没回板验证；V2 桥板还没开始。','贯穿全部',['s_fps'],[]],
+    ['u_hsroute','高速布线与等长','差分 · 蛇形 · 回流','near','有差距','CZ06 插座一档 1.62 / 0.80 ps、DDR 数据已定版，地址命令未完。10-26 用户否过一版（等长抄近路、电源细线）；中间数据也自证错过，只认原生复验。','观看',['s_fps','s_clear'],[]],
+    ['u_stack','叠层与 HDI 工艺','阻抗 · 盲埋孔 · 盘中孔','near','HDI 未定','灯板 864 个盲孔不能激光打，要板厂 HDI 叠层；CZ06 阻抗核算差分 OK、DDR 单端偏高。','贯穿全部',['s_clear'],[]],
+    ['u_fab','DFM 与出图','Gerber · 放行闸门','part','脚本演练过','出图和 DFM 脚本在 CZ06 上演练 FAIL 0；原定 11-02 出 Gerber 没达成，V2 桥板和底板还没到这一步。','出厂前',['s_fps'],[]]
+  ]},
+  {code:'S13', g:'硬件测试与可靠性', s:'回板调试、抗振和长期稳定', line:'硬件', role:'硬件测试工程师', hire:'可兼', aido:'写测试脚本、分析日志', hudo:'示波器实测、失效分析', t:[
+    ['u_bringup','回板调试','示波器 · 眼图 · 纹波','part','测量未盘点','底板和桥板回板一键流程走通，上行误码有记录；眼图和电源纹波实测记录没盘点。','上电',['s_boot','s_fps'],[]],
+    ['u_board','抗振可靠性','BGA 焊点 · 点胶 · 失效分析','near','疑 BGA 振裂','1220 rpm 后原核心板疑 BGA 振裂；USB 供电时 WiFi 射频上电会拉复位。V2 要加边角胶。','贯穿全部',['s_long'],[]]
+  ]},
+  {code:'S14', g:'结构设计', s:'整机形态、高速旋转件和罩体', line:'机械', role:'结构工程师', hire:'先招', aido:'出任务表、STEP 和估算', hudo:'整机设计，打样，装配验证', t:[
+    ['u_struct','整机结构设计','3D 建模 · 公差 · 堆叠','near','三板包要重出','11-05 出整机 STEP 和 47 个零件，只用 OCC 校验过；三板包里桥板还是 4 座旧版。','整机',['s_float','s_place'],[]],
+    ['u_fix','高速旋转件设计','抗离心 · 连接器固定','near','有 1 例损伤','900 rpm 半径 75 mm 约 68 g，1200 rpm 约 121 g。','贯穿全部',['s_long','s_quiet'],[]],
+    ['u_dome','透明罩与镀膜','减反 · 注塑 · 表面工艺','plan','未建','初判有条件可行；罩内反射、散热都没验证。','整机',['s_float','s_bright','s_safe'],[],'可外采']
+  ]},
+  {code:'S15', g:'转子动力学与热', s:'转得稳、转得久', line:'机械', role:'转子动力学 / 振动工程师', hire:'外协', aido:'算配重、跑电机、解算振动、做估算', hudo:'称重和装拆配重，测模态和温升，复核 AI 结果', t:[
+    ['u_balance','动平衡','影响系数法 · 单 / 两平面配平','near','残余 60–80 g·mm','11-06 不带屏转子做单平面配平：900 rpm 振动 11.09 → 2.67 mg，降约 75%，1200 rpm 无故障；残余没到 32 g·mm 目标。AI 算配重、跑电机、解算，人称重和装拆。AI 有两次预测没兑现，其中一次是试重没拆造成的。上屏后要两平面重做。','整机',['s_spin','s_quiet','s_geom'],[]],
+    ['u_rotor','模态与振动分析','CAE · 共振','part','只有转速扫描','估算 15–27 Hz（900–1600 rpm），压在工作转速带上。11-06 扫过 300–1200 rpm 振动，放不稳支撑时 1000 rpm 有 47 mg 峰，固有频率没单独测。','整机',['s_quiet','s_float'],[],'可外采'],
+    ['u_heat','热设计','罩内温升 · 散热路径','blind','没有实测','罩内温升没有实测，罩体方案也没定。','整机',['s_long','s_safe'],[],'可外采']
+  ]},
+  {code:'S16', g:'供应链', s:'降低成本，物料交期可控', line:'跨线', role:'采购 / 供应链工程师', hire:'先招', aido:'出询价清单和方案对比', hudo:'询价、谈交期，定买还是自做', t:[
+    ['u_mainsrc','平台替代选型','国产化 · 成本 · 交期','part','账未录','换平台的目的是成本和交期，不是性能：性能瓶颈换 FPGA 解决不了。V0 已在 DR1M90 上真转；单价和交期没有录入本文。','贯穿全部',['s_view','s_boot'],[]],
+    ['u_corebuy','外购与自研决策','核心板 · BOM 成本','part','外购 CZ06','V2.0 用买的 CZ06；复刻版 ≈82% 暂停；创龙核心板询价清单 10-20 已出，报价没有录入。','贯穿全部',['s_long','s_boot'],[]],
+    ['u_lead','关键物料采购','FPGA · 连接器 · LED','unk','待询价','UG324S 封装供货和单价、120P 连接器交期和起订量、V2 LED 都待确认。','贯穿全部',['s_clear','s_fps'],[]]
+  ]},
+  {code:'S17', g:'量产与质量', s:'造得出、改得动、过得了认证', line:'跨线', role:'NPI / 测试工程师', hire:'后招', aido:'写烧录和测试脚本、复验', hudo:'定产线方案，跑认证', t:[
+    ['u_test','产线测试与烧录','工装 · 批量烧录','part','只有研发脚本','有批量烧桥和回板一键脚本，新桥板首烧要下载器；没有产线工具。','出厂前',['s_boot','s_ota'],[]],
+    ['u_prodfw','量产固件收口','身份 · 开发开关','near','3 项未收','02 上开发开关开着，热点密码是旧的，设备身份是 MAC 派生。','出厂前',['s_wifi','s_pair'],[]],
+    ['u_verify','测试与版本管理','回归 · 复验 · 分支','near','上板版未合主线','每项交付有验收脚本和复验；手机配网、配对、遥控、卡只读都还在分支上。','贯穿全部',['s_wifi','s_play','s_pair'],[]],
+    ['u_cert','认证与合规','安规 · 无线 · EMC','unk','未盘点','旋转件、无线供电、WiFi 都涉及认证，记录里没有盘点。','上市前',['s_safe','s_wifi'],[],'可外采']
+  ]}
+];
+
+const LINES = [
+  {k:'软件', d:'跑在 CPU、MCU 上的代码和算法'},
+  {k:'硬件', d:'FPGA、电路和 Layout，每项从原理做到板子'},
+  {k:'机械', d:'结构、转子动力学和热'},
+  {k:'跨线', d:'三条线都要参与的供应和量产'}
+];
+const AI_LV = {ai:'AI 接管', co:'AI 做人把关', hu:'人主导'};
+const AI_DEF = {ai:'AI 写、AI 验，人定目标和验收；招人时看能否把关', co:'AI 出主要产物，但要人看过或拍板才算数；招有实战经验的人', hu:'要动实物、对外沟通或人出设计，AI 做分析和资料；这些最缺人'};
+const HIRE_DEF = {先招:'现在就卡进度，或 AI 替代不了', 可兼:'AI 接管大半，由相邻岗位兼', 外协:'专项工作，找外部团队或顾问', 后招:'量产或上云前再招'};
+const AI = {"u_kernel": "ai", "u_bootst": "ai", "u_wifi": "ai", "u_mem": "ai", "u_rotorops": "ai", "u_codec": "ai", "u_motion": "ai", "u_flow": "ai", "u_net": "ai", "u_voxel": "ai", "u_anim": "ai", "u_scan": "co", "u_depth": "co", "u_raster": "ai", "u_phase": "ai", "u_rpm": "ai", "u_smooth": "ai", "u_depth12": "ai", "u_gamma": "co", "u_uniform": "co", "u_foc": "co", "u_speed": "co", "u_motortool": "ai", "u_web": "ai", "u_auth": "ai", "u_acct": "ai", "u_hostapp": "co", "u_slice": "ai", "u_highfps": "ai", "u_uplink": "ai", "u_2260": "co", "u_port": "ai", "u_fpgaver": "ai", "u_fpgahw": "co", "u_ddr": "co", "u_flash": "co", "u_hsif": "co", "u_sch": "co", "u_rf": "hu", "u_dcdc": "co", "u_pdn": "co", "u_wpt": "hu", "u_motorhw": "hu", "u_power": "co", "u_ledhw": "hu", "u_ledmeas": "hu", "u_place": "co", "u_fanout": "co", "u_hsroute": "co", "u_stack": "co", "u_fab": "ai", "u_bringup": "hu", "u_board": "hu", "u_struct": "co", "u_fix": "hu", "u_dome": "hu", "u_balance": "co", "u_rotor": "hu", "u_heat": "hu", "u_mainsrc": "co", "u_corebuy": "hu", "u_lead": "hu", "u_test": "co", "u_prodfw": "ai", "u_verify": "ai", "u_cert": "hu"};
+const REQ = {"u_kernel": "熟悉 ARM/RISC-V Linux，写过设备树和字符/DMA 驱动，调过 PS 与 PL 通信", "u_bootst": "做过 U-Boot 移植和启动裁剪，处理过掉电损坏、只读根文件系统", "u_wifi": "调过 WiFi 驱动和 TCP 吞吐，能定位丢包、重连、AP 兼容问题", "u_mem": "做过 DDR 带宽分析和 AXI QoS，能量化 CPU 与 PL 的争用", "u_rotorops": "做过设备 OTA 回滚、看门狗和远程诊断", "u_codec": "做过数据压缩或视频编解码，能在嵌入式上做性能优化", "u_motion": "设计过私有码流或 3D 数据格式，懂增量编码", "u_flow": "做过低延迟推流，处理过网络抖动和积压", "u_net": "做过 P2P 穿透或中继服务、设备鉴权", "u_voxel": "熟悉 glTF、网格和体素化，处理过纹理和透明", "u_anim": "做过骨骼动画和运动平滑", "u_scan": "做过点云配准、多视图或神经重建，能判断重建质量", "u_depth": "懂体显示或光场的成像特点，能调遮挡和立体感", "u_raster": "写过 CPU/GPU 实时渲染和多线程优化", "u_phase": "做过编码器或光电同步、PLL 类相位跟踪", "u_rpm": "做过旋转设备的变速同步和节拍控制", "u_smooth": "能定义流畅度指标，做过实时系统丢帧分析", "u_depth12": "做过 LED 显示灰阶、PWM/BCM 调制", "u_gamma": "做过 LED 屏 Gamma 校正和色度测量", "u_uniform": "做过 LED 屏逐点校正或产线校准", "u_foc": "量产过无感 FOC，熟悉高频注入和零速起动", "u_speed": "调过大惯量或不平衡负载的速度环", "u_motortool": "写过电机 MCU 固件和调参上位机", "u_web": "做过设备配网和手机 Web/App，处理过多机型兼容", "u_auth": "做过 IoT 设备身份、配对和访问控制", "u_acct": "做过 IoT 云平台和账号体系", "u_hostapp": "做过桌面或边缘端 3D 应用", "u_slice": "独立做过视频或图像实时流水线，熟悉 AXI 和 DDR 读写", "u_highfps": "能独立做时序约束和收敛，处理多时钟域", "u_uplink": "做过 IDELAY/ISERDES 类链路校准，能看误码和眼图", "u_2260": "调过 LED 驱动 IC 或屏幕时序控制器", "u_port": "用过 Xilinx 和国产 FPGA 工具链，能做跨平台移植", "u_fpgaver": "能搭自检 testbench 和黄金模型对拍", "u_fpgahw": "独立做过 300 球以上 FPGA 板，从选型、引脚规划到 Layout 和回板", "u_ddr": "独立画过 DDR3/4 并跑通，懂 fly-by、端接、等长和时序裕量", "u_flash": "做过 QSPI 和 eMMC 启动设计，懂信号完整性和掉电保护", "u_hsif": "做过 Gbps 级差分接口，能做 SI 仿真和眼图分析", "u_sch": "能从需求做到整板架构和选型，读得懂手册和参考设计", "u_rf": "做过 WiFi 模组集成和天线调试，懂金属和旋转环境的影响", "u_dcdc": "独立设计过 10 A 以上 DC-DC，懂环路、功率回路 Layout 和实测", "u_pdn": "做过 FPGA 和 DDR 的 PDN 设计，能做目标阻抗和压降分析", "u_wpt": "做过 50 W 以上无线供电或旋转供电，懂线圈和效率", "u_motorhw": "画过 24 V 以上三相驱动板，懂电流采样和 MOS 选型", "u_power": "能做整机功耗预算和峰值分析", "u_ledhw": "做过 1 mm 以下间距 LED 灯板，懂 HDI 和驱动 IC 布局", "u_ledmeas": "会用亮度计和色度计，懂 LED 发光角和屏幕光学测试", "u_place": "做过小尺寸高密度板的布局，能和结构一起定堆叠", "u_fanout": "独立走过 300 球以上 BGA，懂通道规划和过孔策略", "u_hsroute": "走过 DDR 和 Gbps 差分，懂等长、回流和串扰控制", "u_stack": "能和板厂定叠层和阻抗，做过 HDI", "u_fab": "能出完整生产资料，处理板厂 DFM 反馈", "u_bringup": "独立 bring-up 过 FPGA + DDR 板，熟练用示波器和逻辑分析仪", "u_board": "做过振动环境电子产品，懂焊点失效和加固工艺", "u_struct": "独立做过整机结构，熟练用 SolidWorks 或 Creo，懂公差和量产工艺", "u_fix": "做过高速旋转件，能算离心载荷和紧固", "u_dome": "做过透明件或光学罩，熟悉镀膜厂和成型工艺", "u_balance": "懂影响系数法和两平面动平衡，能审 AI 解算结果，做配平工装", "u_rotor": "会做模态分析和实测，能避开工作转速带", "u_heat": "做过封闭腔体的热仿真和实测", "u_mainsrc": "做过主控或 FPGA 国产替代的成本和交期评估", "u_corebuy": "能算 BOM 和 NRE，比较外购和自研", "u_lead": "有电子物料渠道，能拿到 FPGA 和连接器的价格、交期", "u_test": "做过产线烧录和测试工装", "u_prodfw": "做过设备量产配置和唯一身份写入", "u_verify": "做过嵌入式自动化测试和版本发布", "u_cert": "跑过 CCC、SRRC、CE 或 FCC 认证，懂 EMC 整改"};
+
+const GAP = {
+  k_pack:'等结构定形态后出方案', k_module:'等结构结论；定拆装和配平流程',
+  k_base:'结构定底座外形和电源入口', k_interlock:'定开罩检测方式，接到电机停转',
+  k_shell:'结构出强度验证', k_bootv1:'灯板到后测上电到亮起时间', k_bootstate:'排期后做：启动阶段和错误信息上屏',
+  k_start:'查起步锁定期角度不稳；判极电流降到 1.5 A', k_speed:'并联加电流反馈阻尼；带转子往 720 rpm 走',
+  k_gate:'新转子和光电到位后复测', k_rpmrange:'真转验证光电估转速', k_lowlum:'V1 灯板上重测',
+  k_fault:'盘点并验收转动中丢信号的行为', k_ap:'确认手机是否自动弹页', k_fallback:'手机页面走一遍错密码和找不到网',
+  k_cfgpower:'补断电测试', k_phones:'跑完四类手机', k_dnssd:'实测手机和 Windows 发现', k_manualip:'核对并补测手动输 IP',
+  k_code:'实测屏幕 6 位码；定转动时显示规则', k_enforce:'D144 过后默认打开', k_revoke:'走一遍手机撤销',
+  k_5g:'实测 5 GHz 直连推流', k_24g:'实测回退和提示', k_remote:'真手机打开页面验收', k_spinremote:'转动中实测',
+  k_pushv1:'灯板到后真内容上屏', k_count:'跑正式上板验收', k_quality:'定内容入库标准', k_upeval:'评估后定做不做',
+  k_gamectl:'用户定是否恢复', k_cloud:'V2 定方案', k_dual:'两面灯板同时显示', k_blind:'V1、V2 算出盲区并实看',
+  k_resv1:'灯板上屏实看', k_resv2:'新板回来后验证', k_map:'向硬件要全 4 项信息',
+  k_12bit:'真 2260 出图', k_2260:'验证板上查 ACK 通路', k_gamma:'有实屏后建校准流程',
+  k_24hz:'实转 720 rpm 验证', k_margin:'实测时钟偏差，确认 0.7% 够用', k_30hz:'新板回来后实测', k_ddr:'V2 核心板确认带宽；做预取缓冲',
+  k_cal:'V1 转起来校准', k_flex:'测屏面变形量', k_cant:'结构出固有频率和方案', k_hide:'结构和底板一起定高度',
+  k_nits:'做亮度和对比度实测，定目标', k_peak:'要 V2 LED 规格书；核 2260 最大电流', k_lum:'核对 130 W 记录和规格书的差距；定内容亮度上限', k_1mv1:'接受 V1 只作验证机，或评估提高片数', k_1mv2:'V2 实屏 1 米实看', k_h360:'实测屏面平行视线时的亮度', k_up80:'实测 80° 亮度；V2 选型时看发光角', k_down20:'结构确认：缩小底板或抬高屏，或放宽仰角', k_topfree:'等结构定无柱方案', k_sdk:'定用户怎么接入：工具、插件还是接口', k_stream:'定公开内容格式', k_cloudlive:'定是否要做实时', k_ar:'找镀膜厂，定罩体方案', k_vib:'上屏后两平面配平；查 1000 rpm 振动峰；实测固有频率', k_noise:'定噪声目标并测量',
+  k_heat:'罩内温升实测', k_v1soak:'V1 整机 1 小时实转、8 小时软件', k_bga:'V2 核心板加边角胶；写进 CZ06 待办',
+  k_bridgeflash:'把桥 flash 升级接进 OTA 回滚', k_mobilestate:'真手机验收', k_errmsg:'盘点错误提示'
+};
+const GAP_DEFAULT = {ok:'无', unk:'未盘点：先摸清现状和问题', hw:'待上板：要真硬件出结论', blind:'没有数据：先补测量', plan:'还没建', part:'只做了一部分', near:'有差距', miss:'不达标', ext:'不在项目范围'};
+
+const PLAN = {
+  s_boot:{tasks:['灯板到后跑回板一键流程','测 V1 上电到亮起时间'], metrics:[['上电到 0° 片亮起','V0 12.4 秒','≤12.5 秒'],['需要串口','0','0']]},
+  s_spin:{tasks:['查起步锁定期角度不稳','并联加电流反馈阻尼','低速误判门限调整','上屏后配平，带屏到 720 rpm'], metrics:[['转子稳定转速','不带屏 1200 rpm','带屏 V1 720 / V2 900 rpm'],['起步异常比例','约 1/3','目标待定'],['上电到转稳全亮','未测','目标待定']]},
+  s_idle:{tasks:['V1 灯板重测停转低亮'], metrics:[['停转自动低亮','V0 有','V1、V2 有']]},
+  s_wifi:{tasks:['D144：四类手机验收','手机页面走错密码和找不到网','补配置时断电测试','量产前删开发开关、换独立热点密码'], metrics:[['工况表 V1 必做项','部分通过','全过'],['手机机型覆盖','1 台','4 类']]},
+  s_find:{tasks:['实测手机和 Windows 局域网发现'], metrics:[['按名字找到板子','19.8 秒','≤21 秒']]},
+  s_pair:{tasks:['实测屏幕 6 位码','D144 后默认打开授权','定转动时是否显示配对码'], metrics:[['陌生人能改 WiFi 或推流','授权默认未开','0']]},
+  s_direct:{tasks:['实测 5 GHz 直连推流','实测退回 2.4 GHz'], metrics:[['无路由器现场可推流','待测','可用']]},
+  s_play:{tasks:['D145：真手机打开遥控页','转动中实测','合回主线'], metrics:[['交互方式数','PC + 手机（手机脚本模拟）','2 种']]},
+  s_push:{tasks:['灯板到后真内容上屏'], metrics:[['端到端延迟 p50','41 ms','≤70 ms'],['延迟抖动 p99','103 ms','≤120 ms'],['实转刷新率','18.9 fps','V1 12 / V2 15 fps']]},
+  s_lib:{tasks:['跑内容正式上板验收','定内容入库标准'], metrics:[['可实时播放内容数','10 类未验收','V1 5 / V2 10']]},
+  s_mon:{tasks:['定用户接入方式','写内容格式和接口说明'], metrics:[['用户不靠研发能推内容','不能','能']]},
+  s_angle:{tasks:['实测 +80° 和 −20° 观看效果','结构确认底部遮挡','要 V2 LED 规格书'], metrics:[['水平可视','V0 360°','360°'],['垂直可视','未测','−20° ~ +80°']]},
+  s_bright:{tasks:['V1 上屏后量亮度和对比度','核 LED 峰值和 2260 电流','定灰罩透过率','找镀膜厂定方案'], metrics:[['300 lux 对比度','估算不足','≥10:1（暂定）'],['圆罩单面反射','未做','<1%（以镀膜厂为准）']]},
+  s_upload:{tasks:['评估手机传内容方案'], metrics:[['手机传内容','未建','目标待定']]},
+  s_remote:{tasks:['定 V2 账号和云方案','定互联网推送范围'], metrics:[['互联网内容推送','未建','V2 首版上线']]},
+  s_view:{tasks:['V1 两面灯板同时上屏','算出 V1、V2 中心盲区'], metrics:[['两面同时显示','未做','通过']]},
+  s_clear:{tasks:['向硬件要面板映射 4 项信息','V1 上屏实看','V2 灯板补接插件、板框和 HDI 叠层'], metrics:[['1 m 处像素（径向）','V1 3.2′ / V2 2.7′','≤3.4′'],['1 m 处像素（切向）','V1 4.5′ / V2 2.7′','≤3.4′'],['每圈片数','V0 142','V1 357 / V2 605']]},
+  s_color:{tasks:['验证板上查 2260 ACK 通路','真 2260 出图','建颜色校准流程'], metrics:[['色深','V0 显示 3 bit','12 bit']]},
+  s_fps:{tasks:['V1 实转 720 rpm','实测节拍余量','V2 新板 30 Hz 实测'], metrics:[['体帧率','V1 24 Hz 仅仿真和进桥','V1 24 / V2 30 Hz'],['1 m 处看不出闪烁','未测','人眼实测通过'],['丢帧/迟到率','0.0012%','≤0.1%']]},
+  s_geom:{tasks:['V1 转起来几何校准','测屏面离心变形'], metrics:[['几何和镜像已核','V0 已核','V1、V2 已核']]},
+  s_float:{tasks:['结构任务 2-0：给出产品形态结论','无柱悬臂固有频率评估'], metrics:[['一阶固有频率','估算 15–27 Hz','高于 20 Hz 并留余量']]},
+  s_quiet:{tasks:['上屏后两平面配平','实测固有频率','定噪声目标'], metrics:[['噪声','用户嫌吵，未测','目标待定']]},
+  s_long:{tasks:['V1 整机实转 1 小时','V1 软件无人值守 8 小时','V2 核心板加抗振措施'], metrics:[['软件无人值守','24 小时','V1 8 / V2 24 小时'],['整机实转','V0 1 小时','1 小时']]},
+  s_heal:{tasks:[], metrics:[['断线恢复','16 秒','≤30 秒']]},
+  s_ota:{tasks:['把桥 flash 升级接进 OTA 回滚'], metrics:[['升级失败自动回滚','主控有','主控和桥都有']]},
+  s_status:{tasks:['真手机验收状态显示','盘点错误提示'], metrics:[['转子遥测可用','电脑可用','电脑和手机可用']]},
+  S1:{tasks:['已上板分支合回主线','卡只读合回主线','确认 32 bit 内存实际带宽'], metrics:[]},
+  S2:{tasks:['骨骼动画改发位姿或增量','定互联网推送方案'], metrics:[['WiFi 可用带宽','≥160 Mbit/s','≥62 Mbit/s'],['动图码流','体素表','目标待定']]},
+  S3:{tasks:['评估真实物体重建路线','重新评估遮挡和立体感','定中轴盲区处理'], metrics:[['可实时播放内容','10 类未验收','V1 5 / V2 10']]},
+  S4:{tasks:['真转验证光电和片数换档'], metrics:[['丢帧/迟到率','0.0012%','≤0.1%'],['滑格率','≤0.19%','目标待定']]},
+  S5:{tasks:['真屏 12 bit 出图','定色深测量方法','建 Gamma 和两面一致性校准'], metrics:[['显示色深','3 bit','12 bit']]},
+  S6:{tasks:['查起步角度不稳','并联加电流反馈阻尼','上屏后调到 720、900 rpm'], metrics:[['转子转速','不带屏 1200 rpm','带屏 V1 720 / V2 900 rpm'],['电机严测','部分未过','全过']]},
+  S7:{tasks:['默认打开授权','跑完四类手机验收'], metrics:[]},
+  S8:{tasks:['灯板到后 2260 上屏','实测 V1 时序余量','V2 重出 1.0G×16 位流并上板'], metrics:[['V1 片速率','4,284 片/秒进桥','上屏'],['V2 片速率','仿真','9,075 片/秒上屏']]},
+  S9:{tasks:['恢复 CZ06 复刻：DDR 地址命令、其余信号','定下行时钟方案'], metrics:[]},
+  S10:{tasks:['核对 130 W 记录和规格书','评估电机板电流采样改开尔文','定转子供电方案'], metrics:[['无线供电','现役 48 W','V2 整机峰值约 117 W（估）']]},
+  S11:{tasks:['定灯板 HDI 叠层并画拼板','做亮度和对比度实测'], metrics:[]},
+  S12:{tasks:['桥板、底板走线','恢复 CZ06 复刻：DDR 地址命令、其余信号、等长','出 Gerber，送板厂 DFM，同事外审关键区'], metrics:[['V2 桥板未连','499','0'],['CZ06 复刻','≈82%','出 Gerber']]},
+  S13:{tasks:['核心板加抗振措施','盘点眼图和纹波实测'], metrics:[]},
+  S14:{tasks:['按 2 座版重出三板包','STEP 在 SolidWorks 打开确认'], metrics:[]},
+  S15:{tasks:['上屏后做两平面配平','查 1000 rpm 振动峰','假负载试转到 900 rpm','实测固有频率'], metrics:[['配平后残余','60–80 g·mm','32 g·mm'],['配平后转速','不带屏 1200 rpm','带屏 900 rpm 不共振'],['固有频率','估算 15–27 Hz','避开 300–1200 rpm']]},
+  S16:{tasks:['向采购收齐主控、桥 FPGA、连接器、LED 的价格和交期','定核心板买还是自做'], metrics:[['BOM 成本','未录入','目标待定'],['最长物料交期','未录入','目标待定']]},
+  S17:{tasks:['列量产固件清单','盘点认证范围','做产线烧录和出厂测试工具'], metrics:[['产线工具','研发脚本','目标待定']]}
+};
+
+const FOCUS = {s_bright:'V1 上屏量亮度', s_wifi:'V1 必须', s_find:'V1 必须', s_pair:'V1 必须', s_direct:'V1 必须', s_play:'V1 必须', s_spin:'卡 V1 实转', s_view:'V1 上屏', s_color:'V1 上屏', s_fps:'V1 上屏'};
+const SPRINT1 = {s_bright:'量亮度和对比度，定目标', s_wifi:'D144 四类手机验收（11-10）', s_find:'手机和 Windows 发现实测', s_pair:'屏幕配对码实测，默认开授权', s_direct:'5 GHz 直连实测', s_play:'D145 真手机和转动实测（11-10）', s_spin:'起步和低速修完，带转子到 720 rpm', s_view:'两面灯板同时上屏', s_color:'查 2260 ACK，真屏出图', s_fps:'实转 24 Hz（11-12 ~ 11-20）'};
+const SPRINT2 = {s_clear:'192×216 新板点亮', s_float:'结构给形态结论，真板装机', s_angle:'结构确认 −20° 遮挡', s_quiet:'动平衡到 900 rpm', s_remote:'互联网首版方案', s_mon:'定用户接入方式', s_unbox:'包装和运输锁定'};
+const SPRINT2_HW = {s_fps:'双面 30 Hz 实转（12-08 ~ 12-13）'};
+const SUBMARK = {
+  k_phones:{why:'V1 必须', s1:'四类手机跑完工况表'}, k_code:{why:'V1 必须', s1:'实测屏幕 6 位码'},
+  k_5g:{why:'V1 必须', s1:'实测直连推流'}, k_remote:{why:'V1 必须', s1:'真手机打开遥控页'}, k_spinremote:{why:'V1 必须', s1:'转动中实测'},
+  k_start:{why:'卡 V1 实转', s1:'查起步锁定期角度不稳'}, k_speed:{why:'卡 V1 实转', s1:'带转子到 720 rpm'},
+  k_dual:{why:'V1 上屏', s1:'两面同时显示'}, k_2260:{why:'V1 上屏', s1:'查 ACK 通路'}, k_24hz:{why:'V1 上屏', s1:'实转 720 rpm'},
+  k_30hz:{s2:'双面 30 Hz 实转'}, k_resv2:{s2:'192×216 新板点亮'}, k_cant:{s2:'结构给形态结论'}, k_ar:{s2:'定圆罩和镀膜'}, k_vib:{s2:'动平衡到 900 rpm'}
+};
+const CASE_TODO = {s_boot:['灯板到货'], s_idle:['灯板到货'], s_view:['灯板到货'], s_color:['灯板到货'], s_fps:['灯板和转子'], s_geom:['灯板和转子'], s_spin:['上屏后配平'], s_clear:['V2 新板'], s_float:['结构结论'], s_bright:['灯板到货'], s_long:['V1 整机']};
+const CALM = new Set();
+const HW = '硬件', APP = '软件', STR = '结构';
+const CARRIER = {s_unbox:[STR], s_place:[STR, HW], s_safe:[STR, HW, APP], s_boot:[HW, APP], s_spin:[HW, APP, STR], s_idle:[APP],
+  s_wifi:[APP], s_find:[APP], s_pair:[APP], s_direct:[APP], s_play:[APP], s_push:[APP], s_lib:[APP], s_upload:[APP], s_game:[APP], s_remote:[APP],
+  s_mon:[APP], s_angle:[STR, HW], s_view:[HW, APP], s_clear:[HW], s_color:[HW, APP], s_fps:[HW, APP], s_geom:[STR, HW, APP], s_float:[STR], s_bright:[STR, HW], s_quiet:[STR, HW],
+  s_long:[STR, HW, APP], s_heal:[APP], s_ota:[APP], s_status:[APP]};
+const NOTE = 'V1', CASE = 'V2';
+const PROD = {s_unbox:[CASE], s_safe:[CASE], s_remote:[CASE], s_float:[CASE],
+  k_bootv1:[NOTE], k_resv1:[NOTE], k_resv2:[CASE], k_1mv1:[NOTE], k_1mv2:[CASE], k_24hz:[NOTE], k_margin:[NOTE], k_30hz:[CASE], k_ddr:[CASE], k_v1soak:[NOTE], k_pushv1:[NOTE]};
+const NOSUB = {};
+const SUP_LINE = Object.fromEntries(SUPS.map(G => [G.code, G.line === '软件' ? [APP] : G.line === '硬件' ? [HW] : G.line === '机械' ? [STR] : [HW, APP]]));
+
+const GOALS = [
+  {v:'V1', cls:'', date:'11-27', goals:['手机配网、配对、遥控验收','灯板上屏，实转 24 Hz'], add:'确认显示内容'},
+  {v:'V2', cls:'sp2', date:'12-16', goals:['192×216 新板点亮','双面 30 Hz 实转','24 小时长跑和验收'], add:'ID 首版'}
+];
+const CADENCE = [
+  {c:APP, cls:'', v:'V1 · 手机验收', who:'手机配网、配对、遥控，日期来自看板', ms:[['11-07','配网、配对开发完成（计划）'],['11-10','四类手机验收、手机遥控验收（计划）']]},
+  {c:HW, cls:'', v:'V1 · 灯板上屏', who:'日期来自 10-27 甘特图，灯板到货未确认', ms:[['约 11-05','灯板回板'],['11-10 ~ 11-17','2260 驱动实测，量亮度和可视角'],['11-12 ~ 11-20','实转 24 Hz，验证几何和延迟']]},
+  {c:HW, cls:'case', v:'电机 · 下一轮', who:'没有日期', ms:[['待排','起步角度不稳、低速误判'],['待排','上屏后配平，往 720 rpm 走']]},
+  {c:HW, cls:'sp2', v:'V2 · 硬件', who:'10-27 排期，之后方案已变，要重排', ms:[['11-12','设计冻结'],['11-16','下单闸门'],['12-04','回板']]},
+  {c:STR, cls:'sp2', v:'V2 · 结构', who:'结构任务表的参考节点；11-04 晚桥板座又改，接口冻结未完成', ms:[['11-05','接口冻结（要按 2 座版重出资料）'],['12-02','假负载过门'],['12-04 ~ 12-10','真板配平']]},
+  {c:APP, cls:'sp2', v:'V2 · 联调验收', who:'关键路径浮动约 0', ms:[['12-08 ~ 12-13','双面 30 Hz 实转和几何校准'],['12-12 ~ 12-15','24 小时长跑和验收']]}
+];
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const parseSp = list => list.map(v => ({x:v[0], imp:v.endsWith('*')}));
+const sev = st => ORDER.indexOf(st);
+const bySev = (a, b) => sev(a.st) - sev(b.st);
+const stText = n => n.short === S[n.st] ? S[n.st] : `${S[n.st]} · ${n.short}`;
+const TYPE = {gate:'门槛', extra:'卖点外'};
+const gapOf = n => GAP[n.id] || GAP_DEFAULT[n.st] || '';
+
+const N = {};
+SP.forEach(x => N[x.id] = {kind:'sp', id:x.id, name:`${x.id} / ${x.k}`, x});
+STAGES.forEach(G => G.t.forEach(s => N[s[0]] = {kind:'step', id:s[0], grp:G.n, name:s[1], sub:s[2], st:s[3], short:s[4], sp:s[5], type:s[5].length ? 'sp' : s[6], subs:[], sups:[]}));
+const byKind = k => Object.values(N).filter(n => n.kind === k);
+const need = id => N[id] || console.error('缺', id);
+CORES.forEach(G => { const st = need(G.step); if (!st) return;
+  G.t.forEach(c => { N[c[0]] = {kind:'sub', id:c[0], step:G.step, grp:`${st.grp} · ${st.name}`, name:c[1], sub:c[2], st:c[3], short:c[4], ev:c[5], sp:st.sp}; st.subs.push(c[0]); }); });
+SUPS.forEach(G => G.t.forEach(u => N[u[0]] = {kind:'sup', id:u[0], grp:`${G.code} ${G.g}`, name:u[1], sub:u[2], st:u[3], short:u[4], ev:u[5], at:u[6], steps:u[7], buy:u[9], ai:AI[u[0]]}));
+byKind('sup').forEach(u => u.steps.forEach(s => need(s) && N[s].sups.push(u.id)));
+
+const taskLinks = () => '';
+const sp2Line = id => (SPRINT1[id] ? `<span class="tfocus">V1 冲刺 · ${esc(SPRINT1[id])}</span>` : '')
+  + (SPRINT2[id] || SPRINT2_HW[id] ? `<span class="tsp2">V2 冲刺 · ${esc(SPRINT2[id] || SPRINT2_HW[id])}</span>` : '');
+const subMarkLines = id => { const m = SUBMARK[id]; if (!m) return '';
+  return (m.why ? `<span class="tfocus">${esc(m.why)}</span>` : '') + (m.s1 ? `<span class="tfocus">V1 冲刺 · ${esc(m.s1)}</span>` : '')
+    + (m.s2 ? `<span class="tsp2">V2 冲刺 · ${esc(m.s2)}</span>` : ''); };
+const caseTodo = id => (CASE_TODO[id] || []).map(t => `<span class="tcase">等 ${esc(t)}</span>`).join('');
+const prodOf = id => PROD[id] || (N[id] && N[id].kind === 'sub' ? prodOf(N[id].step) : [NOTE, CASE]);
+const prodTags = id => prodOf(id).map(p => `<span class="tag ${p === NOTE ? 'p-note' : 'p-case'}">${p}</span>`).join('');
+const lineCls = c => c === HW ? 'c-hw' : c === STR ? 'c-st' : 'c-app';
+const carrierTags = id => (CARRIER[id] || []).map(c => `<span class="tag ${lineCls(c)}">${c}</span>`).join('');
+const lineOf = n => n.kind === 'step' ? CARRIER[n.id] : n.kind === 'sub' ? CARRIER[n.step] : SUP_LINE[n.grp.split(' ')[0]] || [];
+const STEP_ORDER = STAGES.flatMap(G => G.t.map(t => t[0]));
+const subsOf = s => N[s].subs.map(i => N[i]);
+const chainSubs = x => byKind('sub').flatMap(c => { const p = parseSp(c.sp).find(p => p.x === x); return p ? [{n:c, imp:p.imp}] : []; })
+  .sort((a, b) => bySev(a.n, b.n));
+const supsOfSubs = subs => [...new Set(subs.flatMap(c => N[c.step].sups))].map(u => N[u]).sort(bySev);
+
+function badges(n){
+  if (n.kind !== 'step') return '';
+  const ps = parseSp(n.sp);
+  if (!ps.length) return `<span class="bdg"><span class="gate">${TYPE[n.type]}</span></span>`;
+  return `<span class="bdg">${ps.map(p => `<i data-x="${p.x}" class="${p.imp ? 'imp' : ''}" title="${p.imp ? '隐含承诺' : '服务卖点'} ${p.x}">${p.x}</i>`).join('')}</span>`;
+}
+const visGrid = v => `<span class="vis">${[v.head, ...v.rows].map((r, i) => `<span class="vr${i ? '' : ' vh'}">${r.map((c, j) => `<span${j === 3 ? ' class="pass"' : ''}>${esc(c)}</span>`).join('')}</span>`).join('')}<span class="vn">${esc(v.note)}</span></span>`;
+const aiChip = n => `<span class="tai a-${n.ai}">${AI_LV[n.ai]}</span>`;
+const aiBar = items => `<span class="aibar">${Object.keys(AI_LV).map(k => { const c = items.filter(n => n.ai === k).length; return c ? `<i class="a-${k}" style="flex:${c}" title="${AI_LV[k]} ${c}"></i>` : ''; }).join('')}</span>`;
+const aiCount = items => Object.keys(AI_LV).map(k => `${AI_LV[k]} ${items.filter(n => n.ai === k).length}`).join(' · ');
+function tile(n){
+  const tag = n.kind === 'sup' ? `<span class="tag">${esc(n.at)}</span>${n.buy ? `<span class="tag dg-commodity">${n.buy}</span>` : ''}`
+    : n.kind === 'step' ? prodTags(n.id) + carrierTags(n.id) : PROD[n.id] ? prodTags(n.id) : '';
+  const sub = tag + esc(n.sub || '');
+  const ds = n.kind === 'step' ? (n.id in FOCUS ? 'focus' : n.id in SPRINT2 ? 'sp2' : 'step')
+    : SUBMARK[n.id] ? (SUBMARK[n.id].s1 ? 'focus' : 'sp2') : CALM.has(n.id) ? 'calm' : n.st;
+  return `<button class="tile" type="button" data-l="${(lineOf(n) || []).join(' ')}" data-id="${n.id}" data-s="${ds}"${n.sub ? ` title="${esc(n.sub)}"` : ''} data-p="${n.kind === 'sup' ? 'v1 v2' : prodOf(n.id).join(' ').toLowerCase()}" aria-pressed="false">
+    <span class="tt"><span class="tn">${esc(n.name)}</span>${badges(n)}</span>${sub ? `<span class="ts">${sub}</span>` : ''}
+    <span class="tst"><i class="dot ${n.st}"></i>${esc(n.short)}</span>${n.kind === 'sup' ? aiChip(n) : ''}${FOCUS[n.id] ? `<span class="tfocus">${esc(FOCUS[n.id])}</span>` : ''}${n.kind === 'step' ? sp2Line(n.id) : subMarkLines(n.id)}${caseTodo(n.id)}${n.kind === 'sub' ? `<span class="tgap">${n.st === 'ok' ? '已达标' : 'GAP：' + esc(gapOf(n))}</span>` : ''}</button>`;
+}
+const shown = n => n.st;
+const BAR_ORDER = ORDER.flatMap(k => k === 'ok' ? ['calm', 'ok'] : [k]);
+const barLabel = k => k === 'calm' ? '已确认没问题' : S[k];
+function bar(items){
+  const c = {}; items.forEach(n => { const k = shown(n); c[k] = (c[k] || 0) + 1; });
+  return `<span class="bar">${BAR_ORDER.filter(k => c[k]).map(k => `<span class="seg ${k}" style="flex:${c[k]}" title="${barLabel(k)} ${c[k]}"></span>`).join('')}</span>`;
+}
+const taskItems = (key, ts) => ts.map((t, i) => `<li><span>${esc(t)}</span><span class="ipds">${taskLinks(key, i)}</span></li>`).join('');
+const taskList = (P, key) => { const ts = P ? P.tasks : [];
+  return `<div class="pane-task"><span class="pt-h">开发任务 · ${ts.length} 项</span><ol>${taskItems(key, ts) || '<li class="hint">暂无</li>'}</ol></div>`; };
+const metricList = P => `<ul class="pane-metric">${(P ? P.metrics : []).map(([k, c, g]) => `<li><b>${esc(k)}</b><span class="mv"><span>现状 ${esc(c)}</span><span>→</span><span class="mg${g === '目标待定' ? ' tbd' : ''}">${esc(g)}</span></span></li>`).join('') || '<li class="hint">暂无</li>'}</ul>`;
+const stepMod = id => { const n = N[id], subs = subsOf(id).sort(bySev), P = PLAN[id], gaps = subs.filter(c => c.st !== 'ok').length;
+  return `<div class="cg" data-p="${prodOf(id).join(' ').toLowerCase()}"><div class="cg-h" data-id="${id}" role="button" tabindex="0">
+      <span class="cg-t"><span class="code">${esc(n.grp)}</span>${esc(n.name)}${prodTags(id)}${carrierTags(id)}</span>
+      <small>${esc(stText(n))}</small>
+      <span class="cg-n">${bar(subs)}<span>${subs.length} 项 · 有 GAP ${gaps} 项</span></span></div>
+    <div class="tiles pane-cap">${subs.map(tile).join('')}</div>${taskList(P, id)}${metricList(P)}</div>`; };
+const supCard = G => { const items = G.t.map(t => N[t[0]]), P = PLAN[G.code];
+  return `<div class="cg${items.length > 6 ? ' wide' : ''}"><div class="cg-h"><span class="cg-t"><span class="code">${G.code}</span>${G.g}</span><small>${esc(G.role)} · ${G.hire} · ${esc(G.s)}</small><span class="cg-n">${bar(items)}<span>${items.length} 项</span></span></div>
+    <div class="tiles pane-cap">${items.map(tile).join('')}</div>${taskList(P, G.code)}${metricList(P)}</div>`; };
+function setMode(m){
+  document.body.dataset.mode = m;
+  document.querySelectorAll('.modebar [data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m ? 'true' : 'false'));
+  try { localStorage.setItem('aibrain-mode', m); } catch (e) {}
+}
+document.querySelector('.modebar').addEventListener('click', e => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); });
+function setProd(p){
+  document.body.dataset.prod = p;
+  document.querySelectorAll('.modebar [data-prod]').forEach(b => b.setAttribute('aria-pressed', b.dataset.prod === p ? 'true' : 'false'));
+}
+document.querySelector('.modebar').addEventListener('click', e => { const b = e.target.closest('[data-prod]'); if (b) setProd(b.dataset.prod); });
+function setLine(l){
+  document.body.dataset.line = l;
+  document.querySelectorAll('.modebar [data-line]').forEach(b => b.setAttribute('aria-pressed', b.dataset.line === l ? 'true' : 'false'));
+  document.querySelectorAll('.tile[data-l]').forEach(t => t.classList.toggle('offline', l !== 'all' && !t.dataset.l.split(' ').includes(l)));
+}
+document.querySelector('.modebar').addEventListener('click', e => { const b = e.target.closest('[data-line]'); if (b) setLine(b.dataset.line); });
+let initMode = 'flow';
+try { initMode = localStorage.getItem('aibrain-mode') || 'flow'; } catch (e) {}
+setMode(['flow','work','metric'].includes(initMode) ? initMode : 'flow');
+
+const $ = id => document.getElementById(id);
+const stepTone = id => id in FOCUS ? 'r' : id in SPRINT2 ? 'y' : 'g';
+const TONE_RANK = {r:0, y:1, g:2};
+const l1Tasks = steps => `<span class="pane-l1">${[...steps].sort((a, b) => TONE_RANK[stepTone(a.n.id)] - TONE_RANK[stepTone(b.n.id)]).map(c => {
+  const id = c.n.id, tone = stepTone(id), marks = subsOf(id).filter(u => SUBMARK[u.id]);
+  return `<span class="l1s ${tone}"><b>${esc(c.n.name)}${c.imp ? '（隐含）' : ''}</b>${tone === 'g' ? '<span class="l1t">没有排期改动</span>' : marks.map(u => { const m = SUBMARK[u.id];
+    return `<span class="l1t"><i>${esc(u.name)}</i>${m.s1 ? `<span class="s1">V1 冲刺 · ${esc(m.s1)}</span>` : ''}${m.s2 ? `<span class="s2">V2 冲刺 · ${esc(m.s2)}</span>` : ''}</span>`; }).join('')}</span>`;
+}).join('')}</span>`;
+const chainSteps = x => byKind('step').flatMap(s => { const p = parseSp(s.sp).find(p => p.x === x); return p ? [{n:s, imp:p.imp}] : []; });
+$('sps').innerHTML = SP.map(x => {
+  const steps = chainSteps(x.id), sups = [...new Set(steps.flatMap(c => c.n.sups))].map(u => N[u]);
+  const hot = steps.filter(c => c.n.id in FOCUS);
+  return `<button class="sp" type="button" data-id="${x.id}" data-x="${x.id}" aria-pressed="false">
+    <span class="k"><span>${x.id} / ${x.k}</span><span>${x.en}</span></span>
+    <span class="h">${esc(x.h)}</span>
+    <span class="cl">${x.claims.map(c => `<span>${esc(c)}</span>`).join('')}</span>${x.vis ? visGrid(x.vis) : ''}
+    <span class="wk">${bar([...steps.map(c => c.n), ...sups])}<span>链上 ${steps.length} 个步骤、${sups.length} 项支撑 · 要动：${hot.length ? hot.map(c => `<b>${esc(c.n.name)}</b>${c.imp ? '（隐含）' : ''}`).join('、') : '没有红色卡片'}</span></span>${l1Tasks(steps)}</button>`;
+}).join('');
+$('stages').innerHTML = STAGES.map(G => `<div class="stage"><div class="st-h">${G.n}</div>${G.t.map(s => tile(N[s[0]])).join('')}</div>`).join('');
+$('stepmods').innerHTML = STEP_ORDER.filter(s => N[s].subs.length).map(stepMod).join('');
+const groupItems = G => G.t.map(t => N[t[0]]);
+$('sups').innerHTML = LINES.map(L => { const gs = SUPS.filter(G => G.line === L.k), items = gs.flatMap(groupItems);
+  return `<div class="supline"><b>${L.k}</b><small>${esc(L.d)}</small><span>${gs.length} 组 ${items.length} 项 · ${aiCount(items)}</span>${aiBar(items)}</div><div class="supband">${gs.map(supCard).join('')}</div>`; }).join('');
+const allSup = byKind('sup');
+$('aisum').innerHTML = `<div class="aisum-k">${Object.keys(AI_LV).map(k => `<div class="cd"><h3><span class="tai a-${k}">${AI_LV[k]}</span> ${allSup.filter(n => n.ai === k).length} 项</h3><p>${esc(AI_DEF[k])}</p></div>`).join('')}</div>
+  <p class="tblnote">${Object.keys(HIRE_DEF).map(k => `<span class="hire h-${k}">${k}</span> ${esc(HIRE_DEF[k])}`).join('　')}</p><div class="tw"><table class="aitbl"><thead><tr><th>线</th><th>能力组</th><th>对应岗位</th><th>建议</th><th>AI 分工</th><th>AI 在做</th><th>人要做</th></tr></thead><tbody>${SUPS.map(G => { const it = groupItems(G);
+    return `<tr><td>${G.line}</td><td><b>${G.code} ${esc(G.g)}</b></td><td>${esc(G.role)}</td><td><span class="hire h-${G.hire}">${G.hire}</span></td><td class="aic">${aiBar(it)}<span>${Object.keys(AI_LV).map(k => it.filter(n => n.ai === k).length).join(' / ')}</span></td><td>${esc(G.aido)}</td><td>${esc(G.hudo)}</td></tr>`; }).join('')}</tbody></table></div>`;
+const allSubs = byKind('sub'), gapSubs = allSubs.filter(c => c.st !== 'ok');
+$('mbn').textContent = `子任务 ${allSubs.length} 项，有 GAP ${gapSubs.length} 项 · 开发任务 ${Object.values(PLAN).reduce((a, P) => a + P.tasks.length, 0)} 条`;
+$('meta').innerHTML = `<span>卖点 ${SP.length} 个</span><span>流程环节 ${byKind('step').length} 个 · 子任务 ${allSubs.length} 项</span><span>L3 支撑能力 ${SUPS.length} 组 ${byKind('sup').length} 项</span><span>现状截至 2026-11-06</span>`;
+$('legend').innerHTML = ORDER.map(k => `<span><i class="dot ${k}"></i>${S[k]}</span>`).join('')
+  + `<span class="bdg">${SP.map(x => `<i data-x="${x.id}">${x.id}</i>`).join('')}</span><span>服务的卖点</span>`
+  + `<span class="bdg"><i data-x="A" class="imp">A</i></span><span>隐含：卖点没写，但做不好卖点就不成立</span>`
+  + `<span><i class="lg-focus"></i>红色卡片：V1 冲刺要动的</span><span><i class="lg-sp2"></i>黄色卡片：V2 冲刺要动的</span>`
+  + `<span><span class="tag c-app">软件</span><span class="tag c-hw">硬件</span><span class="tag c-st">结构</span>步骤由哪条线负责</span>`
+  + `<span>${Object.keys(AI_LV).map(k => `<span class="tai a-${k}">${AI_LV[k]}</span>`).join(' ')} 支撑能力的 AI 分工</span>`;
+function related(id){
+  const r = new Set([id]);
+  const n = N[id];
+  const spOf = o => parseSp(o.sp).forEach(p => r.add(p.x));
+  if (n.kind === 'sp'){
+    byKind('step').filter(s => parseSp(s.sp).some(p => p.x === id)).forEach(s => { r.add(s.id); s.subs.forEach(c => r.add(c)); s.sups.forEach(u => r.add(u)); });
+  } else if (n.kind === 'step'){
+    spOf(n); n.subs.forEach(c => r.add(c)); n.sups.forEach(u => r.add(u));
+  } else if (n.kind === 'sub'){
+    spOf(n); r.add(n.step); N[n.step].sups.forEach(u => r.add(u));
+  } else {
+    n.steps.forEach(s => { r.add(s); spOf(N[s]); });
+  }
+  return r;
+}
+
+const board = $('board'), detail = $('detail');
+let cur = null;
+const li = (n, extra) => `<li><button class="lnk" type="button" data-go="${n.id}"><i class="dot ${n.st}"></i><span class="nm">${esc(n.name)}</span>${extra || ''}<span class="sh">${esc(n.short)}</span></button></li>`;
+const list = (items, empty) => items.length ? `<ul class="dlist">${items.map(i => i.n ? li(i.n, i.imp ? '<em>隐含</em>' : '') : li(i)).join('')}</ul>` : `<p class="hint">${empty}</p>`;
+const spBtn = (x, imp) => `<button type="button" data-go="${x}" data-x="${x}">${N[x].name}${imp ? '（隐含）' : ''}</button>`;
+const sec = (label, body) => `<div class="dsec"><span class="dl">${label}</span>${body}</div>`;
+const spSec = n => { const ps = parseSp(n.sp);
+  if (ps.length) return `<div class="go">${ps.map(p => spBtn(p.x, p.imp)).join('')}</div>`;
+  return n.type === 'gate' ? '<p>门槛：不直接产生价值，但走不过去就到不了后面的环节。</p>' : '<p>卖点外：产生价值，但四个卖点里没写。</p>'; };
+const iterSec = (why, s1, s2) => why || s1 || s2 ? sec('近期排期', (why ? `<p class="tfocus">${esc(why)}</p>` : '')
+  + (s1 ? `<p class="tfocus">V1 冲刺 · ${esc(s1)}</p>` : '') + (s2 ? `<p class="tsp2">V2 冲刺 · ${esc(s2)}</p>` : '')) : '';
+const planSecs = (P, key, scope) => P ? sec(`验收标准 · ${P.metrics.length} 项${scope ? `（${scope}）` : ''}`, metricList(P))
+  + sec(`开发任务 · ${P.tasks.length} 项${scope ? `（${scope}）` : ''}`, `<ol class="dtask">${taskItems(key, P.tasks)}</ol>`) : '';
+function renderDetail(id){
+  if (!id){
+    detail.innerHTML = `<div class="crumb"><span>怎么读</span></div>
+      <p class="hint">点任意卖点、步骤、子任务或支撑能力，这里会显示它的现状和依据；点步骤先看 近期排期和验收标准，再看开发任务、全部子任务和 GAP。先从一个卖点看起：</p>
+      <div class="go">${SP.map(x => spBtn(x.id)).join('')}</div>`;
+    return;
+  }
+  const n = N[id];
+  const head = (crumb, title, sub, st) => `<div class="crumb"><span>${esc(crumb)}</span><button class="x" type="button" data-clear>清除</button></div>
+    <div class="dhead"><h3>${esc(title)}</h3>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}${st ? `<span class="pill"><i class="dot ${n.st}"></i>${esc(stText(n))}</span>` : ''}</div>`;
+  let h = '';
+  if (n.kind === 'sp'){
+    const x = n.x, subs = chainSubs(id), weak = supsOfSubs(subs.map(c => c.n)).filter(u => sev(u.st) <= sev('near'));
+    const steps = byKind('step').filter(s => parseSp(s.sp).some(p => p.x === id)).map(s => ({n:s, imp:parseSp(s.sp).find(p => p.x === id).imp}));
+    h = head('① 产品价值与卖点', `${x.id} / ${x.k} · ${x.h}`, x.en)
+      + (x.vis ? sec('多远看不到颗粒', visGrid(x.vis)) : '')
+      + sec('兑现到哪了', `<p>${esc(x.verdict)}</p>`)
+      + sec('靠这些步骤兑现', list(steps, '—'))
+      + sec('链上最弱的子任务', list(subs.filter(c => sev(c.n.st) <= sev('near')).map(c => ({n:c.n, imp:c.imp})), '没有不达标、未建或看不见的子任务。'))
+      + sec('支撑短板', list(weak, '撑着它的支撑能力没有明显短板。'))
+      + sec('卖点原文', `<ul>${x.claims.map(c => `<li>${esc(c)}</li>`).join('')}</ul><p class="hint">${esc(x.note)}</p>`);
+  } else if (n.kind === 'step'){
+    const subs = subsOf(id).sort(bySev), P = PLAN[id];
+    h = head(`② 业务流程 · ${n.grp}`, n.name, n.sub, true)
+      + iterSec(FOCUS[id], SPRINT1[id], SPRINT2[id] || SPRINT2_HW[id])
+      + planSecs(P, id)
+      + sec('服务的卖点', spSec(n))
+      + sec(`子任务 · ${subs.length} 项，最弱在前`, subs.length ? `<ul class="dsubs">${subs.map(c => `<li><span class="sl-h"><i class="dot ${c.st}"></i><b>${esc(c.name)}</b><span class="sh">${esc(stText(c))}</span></span><span class="gap">${c.st === 'ok' ? '已达标' : 'GAP：' + esc(gapOf(c))}</span><span class="ev">${esc(c.ev)}</span></li>`).join('')}</ul>` : `<p class="hint">${esc(NOSUB[id] || '暂无子任务')}</p>`)
+      + sec('L3 支撑能力', list(n.sups.map(u => N[u]).sort(bySev), '—'));
+  } else if (n.kind === 'sub'){
+    const m = SUBMARK[id] || {};
+    h = head(`② 业务流程 · ${n.grp}`, n.name, n.sub, true)
+      + iterSec(m.why, m.s1, m.s2)
+      + sec('GAP · 要做什么', `<p>${n.st === 'ok' ? '已达标' : esc(gapOf(n))}</p>`)
+      + sec('现状依据', `<p>${esc(n.ev)}</p>`)
+      + sec('所属步骤', list([N[n.step]], '—'))
+      + sec('服务的卖点', spSec(N[n.step]));
+  } else {
+    const sps = [...new Set(n.steps.flatMap(s => parseSp(N[s].sp).map(p => p.x)))].sort();
+    const G = SUPS.find(g => g.t.some(t => t[0] === id));
+    h = head(`③ 支撑能力 · ${n.grp}`, n.name, n.sub, true)
+      + planSecs(PLAN[G.code], G.code, `${G.code} ${G.g} 整组`)
+      + sec('招聘要求', `<p>${esc(REQ[id])}</p><p>对应岗位：${esc(G.role)} · 建议${esc(G.hire)}</p>`)
+      + sec('AI 分工', `<p>${aiChip(n)}</p><p>AI 在做：${esc(G.aido)}</p><p>人在做：${esc(G.hudo)}</p>`)
+      + sec('现状依据', `<p>${esc(n.ev)}</p>`)
+      + sec('支撑范围', `<p>${esc(n.at)}</p>`)
+      + (n.buy ? sec('能否外采', `<p>${esc(n.buy)}</p>`) : '')
+      + sec('支撑这些步骤', list(n.steps.map(s => N[s]), '不专门撑某一步，影响全部。'))
+      + sec('最终撑起的卖点', sps.length ? `<div class="go">${sps.map(x => spBtn(x)).join('')}</div>` : '<p>影响全部。</p>');
+  }
+  detail.innerHTML = h;
+}
+function focus(id){
+  if (!id || cur === id){ cur = null; board.classList.remove('focusing');
+    board.querySelectorAll('[data-id]').forEach(el => { el.classList.remove('on', 'sel'); el.setAttribute('aria-pressed', 'false'); });
+    renderDetail(null); document.querySelector('.arch').classList.remove('open'); return; }
+  cur = id;
+  document.querySelector('.arch').classList.add('open');
+  const r = related(id);
+  board.classList.add('focusing');
+  board.querySelectorAll('[data-id]').forEach(el => {
+    const me = el.dataset.id === id;
+    el.classList.toggle('on', r.has(el.dataset.id)); el.classList.toggle('sel', me);
+    el.setAttribute('aria-pressed', me ? 'true' : 'false');
+  });
+  renderDetail(id);
+}
+board.addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (b) focus(b.dataset.id); });
+detail.addEventListener('click', e => {
+  if (e.target.closest('[data-clear]')) return focus(null);
+  const g = e.target.closest('[data-go]'); if (g){ cur = null; focus(g.dataset.go); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && cur) focus(null); if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.cg-h[data-id]')) { e.preventDefault(); focus(e.target.dataset.id); } });
+renderDetail(null);
+const GROUPS = [
+  {k:'fix', n:'补差距', d:'不达标、未建、看不见、有差距或只做了一部分：差距已经清楚，可以直接排期。', sts:['miss','plan','blind','near','part']},
+  {k:'test', n:'等上板', d:'软件或仿真已就绪，要真硬件出结论。', sts:['hw']},
+  {k:'audit', n:'先盘点', d:'有实现或有要求，没核过：先摸清现状，才知道差多少。', sts:['unk']}
+];
+const ordered = arr => arr.slice().sort((a, b) => STEP_ORDER.indexOf(a.step) - STEP_ORDER.indexOf(b.step) || bySev(a, b));
+$('goals').innerHTML = GOALS.map(g => `<div class="cgoal${g.cls ? ' ' + g.cls : ''}"><div class="cgd"><span>${esc(g.v)} 交付</span><b>${esc(g.date)}</b></div><ul>${g.goals.map(x => `<li>${esc(x)}</li>`).join('')}<li><b>${esc(g.add)}</b></li></ul></div>`).join('');
+$('cadence').innerHTML = CADENCE.map(t => `<div class="ctrack${t.cls ? ' ' + t.cls : ''}"><h3><span class="tag ${lineCls(t.c)}">${t.c}</span>${esc(t.v)}</h3><span class="who">${esc(t.who)}</span><ol class="cline">${t.ms.map(([w, d]) => `<li><span class="when">${esc(w)}</span><span class="what">${esc(d)}</span></li>`).join('')}</ol></div>`).join('');
+$('todo-sum').innerHTML = GROUPS.map(g => { const n = gapSubs.filter(c => g.sts.includes(c.st)).length; return `<a class="tsum" href="#todo-${g.k}"><b>${n}</b><span>${g.n}</span></a>`; }).join('');
+$('todo').innerHTML = GROUPS.map(g => { const items = ordered(gapSubs.filter(c => g.sts.includes(c.st)));
+  return `<h3 class="tbl" id="todo-${g.k}">${g.n} · ${items.length} 项</h3><p class="hint">${g.d}</p>
+  <div class="tw"><table class="todo"><thead><tr><th style="width:120px">步骤</th><th style="width:150px">子任务</th><th style="width:150px">现状</th><th>GAP · 要做什么</th><th style="width:70px">卖点</th></tr></thead><tbody>
+  ${items.map(c => { const ps = parseSp(c.sp); return `<tr><td class="nm"><b>${esc(N[c.step].name)}</b><span>${esc(N[c.step].grp)}${(CARRIER[c.step] || []).map(c => ' · ' + c).join('')}</span></td><td class="nm"><b>${esc(c.name)}</b><span>${esc(c.sub)}</span></td><td class="st"><span class="pill"><i class="dot ${c.st}"></i>${S[c.st]}</span>${c.short !== S[c.st] ? `<div class="ts">${esc(c.short)}</div>` : ''}</td><td>${esc(gapOf(c))}</td><td>${ps.length ? ps.map(p => p.x + (p.imp ? '（隐含）' : '')).join('、') : TYPE[N[c.step].type]}</td></tr>`; }).join('')}
+  </tbody></table></div>`; }).join('');
+$('chains').innerHTML = SP.map(x => {
+  const subs = chainSubs(x.id), g = {};
+  subs.forEach(c => (g[c.n.st] = g[c.n.st] || []).push(c));
+  const weak = supsOfSubs(subs.map(c => c.n)).filter(u => sev(u.st) <= sev('near'));
+  return `<div class="ch" data-x="${x.id}"><span class="k">${x.id} / ${x.k} · ${x.en}</span><h3>${esc(x.h)}</h3><p>${esc(x.verdict)}</p>
+    <div class="srows">${ORDER.filter(k => g[k] && sev(k) <= sev('near')).map(k => `<div class="srow"><span class="sl"><i class="dot ${k}"></i>${S[k]}</span><span>${g[k].map(c => `${esc(c.n.name)}${c.imp ? '<sup>隐含</sup>' : ''}`).join('、')}</span></div>`).join('') || '<div class="srow"><span class="sl">—</span><span>没有明确差距</span></div>'}
+      <div class="srow su"><span class="sl">支撑短板</span><span>${weak.length ? weak.map(u => `${esc(u.name)}（${S[u.st]}）`).join('、') : '无'}</span></div></div></div>`;
+}).join('');
+const stCell = n => `<td class="st"><span class="pill"><i class="dot ${n.st}"></i>${S[n.st]}</span>${n.short !== S[n.st] ? `<div class="ts">${esc(n.short)}</div>` : ''}</td>`;
+const nmCell = n => `<td class="nm"><b>${esc(n.name)}</b>${n.sub ? `<span>${esc(n.sub)}</span>` : ''}</td>`;
+$('tbody-c').innerHTML = STEP_ORDER.filter(s => N[s].subs.length).map(s => `<tr class="gr"><td colspan="4">${esc(N[s].grp)} · ${esc(N[s].name)}（${esc(stText(N[s]))}）</td></tr>` + subsOf(s).map(c => `<tr>${nmCell(c)}${stCell(c)}<td>${c.st === 'ok' ? '已达标' : esc(gapOf(c))}</td><td>${esc(c.ev)}</td></tr>`).join('')).join('');
+$('tbody-s').innerHTML = SUPS.map(G => `<tr class="gr"><td colspan="6">${G.line} · ${G.code} ${G.g} · ${G.role}（${G.hire}）</td></tr>` + G.t.map(t => { const u = N[t[0]];
+  return `<tr>${nmCell(u)}<td>${esc(REQ[u.id])}</td>${stCell(u)}<td>${AI_LV[u.ai]}</td><td>${esc(u.ev)}</td><td>${u.steps.length ? u.steps.map(s => esc(N[s].name)).join('、') : '不专门撑某一步，影响全部'}</td></tr>`;
+}).join('')).join('');
+const FOLD_KEY = 'arch-fold-' + document.title;
+let folded = [];
+try { folded = JSON.parse(localStorage.getItem(FOLD_KEY) || '[]'); } catch (e) {}
+document.querySelectorAll('#board > .lyr').forEach((l, i) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'lyr-fold';
+  const sync = () => { const c = l.classList.contains('collapsed'); b.textContent = c ? '展开 ▾' : '收起 ▴'; b.setAttribute('aria-expanded', c ? 'false' : 'true'); };
+  if (folded.includes(i)) l.classList.add('collapsed');
+  sync();
+  b.addEventListener('click', e => { e.stopPropagation(); l.classList.toggle('collapsed'); sync();
+    folded = [...document.querySelectorAll('#board > .lyr')].flatMap((x, j) => x.classList.contains('collapsed') ? [j] : []);
+    try { localStorage.setItem(FOLD_KEY, JSON.stringify(folded)); } catch (err) {} });
+  l.appendChild(b);
+});
+
+</script>
+</body></html>

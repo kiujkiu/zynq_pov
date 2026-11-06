@@ -1,0 +1,550 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>aibrain L2 设备架构</title><style>body{margin:0}[hidden]{display:none!important}</style><style>
+
+:root{
+  --bg:#e8eaeb; --surface:#ffffff; --surface-2:#f4f5f6;
+  --ink:#000000e6; --ink-2:#00000099; --ink-3:#0000005c;
+  --line:#00000014; --line-2:#00000026;
+  --accent:#0077e0; --accent-soft:#0077e01a;
+  --miss:#d92d20; --miss-soft:#fde8e7;
+  --near:#b54a00; --near-soft:#fff0e0;
+  --sp2:#8a6400; --sp2-soft:#fdf2c2;
+  --ok:#157f52; --ok-soft:#e3f5ec;
+  --blind:#5b5f66; --blind-soft:#f1f2f4;
+  --under:#eef0f3;
+  --A:#b4442a; --A-s:#f7ebe5;
+  --B:#3d6e54; --B-s:#e6f0ea;
+  --C:#3a5c8a; --C-s:#e7edf5;
+  --D:#6c4f93; --D-s:#efe9f5;
+  --Lv1:#2a5da8; --Lv2:#126b5d; --Lv3:#5a4fa0; --onc:#ffffff;
+  --pn:#0b6e8a; --pn-s:#dff1f6; --pc:#a3266b; --pc-s:#fbe6f0;
+  --font-sans:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#000000; --surface:#1c1c1c; --surface-2:#242526;
+  --ink:#ffffffe6; --ink-2:#ffffffa6; --ink-3:#ffffff66;
+  --line:#ffffff1f; --line-2:#ffffff33;
+  --accent:#4fa8ff; --accent-soft:#4fa8ff24;
+  --miss:#ff6b63; --miss-soft:#3a1715;
+  --near:#ffa45c; --near-soft:#3a2614;
+  --sp2:#e8c55a; --sp2-soft:#302810;
+  --ok:#4cd187; --ok-soft:#13301f;
+  --blind:#b4b8bf; --blind-soft:#2a2b2d;
+  --under:#151617;
+  --A:#f19274; --A-s:#2e1912;
+  --B:#82c7a0; --B-s:#14251b;
+  --C:#94b4e6; --C-s:#141f31;
+  --D:#bea2e6; --D-s:#251c33;
+  --Lv1:#7fa8e8; --Lv2:#6cc4b2; --Lv3:#ada4e8; --onc:#0d1117; --pn:#6cd0ea; --pn-s:#0f2a33; --pc:#f08bbf; --pc-s:#33141f;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#000000; --surface:#1c1c1c; --surface-2:#242526;
+  --ink:#ffffffe6; --ink-2:#ffffffa6; --ink-3:#ffffff66;
+  --line:#ffffff1f; --line-2:#ffffff33;
+  --accent:#4fa8ff; --accent-soft:#4fa8ff24;
+  --miss:#ff6b63; --miss-soft:#3a1715;
+  --near:#ffa45c; --near-soft:#3a2614;
+  --sp2:#e8c55a; --sp2-soft:#302810;
+  --ok:#4cd187; --ok-soft:#13301f;
+  --blind:#b4b8bf; --blind-soft:#2a2b2d;
+  --under:#151617;
+  --A:#f19274; --A-s:#2e1912;
+  --B:#82c7a0; --B-s:#14251b;
+  --C:#94b4e6; --C-s:#141f31;
+  --D:#bea2e6; --D-s:#251c33;
+  --Lv1:#7fa8e8; --Lv2:#6cc4b2; --Lv3:#ada4e8; --onc:#0d1117; --pn:#6cd0ea; --pn-s:#0f2a33; --pc:#f08bbf; --pc-s:#33141f;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:1600px;margin:0 auto;display:grid;gap:44px}
+.wrap>*,section>*{min-width:0}
+h1,h2,h3{text-wrap:balance;margin:0;font-weight:620;letter-spacing:-.01em}
+h1{font-size:32px;line-height:1.2}
+h2{font-size:21px;line-height:1.35}
+h3{font-size:15px;line-height:1.4}
+p{margin:0}
+ul{margin:0;padding-left:20px;display:grid;gap:6px}
+b{font-weight:620}
+
+header{display:grid;gap:12px}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;color:var(--ink-2);text-transform:uppercase}
+.lead{font-size:16px;color:var(--ink-2);max-width:74ch}
+.meta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2)}
+section{display:grid;gap:14px}
+.sec-h{display:grid;gap:4px}
+.sec-h .num{font-family:var(--font-mono);font-size:12px;color:var(--ink-3)}
+.sec-h p{color:var(--ink-2);max-width:78ch;overflow-wrap:anywhere}
+
+[data-x="A"]{--x:var(--A);--xs:var(--A-s)}
+[data-x="B"]{--x:var(--B);--xs:var(--B-s)}
+[data-x="C"]{--x:var(--C);--xs:var(--C-s)}
+[data-x="D"]{--x:var(--D);--xs:var(--D-s)}
+
+
+.ltable{display:grid;gap:6px}
+.lrow{display:grid;grid-template-columns:150px minmax(0,1.1fr) minmax(0,1.6fr);gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;align-items:baseline}
+.lrow.sup{background:var(--under);border-style:dashed;border-color:var(--line-2)}
+.lrow b{font-size:15px}
+.lrow .n{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3);margin-right:6px}
+.lrow .q{font-size:13.5px}
+.lrow .c{font-size:13px;color:var(--ink-2)}
+.rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.rule{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:10px 14px;display:grid;gap:4px;align-content:start}
+.rule h3{font-size:14.5px}
+.rule p{font-size:13.5px;color:var(--ink-2)}
+
+
+.arch{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:12px;align-items:start}
+.board{background:var(--surface-2);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:6px;min-width:0}
+.lyr{display:grid;grid-template-columns:132px minmax(0,1fr);gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px}
+.lyr.sup{background:var(--under);border:1px dashed var(--line-2)}
+.lyr>*{min-width:0}
+.lyr-l{display:grid;gap:2px;align-content:start}
+.lyr-l .n{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-3)}
+.lyr-l b{font-size:15px;line-height:1.35}
+.lyr-l small{font-size:11.5px;color:var(--ink-3);line-height:1.45}
+.lyr-l small+small{margin-top:4px}
+.lyr-l small em{font-style:normal;display:block;font-size:10.5px;color:var(--ink-2);font-weight:600}
+.down{font-size:11.5px;color:var(--ink-3);display:flex;align-items:center;gap:8px;padding:0 6px;text-align:center}
+.down::before,.down::after{content:"";flex:1;border-top:1px dashed var(--line-2);min-width:16px}
+.down.strong{color:var(--accent);font-weight:600}
+.down.strong::before,.down.strong::after{border-top:2px dashed var(--accent)}
+
+.sps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sp{font:inherit;text-align:left;cursor:pointer;color:var(--ink);background:var(--xs);border:1px solid var(--line);border-top:3px solid var(--x);border-radius:10px;padding:9px 11px;display:grid;gap:5px;align-content:start;min-width:0;transition:opacity .15s}
+.sp .k{display:flex;flex-wrap:wrap;justify-content:space-between;gap:0 8px;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.04em;color:var(--x)}
+.sp .k span:first-child{white-space:nowrap}
+.sp .h{font-size:15px;font-weight:620;line-height:1.35}
+.pane-l1{display:none}
+body[data-mode="work"] .pane-l1{display:grid;gap:5px;border-top:1px solid var(--line-2);padding-top:6px}
+.l1s{display:grid;gap:3px;font-size:11.5px;line-height:1.4;padding:5px 7px;border-radius:6px;border-left:3px solid var(--ok);background:var(--surface)}
+.l1s b{font-size:12px;font-weight:600}
+.l1s.r{background:var(--miss-soft);border-left-color:var(--miss)}
+.l1s.y{background:var(--sp2-soft);border-left-color:var(--sp2)}
+.l1s.g .l1t{color:var(--ok)}
+.l1t{display:grid;gap:1px;color:var(--ink-2)}
+.l1t i{font-style:normal;color:var(--ink);font-weight:500}
+.l1t .s1{color:var(--miss);font-weight:600}
+.l1t .s2{color:var(--sp2);font-weight:600}
+.sp .wk{display:grid;gap:4px;border-top:1px solid var(--line-2);padding-top:6px;font-size:11.5px;color:var(--ink-2);line-height:1.4}
+.sp .wk b{color:var(--ink)}
+.sp:hover{border-color:var(--line-2);border-top-color:var(--x)}
+.bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line);gap:1px}
+.seg{display:block;height:100%}
+
+.stages{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.stage{display:grid;gap:5px;align-content:start;min-width:0}
+.st-h{font-size:12.5px;font-weight:620;color:var(--ink);display:flex;align-items:center;gap:4px;padding:0 2px}
+.st-h::after{content:"→";color:var(--ink-3);font-weight:400;margin-left:auto}
+.stage:last-child .st-h::after{content:""}
+
+.cores{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.sups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.sups .cg.wide{grid-column:span 2}
+.sups .cg.wide .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cg{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:7px;display:grid;gap:5px;align-content:start;min-width:0}
+.sups .cg{background:var(--surface)}
+.cg-h{display:grid;gap:3px;line-height:1.35}
+.cg-t{display:flex;align-items:baseline;gap:6px;font-size:13px;font-weight:620}
+.code{font-family:var(--font-mono);font-size:11px;color:var(--accent);font-weight:600}
+.cg-n{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-3)}
+.cg-n .bar{flex:1}
+.cg-h small{font-size:11px;color:var(--ink-3)}
+.cg .tiles{display:grid;gap:5px}
+.sups .cg .tiles{grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
+
+.tile{font:inherit;text-align:left;cursor:pointer;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 7px;display:grid;gap:1px;align-content:start;min-width:0;transition:opacity .15s}
+.sups .tile{background:var(--surface-2)}
+.tile:hover{border-color:var(--line-2)}
+.tile:focus-visible,.sp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tt{display:flex;align-items:flex-start;justify-content:space-between;gap:4px}
+.tn{font-size:13px;font-weight:600;line-height:1.35}
+.ts{font-size:11px;color:var(--ink-3);line-height:1.4}
+.tag{font-family:var(--font-mono);font-size:9.5px;line-height:1.5;color:var(--ink-2);background:var(--line);border-radius:3px;padding:0 4px;margin-right:4px;white-space:nowrap;display:inline-block}
+.tag.dg-core{background:var(--accent);color:var(--surface);font-weight:600}
+.tag.c-hw{background:var(--ink-2);color:var(--surface);font-weight:600}
+.tag.p-note,.tag.p-case{font-family:var(--font-sans);font-weight:650;border-radius:99px;padding:0 6px;line-height:1.45}
+.tcase{font-size:11px;font-weight:600;color:var(--pc);margin-top:2px;line-height:1.4}
+.tag.p-note{background:var(--pn-s);color:var(--pn)}
+.tag.p-case{background:var(--pc-s);color:var(--pc)}
+body[data-prod="v1"] .tile:not([data-p~="v1"]),body[data-prod="v2"] .tile:not([data-p~="v2"]),
+body[data-prod="v1"] .cg[data-p]:not([data-p~="v1"]),body[data-prod="v2"] .cg[data-p]:not([data-p~="v2"]){opacity:.2}
+.modebar .mb-l.sep{margin-left:10px}
+.tag.c-app{background:transparent;color:var(--accent);border:1px solid var(--accent);font-weight:600;line-height:1.3}
+.tag.dg-parity{background:transparent;border:1px solid var(--line-2)}
+.tag.dg-commodity{background:transparent;border:1px dashed var(--line-2);color:var(--ink-3)}
+.dgl{list-style:none;padding:0;display:grid;gap:4px}
+.dgl li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:13.5px}
+.dgl .dot{position:relative;top:1px}
+.dgl .sh{font-size:12px;color:var(--ink-3);text-align:right}
+.dgl .g,.cd h3 .g{font-size:11.5px;color:var(--ink-3);font-weight:400}
+.sp .cl{display:grid;gap:2px}
+.sp .cl span{font-size:12px;color:var(--ink-2);line-height:1.45;padding-left:11px;position:relative}
+.sp .cl span::before{content:"+";position:absolute;left:0;color:var(--x)}
+.tst{font-size:11px;line-height:1.35;display:flex;flex-wrap:wrap;align-items:center;gap:3px 4px;margin-top:3px;color:var(--ink-2)}
+.tst .tag{margin-right:0}
+
+.stages .tile,.sups .tile{padding:7px 9px;gap:2px;align-content:start;text-align:left}
+.stages .tile .tn,.sups .tile .tn{font-size:13.5px;font-weight:650;line-height:1.35}
+.stages .tile .tt,.sups .tile .tt{margin-bottom:1px}
+.stages .tile .ts,.sups .tile .ts{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.stages{gap:6px} .stage{gap:6px}
+.board .sups .cg .tiles,.board .sups .cg.wide .tiles{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+.tsv{display:inline-flex;align-items:center;gap:5px;min-width:0}
+.tile[data-s="ok"] .tst{color:var(--ok)}
+.tile[data-s="near"] .tst{color:var(--near)}
+.tile[data-s="miss"] .tst{color:var(--miss)}
+.tile[data-s="miss"],.sups .tile[data-s="miss"],.tile[data-s="focus"]{background:var(--miss-soft)}
+.tile[data-s="sp2"]{background:var(--sp2-soft)}
+.tsp2{font-size:11px;font-weight:600;color:var(--sp2);margin-top:2px;line-height:1.4}
+.detail .tfocus,.detail .tsp2{font-size:12.5px;margin:0}
+.lg-sp2{width:16px;height:11px;border-radius:3px;background:var(--sp2-soft);border:1px solid var(--sp2)}
+.ctrack.sp2 .cline li:first-child{border-top-color:var(--sp2)}
+.ctrack.case .cline li,.ctrack.case .cline li:first-child,.ctrack.case .cline li:last-child{border-top-color:var(--pc)}
+.tfocus{font-size:11px;font-weight:600;color:var(--miss);margin-top:2px;line-height:1.4}
+.lg-focus{width:16px;height:11px;border-radius:3px;background:var(--miss-soft);border:1px solid var(--miss)}
+.tile[data-s="blind"]{border-style:dashed;border-color:var(--line-2)}
+.tile[data-s="plan"],.sups .tile[data-s="plan"]{background:transparent;border:1px dashed var(--ink-3)}
+.tile[data-s="plan"] .tn,.tile[data-s="ext"] .tn{color:var(--ink-2)}
+.tile[data-s="ext"],.tile[data-s="hw"]{background:var(--surface-2)}
+.sups .tile[data-s="ext"],.sups .tile[data-s="hw"]{background:var(--surface)}
+
+.bdg{display:inline-flex;gap:2px;flex:none;padding-top:1px}
+.bdg i{font-style:normal;font-family:var(--font-mono);font-size:9.5px;font-weight:600;line-height:1;min-width:14px;height:14px;padding:0 2px;display:inline-grid;place-items:center;border-radius:3px;background:var(--x);color:var(--surface)}
+.bdg i.imp{background:transparent;color:var(--x);border:1px dashed var(--x)}
+.bdg .gate{font-size:10px;color:var(--ink-3);white-space:nowrap;line-height:14px}
+
+.board.focusing [data-id]:not(.on){opacity:.28}
+.board [data-id].sel{outline:2px solid var(--accent);outline-offset:1px}
+
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none;background:var(--line-2)}
+.dot.ok{background:var(--ok)} .dot.near{background:var(--near)} .dot.miss{background:var(--miss)}
+.dot.blind{background:transparent;border:1.5px dashed var(--blind)}
+.dot.unk{background:var(--ink-3);opacity:.45}
+.dot.part{background:linear-gradient(90deg,var(--ink-2) 50%,transparent 50%);border:1.5px solid var(--ink-2)}
+.dot.plan{background:transparent;border:1.5px dashed var(--miss)}
+.dot.hw{border-radius:2px;background:repeating-linear-gradient(45deg,var(--ink-3) 0 1.5px,transparent 1.5px 3.5px);border:1px solid var(--ink-3)}
+.dot.ext{border-radius:2px;background:transparent;border:1.5px solid var(--ink-3)}
+.seg.ok{background:var(--ok)} .seg.near{background:var(--near)} .seg.miss{background:var(--miss)}
+.seg.blind{background:repeating-linear-gradient(90deg,var(--blind) 0 3px,transparent 3px 5px)}
+.seg.unk{background:var(--ink-3);opacity:.5}
+.seg.part{background:var(--ink-2);opacity:.6}
+.seg.plan{background:repeating-linear-gradient(90deg,var(--ink-2) 0 3px,transparent 3px 5px)}
+.seg.calm{background:var(--ink-3)}
+.seg.hw{background:repeating-linear-gradient(45deg,var(--ink-3) 0 2px,transparent 2px 4px)}
+.seg.ext{background:var(--line-2)}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2);align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+
+.detail{background:var(--surface);border:1px solid var(--line-2);border-radius:12px;padding:14px 16px;display:grid;gap:10px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;align-content:start}
+.crumb{font-size:11.5px;color:var(--ink-3);font-family:var(--font-mono);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.x{font:inherit;font-size:12px;cursor:pointer;background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:1px 8px}
+.dhead{display:grid;gap:4px}
+.dhead h3{font-size:17px}
+.dhead .sub{color:var(--ink-3);font-size:12.5px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:2px 10px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);justify-self:start}
+.dsec{display:grid;gap:4px}
+.dl{font-size:12px;color:var(--ink-3)}
+.detail p{font-size:13.5px}
+.dlist{list-style:none;padding:0;display:grid;gap:3px}
+.lnk{font:inherit;font-size:13px;cursor:pointer;background:none;border:0;padding:2px 0;color:var(--ink);text-align:left;display:flex;align-items:baseline;gap:6px;width:100%}
+.lnk .dot{position:relative;top:1px}
+.lnk:hover .nm{text-decoration:underline}
+.lnk .sh{color:var(--ink-3);font-size:12px;margin-left:auto;text-align:right}
+.go{display:flex;flex-wrap:wrap;gap:6px}
+.go button{font:inherit;font-size:12.5px;cursor:pointer;border:1px solid var(--line);background:var(--xs,var(--surface-2));color:var(--x,var(--ink));border-radius:8px;padding:3px 10px;font-weight:600}
+.hint{font-size:13px;color:var(--ink-2)}
+
+
+.chains{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ch{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--x);border-radius:12px;padding:12px 14px;display:grid;gap:8px;align-content:start}
+.ch .k{font-family:var(--font-mono);font-size:11.5px;color:var(--x)}
+.ch h3{font-size:16px}
+.srow sup{font-size:10px;color:var(--ink-3);margin-left:1px}
+.ch p{font-size:13.5px;color:var(--ink-2)}
+.srows{display:grid;gap:4px}
+.srow{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;font-size:13px;align-items:baseline}
+.srow .sl{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-2);white-space:nowrap}
+.srow.su{border-top:1px dashed var(--line-2);padding-top:6px;margin-top:2px}
+.srow.su .sl{color:var(--accent)}
+
+
+.cadence{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px}
+.ctrack{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:10px;align-content:start;min-width:0}
+.ctrack h3{font-size:14.5px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+.ctrack .who{font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.cline{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cline li{border-top:3px solid var(--line-2);padding-top:7px;display:grid;gap:2px;min-width:0}
+.cline li:first-child{border-top-color:var(--accent)}
+.cline li:last-child{border-top-color:var(--ok)}
+.cline .when{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2)}
+.cline .what{font-size:13.5px;font-weight:600;line-height:1.45}
+@media (max-width:760px){.cadence{grid-template-columns:1fr}}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:10px}
+.cd{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:4px;align-content:start}
+.cd h3{font-size:14.5px}
+.cd p{font-size:13.5px;color:var(--ink-2)}
+.olist{list-style:none;padding:0;display:grid;gap:4px}
+.olist li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:13.5px}
+.olist .dot{position:relative;top:1px}
+.olist .sh{font-size:12px;color:var(--ink-3);text-align:right}
+
+
+.tw{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:980px;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+th{font-size:12px;font-weight:600;color:var(--ink-2);background:var(--surface-2)}
+td.nm b{display:block;font-size:13.5px}
+td.nm span{font-size:12px;color:var(--ink-3)}
+td.st{white-space:nowrap}
+td .ts{margin-top:3px}
+tr.gr td{background:var(--surface-2);font-weight:620;font-size:13px;color:var(--ink-2)}
+h3.tbl{font-size:15px;margin-top:6px}
+.modebar{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--line-2);margin-top:-28px}
+.modebar .mb-l{font-size:12.5px;font-weight:620;color:var(--ink-2);margin-right:4px}
+.modebar button{font:inherit;font-size:13px;cursor:pointer;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);border-radius:99px;padding:3px 12px}
+.modebar button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.modebar .mb-n{font-size:12px;color:var(--ink-3)}
+.pane-task,.pane-metric{display:none;margin:0;font-size:12.5px;line-height:1.5}
+.pane-task{gap:4px}
+.pane-task ol{margin:0;padding-left:18px;display:grid;gap:5px}
+.pane-task li,.dtask li{display:grid;gap:2px}
+.ipds{display:flex;flex-wrap:wrap;gap:3px 6px;min-width:0}
+.ipd{font-size:11px;line-height:1.4;color:var(--accent);text-decoration:none;border:1px solid var(--line-2);border-radius:4px;padding:0 5px;max-width:100%;overflow-wrap:anywhere}
+.ipd:hover{text-decoration:underline}
+.ipd.none{color:var(--ink-3);border-style:dashed}
+.pt-h{font-size:11.5px;font-weight:600;color:var(--ink-2);border-top:1px dashed var(--line-2);padding-top:6px;margin-top:2px}
+.pane-metric{list-style:none;padding:0;gap:6px}
+.detail .pane-metric{display:grid}
+.detail .pane-metric li{background:var(--surface-2)}
+.pane-metric li{display:grid;gap:1px;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:5px 7px}
+.sups .pane-metric li{background:var(--surface-2)}
+.pane-metric b{font-size:12.5px;font-weight:600}
+.pane-metric .mv{display:flex;flex-wrap:wrap;gap:0 6px;color:var(--ink-2);font-size:12px}
+.pane-metric .mg{color:var(--ok);font-weight:600}
+.pane-metric .mg.tbd{color:var(--near);font-weight:400}
+body[data-mode="metric"] .pane-cap{display:none}
+.cg-h[data-id]{cursor:pointer;border-radius:6px}
+.cg-h[data-id]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cg-t .tag{margin-left:6px}
+body[data-mode="work"] .pane-task{display:grid}
+body[data-mode="metric"] .pane-metric{display:grid}
+.deftable{min-width:880px}
+.deftable thead th{font-size:13px;color:var(--ink);white-space:nowrap}
+.deftable th[scope=row]{width:108px;white-space:nowrap;font-size:12.5px;color:var(--ink);background:var(--surface-2)}
+.deftable td{font-size:13px;line-height:1.55}
+.deftable .dsup{background:var(--under)}
+
+
+footer{display:grid;gap:6px;font-size:12.5px;color:var(--ink-2);border-top:1px solid var(--line-2);padding-top:16px}
+
+
+.arch{grid-template-columns:minmax(0,1fr)}
+.arch:not(.open) .detail{display:none}
+@media (min-width:1181px){
+  .detail{position:fixed;top:max(12px,env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:12px;width:min(400px,34vw);max-height:none;z-index:20;box-shadow:0 10px 40px #00000040}
+}
+@media (max-width:1180px){
+  .arch{grid-template-columns:1fr}
+  .detail{top:auto;bottom:0;max-height:44vh;z-index:5;box-shadow:0 -6px 24px #0000002e;padding-bottom:max(14px,env(safe-area-inset-bottom,0px))}
+}
+@media (max-width:1000px){
+  .sps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cores{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .sups{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stages{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .stage:nth-child(3) .st-h::after{content:""}
+  .chains,.rules{grid-template-columns:1fr}
+  .lrow{grid-template-columns:130px minmax(0,1fr)}
+  .lrow .c{grid-column:2}
+}
+@media (max-width:760px){
+  h1{font-size:26px}
+  .lyr{grid-template-columns:1fr}
+  .lyr-l{grid-template-columns:auto auto 1fr;gap:6px;align-items:baseline}
+  .lyr-l small{grid-column:1/-1}
+  .lyr-l small+small{margin-top:0}
+}
+@media (max-width:560px){
+  .sps{grid-template-columns:1fr}
+  .cores,.stages,.sups{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stage .st-h::after{content:""}
+  .lrow{grid-template-columns:1fr;gap:2px}
+  .lrow .c{grid-column:auto}
+  .srow{grid-template-columns:1fr;gap:2px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.lyr{grid-template-columns:132px minmax(0,1fr) auto}
+.lyr-fold{font:inherit;font-size:11.5px;cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);color:var(--ink-2);border-radius:6px;padding:1px 8px;align-self:start;white-space:nowrap}
+.lyr-fold:hover{border-color:var(--ink-3);color:var(--ink)}
+.lyr.collapsed>:not(.lyr-l):not(.lyr-fold){display:none}
+.lyr.collapsed{grid-template-columns:minmax(0,1fr) auto}
+.lyr.collapsed .lyr-l{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lyr.collapsed .lyr-l small{display:none}
+.lyr.collapsed .lyr-l::after{content:"已收起";font-size:11.5px;color:var(--ink-3)}
+@media (max-width:760px){.lyr{position:relative;grid-template-columns:1fr}.lyr.collapsed{grid-template-columns:1fr}.lyr-fold{position:absolute;top:8px;right:8px}}
+#stepmods{display:none}
+body:not([data-mode="flow"]) #stepmods{display:grid}
+body:not([data-mode="flow"]) #stages{display:none}
+.tile .tgap{font-size:11px;color:var(--ink-2);line-height:1.45;margin-top:2px}
+.tile[data-s="ok"] .tgap{color:var(--ok)}
+.sc-n{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-3)}
+.sc-n .bar{flex:1}
+.slist,.dsubs{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.slist li,.dsubs li{display:grid;gap:1px;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:5px 7px;font-size:12px}
+.slist li[data-s="miss"]{background:var(--miss-soft)}
+.sl-h{display:flex;align-items:baseline;gap:6px}
+.sl-h .dot{position:relative;top:1px}
+.sl-h b{font-size:12.5px;font-weight:600}
+.sl-h .sh{margin-left:auto;color:var(--ink-3);font-size:11px;text-align:right}
+.gap{color:var(--ink-2);line-height:1.45}
+.dsubs .ev{color:var(--ink-3);font-size:11.5px;line-height:1.45}
+.dtask{margin:0;padding-left:18px;display:grid;gap:3px;font-size:12.5px;color:var(--ink-2)}
+.todo-sum{display:flex;flex-wrap:wrap;gap:10px}
+.tsum{display:grid;gap:0;min-width:120px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 14px;color:var(--ink);text-decoration:none}
+.tsum b{font-size:24px;font-weight:650;line-height:1.2}
+.tsum span{font-size:12.5px;color:var(--ink-2)}
+table.todo{min-width:860px}
+
+.lyr[data-c="1"]{--c:var(--Lv1)} .lyr[data-c="2"]{--c:var(--Lv2)} .lyr[data-c="3"]{--c:var(--Lv3)}
+.board{background:transparent;border:0;border-radius:0;padding:0;gap:0}
+.board .lyr,.board .lyr.sup{--cb:color-mix(in oklab,var(--c) 10%,var(--surface));--cw:color-mix(in oklab,var(--c) 4%,var(--surface));--cl:color-mix(in oklab,var(--c) 28%,var(--surface));
+  position:relative;display:flex;gap:0;padding:0;border-radius:12px;overflow:hidden;border:1px solid var(--cl);background:var(--cw)}
+.board .lyr-l{width:44px;flex:none;background:var(--c);color:var(--onc);writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 0 40px}
+.board .lyr-l .n{color:inherit;opacity:.85;font-size:13px}
+.board .lyr-l b{font-size:16px;font-weight:700;letter-spacing:.4em}
+.board .lyr-l small{display:none}
+.board .lyr>:nth-child(2){flex:1;min-width:0;padding:12px}
+.board .lyr-fold{position:absolute;left:3px;bottom:8px;width:38px;padding:1px 0;font-size:10.5px;text-align:center;background:transparent;color:var(--onc);border-color:color-mix(in oklab,var(--onc) 45%,transparent)}
+.board .lyr-fold:hover{color:var(--onc);border-color:var(--onc)}
+.board .lyr.collapsed .lyr-l{writing-mode:horizontal-tb;width:auto;flex:1;justify-content:flex-start;padding:8px 90px 8px 14px}
+.board .lyr.collapsed .lyr-l::after{color:inherit;opacity:.75}
+.board .lyr.collapsed .lyr-fold{left:auto;right:10px;bottom:auto;top:7px;width:auto;padding:1px 8px}
+.board .down{position:relative;justify-content:center;padding:10px 0;gap:0}
+.board .down::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--ink-3);border:0;min-width:0}
+.board .down::after{display:none}
+.board .down span{position:relative;padding:4px 16px;border-radius:14px;background:var(--ink);color:var(--surface);font-size:12.5px;font-weight:600;line-height:18px}
+.board .down.strong span{background:var(--accent)}
+.board .stages{gap:6px}
+.board .stage{background:var(--cb);border-radius:8px;padding:6px;gap:6px}
+.board .st-h{font-size:13px;font-weight:700;color:var(--c);letter-spacing:.04em;padding:0 2px}
+.board .sups{gap:8px}
+.board .sups .cg,.board .cores .cg{background:var(--cb);border:0;border-radius:8px;padding:8px;gap:8px}
+.board .cg-t .code{color:var(--c)}
+.board .stages .tile,.board .sups .tile{background:var(--surface);border:1px solid var(--cl);border-radius:7px}
+.board .stages .tile:hover,.board .sups .tile:hover{border-color:var(--c)}
+.board .stages .tile[data-s="focus"],.board .sups .tile[data-s="miss"]{background:var(--miss-soft);border-color:color-mix(in oklab,var(--miss) 35%,var(--surface))}
+.board .stages .tile[data-s="sp2"]{background:var(--sp2-soft);border-color:color-mix(in oklab,var(--sp2) 40%,var(--surface))}
+.board .sups .tile[data-s="plan"],.board .sups .tile[data-s="blind"]{border-style:dashed}
+.board .sups .tile[data-s="ext"],.board .sups .tile[data-s="hw"]{background:var(--surface-2)}
+@media (max-width:760px){
+  .board .lyr{flex-direction:column}
+  .board .lyr-l{writing-mode:horizontal-tb;width:auto;justify-content:flex-start;padding:8px 90px 8px 14px}
+  .board .lyr-fold{left:auto;right:10px;bottom:auto;top:7px;width:auto;padding:1px 8px}
+}
+.ist{display:inline-flex;align-items:center;font-size:10.5px;line-height:1.4;border-radius:4px;padding:0 5px;margin-left:4px;white-space:nowrap;border:1px solid currentColor}
+.ist[data-g="completed"]{color:var(--ok)} .ist[data-g="started"]{color:#b07d00} .ist[data-g="unstarted"]{color:var(--ink-3)} .ist[data-g="cancelled"]{color:var(--ink-3);text-decoration:line-through}
+.ist[data-a="验收通过"]{color:var(--ok);font-weight:600} .ist[data-a="验收未通过"]{color:#d92d20;font-weight:600} .ist[data-a="进行中"]{color:#b07d00}
+.v8n{margin:6px 0 0;padding:6px 10px;border-left:3px solid var(--accent);background:var(--accent-soft, #0077e01a);border-radius:0 6px 6px 0;font-size:13px;max-width:980px}
+
+.tag.c-st{background:transparent;color:var(--B);border:1px solid var(--B);font-weight:600;line-height:1.3}
+.tile.offline{opacity:.25}
+.cards.lines{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.cards.lines .cd p{margin:0 0 8px}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.modebar{position:static!important}.detail{display:none!important}.arch{display:block!important}}
+@page{size:A3 landscape;margin:10mm}
+@media print{.modebar,.lyr-fold{display:none!important}.tw,.board,.arch{overflow:visible!important}.tile,.sp,.cd,.ctrack,.ch,tr{break-inside:avoid}.sec-h{break-after:avoid}section{padding-top:12px}}
+.sups{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+@media (max-width:900px){.sups{grid-template-columns:1fr!important}}
+@media print{.sups{grid-template-columns:repeat(5,minmax(0,1fr))!important}.stages{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+
+/* 支撑能力按线分组 + AI 分工 */
+.supline{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:6px 2px 2px;border-bottom:1px solid var(--line-2)}
+.supline b{font-size:15px}.supline small,.supline span{font-size:12px;color:var(--ink-2)}
+.supline small{color:var(--ink-3)}
+.supline .aibar{margin-left:auto;width:160px}
+.tai{display:inline-block;width:max-content;font-size:10.5px;line-height:1.5;font-weight:600;border-radius:99px;padding:0 6px;white-space:nowrap}
+.tai.a-ai{background:var(--ok);color:var(--surface)}
+.tai.a-co{background:var(--ok-soft);color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+.tai.a-hu{background:transparent;color:var(--ink-3);box-shadow:inset 0 0 0 1px var(--line-2)}
+.aibar{display:flex;height:7px;border-radius:99px;overflow:hidden;gap:1px;background:var(--line)}
+.aibar i.a-ai{background:var(--ok)}.aibar i.a-co{background:color-mix(in oklab,var(--ok) 40%,var(--surface))}.aibar i.a-hu{background:var(--ink-3)}
+.aisum-k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}
+.aisum-k h3{display:flex;align-items:center;gap:6px;font-size:14px}
+.tblnote{font-size:13px;color:var(--ink-2);margin:4px 0 6px}
+.aitbl{width:100%;border-collapse:collapse;font-size:13px}
+.aitbl th,.aitbl td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.aitbl td.aic{min-width:120px}.aitbl td.aic span{font-size:11px;color:var(--ink-3)}
+@media (max-width:760px){.aisum-k{grid-template-columns:1fr}.supline .aibar{margin-left:0}}
+@media print{.aitbl tr,.supline{break-inside:avoid}.supline{break-after:avoid}.aibar i,.tai{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.supband{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}
+.supband .cg.wide{grid-column:auto}
+@media print{.aisum-k{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+.lyr.sup>.sups{min-width:0;width:100%;grid-column:1/-1}
+@media print{.sups .tile,.supline{break-inside:avoid}.sups .cg{break-inside:auto}}
+
+.hire{display:inline-block;font-size:11px;font-weight:600;line-height:1.5;padding:0 6px;border-radius:4px;white-space:nowrap}
+.hire.h-先招{background:var(--accent);color:var(--surface)}
+.hire.h-可兼{background:var(--accent-soft);color:var(--accent)}
+.hire.h-外协{box-shadow:inset 0 0 0 1px var(--accent);color:var(--accent)}
+.hire.h-后招{box-shadow:inset 0 0 0 1px var(--line-2);color:var(--ink-3)}
+
+.vis{display:grid;gap:1px;font-size:11.5px;color:var(--ink-2);line-height:1.35;border-top:1px solid var(--line-2);padding-top:6px}
+.vis .vr{display:grid;grid-template-columns:1.25fr 1fr .9fr .9fr;gap:6px;align-items:end}
+.vis .vh{font-size:10.5px;color:var(--ink-3)}
+.vis .pass{font-weight:700;color:var(--ink)}
+.vis .vn{font-size:10.5px;color:var(--ink-3);margin-top:2px}
+@media print{.sps{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+.nav{font-size:13px;color:var(--ink-2);margin:0 0 8px}.nav a{color:var(--accent)}
+section>.modebar{margin-top:0}
+select{font:inherit;font-size:12px;padding:4px 8px;border:1px solid var(--line-2);border-radius:14px;background:var(--surface);color:var(--ink)}
+.t-arch{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:12px;align-items:start}
+.t-side{position:sticky;top:8px;display:flex;flex-direction:column;gap:6px}
+.rbh{font-weight:700;font-size:13px}.rb{background:var(--surface);border-radius:8px;padding:8px 10px;font-size:12px;display:grid;grid-template-columns:auto 1fr;column-gap:6px}
+.rb small{grid-column:2;color:var(--ink-2)}.rb span{grid-column:1/-1;color:var(--ink-2);margin-top:3px;line-height:1.45}
+.t-det{background:var(--surface);border-radius:10px;padding:12px;font-size:13px;line-height:1.55;margin-top:6px}.t-det h3{margin:4px 0}.t-det p{margin:6px 0}
+.ly{display:grid;grid-template-columns:110px minmax(0,1fr);background:var(--surface);border-radius:10px;overflow:hidden;margin-bottom:4px}
+.lyh{background:var(--C);color:#fff;padding:10px;display:flex;flex-direction:column;gap:3px;font-size:13px}.lyh small{opacity:.8;font-size:10px}
+.ly-l .lyh{background:var(--Lv2)}.ly-p .lyh{background:var(--Lv1)}.ly-b .lyh{background:var(--Lv3)}.ly-d .lyh{background:var(--A)}.ly-m .lyh{background:var(--blind)}
+.bks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;padding:8px}
+.bk{appearance:none;text-align:left;font:inherit;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;display:flex;flex-direction:column;gap:2px;color:var(--ink)}
+button.bk{cursor:pointer}button.bk:hover{border-color:var(--accent)}.bk.sel{outline:2px solid var(--accent)}.bk.dim{opacity:.22}
+.bn{font-weight:600;font-size:13px;display:flex;align-items:center;gap:5px}.bn em{font-style:normal;font-size:10px;color:var(--pc);margin-left:auto}
+.bs{font-size:11.5px;color:var(--ink-2);line-height:1.4}.bs2{font-size:11px;color:var(--ink-3)}.bt{font-size:11px;color:var(--miss);line-height:1.35;margin-top:2px}
+.ifl{text-align:center;margin:3px 0 6px}.ifl span{background:#000c;color:#fff;font-size:11px;padding:3px 10px;border-radius:10px}
+.sg{display:grid;grid-template-columns:90px minmax(0,1fr);background:var(--surface);border-radius:10px;margin-bottom:6px;overflow:hidden}
+.sgh{background:var(--surface-2);padding:10px;display:flex;flex-direction:column;font-size:13px}.sgh small{color:var(--ink-2)}
+.scs{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:6px;padding:8px}
+.sc{border:1px solid var(--line);border-radius:8px;padding:7px 9px;display:flex;flex-direction:column;gap:2px;font-size:12.5px}.sc small{color:var(--ink-2)}
+.sc code{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);word-break:break-all}.dd{display:flex;gap:10px;font-size:11px;color:var(--ink-2)}.dd span{display:flex;align-items:center;gap:3px}
+.vt{display:flex;gap:6px;margin-bottom:8px}.vt button{font:inherit;font-size:12px;padding:5px 12px;border-radius:14px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);cursor:pointer}.vt button[aria-pressed=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+svg.hw{width:100%;height:auto;background:var(--surface);border-radius:10px}
+.zone{fill:var(--A-s);stroke:var(--line-2)}.zone.z2{fill:var(--C-s)}.zt{font-size:13px;font-weight:600;fill:var(--ink-2)}
+.sb rect{fill:var(--surface);stroke:var(--ink-3)}.sb.pl rect{stroke-dasharray:5 4}.st{font-size:14px;font-weight:600;fill:var(--ink)}.ss{font-size:11.5px;fill:var(--ink-2)}
+.sl{stroke:var(--C);stroke-width:2;fill:none}.sl.w{stroke:var(--blind);stroke-dasharray:6 4}.sl.p{stroke:var(--miss);stroke-dasharray:5 4}.sl.o{stroke:var(--near);stroke-dasharray:5 4}.sm{fill:var(--ink-2)}.sa{font-size:11.5px;fill:var(--ink-2)}
+.j{font-weight:700}.j.v{color:var(--ok)}.j.w{color:var(--near)}.j.x{color:var(--miss)}
+.fl{display:flex;flex-direction:column;gap:8px}.fr{background:var(--surface);border-radius:10px;padding:10px 12px;font-size:13px}.fc{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}.fc span{background:var(--surface-2);border-radius:6px;padding:3px 8px;font-size:12px}.fc i{font-style:normal;color:var(--ink-3)}
+.gl{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}.gl span{background:var(--surface);border-radius:8px;padding:7px 10px;font-size:12.5px}.gl b{margin-right:8px}
+@media (max-width:980px){.t-arch{grid-template-columns:1fr}.t-side{position:static}}
+.hwcap{display:none;font-weight:600;margin:8px 0 4px}
+@media print{.t-arch{grid-template-columns:1fr}.t-side{position:static;flex-direction:row;flex-wrap:wrap}.rbh{flex:0 0 100%}.rb{flex:1 1 15%}.t-det{display:none}.bk,.sc,.sg,.fr,.ly{break-inside:avoid}.vt{display:none}.hwp{display:block!important;break-inside:avoid}.hwcap{display:block}svg.hw{max-height:150mm}}
+@media print{.wrap{display:block}section{display:block;margin-top:16px;padding-top:0}.sec-h{margin-bottom:8px;break-after:avoid}h3.tbl{break-after:avoid}.tw{break-before:avoid}section:has(.t-arch){break-before:page}section:has(svg.hw){break-before:page}footer{margin-top:16px}.hwp+.hwp{break-before:page}}
+@media print{.t-arch{zoom:.86}.rb{break-inside:avoid}.t-arch+.legend{break-before:avoid}}
+</style></head><body data-mode="flow" data-v="all">
+<div class="wrap"><header><div class="eyebrow">L2 设备架构 · 第一版 · 2026-11-05</div><h1>aibrain L2 设备架构</h1><p class="lead">这份往下讲到设备内部：软件分层、硬件框图、电源、部署、代码状态，并逐个业务步骤核对从内容端到硬件是否贯通。</p><p class="v8n">结论以代码和实测为准。V1 灯板未上屏，所以涉及显示的步骤大多是 ⚠。V1 圆点只认 V1 硬件，V0 过的项写在说明里。</p></header>
+<p class="nav"><a href="aibrain业务架构_v1_2026-11-05.html">业务架构</a> · <a href="aibrain-L1-技术架构_2026-11-05.html">L1 技术架构</a> · <b>L2 设备架构</b> · <a href="aibrain-L2-主机与云端架构_2026-11-05.html">L2 主机与云端</a></p><section><div class="sec-h"><span class="num">01</span><h2>软件分层</h2><p>四个执行单元从上到下读。每格两个圆点是 V1 和 V2 的现状，下面是源码或分支。</p></div><h3 class="tbl">主控 Linux（DR1M90 ARM A35 双核）</h3><div class="sg"><div class="sgh"><b>应用</b><small>内容与显示</small></div><div class="scs"><div class="sc"><b>voxslice</b><small>收包、解压、散写、翻页</small><span class="dd"><span title="V1 待上板"><i class="dot hw"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>board/voxrx/voxslice.c</code></div><div class="sc"><b>本地播放</b><small>开机内容循环</small><span class="dd"><span title="V1 待上板"><i class="dot hw"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>pov/vs · show.conf</code></div><div class="sc"><b>手机遥控</b><small>选内容、暂停、亮度</small><span class="dd"><span title="V1 部分有"><i class="dot part"></i>V1</span><span title="V2 部分有"><i class="dot part"></i>V2</span></span><code>task/d145-remote</code></div></div></div><div class="sg"><div class="sgh"><b>服务</b><small>联网与运维</small></div><div class="scs"><div class="sc"><b>povreach</b><small>配网、热点、守护兜底</small><span class="dd"><span title="V1 部分有"><i class="dot part"></i>V1</span><span title="V2 部分有"><i class="dot part"></i>V2</span></span><code>task/d144-merge</code></div><div class="sc"><b>povpair</b><small>配对、授权、接管</small><span class="dd"><span title="V1 部分有"><i class="dot part"></i>V1</span><span title="V2 部分有"><i class="dot part"></i>V2</span></span><code>task/d144-merge</code></div><div class="sc"><b>povmdns</b><small>局域网发现</small><span class="dd"><span title="V1 部分有"><i class="dot part"></i>V1</span><span title="V2 部分有"><i class="dot part"></i>V2</span></span><code>task/d144-merge</code></div><div class="sc"><b>povnetd</b><small>网络守护</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>board/povnetd</code></div><div class="sc"><b>povstat</b><small>状态遥测</small><span class="dd"><span title="V1 待上板"><i class="dot hw"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>board/povstat</code></div><div class="sc"><b>OTA</b><small>A/B 槽，自动回滚</small><span class="dd"><span title="V1 待上板"><i class="dot hw"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>board/ota</code></div><div class="sc"><b>sbd</b><small>桥边带命令</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>board/sbd</code></div><div class="sc"><b>gw5a_sram / flash</b><small>JTAG 灌桥、写 flash</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>d33_jtag</code></div></div></div><div class="sg"><div class="sgh"><b>内核</b><small>驱动</small></div><div class="scs"><div class="sc"><b>povmem</b><small>PL 内存映射</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>board/povmem</code></div><div class="sc"><b>mt7921u</b><small>USB WiFi</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>wifi/</code></div><div class="sc"><b>看门狗</b><small>硬件看门狗</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>d22_reach</code></div></div></div><div class="sg"><div class="sgh"><b>启动</b><small>上电流程</small></div><div class="scs"><div class="sc"><b>FSBL + u-boot</b><small>加载 PL 和内核</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 未建"><i class="dot plan"></i>V2</span></span><code>boot/</code></div><div class="sc"><b>autorun</b><small>早显示、WiFi、服务、应用</small><span class="dd"><span title="V1 待上板"><i class="dot hw"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>boot/m90_autoboot/v2</code></div><div class="sc"><b>卡只读</b><small>内存运行，卡封只读</small><span class="dd"><span title="V1 部分有"><i class="dot part"></i>V1</span><span title="V2 未建"><i class="dot plan"></i>V2</span></span><code>task/d135-cardro</code></div></div></div><h3 class="tbl">主控 PL（DR1M90 FPGA）</h3><div class="sg"><div class="sgh"><b>显示后端</b><small>到桥</small></div><div class="scs"><div class="sc"><b>上行发送</b><small>1.0G，V1 13 lane，V2 16 + 校验</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>td_pov</code></div><div class="sc"><b>边带</b><small>串口、复位、状态</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>td_pov</code></div><div class="sc"><b>JTAG 主机</b><small>位敲灌桥</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>td_pov</code></div></div></div><div class="sg"><div class="sgh"><b>公共前端</b><small>切片</small></div><div class="scs"><div class="sc"><b>切片器</b><small>查表取像素柱</small><span class="dd"><span title="V1 待上板"><i class="dot hw"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>slice/rtl</code></div><div class="sc"><b>角度时序</b><small>光电、片节拍、换档</small><span class="dd"><span title="V1 待上板"><i class="dot hw"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>slice/rtl</code></div><div class="sc"><b>读引擎</b><small>DDR 读网格</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 有差距"><i class="dot near"></i>V2</span></span><code>slc_pls_reader</code></div></div></div><h3 class="tbl">桥 FPGA（GW5A-25，每面一颗）</h3><div class="sg"><div class="sgh"><b>下行</b><small>到灯板</small></div><div class="scs"><div class="sc"><b>2260 序列器</b><small>mini-LVDS 6 链</small><span class="dd"><span title="V1 待上板"><i class="dot hw"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>gw5a_bridge/p1/rtl</code></div><div class="sc"><b>寄存器表</b><small>定期刷新，读 ACK</small><span class="dd"><span title="V1 待上板"><i class="dot hw"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>gw5a_bridge/p1/regs</code></div><div class="sc"><b>黑场看门狗</b><small>50 ms 无片黑场</small><span class="dd"><span title="V1 待上板"><i class="dot hw"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>gw5a_bridge/p1/rtl</code></div></div></div><div class="sg"><div class="sgh"><b>上行</b><small>从主控</small></div><div class="scs"><div class="sc"><b>收端</b><small>逐 lane 扫眼对齐</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>gw5a_bridge/p1/rtl</code></div><div class="sc"><b>片缓冲</b><small>缓冲排队</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>gw5a_bridge/p1/rtl</code></div><div class="sc"><b>边带从机</b><small>状态帧、命令</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>gw5a_bridge/p1/rtl</code></div></div></div><h3 class="tbl">电机控制板（LKS32MC453）</h3><div class="sg"><div class="sgh"><b>应用</b><small>APL</small></div><div class="scs"><div class="sc"><b>无感 FOC</b><small>HFI 低速，PLL 高速</small><span class="dd"><span title="V1 有差距"><i class="dot near"></i>V1</span><span title="V2 有差距"><i class="dot near"></i>V2</span></span><code>board/aibrain-motor</code></div><div class="sc"><b>速度环</b><small>并联速度环，死区补偿</small><span class="dd"><span title="V1 有差距"><i class="dot near"></i>V1</span><span title="V2 有差距"><i class="dot near"></i>V2</span></span><code>board/aibrain-motor</code></div><div class="sc"><b>HSS 采集</b><small>1 kHz 调参采集</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 达标"><i class="dot ok"></i>V2</span></span><code>tools/hss/hss.py</code></div><div class="sc"><b>动平衡采集</b><small>IMU 和角度，未上板跑</small><span class="dd"><span title="V1 待上板"><i class="dot hw"></i>V1</span><span title="V2 待上板"><i class="dot hw"></i>V2</span></span><code>tools/hss/hss_bal.py</code></div></div></div><div class="sg"><div class="sgh"><b>引导</b><small>LDR</small></div><div class="scs"><div class="sc"><b>Loader</b><small>引导、校验尾；串口升级未盘点</small><span class="dd"><span title="V1 达标"><i class="dot ok"></i>V1</span><span title="V2 达标"><i class="dot ok"></i>V2</span></span><code>DEMO_WHEEL_LDR</code></div></div></div><div class="legend"><span><i class="dot miss"></i>不达标</span><span><i class="dot plan"></i>未建</span><span><i class="dot blind"></i>看不见</span><span><i class="dot near"></i>有差距</span><span><i class="dot part"></i>部分有</span><span><i class="dot unk"></i>未盘点</span><span><i class="dot hw"></i>待上板</span><span><i class="dot ok"></i>达标</span></div></section>
+<section><div class="sec-h"><span class="num">02</span><h2>硬件框图</h2><p>功能边界图，不替代原理图。</p></div><div class="vt"><button type="button" data-hv="V1" aria-pressed="true">V1 验证机</button><button type="button" data-hv="V2" aria-pressed="false">V2 产品机</button></div><div id="hwV1" class="hwp"><div class="hwcap">V1 验证机</div><svg viewBox="0 0 1120 470" class="hw" role="img" aria-label="V1 硬件框图"><defs><marker id="ahV1" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8z" class="sm"/></marker></defs><rect x="210" y="14" width="896" height="330" rx="10" class="zone"/><text x="226" y="36" class="zt">转子（跟灯板一起转）</text><rect x="210" y="360" width="896" height="96" rx="10" class="zone z2"/><text x="226" y="382" class="zt">定子（不转）</text><g class="sb "><rect x="16" y="51" width="160" height="70" rx="6"/><text x="96.0" y="83.0" text-anchor="middle" class="st">电脑</text><text x="96.0" y="99.0" text-anchor="middle" class="ss">内容 · 运维</text></g><g class="sb "><rect x="16" y="150" width="160" height="70" rx="6"/><text x="96.0" y="182.0" text-anchor="middle" class="st">手机</text><text x="96.0" y="198.0" text-anchor="middle" class="ss">配网 · 遥控</text></g><g class="sb "><rect x="236" y="56" width="170" height="60" rx="6"/><text x="321.0" y="83.0" text-anchor="middle" class="st">WiFi</text><text x="321.0" y="99.0" text-anchor="middle" class="ss">MT7921AU</text></g><g class="sb "><rect x="236" y="146" width="170" height="70" rx="6"/><text x="321.0" y="178.0" text-anchor="middle" class="st">主控 DR1M90</text><text x="321.0" y="194.0" text-anchor="middle" class="ss">FS03 · 16 bit DDR3L</text></g><g class="sb "><rect x="236" y="250" width="170" height="70" rx="6"/><text x="321.0" y="282.0" text-anchor="middle" class="st">转接底板</text><text x="321.0" y="298.0" text-anchor="middle" class="ss">140×80 · 24 V 转 5 / 2.5 V</text></g><g class="sb "><rect x="570" y="60" width="180" height="70" rx="6"/><text x="660.0" y="92.0" text-anchor="middle" class="st">面 A 桥</text><text x="660.0" y="108.0" text-anchor="middle" class="ss">ACG525 + 转接板</text></g><g class="sb "><rect x="570" y="190" width="180" height="70" rx="6"/><text x="660.0" y="222.0" text-anchor="middle" class="st">面 B 桥</text><text x="660.0" y="238.0" text-anchor="middle" class="ss">ACG525 + 转接板</text></g><g class="sb "><rect x="860" y="60" width="226" height="70" rx="6"/><text x="973.0" y="92.0" text-anchor="middle" class="st">面 A 灯板</text><text x="973.0" y="108.0" text-anchor="middle" class="ss">12 颗 2260 · 160×180</text></g><g class="sb "><rect x="860" y="190" width="226" height="70" rx="6"/><text x="973.0" y="222.0" text-anchor="middle" class="st">面 B 灯板</text><text x="973.0" y="238.0" text-anchor="middle" class="ss">12 颗 2260 · 160×180</text></g><line x1="176" y1="86" x2="236" y2="86" class="sl w" marker-end="url(#ahV1)"/><path d="M176 185 H196 V86" class="sl w"/><line x1="321" y1="116" x2="321" y2="146" class="sl " marker-end="url(#ahV1)"/><text x="336" y="136" text-anchor="start" class="sa">USB</text><line x1="321" y1="216" x2="321" y2="250" class="sl " marker-end="url(#ahV1)"/><text x="336" y="238" text-anchor="start" class="sa">排针 H1/H2</text><path d="M406 270 H480 V95 H570" class="sl " marker-end="url(#ahV1)"/><path d="M480 225 H570" class="sl " marker-end="url(#ahV1)"/><text x="443" y="264" text-anchor="middle" class="sa">FPC × 2</text><text x="525" y="89" text-anchor="middle" class="sa">13 lane 1.0G</text><text x="525" y="219" text-anchor="middle" class="sa">13 lane 1.0G</text><line x1="750" y1="95" x2="860" y2="95" class="sl " marker-end="url(#ahV1)"/><text x="805" y="89" text-anchor="middle" class="sa">6 链 · AXK 100P</text><line x1="750" y1="225" x2="860" y2="225" class="sl " marker-end="url(#ahV1)"/><text x="805" y="219" text-anchor="middle" class="sa">6 链 · AXK 100P</text><g class="sb "><rect x="236" y="392" width="170" height="50" rx="6"/><text x="321.0" y="414.0" text-anchor="middle" class="st">无线发射</text><text x="321.0" y="430.0" text-anchor="middle" class="ss">24 V 2 A</text></g><g class="sb "><rect x="520" y="392" width="200" height="50" rx="6"/><text x="620.0" y="414.0" text-anchor="middle" class="st">电机 + 电机控制板</text><text x="620.0" y="430.0" text-anchor="middle" class="ss">LKS32MC453 · 无感</text></g><g class="sb "><rect x="860" y="392" width="226" height="50" rx="6"/><text x="973.0" y="414.0" text-anchor="middle" class="st">光电索引标记</text><text x="973.0" y="430.0" text-anchor="middle" class="ss">每圈 1 脉冲</text></g><line x1="321" y1="392" x2="321" y2="320" class="sl p" marker-end="url(#ahV1)"/><text x="336" y="356" text-anchor="start" class="sa">48 W</text><path d="M973 392 V300 H406" class="sl o" marker-end="url(#ahV1)"/><text x="690" y="294" text-anchor="middle" class="sa">光电 0°</text></svg></div><div id="hwV2" class="hwp" hidden><div class="hwcap">V2 产品机</div><svg viewBox="0 0 1120 470" class="hw" role="img" aria-label="V2 硬件框图"><defs><marker id="ahV2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8z" class="sm"/></marker></defs><rect x="210" y="14" width="896" height="330" rx="10" class="zone"/><text x="226" y="36" class="zt">转子（跟灯板一起转）</text><rect x="210" y="360" width="896" height="96" rx="10" class="zone z2"/><text x="226" y="382" class="zt">定子（不转）</text><g class="sb "><rect x="16" y="51" width="160" height="70" rx="6"/><text x="96.0" y="83.0" text-anchor="middle" class="st">电脑</text><text x="96.0" y="99.0" text-anchor="middle" class="ss">内容 · 运维</text></g><g class="sb "><rect x="16" y="150" width="160" height="70" rx="6"/><text x="96.0" y="182.0" text-anchor="middle" class="st">手机</text><text x="96.0" y="198.0" text-anchor="middle" class="ss">配网 · 遥控</text></g><g class="sb pl"><rect x="16" y="250" width="160" height="70" rx="6"/><text x="96.0" y="282.0" text-anchor="middle" class="st">云</text><text x="96.0" y="298.0" text-anchor="middle" class="ss">未建</text></g><g class="sb "><rect x="236" y="56" width="170" height="60" rx="6"/><text x="321.0" y="83.0" text-anchor="middle" class="st">WiFi</text><text x="321.0" y="99.0" text-anchor="middle" class="ss">BL-M7921AU1</text></g><g class="sb "><rect x="236" y="146" width="170" height="70" rx="6"/><text x="321.0" y="178.0" text-anchor="middle" class="st">主控 DR1M90</text><text x="321.0" y="194.0" text-anchor="middle" class="ss">CZ06 · 32 bit DDR3L</text></g><g class="sb "><rect x="236" y="250" width="170" height="70" rx="6"/><text x="321.0" y="282.0" text-anchor="middle" class="st">转接底板</text><text x="321.0" y="298.0" text-anchor="middle" class="ss">140×80 6 层 · 只摆件</text></g><g class="sb "><rect x="570" y="60" width="180" height="70" rx="6"/><text x="660.0" y="92.0" text-anchor="middle" class="st">面 A 桥</text><text x="660.0" y="108.0" text-anchor="middle" class="ss">一体桥板 UG324S</text></g><g class="sb "><rect x="570" y="190" width="180" height="70" rx="6"/><text x="660.0" y="222.0" text-anchor="middle" class="st">面 B 桥</text><text x="660.0" y="238.0" text-anchor="middle" class="ss">一体桥板 UG324S</text></g><g class="sb "><rect x="860" y="60" width="226" height="70" rx="6"/><text x="973.0" y="92.0" text-anchor="middle" class="st">面 A 灯板</text><text x="973.0" y="108.0" text-anchor="middle" class="ss">24 颗 2260 · 192×216</text></g><g class="sb "><rect x="860" y="190" width="226" height="70" rx="6"/><text x="973.0" y="222.0" text-anchor="middle" class="st">面 B 灯板</text><text x="973.0" y="238.0" text-anchor="middle" class="ss">24 颗 2260 · 192×216</text></g><line x1="176" y1="86" x2="236" y2="86" class="sl w" marker-end="url(#ahV2)"/><path d="M176 185 H196 V86" class="sl w"/><path d="M176 285 H196 V185" class="sl w"/><line x1="321" y1="116" x2="321" y2="146" class="sl " marker-end="url(#ahV2)"/><text x="336" y="136" text-anchor="start" class="sa">USB</text><line x1="321" y1="216" x2="321" y2="250" class="sl " marker-end="url(#ahV2)"/><text x="336" y="238" text-anchor="start" class="sa">DF40 板对板</text><path d="M406 270 H480 V95 H570" class="sl " marker-end="url(#ahV2)"/><path d="M480 225 H570" class="sl " marker-end="url(#ahV2)"/><text x="443" y="264" text-anchor="middle" class="sa">FPC × 2</text><text x="525" y="89" text-anchor="middle" class="sa">18 对 1.0G</text><text x="525" y="219" text-anchor="middle" class="sa">18 对 1.0G</text><line x1="750" y1="95" x2="860" y2="95" class="sl " marker-end="url(#ahV2)"/><text x="805" y="89" text-anchor="middle" class="sa">2 × 120P</text><line x1="750" y1="225" x2="860" y2="225" class="sl " marker-end="url(#ahV2)"/><text x="805" y="219" text-anchor="middle" class="sa">2 × 120P</text><g class="sb "><rect x="236" y="392" width="170" height="50" rx="6"/><text x="321.0" y="414.0" text-anchor="middle" class="st">无线发射</text><text x="321.0" y="430.0" text-anchor="middle" class="ss">24 V 2 A</text></g><g class="sb "><rect x="520" y="392" width="200" height="50" rx="6"/><text x="620.0" y="414.0" text-anchor="middle" class="st">电机 + 电机控制板</text><text x="620.0" y="430.0" text-anchor="middle" class="ss">LKS32MC453 · 无感</text></g><g class="sb "><rect x="860" y="392" width="226" height="50" rx="6"/><text x="973.0" y="414.0" text-anchor="middle" class="st">光电索引标记</text><text x="973.0" y="430.0" text-anchor="middle" class="ss">每圈 1 脉冲</text></g><line x1="321" y1="392" x2="321" y2="320" class="sl p" marker-end="url(#ahV2)"/><text x="336" y="356" text-anchor="start" class="sa">48 W</text><path d="M973 392 V300 H406" class="sl o" marker-end="url(#ahV2)"/><text x="690" y="294" text-anchor="middle" class="sa">光电 0°</text></svg></div><p class="hint">跨旋转面没有电线：供电靠无线，数据靠 WiFi，角度靠光电。电机控制板和转子电路不通信。5 V 电源线从底板到桥和灯板，图上没画，见电源树。V2 的 WiFi 模块焊在底板上。</p></section>
+<section><div class="sec-h"><span class="num">03</span><h2>硬件模块</h2><p>按功能块列硬件。</p></div><div class="tw"><table><thead><tr><th style="width:70px">编号</th><th style="width:110px">模块</th><th>器件</th><th>功能</th><th>说明</th><th style="width:100px">现状</th><th style="width:130px">依据</th></tr></thead><tbody><tr><td>HW-01</td><td><b>主控 SoC</b></td><td>DR1M90GEG484</td><td>ARM + FPGA：收内容、切片、上行</td><td>V1 FS03 核心板；V2 CZ06</td><td><span class="pill"><i class="dot part"></i>部分有</span></td><td>V1 系统说明书</td></tr><tr><td>HW-02</td><td><b>内存</b></td><td>DDR3L</td><td>网格和查找表</td><td>V1 16 bit 512 MB；V2 CZ06 32 bit，未实测</td><td><span class="pill"><i class="dot part"></i>部分有</span></td><td>DDR 预算；CZ06 复刻说明</td></tr><tr><td>HW-03</td><td><b>WiFi</b></td><td>MT7921AU；V2 BL-M7921AU1</td><td>内容和运维唯一通道</td><td>USB</td><td><span class="pill"><i class="dot ok"></i>达标</span></td><td>V1 说明书；V2 底板</td></tr><tr><td>HW-04</td><td><b>存储</b></td><td>TF 卡；V2 CZ06 带 eMMC</td><td>启动和内容</td><td>QSPI 32 MB 装不下全部内容</td><td><span class="pill"><i class="dot part"></i>部分有</span></td><td>卡事故记录；CZ06 复刻说明</td></tr><tr><td>HW-05</td><td><b>转接底板</b></td><td>V1 140×80；V2 140×80 6 层</td><td>出两路 FPC，转电源</td><td>V2 只摆件</td><td><span class="pill"><i class="dot part"></i>部分有</span></td><td>底板 README</td></tr><tr><td>HW-06</td><td><b>桥</b></td><td>V1 ACG525 GW5A-25；V2 一体桥 UG324S</td><td>收上行，驱灯板</td><td>V2 70×30 6 层，未走线；料号 LV / EV 待确认</td><td><span class="pill"><i class="dot part"></i>部分有</span></td><td>V2 桥板交付包</td></tr><tr><td>HW-07</td><td><b>主控桥连接</b></td><td>70 芯 FPC 0.5 mm</td><td>数据、边带、JTAG</td><td>不走电源；V2 脚序和 V1 不同，不能混接</td><td><span class="pill"><i class="dot ok"></i>达标</span></td><td>V1 说明书；V2 桥板交付包</td></tr><tr><td>HW-08</td><td><b>灯板</b></td><td>V1 12 颗 2260；V2 24 块模块</td><td>显示</td><td>V1 到货未确认</td><td><span class="pill"><i class="dot hw"></i>待上板</span></td><td>灯板审查记录</td></tr><tr><td>HW-09</td><td><b>灯板桥连接</b></td><td>V1 AXK 100P；V2 2×120P</td><td>下行、电源（V1）</td><td>V2 定位柱孔待核</td><td><span class="pill"><i class="dot near"></i>有差距</span></td><td>V2 桥板交付包</td></tr><tr><td>HW-10</td><td><b>无线供电</b></td><td>线圈 Φ80–Φ145</td><td>转子全部用电</td><td>24 V 2 A</td><td><span class="pill"><i class="dot part"></i>部分有</span></td><td>结构交付包</td></tr><tr><td>HW-11</td><td><b>光电</b></td><td>推挽 3.3 V</td><td>0° 脉冲</td><td>R82 换 2.2k</td><td><span class="pill"><i class="dot hw"></i>待上板</span></td><td>V1 说明书</td></tr><tr><td>HW-12</td><td><b>电机控制板</b></td><td>LKS32MC453 + EG6288</td><td>24 V 三相无感，IMU</td><td>在定子，不接转子</td><td><span class="pill"><i class="dot near"></i>有差距</span></td><td>电机板评审</td></tr><tr><td>HW-13</td><td><b>转子结构</b></td><td>V1.0 / V1.1</td><td>承载、配平</td><td>11-05 出 STEP</td><td><span class="pill"><i class="dot near"></i>有差距</span></td><td>结构模型 STEP 版</td></tr><tr><td>HW-14</td><td><b>圆罩</b></td><td>OD200 方案，未镀膜</td><td>安全、光学</td><td>V2</td><td><span class="pill"><i class="dot plan"></i>未建</span></td><td>结构交付包</td></tr></tbody></table></div></section>
+<section><div class="sec-h"><span class="num">04</span><h2>电源树</h2><p>转子全部用电来自 48 W 无线供电。</p></div><div class="tw"><table><thead><tr><th style="width:150px">电源</th><th>路径</th><th style="width:150px">供给</th><th>注意</th><th style="width:100px">现状</th></tr></thead><tbody><tr><td><b>24 V 无线接收</b></td><td>转接板 P4</td><td>48 W，估算上屏约 29 W</td><td>无保险丝、TVS、防反接，上转子前必须补</td><td><span class="pill"><i class="dot part"></i>部分有</span></td></tr><tr><td><b>5 V</b></td><td>转接板 → CN1/CN2 → 两块桥</td><td>桥和灯板用电</td><td>V1 灯板未接，带载没验。V2：灯板 5 V 走底板单独电源线，桥 5 V 从 J6</td><td><span class="pill"><i class="dot part"></i>部分有</span></td></tr><tr><td><b>2.5 V</b></td><td>转接板 H7/H9 → FS03 J1/J2</td><td>主控 bank11、bank33 IO</td><td>V1 飞线，拔跳帽；量 2.40–2.60 V 才装位流</td><td><span class="pill"><i class="dot ok"></i>达标</span></td></tr><tr><td><b>3.8 / 3.3 / 2.8 / 2.5 V</b></td><td>桥板产生</td><td>灯板和桥</td><td>V2 桥板 BL8028 只出 0.936 / 2.50 / 3.32 V；灯板 3.8 / 2.8 V 从哪来未盘点</td><td><span class="pill"><i class="dot hw"></i>待上板</span></td></tr><tr><td><b>V2 底板 24 V</b></td><td>24 V → 两路 5 V，每路 12 A 级，加电子保险丝</td><td>每面一根线去灯板</td><td>默认方案待定，降压和保险型号未选</td><td><span class="pill"><i class="dot plan"></i>未建</span></td></tr><tr><td><b>FS03 电源</b></td><td>FS03 自己的电源口</td><td>主控核心板</td><td>不经 H1/H2，先上 24 V 再上主控；上电顺序待硬件定稿</td><td><span class="pill"><i class="dot part"></i>部分有</span></td></tr><tr><td><b>电机 24 V</b></td><td>定子 XT60</td><td>电机控制板</td><td>过压靠软件保护；与转子无关</td><td><span class="pill"><i class="dot near"></i>有差距</span></td></tr></tbody></table></div></section>
+<section><div class="sec-h"><span class="num">05</span><h2>软件部署</h2><p>每个执行单元上跑什么。</p></div><div class="tw"><table><thead><tr><th style="width:150px">执行单元</th><th>承载</th><th style="width:100px">现状</th><th style="width:200px">说明</th></tr></thead><tbody><tr><td><b>ARM CPU0</b></td><td>收包、lz4、解表、翻页，WiFi 中断也在这</td><td><span class="pill"><i class="dot hw"></i>待上板</span></td><td>V0 上板；V1 推流待上板</td></tr><tr><td><b>ARM CPU1</b></td><td>CPU 切片退路</td><td><span class="pill"><i class="dot ok"></i>达标</span></td><td>V0 开机默认走 PL</td></tr><tr><td><b>主控 PL</b></td><td>切片、角度时序、上行、边带、JTAG</td><td><span class="pill"><i class="dot hw"></i>待上板</span></td><td>V0 上板；V1 进桥</td></tr><tr><td><b>桥 FPGA × 2</b></td><td>上行接收、序列器、看门狗</td><td><span class="pill"><i class="dot hw"></i>待上板</span></td><td>位流 flash 自启动</td></tr><tr><td><b>电机 MCU</b></td><td>FOC 实时环，APL 从 0x4000，LDR 0x0</td><td><span class="pill"><i class="dot near"></i>有差距</span></td><td>11-05 烧录 2.3 秒</td></tr><tr><td><b>手机浏览器</b></td><td>配网页、遥控页</td><td><span class="pill"><i class="dot part"></i>部分有</span></td><td>不装 App</td></tr><tr><td><b>电脑</b></td><td>内容渲染、推流、运维、仿真</td><td><span class="pill"><i class="dot ok"></i>达标</span></td><td>Windows + WSL</td></tr></tbody></table></div></section>
+<section><div class="sec-h"><span class="num">06</span><h2>功能映射与贯通校验</h2><p>业务架构的 30 个步骤逐层往下查。✓ 全层有实现且真机验过（1 项）；⚠ 全层有实现，但有层待真机或待验证（22 项）；✗ 有层缺失（7 项）。</p></div><div class="tw"><table><thead><tr><th style="width:130px">业务步骤</th><th>内容端</th><th>主控 Linux</th><th>主控 PL</th><th>桥</th><th>硬件 / 结构</th><th style="width:50px">判定</th><th>说明</th></tr></thead><tbody><tr><td><b>拆箱取机</b></td><td>—</td><td>—</td><td>—</td><td>—</td><td>包装、运输锁定</td><td><span class="j x">✗</span></td><td>硬件形态未定</td></tr><tr><td><b>放好接电</b></td><td>—</td><td>—</td><td>—</td><td>—</td><td>底座、无线供电</td><td><span class="j w">⚠</span></td><td>样机可用，产品底座未建</td></tr><tr><td><b>确认安全</b></td><td>—</td><td>—</td><td>转速门控</td><td>—</td><td>开罩检测</td><td><span class="j x">✗</span></td><td>开罩检测未建</td></tr><tr><td><b>上电自动播放</b></td><td>—</td><td>autorun · 本地播放</td><td>切片</td><td>序列器</td><td>灯板</td><td><span class="j w">⚠</span></td><td>V0 12.4 秒；V1 待灯板</td></tr><tr><td><b>转稳全亮</b></td><td>—</td><td>povstat</td><td>角度时序</td><td>—</td><td>电机控制板、光电</td><td><span class="j w">⚠</span></td><td>严测部分未过；不带屏到 1200 rpm</td></tr><tr><td><b>停转不刺眼</b></td><td>—</td><td>voxslice 门控</td><td>转速门控</td><td>黑场看门狗</td><td>灯板</td><td><span class="j w">⚠</span></td><td>V0 过；V1 待灯板</td></tr><tr><td><b>手机配网</b></td><td>手机网页</td><td>povreach</td><td>—</td><td>—</td><td>WiFi</td><td><span class="j w">⚠</span></td><td>02 板过，分支未合</td></tr><tr><td><b>找到设备</b></td><td>手机、电脑</td><td>povmdns</td><td>—</td><td>—</td><td>WiFi</td><td><span class="j w">⚠</span></td><td>手机和 Windows 发现待测</td></tr><tr><td><b>配对授权</b></td><td>手机、电脑</td><td>povpair</td><td>切片（显示配对码）</td><td>序列器</td><td>灯板</td><td><span class="j w">⚠</span></td><td>屏幕码待测</td></tr><tr><td><b>现场直连</b></td><td>手机、电脑</td><td>povreach</td><td>—</td><td>—</td><td>WiFi 5 GHz</td><td><span class="j w">⚠</span></td><td>直连推流待测</td></tr><tr><td><b>手机选内容</b></td><td>手机网页</td><td>povpair · voxslice</td><td>—</td><td>—</td><td>—</td><td><span class="j w">⚠</span></td><td>服务端过，真手机待测</td></tr><tr><td><b>局域网推流</b></td><td>voxlive</td><td>voxslice</td><td>切片</td><td>序列器</td><td>灯板</td><td><span class="j w">⚠</span></td><td>V0 真转过；V1 待上屏</td></tr><tr><td><b>当 3D 显示器用</b></td><td>用户接入缺</td><td>voxslice</td><td>切片</td><td>序列器</td><td>灯板</td><td><span class="j x">✗</span></td><td>用户接入方式未建</td></tr><tr><td><b>内容够看</b></td><td>内容工具</td><td>本地播放</td><td>切片</td><td>序列器</td><td>灯板</td><td><span class="j w">⚠</span></td><td>10 类未正式验收</td></tr><tr><td><b>手机传内容</b></td><td>未建</td><td>未建</td><td>—</td><td>—</td><td>—</td><td><span class="j x">✗</span></td><td>待评估</td></tr><tr><td><b>互动玩法</b></td><td>手机手柄</td><td>分支未合</td><td>切片</td><td>序列器</td><td>灯板</td><td><span class="j w">⚠</span></td><td>已暂停</td></tr><tr><td><b>互联网推送</b></td><td>云未建</td><td>未建</td><td>—</td><td>—</td><td>—</td><td><span class="j x">✗</span></td><td>V2</td></tr><tr><td><b>四周看立体像</b></td><td>voxlive</td><td>voxslice</td><td>切片</td><td>序列器</td><td>灯板、双面</td><td><span class="j w">⚠</span></td><td>V0 成像；两面灯板待上屏</td></tr><tr><td><b>上下都能看</b></td><td>—</td><td>—</td><td>切片</td><td>序列器</td><td>LED 发光角、底板遮挡</td><td><span class="j w">⚠</span></td><td>+80° 余量 2.5°；−20° 被挡</td></tr><tr><td><b>1 米看清细节</b></td><td>—</td><td>—</td><td>切片</td><td>序列器</td><td>灯板</td><td><span class="j w">⚠</span></td><td>V2 新板未投</td></tr><tr><td><b>看到丰富颜色</b></td><td>—</td><td>—</td><td>颜色处理</td><td>序列器</td><td>2260</td><td><span class="j w">⚠</span></td><td>ACK 未通；真屏未出图</td></tr><tr><td><b>看到流畅画面</b></td><td>—</td><td>换帧</td><td>切片、上行</td><td>序列器</td><td>灯板、电机</td><td><span class="j w">⚠</span></td><td>V1 余量 0.7%</td></tr><tr><td><b>立体不变形</b></td><td>查找表生成</td><td>—</td><td>切片</td><td>—</td><td>屏面、光电</td><td><span class="j w">⚠</span></td><td>V1 待转起来校准</td></tr><tr><td><b>只看到悬浮的光</b></td><td>—</td><td>—</td><td>—</td><td>—</td><td>悬臂、圆罩</td><td><span class="j x">✗</span></td><td>等结构结论</td></tr><tr><td><b>室内看得清</b></td><td>—</td><td>亮度接口</td><td>—</td><td>序列器</td><td>LED、圆罩</td><td><span class="j x">✗</span></td><td>亮度估算不足，罩未建</td></tr><tr><td><b>安静不晃</b></td><td>—</td><td>—</td><td>—</td><td>—</td><td>动平衡、电机</td><td><span class="j w">⚠</span></td><td>不带屏配平到 1200 rpm；上屏后重做；固有频率未测</td></tr><tr><td><b>连开一整天</b></td><td>—</td><td>全部服务</td><td>切片</td><td>序列器</td><td>转子抗振</td><td><span class="j w">⚠</span></td><td>V0 24 小时；V1 待整机</td></tr><tr><td><b>断网自己恢复</b></td><td>—</td><td>povnetd</td><td>—</td><td>—</td><td>WiFi</td><td><span class="j v">✓</span></td><td>断线恢复 16 秒</td></tr><tr><td><b>远程升级</b></td><td>povota</td><td>OTA · gw5a_sram</td><td>边带</td><td>位流存储</td><td>flash</td><td><span class="j w">⚠</span></td><td>桥 flash 能远程写，没接进 OTA 回滚</td></tr><tr><td><b>看设备状态</b></td><td>povstat_rx · 手机</td><td>povstat</td><td>边带</td><td>状态帧</td><td>—</td><td><span class="j w">⚠</span></td><td>手机待验</td></tr></tbody></table></div></section>
+<section><div class="sec-h"><span class="num">07</span><h2>代码实现对照</h2><p>实际代码和硬件工程的状态。</p></div><div class="tw"><table><thead><tr><th style="width:210px">分支 / 工程</th><th>版本</th><th>内容</th><th style="width:150px">状态</th><th style="width:100px">现状</th></tr></thead><tbody><tr><td><code>主线 feature/lvds-b2b</code></td><td>66a431d（10-30）</td><td>切片、上行、桥、运维</td><td>主线</td><td><span class="pill"><i class="dot ok"></i>达标</span></td></tr><tr><td><code>task/d144-merge</code></td><td>领先主线 7 个提交，含 d135</td><td>手机配网、配对</td><td>已上 02，未合</td><td><span class="pill"><i class="dot part"></i>部分有</span></td></tr><tr><td><code>task/d145-remote</code></td><td>领先主线 10 个提交，含 d144</td><td>手机遥控</td><td>已上 02，未合</td><td><span class="pill"><i class="dot part"></i>部分有</span></td></tr><tr><td><code>task/d135-cardro</code></td><td>领先主线 1 个提交</td><td>卡只读</td><td>已上 02，未合</td><td><span class="pill"><i class="dot part"></i>部分有</span></td></tr><tr><td><code>task/d132-roam</code></td><td>领先主线 2 个提交</td><td>WiFi 换近 AP</td><td>未合</td><td><span class="pill"><i class="dot part"></i>部分有</span></td></tr><tr><td><code>task/d133-1200rpm</code></td><td>领先主线 2 个提交</td><td>1200 rpm 位流</td><td>02 已退回，要台架长跑</td><td><span class="pill"><i class="dot part"></i>部分有</span></td></tr><tr><td><code>task/d136-snake</code></td><td>领先主线 2 个提交</td><td>贪吃蛇</td><td>暂停</td><td><span class="pill"><i class="dot unk"></i>未盘点</span></td></tr><tr><td><code>task/d139-tube</code></td><td>领先主线 2 个提交</td><td>管道射击</td><td>暂停</td><td><span class="pill"><i class="dot unk"></i>未盘点</span></td></tr><tr><td><code>task/d137、d138、d140、d141</code></td><td>各领先主线 2 个提交</td><td>其他玩法和固定入口</td><td>未测，暂停</td><td><span class="pill"><i class="dot unk"></i>未盘点</span></td></tr><tr><td><code>board/aibrain-motor</code></td><td>274295f（11-05）</td><td>电机固件、上位机、动平衡采集</td><td>独立仓库</td><td><span class="pill"><i class="dot part"></i>部分有</span></td></tr><tr><td><code>Bridge V2.0</code></td><td>3a7832de（11-04）</td><td>V2 桥板</td><td>摆件，未走线</td><td><span class="pill"><i class="dot part"></i>部分有</span></td></tr><tr><td><code>V2 底板</code></td><td>b9b99f65（11-04）</td><td>CZ06 底板</td><td>摆件，未走线</td><td><span class="pill"><i class="dot part"></i>部分有</span></td></tr></tbody></table></div></section>
+<section><div class="sec-h"><span class="num">08</span><h2>数据流</h2><p>五条主流程。</p></div><div class="fl"><div class="fr"><b>F1 内容推流</b><div class="fc"><span>电脑渲染</span><i>→</i><span>体素帧</span><i>→</i><span>差分 + lz4</span><i>→</i><span>WiFi TCP 9500</span><i>→</i><span>解压解表</span><i>→</i><span>散写网格</span><i>→</i><span>圈零位换帧</span><i>→</i><span>PL 切片</span><i>→</i><span>1.0G 上行</span><i>→</i><span>桥序列器</span><i>→</i><span>2260</span><i>→</i><span>LED</span></div></div><div class="fr"><b>F2 上电自动播放</b><div class="fc"><span>24 V</span><i>→</i><span>5 V / 2.5 V</span><i>→</i><span>桥 flash 自启动</span><i>→</i><span>主控启动</span><i>→</i><span>autorun</span><i>→</i><span>放开桥复位</span><i>→</i><span>握手训练</span><i>→</i><span>本地内容</span><i>→</i><span>转速门控</span><i>→</i><span>上屏</span></div></div><div class="fr"><b>F3 配网配对</b><div class="fc"><span>贴纸二维码</span><i>→</i><span>设备热点</span><i>→</i><span>中文配置页</span><i>→</i><span>试连 WiFi</span><i>→</i><span>写入配置</span><i>→</i><span>失败回退</span><i>→</i><span>局域网发现</span><i>→</i><span>配对码</span><i>→</i><span>授权</span></div></div><div class="fr"><b>F4 升级</b><div class="fc"><span>povota</span><i>→</i><span>上传到 A/B 槽</span><i>→</i><span>自检和心跳</span><i>→</i><span>失败回滚</span><i>→</i><span>桥：JTAG 灌 SRAM 或写 flash</span><i>→</i><span>校验 BUILD</span></div></div><div class="fr"><b>F5 动平衡</b><div class="fc"><span>电机控制板</span><i>→</i><span>1 kHz 采 IMU 和角度</span><i>→</i><span>hss_bal 记录</span><i>→</i><span>分析不平衡</span><i>→</i><span>配重</span><i>→</i><span>复测</span></div></div></div></section>
+<section><div class="sec-h"><span class="num">09</span><h2>V1 和 V2 差在哪</h2><p>公共前端相同，差异集中在显示后端和硬件。</p></div><div class="tw"><table><thead><tr><th style="width:130px">项</th><th>V1 验证机</th><th>V2 产品机</th></tr></thead><tbody><tr><td><b>显示</b></td><td>每面 160×180，0.9375 mm</td><td>每面 192×216，0.78 mm</td></tr><tr><td><b>驱动</b></td><td>12 颗 2260，6 链 × 2 颗，60 扫</td><td>24 颗 2260，16 组 48 扫</td></tr><tr><td><b>转速 × 片</b></td><td>720 rpm × 357 片</td><td>900 rpm × 605 片</td></tr><tr><td><b>体帧率</b></td><td>24 Hz</td><td>30 Hz</td></tr><tr><td><b>上行</b></td><td>13 lane × 1.0G，每面 12 数据 + 校验 + 时钟</td><td>16 数据 + 校验 + 时钟，每面 18 对</td></tr><tr><td><b>片速率</b></td><td>4,284 片/秒</td><td>9,075 片/秒</td></tr><tr><td><b>主控板</b></td><td>FS03，H1/H2 对调靠换球</td><td>CZ06，新底板，不用换球</td></tr><tr><td><b>内存</b></td><td>16 bit DDR3L，需求约 595 MB/s</td><td>32 bit DDR3L，带宽待实测</td></tr><tr><td><b>桥</b></td><td>ACG525 + 转接板</td><td>一体桥板，GW5A-LV25UG324S</td></tr><tr><td><b>桥灯板连接</b></td><td>AXK 100P</td><td>2×120P，灯板 5 V 不过桥</td></tr><tr><td><b>桥 JTAG</b></td><td>两桥菊花链</td><td>每块桥独立</td></tr><tr><td><b>存储</b></td><td>TF 卡</td><td>TF 卡 + CZ06 板载 eMMC</td></tr><tr><td><b>互联网</b></td><td>不做</td><td>首版控制和内容下发</td></tr></tbody></table></div></section>
+<section><div class="sec-h"><span class="num">10</span><h2>设计实践</h2><p>这个项目里定下来的做法。</p></div><div class="cards"><div class="cd"><h3>公共前端 + 可换显示后端</h3><p>切片及之前共用，换屏只换后端；接口是按角度的实时片流。</p></div><div class="cd"><h3>实时节拍只在硬件</h3><p>Linux 不碰每片节拍；CPU 抖动不影响片时序。</p></div><div class="cd"><h3>状态单一来源</h3><p>位流版本、片数、转速档都能从板上读回。</p></div><div class="cd"><h3>上板前先对拍</h3><p>黄金模型逐位比对，判据里不放答案。</p></div><div class="cd"><h3>升级可回滚</h3><p>OTA 走 A/B 槽；桥试版只进 SRAM，断电回 flash。</p></div><div class="cd"><h3>判据按真工况</h3><p>性能数要带载测，流畅度要多转速点测。</p></div><div class="cd"><h3>无串口可运维</h3><p>转起来后一切走 WiFi，出错有热点兜底。</p></div><div class="cd"><h3>板级差异集中</h3><p>换球、IO 电压、面号都放在位流档和配置里。</p></div></div></section>
+<section><div class="sec-h"><span class="num">11</span><h2>待定清单</h2><p>未定的都标在这里。</p></div><div class="tw"><table><thead><tr><th style="width:190px">事项</th><th>内容</th><th style="width:190px">状态</th></tr></thead><tbody><tr><td><b>V1 灯板到货</b></td><td>记录里没有到货</td><td>待确认</td></tr><tr><td><b>上电顺序</b></td><td>24 V 和 FS03 的先后</td><td>待硬件定稿</td></tr><tr><td><b>V2 桥灯板座</b></td><td>2 个 120P 沿下边并排</td><td>待确认</td></tr><tr><td><b>120P 定位柱孔</b></td><td>按 100P 外推</td><td>下单前核 Panasonic 图</td></tr><tr><td><b>V2 下行时钟</b></td><td>4 时钟要扇出，12 时钟余量 0</td><td>看眼图定</td></tr><tr><td><b>V2 LED 规格</b></td><td>亮度、发光角</td><td>待提供</td></tr><tr><td><b>转子供电</b></td><td>V2 是否升级 48 W，24 V 储能放哪</td><td>待定</td></tr><tr><td><b>V2 底板电源</b></td><td>5 V 降压和电子保险型号未选</td><td>走线前定</td></tr><tr><td><b>互联网推送范围</b></td><td>是否含实时</td><td>待定</td></tr><tr><td><b>用户接入方式</b></td><td>工具、插件还是接口</td><td>待定</td></tr></tbody></table></div></section>
+<section><div class="sec-h"><span class="num">12</span><h2>术语</h2><p></p></div><div class="gl"><span><b>片</b>转到某角度时屏显示的一幅截面图</span><span><b>体素</b>三维网格里的一个点</span><span><b>PL</b>主控芯片里的 FPGA 部分</span><span><b>lane</b>一对差分线</span><span><b>上行</b>主控到桥的数据方向</span><span><b>下行</b>桥到灯板</span><span><b>边带</b>FPC 上的慢速管理线</span><span><b>金版</b>桥 flash 里的默认位流</span><span><b>HFI</b>低速时用注入信号判断电机角度</span><span><b>换球</b>位流里互换两个座同脚号的引脚</span></div></section>
+<footer><div><b>依据</b>：V1 系统说明书、切片规格、VOXSLICE 上板手册、转子运维 README、V2 桥板硬件交付包、V2 底板 README、电机固件仓库，截至 2026-11-05。</div><div><b>状态</b>：达标＝真硬件实测达到目标；待上板＝软件或仿真已就绪，等真硬件；部分有＝只做了一部分；有差距＝有数据，未达目标；看不见＝没有测量数据；未盘点＝没核过；未建＝还没有。</div></footer></div><script>document.querySelector('.vt').addEventListener('click',e=>{const b=e.target.closest('[data-hv]');if(!b)return;document.querySelectorAll('[data-hv]').forEach(x=>x.setAttribute('aria-pressed',x===b));['V1','V2'].forEach(v=>document.getElementById('hw'+v).hidden=v!==b.dataset.hv)});</script></body></html>

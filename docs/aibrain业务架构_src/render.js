@@ -283,20 +283,32 @@ document.querySelectorAll('#board > .lyr').forEach((l, i) => {
     try { localStorage.setItem(FOLD_KEY, JSON.stringify(folded)); } catch (err) {} });
   l.appendChild(b);
 });
-// ===== 按周拆解 =====
+// ===== 甘特图 =====
 (() => {
-  const SUPN = Object.fromEntries(SUPS.map(G => [G.code, G.g]));
   const RN = Object.fromEntries(RESULTS.map(r => [r.id, r]));
-  const rTag = id => `<span class="tag ${RN[id].v === 'V1' ? 'p-note' : 'p-case'}">${id}</span>`;
-  const lines = [STR, HW, APP];
-  // 结果 → 任务
-  const idx = {}; RESULTS.forEach(r => idx[r.id] = []);
-  WEEKS.forEach(W => W.rows.forEach(r => r[2].forEach(id => { if (!idx[id]) console.error('缺结果', id); else idx[id].push([W.w, r[0], r[1]]); })));
-  RESULTS.forEach(r => { if (!idx[r.id].length) console.error('结果没有任务', r.id); });
-  WEEKS.forEach(W => W.rows.forEach(r => r[4].forEach(s => SUPN[s] || console.error('缺支撑', s))));
-  $('wk-res').innerHTML = `<table class="acc wkres"><thead><tr><th>结果</th><th>怎样算达成</th><th>负责的任务</th></tr></thead><tbody>${['V1', 'V2'].map(v => `<tr class="accg"><td colspan="3">${v} · ${v === 'V1' ? '11-27' : '12-16'}</td></tr>` + RESULTS.filter(r => r.v === v).map(r => `<tr><td>${rTag(r.id)}${esc(r.n)}</td><td>${esc(r.ok)}</td><td class="accn">${idx[r.id].map(([w, c, t]) => `<div><b>${w}</b> <span class="tag ${lineCls(c)}">${c}</span>${esc(t)}</div>`).join('')}</td></tr>`).join('')).join('')}</tbody></table>`;
-  $('wk').innerHTML = WEEKS.map(W => `<div class="wkb"><div class="wkh"><b>${W.w}</b><span>${esc(W.d)}</span>${W.ms ? `<em>${esc(W.ms)}</em>` : ''}</div><p class="wkcore">核心：${esc(W.core)}</p>`
-    + `<div class="tw"><table class="acc wkt"><thead><tr><th>任务</th><th>为哪个结果负责</th><th>交付物（怎样算完成）</th><th>支撑能力</th><th>谁</th></tr></thead><tbody>`
-    + lines.map(c => { const rs = W.rows.filter(r => r[0] === c); return rs.length ? `<tr class="accg"><td colspan="5">${c}</td></tr>` + rs.map(([, t, res, out, sups, who]) => `<tr><td>${esc(t)}</td><td>${res.map(id => `<div>${rTag(id)}${esc(RN[id].n)}</div>`).join('')}</td><td>${esc(out)}</td><td class="accn">${sups.map(s => `<div>${s} ${esc(SUPN[s])}</div>`).join('')}</td><td class="accn">${esc(who)}</td></tr>`).join('') : ''; }).join('')
-    + `</tbody></table></div></div>`).join('');
+  const SUPN = Object.fromEntries(SUPS.map(G => [G.code, G.g]));
+  const t0 = Date.parse(GSTART + 'T00:00:00');
+  const day = md => { const v = Math.round((Date.parse('2026-' + md + 'T00:00:00') - t0) / 864e5); if (!(v >= 0 && v < GDAYS)) console.error('日期越界', md); return v; };
+  const col = d => d + 2;
+  const rTag = id => RN[id] ? `<span class="tag ${RN[id].v === 'V1' ? 'p-note' : 'p-case'}">${id}</span>` : console.error('缺结果', id);
+  const used = new Set();
+  let h = `<div class="gantt" style="grid-template-columns:132px repeat(${GDAYS},minmax(0,1fr))">`;
+  h += `<div class="gh gcorner" style="grid-row:1;grid-column:1">泳道</div>`;
+  h += GWEEKS.map(([w, a, b]) => `<div class="gh gwk" style="grid-row:1;grid-column:${col(day(a))}/${col(day(b)) + 1}"><b>${w}</b><span>${a} ~ ${b}</span></div>`).join('');
+  h += GMS.map(([m, n, note], i) => `<div class="gms${i % 2 ? ' lo' : ''}${i === GMS.length - 1 ? ' end' : ''}" style="grid-row:2;grid-column:${col(day(m))}"><span><b>${m}</b> ${esc(n)}${note ? `<i>${esc(note)}</i>` : ''}</span></div>`).join('');
+  let row = 3, lastLine = '';
+  GLANES.forEach(([c, n, who, sup, segs]) => {
+    if (c !== lastLine) { h += `<div class="glinehd" style="grid-row:${row};grid-column:1/-1"><span class="tag ${lineCls(c)}">${c}</span></div>`; row++; lastLine = c; }
+    h += `<div class="glane" style="grid-row:${row};grid-column:1"><b>${esc(n)}</b><span>${esc(who)}</span><span class="gsup">${sup.split(' ').map(s => `${s} ${esc(SUPN[s] || console.error('缺支撑', s))}`).join('<br>')}</span></div>`;
+    h += GWEEKS.map(([, a, b]) => `<div class="gcell" style="grid-row:${row};grid-column:${col(day(a))}/${col(day(b)) + 1}"></div>`).join('');
+    segs.forEach(([a, b, txt, res]) => { res.forEach(x => used.add(x));
+      const v2 = res.every(x => RN[x] && RN[x].v === 'V2');
+      h += `<div class="gbar ${v2 ? 'v2' : 'v1'}" style="grid-row:${row};grid-column:${col(day(a))}/${col(day(b)) + 1}"><div class="gres">${res.map(rTag).join('')}</div>${esc(txt)}</div>`; });
+    row++;
+  });
+  h += GMS.map(([m]) => `<div class="gline" style="grid-row:2/${row};grid-column:${col(day(m))}"></div>`).join('');
+  h += `</div>`;
+  RESULTS.forEach(r => used.has(r.id) || console.error('结果没有任务', r.id));
+  $('wk').innerHTML = h;
+  $('wk-res').innerHTML = `<table class="acc wkres"><thead><tr><th>结果</th><th>V1 · 11-27</th><th>V2 · 12-16</th></tr></thead><tbody>${RESULTS.filter(r => r.v === 'V1').map((r, i) => { const q = RESULTS.filter(x => x.v === 'V2')[i]; const cell = x => x ? `${rTag(x.id)}<b>${esc(x.n)}</b><div class="accn">${esc(x.ok)}</div>` : ''; return `<tr><td>${i + 1}</td><td>${cell(r)}</td><td>${cell(q)}</td></tr>`; }).join('')}</tbody></table>`;
 })();

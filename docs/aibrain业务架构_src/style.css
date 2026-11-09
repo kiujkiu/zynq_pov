@@ -523,17 +523,26 @@ table.todo{min-width:860px}
 .acc.hoout td:first-child{width:7%}
 .acc.hoout td:nth-child(2){width:26%;font-weight:400}
 @media screen and (max-width:760px){.hoscope{grid-template-columns:1fr}}
-.wkres td:first-child{width:22%}
-.wkres .accn div{margin:1px 0}
-.wkb{margin:18px 0 6px;break-inside:auto}
-.wkh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:4px}
-.wkh b{font-size:20px}
-.wkh span{color:var(--ink-2);font-size:13px}
-.wkh em{font-style:normal;font-size:12px;font-weight:600;color:var(--accent);border:1px solid currentColor;border-radius:99px;padding:0 8px}
-.wkcore{margin:8px 0;font-size:14px;font-weight:600}
-.wkt{min-width:760px}
-.acc.wkt td:first-child{width:24%}
-.wkt td:nth-child(2){width:17%}
-.wkt td:nth-child(4){width:15%}
-.wkt td:nth-child(5){width:11%}
-@media print{.wkh,.wkcore,.cgoal-h{break-after:avoid}.wkb{break-before:page}}
+.acc.wkres td:first-child{width:4%;font-weight:400;color:var(--ink-3)}
+.wkres td{width:48%}
+.gantt{display:grid;min-width:1040px;font-size:11.5px;line-height:1.4;position:relative;border:1px solid var(--line)}
+.gh{background:var(--line);padding:6px 8px;font-size:12px}
+.gwk{border-left:1px solid var(--line-2);display:flex;gap:8px;align-items:baseline}
+.gwk b{font-size:14px}.gwk span{color:var(--ink-2)}
+.gms{padding:4px 0 6px;position:relative;min-height:38px;z-index:2}
+.gms span{position:absolute;left:50%;top:4px;white-space:nowrap;font-size:11px;color:var(--pc);background:var(--surface);padding:0 4px;border-left:2px solid var(--pc)}
+.gms.lo span{top:22px}
+.gms.end span{left:auto;right:50%;border-left:0;border-right:2px solid var(--pc)}
+.gms{min-height:44px}
+.gms i{font-style:normal;color:var(--ink-3);margin-left:4px}
+.gline{border-left:2px dashed var(--pc);margin-left:50%;opacity:.55;pointer-events:none;z-index:1}
+.glinehd{padding:6px 8px 2px;border-top:1px solid var(--line-2)}
+.glane{padding:6px 8px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:1px}
+.glane b{font-size:13px}.glane span{color:var(--ink-2);font-size:11px}
+.glane .gsup{color:var(--ink-3);font-size:10.5px}
+.gcell{border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.gbar{margin:5px 3px;padding:5px 7px;border-radius:6px;border-left:4px solid var(--pn);background:var(--pn-s);color:var(--ink);z-index:2;align-self:stretch}
+.gbar.v2{border-left-color:var(--pc);background:var(--pc-s)}
+.gres{margin-bottom:2px}.gres .tag{margin-right:3px}
+@media print{.gantt{min-width:0;font-size:9.5px}.gbar,.glane{break-inside:avoid}}
+@media print{.cgoal-h,.hoh{break-after:avoid}}

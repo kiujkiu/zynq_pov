@@ -523,20 +523,29 @@ table.todo{min-width:860px}
 .acc.hoout td:first-child{width:7%}
 .acc.hoout td:nth-child(2){width:26%;font-weight:400}
 @media screen and (max-width:760px){.hoscope{grid-template-columns:1fr}}
-.wkres td:first-child{width:22%}
-.wkres .accn div{margin:1px 0}
-.wkb{margin:18px 0 6px;break-inside:auto}
-.wkh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:4px}
-.wkh b{font-size:20px}
-.wkh span{color:var(--ink-2);font-size:13px}
-.wkh em{font-style:normal;font-size:12px;font-weight:600;color:var(--accent);border:1px solid currentColor;border-radius:99px;padding:0 8px}
-.wkcore{margin:8px 0;font-size:14px;font-weight:600}
-.wkt{min-width:760px}
-.acc.wkt td:first-child{width:24%}
-.wkt td:nth-child(2){width:17%}
-.wkt td:nth-child(4){width:15%}
-.wkt td:nth-child(5){width:11%}
-@media print{.wkh,.wkcore,.cgoal-h{break-after:avoid}.wkb{break-before:page}}
+.acc.wkres td:first-child{width:4%;font-weight:400;color:var(--ink-3)}
+.wkres td{width:48%}
+.gantt{display:grid;min-width:1040px;font-size:11.5px;line-height:1.4;position:relative;border:1px solid var(--line)}
+.gh{background:var(--line);padding:6px 8px;font-size:12px}
+.gwk{border-left:1px solid var(--line-2);display:flex;gap:8px;align-items:baseline}
+.gwk b{font-size:14px}.gwk span{color:var(--ink-2)}
+.gms{padding:4px 0 6px;position:relative;min-height:38px;z-index:2}
+.gms span{position:absolute;left:50%;top:4px;white-space:nowrap;font-size:11px;color:var(--pc);background:var(--surface);padding:0 4px;border-left:2px solid var(--pc)}
+.gms.lo span{top:22px}
+.gms.end span{left:auto;right:50%;border-left:0;border-right:2px solid var(--pc)}
+.gms{min-height:44px}
+.gms i{font-style:normal;color:var(--ink-3);margin-left:4px}
+.gline{border-left:2px dashed var(--pc);margin-left:50%;opacity:.55;pointer-events:none;z-index:1}
+.glinehd{padding:6px 8px 2px;border-top:1px solid var(--line-2)}
+.glane{padding:6px 8px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:1px}
+.glane b{font-size:13px}.glane span{color:var(--ink-2);font-size:11px}
+.glane .gsup{color:var(--ink-3);font-size:10.5px}
+.gcell{border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.gbar{margin:5px 3px;padding:5px 7px;border-radius:6px;border-left:4px solid var(--pn);background:var(--pn-s);color:var(--ink);z-index:2;align-self:stretch}
+.gbar.v2{border-left-color:var(--pc);background:var(--pc-s)}
+.gres{margin-bottom:2px}.gres .tag{margin-right:3px}
+@media print{.gantt{min-width:0;font-size:9.5px}.gbar,.glane{break-inside:avoid}}
+@media print{.cgoal-h,.hoh{break-after:avoid}}
 </style></head><body>
 <div class="wrap">
 <header>
@@ -594,11 +603,10 @@ table.todo{min-width:860px}
 
 <section class="pgb">
   <h3 class="cgoal-h">按周拆解：结构、硬件、软件</h3>
-  <p class="accnote">把上面的验收目标归成 13 个要交的结果，每个结果写清怎样算达成；再按周排任务，每条任务写清对哪个结果负责、交付什么、靠哪项支撑能力、谁来做。周从周一算。日期沿用 10-27 排期，V2 下单和回板节点没重排，W2 下单是关键路径。</p>
-  <h4 class="hoh">要交的结果</h4>
+  <p class="accnote">横轴是时间，竖虚线是节点；纵轴按结构、硬件、软件分泳道，每格是那一周要交的东西。格子上的 R 号是它负责的结果（蓝 V1、红 V2），泳道左边写谁做、靠哪项支撑能力。日期沿用 10-27 排期；V2 下单按 11-20 画，比原定 11-16 晚 4 天，回板 12-04 已经没有余量。</p>
+  <div class="tw"><div id="wk"></div></div>
+  <h4 class="hoh">结果说明</h4>
   <div class="tw" id="wk-res"></div>
-  <h4 class="hoh">每周任务</h4>
-  <div id="wk"></div>
 </section>
 
 <section class="pgb">
@@ -1309,65 +1317,60 @@ const RESULTS = [
   {id:'R13', v:'V2', n:'24 小时长跑和验收', ok:'整机实转 24 小时；H12 验收报告'}
 ];
 // 每行：[线, 任务, 负责的结果[], 交付物（怎样算完成）, 支撑能力[], 谁]
-const WEEKS = [
-  {w:'W1', d:'11-09 ~ 11-15', core:'V1 灯板点亮，V2 板子走线收尾，上位机交接到同事', ms:'', rows:[
-    [STR,'定 V2 产品形态：无柱、圆罩、镀膜、罩内哑黑',['R12'],'形态结论文档和草图，你确认过（结构任务 2-0）',['S14'],'结构工程师'],
-    [STR,'按 2 座版冻结三板机械接口',['R8','R12'],'三板 STEP 和接口图，SolidWorks 打开确认，结构和硬件双方签字',['S14','S12'],'结构工程师 + 硬件'],
-    [STR,'做上平面配重件和相位基准；称带屏转子重量',['R5','R10'],'配重件和相位基准装上转子；称重记录；G6.3 目标按实重重算',['S15'],'动平衡（AI 算 + 人装）'],
-    [HW,'V1 灯板到货确认，单面上电；查 2260 ACK 通路',['R3'],'单面出静态图的照片；ACK 收到合法应答的记录',['S11','S8','S13'],'硬件 + FPGA'],
-    [HW,'V2 桥板（2 座版）走线',['R8'],'未连 499 → 0，原生 DRC 0 的 .kicad_pcb',['S12','S9'],'Layout'],
-    [HW,'V2 底板原理图和布局；V2 灯板补接插件和板框',['R8'],'底板 ERC 0、摆件完成；灯板板框和座子位置跟三板接口一致',['S9','S11','S12'],'硬件 + 灯板外协'],
-    [HW,'收齐 CZ06、桥 FPGA、连接器、LED 的价格和交期',['R8'],'物料表带交期；最长交期能不能赶 12-04 回板，给出结论',['S16'],'采购'],
-    [APP,'上位机交接给同事：资料、测试板、接口说明',['R1','R2'],'同事签收交接清单；排出到 11-27 的中间节点',['S7'],'设备侧 + 同事'],
-    [APP,'电机起步锁定期角度不稳、低速误判修复',['R5'],'固件新版本；验收套件 S1–S9 全过；起步异常从约 1/3 降到 0/30',['S6'],'电机控制'],
-    [APP,'未合主线的分支合回主线（D132/133/135/136/139、D144、D145）',['R7','R1'],'主线一个版本号；全回归过',['S1'],'嵌入式 Linux'],
-    [APP,'定 V1 演示内容清单和入库标准',['R6'],'内容清单（每条标来源、时长、帧率）；你确认',['S3'],'图形算法']
-  ]},
-  {w:'W2', d:'11-16 ~ 11-22', core:'V1 两面上屏，带屏转起来；V2 下单', ms:'11-16 V2 下单闸门', rows:[
-    [STR,'V1 带屏两平面配平，到 720 rpm',['R5'],'配平记录：残余 ≤85 g·mm，720 rpm 振动 ≤3 mg；从 300 rpm 扫到 830 rpm 每档 ≤30 mg',['S15'],'动平衡（AI 算 + 人装）'],
-    [STR,'地面和展示桌面两种支撑测振，同支撑连测两次',['R5'],'两种支撑都过；两次差 ≤10%',['S15'],'动平衡'],
-    [STR,'实测 V1 转子一阶固有频率（敲击法）',['R5','R10'],'实测频率数和测法记录；对比估算 15–27 Hz',['S15'],'动平衡'],
-    [STR,'罩体和镀膜：找镀膜厂，定罩体方案和底座',['R12'],'罩体方案图；镀膜厂报价和反射率（目标 <1%）',['S14','S16'],'结构工程师 + 采购'],
-    [HW,'V1 两面灯板同时上屏；量亮度、对比度、可视角',['R3'],'两面同时出图的照片；300 lux 下亮度和对比度、+80° 亮度实测表',['S11','S13'],'硬件'],
-    [HW,'V2 三板出 Gerber，板厂 DFM，同事外审关键区后下单',['R8'],'下单的 Gerber 和 BOM；DFM 报告无阻断项；外审意见关闭',['S12','S16'],'Layout + 采购'],
-    [HW,'V2 桥位流：192×216、605 片、30 Hz，时序收敛',['R9'],'位流文件；时序 0 违例；全链路仿真 30 Hz 过',['S8'],'FPGA'],
-    [APP,'V1 转起来校准几何（357 片）',['R4'],'几何查找表；方的是方的、两面对得上的照片',['S4','S3'],'实时控制'],
-    [APP,'V1 实转 24 Hz：测丢片、延迟、节拍余量',['R4'],'1 小时窗口丢片 ≤0.1%；延迟 p50 ≤70 ms、p99 ≤120 ms；节拍余量 0.7% 实测够用',['S4','S2','S8'],'实时控制 + FPGA'],
-    [APP,'实测手机、Windows、Mac 局域网发现',['R1','R2'],'三端发现结果表；路由器屏蔽时手动输地址能连',['S1'],'嵌入式 Linux'],
-    [APP,'同事：手机配网、配对、遥控功能开发',['R1'],'H1–H3 功能在一台真手机上走通',['S7'],'同事'],
-    [APP,'同事：PC 上位机 V1（Windows、Mac）开发',['R2'],'两个平台可运行版本，能发现、配对、推流',['S7'],'同事']
-  ]},
-  {w:'W3', d:'11-23 ~ 11-29', core:'V1 交付', ms:'11-27 V1 交付', rows:[
-    [STR,'V1 整机 1 小时实转（临时防护罩）',['R7','R5'],'1 小时实转记录，振动和温度曲线',['S15','S13'],'动平衡 + 硬件测试'],
-    [STR,'V2 结构详细设计；假负载转子加工',['R10','R12'],'V2 结构图纸下发加工；假负载转子到位',['S14'],'结构工程师'],
-    [HW,'V1 硬件验收：显示各项逐条测',['R3','R4'],'V1 显示验收表逐项有结果，未过项写原因',['S13'],'硬件测试'],
-    [HW,'V2 回板测试计划和治具',['R8'],'回板上电步骤、测试点清单、治具到位',['S13'],'硬件测试'],
-    [APP,'V1 软件 8 小时无人值守',['R7'],'8 小时日志：无卡死、无漏帧告警',['S1'],'嵌入式 Linux'],
-    [APP,'同事：四类手机验收、工况表测试记录',['R1'],'H4 验收报告；H6 工况表手机和 PC 项全有结果',['S7'],'同事'],
-    [APP,'同事：PC 上位机 V1 交付',['R2'],'H5 两个平台的安装包和使用说明；工况 L1–L7、M1–M4、P1、P2 过',['S7'],'同事'],
-    [APP,'V1 发布：版本号、发布说明、验收报告',['R7'],'H7 代码合主线；V1 验收报告（对照版本验收目标表）',['S1','S17'],'嵌入式 Linux']
-  ]},
-  {w:'W4', d:'11-30 ~ 12-06', core:'V2 等回板：假负载过门，软件先做互联网和 V2 网格', ms:'12-02 假负载过门 · 12-04 V2 回板', rows:[
-    [STR,'V2 假负载转子试转',['R10'],'试转到 900 rpm，扫到 1035 rpm 每档 ≤30 mg，无共振峰',['S15'],'动平衡'],
-    [STR,'罩体、底座、结构件到货试装',['R12'],'结构件试装照片；不干涉',['S14'],'结构工程师'],
-    [HW,'V2 回板上电：电源、时钟、桥和主控通信',['R8'],'上电记录；电源纹波实测；桥和主控链路训练过',['S13','S9','S10'],'硬件测试'],
-    [APP,'V2 切片和节拍适配 192×216、605 片',['R9'],'切片器出 V2 网格；仿真 30 Hz 过',['S3','S4'],'图形算法 + 实时控制'],
-    [APP,'设备侧接入云：账号、远程控制、内容下发接口',['R11'],'设备能被云端控制、收下发内容；公网中断能降级',['S7','S2'],'嵌入式 Linux + 同事'],
-    [APP,'同事：V2 手机端、账号绑定解绑',['R11'],'H8、H9 在测试板上走通',['S7'],'同事']
-  ]},
-  {w:'W5', d:'12-07 ~ 12-13', core:'V2 点亮，双面 30 Hz 实转，真板配平', ms:'12-08 ~ 12-13 双面 30 Hz', rows:[
-    [STR,'V2 真板两平面配平',['R10'],'残余 ≤68 g·mm；900 rpm 振动 ≤3 mg；一阶固有频率实测 >20 Hz',['S15'],'动平衡'],
-    [STR,'V2 整机装配：罩、底座、转子',['R12'],'整机装好的照片；看不到柱子和机构',['S14'],'结构工程师'],
-    [HW,'V2 灯板点亮；上行 1.0G×16 测眼图',['R8','R9'],'单面出图照片；16 lane 眼图和误码 0',['S8','S9','S13'],'FPGA + 硬件'],
-    [HW,'V2 抗振：核心板加边角胶',['R13'],'加胶工艺记录；转后 BGA 无失效',['S13'],'硬件测试'],
-    [APP,'V2 双面 30 Hz 实转和几何校准',['R9'],'两面同时 30 Hz；丢片 ≤0.1%；几何校准照片',['S4','S3'],'实时控制'],
-    [APP,'同事：PC 上位机 V2、多语言、用户接入资料',['R11'],'H10、H11：新用户照说明书推上内容；语言可选',['S7'],'同事']
-  ]},
-  {w:'W6', d:'12-14 ~ 12-16', core:'24 小时长跑，V2 交付', ms:'12-16 V2 交付', rows:[
-    [STR,'ID 首版样机定稿',['R12'],'ID 首版样机和外观照片',['S14'],'结构工程师'],
-    [HW,'整机 24 小时实转',['R13'],'24 小时记录：温度、振动、误码',['S13'],'硬件测试'],
-    [APP,'软件 24 小时无人值守；V2 验收报告',['R13','R11'],'24 小时日志；H12 验收报告（192×216 推流、公网中断降级、四类手机）',['S1','S7'],'嵌入式 Linux + 同事']
-  ]}
+// 甘特图：起点 11-09（第 0 天）到 12-16（第 37 天）
+const GSTART = '2026-11-09', GDAYS = 38;
+const GWEEKS = [['W1','11-09','11-15'],['W2','11-16','11-22'],['W3','11-23','11-29'],['W4','11-30','12-06'],['W5','12-07','12-13'],['W6','12-14','12-16']];
+const GMS = [['11-20','V2 下单','原定 11-16'],['11-27','V1 交付',''],['12-02','假负载过门',''],['12-04','V2 回板',''],['12-16','V2 交付','']];
+// 泳道：[线, 名称, 谁, 支撑, 段[]]；段：[起, 止, 当周交付物, 结果[]]
+const GLANES = [
+  [STR,'形态与整机','结构工程师','S14',[
+    ['11-09','11-15','形态结论（无柱、圆罩、镀膜）；三板接口 STEP 冻结',['R12','R8']],
+    ['11-16','11-22','罩体方案图；镀膜厂报价和反射率',['R12']],
+    ['11-23','11-29','结构图纸下发加工；假负载转子到位',['R10','R12']],
+    ['11-30','12-06','结构件到货试装，不干涉',['R12']],
+    ['12-07','12-13','整机装配：看不到柱子和机构',['R12']],
+    ['12-14','12-16','ID 首版样机',['R12']]]],
+  [STR,'动平衡与振动','AI 算 + 人装','S15',[
+    ['11-09','11-15','配重件和相位基准装上；带屏转子称重',['R5','R10']],
+    ['11-16','11-22','两平面配平 ≤85 g·mm，720 rpm ≤3 mg；两种支撑都过；固有频率实测',['R5']],
+    ['11-23','11-29','V1 整机实转 1 小时记录',['R7']],
+    ['11-30','12-06','假负载 900 rpm，扫到 1035 无共振',['R10']],
+    ['12-07','12-13','真板配平 ≤68 g·mm；固有频率 >20 Hz',['R10']]]],
+  [HW,'V1 灯板','硬件 + FPGA','S11 S8 S13',[
+    ['11-09','11-15','单面出图；2260 ACK 合法',['R3']],
+    ['11-16','11-22','两面同时上屏；亮度、对比度、可视角实测表',['R3']],
+    ['11-23','11-29','V1 显示验收表逐项有结果',['R3','R4']]]],
+  [HW,'V2 板子','Layout + 采购 + 硬件测试','S12 S9 S16 S13',[
+    ['11-09','11-15','桥板未连 499→0；底板摆件；灯板板框；物料交期表',['R8']],
+    ['11-16','11-20','Gerber、DFM 无阻断，外审关闭，下单',['R8']],
+    ['11-21','12-03','板厂制板；回板测试计划和治具备好',['R8']],
+    ['12-04','12-06','回板上电：电源、时钟、链路训练过',['R8']],
+    ['12-07','12-13','灯板点亮；核心板加边角胶',['R8','R13']],
+    ['12-14','12-16','整机 24 小时实转记录',['R13']]]],
+  [HW,'FPGA','FPGA 工程师','S8',[
+    ['11-16','11-29','V2 桥位流 192×216、30 Hz：时序 0 违例，仿真过',['R9']],
+    ['12-07','12-13','上行 1.0G×16 眼图，误码 0',['R9']]]],
+  [APP,'电机','电机控制','S6',[
+    ['11-09','11-15','起步异常 1/3 → 0/30，验收套件 S1–S9 过',['R5']],
+    ['11-16','11-22','带屏稳到 720 rpm',['R5']]]],
+  [APP,'显示与实时','图形算法 + 实时控制','S3 S4',[
+    ['11-09','11-15','V1 演示内容清单，你确认',['R6']],
+    ['11-16','11-22','几何校准；24 Hz 丢片 ≤0.1%，p50 ≤70 ms',['R4']],
+    ['11-30','12-06','V2 切片 192×216、605 片，仿真 30 Hz',['R9']],
+    ['12-07','12-13','双面 30 Hz 实转，几何校准',['R9']]]],
+  [APP,'板上系统与长跑','嵌入式 Linux','S1 S2',[
+    ['11-09','11-15','分支合主线，全回归过',['R7']],
+    ['11-16','11-22','手机、Windows、Mac 发现实测',['R1','R2']],
+    ['11-23','11-29','8 小时无人值守；V1 发布和验收报告',['R7']],
+    ['11-30','12-06','设备接入云：远程控制、内容下发、断网降级',['R11']],
+    ['12-14','12-16','24 小时无人值守；V2 验收报告',['R13']]]],
+  [APP,'手机和 PC 上位机','同事','S7',[
+    ['11-09','11-15','交接签收；排出中间节点',['R1','R2']],
+    ['11-16','11-22','手机配网、配对、遥控走通；PC 两平台可运行',['R1','R2']],
+    ['11-23','11-29','H4 四类手机报告；H5 PC 上位机 V1；H6 工况记录',['R1','R2']],
+    ['11-30','12-06','H8 手机远程控制；H9 账号绑定',['R11']],
+    ['12-07','12-13','H10 PC 上位机 V2、多语言；H11 接入资料',['R11']],
+    ['12-14','12-16','H12 V2 验收报告',['R13']]]]
 ];
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -1655,22 +1658,34 @@ document.querySelectorAll('#board > .lyr').forEach((l, i) => {
     try { localStorage.setItem(FOLD_KEY, JSON.stringify(folded)); } catch (err) {} });
   l.appendChild(b);
 });
-// ===== 按周拆解 =====
+// ===== 甘特图 =====
 (() => {
-  const SUPN = Object.fromEntries(SUPS.map(G => [G.code, G.g]));
   const RN = Object.fromEntries(RESULTS.map(r => [r.id, r]));
-  const rTag = id => `<span class="tag ${RN[id].v === 'V1' ? 'p-note' : 'p-case'}">${id}</span>`;
-  const lines = [STR, HW, APP];
-  // 结果 → 任务
-  const idx = {}; RESULTS.forEach(r => idx[r.id] = []);
-  WEEKS.forEach(W => W.rows.forEach(r => r[2].forEach(id => { if (!idx[id]) console.error('缺结果', id); else idx[id].push([W.w, r[0], r[1]]); })));
-  RESULTS.forEach(r => { if (!idx[r.id].length) console.error('结果没有任务', r.id); });
-  WEEKS.forEach(W => W.rows.forEach(r => r[4].forEach(s => SUPN[s] || console.error('缺支撑', s))));
-  $('wk-res').innerHTML = `<table class="acc wkres"><thead><tr><th>结果</th><th>怎样算达成</th><th>负责的任务</th></tr></thead><tbody>${['V1', 'V2'].map(v => `<tr class="accg"><td colspan="3">${v} · ${v === 'V1' ? '11-27' : '12-16'}</td></tr>` + RESULTS.filter(r => r.v === v).map(r => `<tr><td>${rTag(r.id)}${esc(r.n)}</td><td>${esc(r.ok)}</td><td class="accn">${idx[r.id].map(([w, c, t]) => `<div><b>${w}</b> <span class="tag ${lineCls(c)}">${c}</span>${esc(t)}</div>`).join('')}</td></tr>`).join('')).join('')}</tbody></table>`;
-  $('wk').innerHTML = WEEKS.map(W => `<div class="wkb"><div class="wkh"><b>${W.w}</b><span>${esc(W.d)}</span>${W.ms ? `<em>${esc(W.ms)}</em>` : ''}</div><p class="wkcore">核心：${esc(W.core)}</p>`
-    + `<div class="tw"><table class="acc wkt"><thead><tr><th>任务</th><th>为哪个结果负责</th><th>交付物（怎样算完成）</th><th>支撑能力</th><th>谁</th></tr></thead><tbody>`
-    + lines.map(c => { const rs = W.rows.filter(r => r[0] === c); return rs.length ? `<tr class="accg"><td colspan="5">${c}</td></tr>` + rs.map(([, t, res, out, sups, who]) => `<tr><td>${esc(t)}</td><td>${res.map(id => `<div>${rTag(id)}${esc(RN[id].n)}</div>`).join('')}</td><td>${esc(out)}</td><td class="accn">${sups.map(s => `<div>${s} ${esc(SUPN[s])}</div>`).join('')}</td><td class="accn">${esc(who)}</td></tr>`).join('') : ''; }).join('')
-    + `</tbody></table></div></div>`).join('');
+  const SUPN = Object.fromEntries(SUPS.map(G => [G.code, G.g]));
+  const t0 = Date.parse(GSTART + 'T00:00:00');
+  const day = md => { const v = Math.round((Date.parse('2026-' + md + 'T00:00:00') - t0) / 864e5); if (!(v >= 0 && v < GDAYS)) console.error('日期越界', md); return v; };
+  const col = d => d + 2;
+  const rTag = id => RN[id] ? `<span class="tag ${RN[id].v === 'V1' ? 'p-note' : 'p-case'}">${id}</span>` : console.error('缺结果', id);
+  const used = new Set();
+  let h = `<div class="gantt" style="grid-template-columns:132px repeat(${GDAYS},minmax(0,1fr))">`;
+  h += `<div class="gh gcorner" style="grid-row:1;grid-column:1">泳道</div>`;
+  h += GWEEKS.map(([w, a, b]) => `<div class="gh gwk" style="grid-row:1;grid-column:${col(day(a))}/${col(day(b)) + 1}"><b>${w}</b><span>${a} ~ ${b}</span></div>`).join('');
+  h += GMS.map(([m, n, note], i) => `<div class="gms${i % 2 ? ' lo' : ''}${i === GMS.length - 1 ? ' end' : ''}" style="grid-row:2;grid-column:${col(day(m))}"><span><b>${m}</b> ${esc(n)}${note ? `<i>${esc(note)}</i>` : ''}</span></div>`).join('');
+  let row = 3, lastLine = '';
+  GLANES.forEach(([c, n, who, sup, segs]) => {
+    if (c !== lastLine) { h += `<div class="glinehd" style="grid-row:${row};grid-column:1/-1"><span class="tag ${lineCls(c)}">${c}</span></div>`; row++; lastLine = c; }
+    h += `<div class="glane" style="grid-row:${row};grid-column:1"><b>${esc(n)}</b><span>${esc(who)}</span><span class="gsup">${sup.split(' ').map(s => `${s} ${esc(SUPN[s] || console.error('缺支撑', s))}`).join('<br>')}</span></div>`;
+    h += GWEEKS.map(([, a, b]) => `<div class="gcell" style="grid-row:${row};grid-column:${col(day(a))}/${col(day(b)) + 1}"></div>`).join('');
+    segs.forEach(([a, b, txt, res]) => { res.forEach(x => used.add(x));
+      const v2 = res.every(x => RN[x] && RN[x].v === 'V2');
+      h += `<div class="gbar ${v2 ? 'v2' : 'v1'}" style="grid-row:${row};grid-column:${col(day(a))}/${col(day(b)) + 1}"><div class="gres">${res.map(rTag).join('')}</div>${esc(txt)}</div>`; });
+    row++;
+  });
+  h += GMS.map(([m]) => `<div class="gline" style="grid-row:2/${row};grid-column:${col(day(m))}"></div>`).join('');
+  h += `</div>`;
+  RESULTS.forEach(r => used.has(r.id) || console.error('结果没有任务', r.id));
+  $('wk').innerHTML = h;
+  $('wk-res').innerHTML = `<table class="acc wkres"><thead><tr><th>结果</th><th>V1 · 11-27</th><th>V2 · 12-16</th></tr></thead><tbody>${RESULTS.filter(r => r.v === 'V1').map((r, i) => { const q = RESULTS.filter(x => x.v === 'V2')[i]; const cell = x => x ? `${rTag(x.id)}<b>${esc(x.n)}</b><div class="accn">${esc(x.ok)}</div>` : ''; return `<tr><td>${i + 1}</td><td>${cell(r)}</td><td>${cell(q)}</td></tr>`; }).join('')}</tbody></table>`;
 })();
 
 </script>

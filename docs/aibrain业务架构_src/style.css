@@ -523,3 +523,17 @@ table.todo{min-width:860px}
 .acc.hoout td:first-child{width:7%}
 .acc.hoout td:nth-child(2){width:26%;font-weight:400}
 @media screen and (max-width:760px){.hoscope{grid-template-columns:1fr}}
+.wkres td:first-child{width:22%}
+.wkres .accn div{margin:1px 0}
+.wkb{margin:18px 0 6px;break-inside:auto}
+.wkh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:4px}
+.wkh b{font-size:20px}
+.wkh span{color:var(--ink-2);font-size:13px}
+.wkh em{font-style:normal;font-size:12px;font-weight:600;color:var(--accent);border:1px solid currentColor;border-radius:99px;padding:0 8px}
+.wkcore{margin:8px 0;font-size:14px;font-weight:600}
+.wkt{min-width:760px}
+.acc.wkt td:first-child{width:24%}
+.wkt td:nth-child(2){width:17%}
+.wkt td:nth-child(4){width:15%}
+.wkt td:nth-child(5){width:11%}
+@media print{.wkh,.wkcore,.cgoal-h{break-after:avoid}.wkb{break-before:page}}

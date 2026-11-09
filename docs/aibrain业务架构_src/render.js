@@ -283,3 +283,20 @@ document.querySelectorAll('#board > .lyr').forEach((l, i) => {
     try { localStorage.setItem(FOLD_KEY, JSON.stringify(folded)); } catch (err) {} });
   l.appendChild(b);
 });
+// ===== 按周拆解 =====
+(() => {
+  const SUPN = Object.fromEntries(SUPS.map(G => [G.code, G.g]));
+  const RN = Object.fromEntries(RESULTS.map(r => [r.id, r]));
+  const rTag = id => `<span class="tag ${RN[id].v === 'V1' ? 'p-note' : 'p-case'}">${id}</span>`;
+  const lines = [STR, HW, APP];
+  // 结果 → 任务
+  const idx = {}; RESULTS.forEach(r => idx[r.id] = []);
+  WEEKS.forEach(W => W.rows.forEach(r => r[2].forEach(id => { if (!idx[id]) console.error('缺结果', id); else idx[id].push([W.w, r[0], r[1]]); })));
+  RESULTS.forEach(r => { if (!idx[r.id].length) console.error('结果没有任务', r.id); });
+  WEEKS.forEach(W => W.rows.forEach(r => r[4].forEach(s => SUPN[s] || console.error('缺支撑', s))));
+  $('wk-res').innerHTML = `<table class="acc wkres"><thead><tr><th>结果</th><th>怎样算达成</th><th>负责的任务</th></tr></thead><tbody>${['V1', 'V2'].map(v => `<tr class="accg"><td colspan="3">${v} · ${v === 'V1' ? '11-27' : '12-16'}</td></tr>` + RESULTS.filter(r => r.v === v).map(r => `<tr><td>${rTag(r.id)}${esc(r.n)}</td><td>${esc(r.ok)}</td><td class="accn">${idx[r.id].map(([w, c, t]) => `<div><b>${w}</b> <span class="tag ${lineCls(c)}">${c}</span>${esc(t)}</div>`).join('')}</td></tr>`).join('')).join('')}</tbody></table>`;
+  $('wk').innerHTML = WEEKS.map(W => `<div class="wkb"><div class="wkh"><b>${W.w}</b><span>${esc(W.d)}</span>${W.ms ? `<em>${esc(W.ms)}</em>` : ''}</div><p class="wkcore">核心：${esc(W.core)}</p>`
+    + `<div class="tw"><table class="acc wkt"><thead><tr><th>任务</th><th>为哪个结果负责</th><th>交付物（怎样算完成）</th><th>支撑能力</th><th>谁</th></tr></thead><tbody>`
+    + lines.map(c => { const rs = W.rows.filter(r => r[0] === c); return rs.length ? `<tr class="accg"><td colspan="5">${c}</td></tr>` + rs.map(([, t, res, out, sups, who]) => `<tr><td>${esc(t)}</td><td>${res.map(id => `<div>${rTag(id)}${esc(RN[id].n)}</div>`).join('')}</td><td>${esc(out)}</td><td class="accn">${sups.map(s => `<div>${s} ${esc(SUPN[s])}</div>`).join('')}</td><td class="accn">${esc(who)}</td></tr>`).join('') : ''; }).join('')
+    + `</tbody></table></div></div>`).join('');
+})();

@@ -507,3 +507,19 @@ table.todo{min-width:860px}
 .cgd b{font-size:24px;line-height:1.1}
 .cgoal ul{margin:0;padding-left:18px;font-size:14px;line-height:1.6}
 @media screen and (max-width:760px){.cgoals{grid-template-columns:1fr}}
+.cgoal-h{font-size:15px;margin:18px 0 8px}
+.acc{width:100%;border-collapse:collapse;font-size:13px;line-height:1.5}
+.acc th,.acc td{padding:7px 12px;text-align:left;vertical-align:top;border-top:1px solid var(--line)}
+.acc th{border-top:0;font-size:12.5px;color:var(--ink-2)}
+.acc td:first-child{width:24%;font-weight:600}
+.acc .accg td{background:var(--line);font-weight:700;width:auto}
+.accn{color:var(--ink-2);font-size:12.5px}
+.acct{display:inline-block;margin-left:6px;padding:0 5px;border-radius:4px;font-size:11px;font-weight:500;color:var(--warn,#8a6d00);border:1px solid currentColor}
+.accnote{font-size:12.5px;color:var(--ink-2);margin:12px 0 8px}
+.acc tr{break-inside:avoid}
+@media print{.pgb{break-before:page}}
+.hoscope{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.hoh{font-size:14px;margin:16px 0 8px}
+.acc.hoout td:first-child{width:7%}
+.acc.hoout td:nth-child(2){width:26%;font-weight:400}
+@media screen and (max-width:760px){.hoscope{grid-template-columns:1fr}}

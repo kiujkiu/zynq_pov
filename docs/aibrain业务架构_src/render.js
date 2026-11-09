@@ -240,7 +240,14 @@ const GROUPS = [
   {k:'audit', n:'先盘点', d:'有实现或有要求，没核过：先摸清现状，才知道差多少。', sts:['unk']}
 ];
 const ordered = arr => arr.slice().sort((a, b) => STEP_ORDER.indexOf(a.step) - STEP_ORDER.indexOf(b.step) || bySev(a, b));
-$('goals').innerHTML = GOALS.map(g => `<div class="cgoal${g.cls ? ' ' + g.cls : ''}"><div class="cgd"><span>${esc(g.v)} 交付</span><b>${esc(g.date)}</b></div><ul>${g.goals.map(x => `<li>${esc(x)}</li>`).join('')}<li><b>${esc(g.add)}</b></li></ul></div>`).join('');
+const goalsHtml = GOALS.map(g => `<div class="cgoal${g.cls ? ' ' + g.cls : ''}"><div class="cgd"><span>${esc(g.v)} 验收交付</span><b>${esc(g.date)}</b></div><ul>${g.goals.map(x => `<li>${esc(x)}</li>`).join('')}<li><b>${esc(g.add)}</b></li></ul></div>`).join('');
+$('accept').innerHTML = `<table class="acc"><thead><tr><th>验收项</th><th>V1 · 11-27</th><th>V2 · 12-16</th><th>现状（截至 11-06）</th></tr></thead><tbody>${ACCEPT.map(G => `<tr class="accg"><td colspan="4">${esc(G.g)}</td></tr>` + G.rows.map(([a, b, c, d, s]) => `<tr><td>${esc(a)}${s ? '<span class="acct">建议</span>' : ''}</td><td>${b}</td><td>${c}</td><td class="accn">${esc(d)}</td></tr>`).join('')).join('')}</tbody></table>`;
+$('handoff').innerHTML = `<div class="hoscope">${HANDOFF.scope.map(([a, b]) => `<div class="cd"><h3>${esc(a)}</h3><p>${esc(b)}</p></div>`).join('')}</div>`
+  + `<h4 class="hoh">V1、V2 要求</h4><div class="tw"><table class="acc"><thead><tr><th>模块</th><th>V1 · 11-27</th><th>V2 · 12-16</th><th>现状（截至 11-06）</th></tr></thead><tbody>${HANDOFF.req.map(([a, b, c, d]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td><td>${esc(c)}</td><td class="accn">${esc(d)}</td></tr>`).join('')}</tbody></table></div>`
+  + `<h4 class="hoh">交付物</h4><div class="tw"><table class="acc hoout"><thead><tr><th>编号</th><th>交付物</th><th>怎样算交付</th></tr></thead><tbody>${HANDOFF.out.map(([v, r]) => `<tr class="accg"><td colspan="3">${esc(v)}</td></tr>` + r.map(([a, b, c]) => `<tr><td>${esc(a)}</td><td><b>${esc(b)}</b></td><td>${esc(c)}</td></tr>`).join('')).join('')}</tbody></table></div>`
+  + `<h4 class="hoh">交给同事的资料</h4><div class="tw"><table class="acc"><tbody>${HANDOFF.give.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join('')}</tbody></table></div>`
+  + `<h4 class="hoh">开工前要定</h4><div class="tw"><table class="acc"><tbody>${HANDOFF.open.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join('')}</tbody></table></div>`;
+document.querySelectorAll('.cgoals').forEach(e => { e.innerHTML = goalsHtml; });
 $('cadence').innerHTML = CADENCE.map(t => `<div class="ctrack${t.cls ? ' ' + t.cls : ''}"><h3><span class="tag ${lineCls(t.c)}">${t.c}</span>${esc(t.v)}</h3><span class="who">${esc(t.who)}</span><ol class="cline">${t.ms.map(([w, d]) => `<li><span class="when">${esc(w)}</span><span class="what">${esc(d)}</span></li>`).join('')}</ol></div>`).join('');
 $('todo-sum').innerHTML = GROUPS.map(g => { const n = gapSubs.filter(c => g.sts.includes(c.st)).length; return `<a class="tsum" href="#todo-${g.k}"><b>${n}</b><span>${g.n}</span></a>`; }).join('');
 $('todo').innerHTML = GROUPS.map(g => { const items = ordered(gapSubs.filter(c => g.sts.includes(c.st)));

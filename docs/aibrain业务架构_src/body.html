@@ -1,6 +1,6 @@
 <div class="wrap">
 <header>
-  <div class="eyebrow">业务架构 · 第一版 · 2026-11-05 · V1 验证机 + V2 产品机</div>
+  <div class="eyebrow">业务架构 · 第一版 · 2026-11-05 · V1、V2 均在 IPD 计划阶段（方案验证）</div>
   <h1>aibrain 业务架构 v1</h1>
   <p class="lead">aibrain 是旋转体积 3D 显示器：两面 LED 屏背靠背高速旋转，在空中叠出能四周观看的立体画面。这份架构从用户使用产品的完整经历出发，把每一步要做到位的能力和差距列出来。目的只有一个：找出要做的事。</p>
   <p class="v8n">状态只认真硬件实测：V0 过了不算 V1 过。软件和仿真已就绪、等真硬件的，一律标「待上板」。产品价值按三条写：1 m 清晰、裸眼 3D、自动播放与推流；分辨率和帧率从 1 m 观看距离倒算。</p>
@@ -14,8 +14,8 @@
   <button type="button" data-mode="work" aria-pressed="false">开发任务</button>
   <span class="mb-l sep">版本</span>
   <button type="button" data-prod="all" aria-pressed="true">全部</button>
-  <button type="button" data-prod="v1" aria-pressed="false">V1 验证机</button>
-  <button type="button" data-prod="v2" aria-pressed="false">V2 产品机</button>
+  <button type="button" data-prod="v1" aria-pressed="false">V1 方案验证</button>
+  <button type="button" data-prod="v2" aria-pressed="false">V2 方案验证</button>
   <span class="mb-l sep">负责线</span>
   <button type="button" data-line="all" aria-pressed="true">全部</button>
   <button type="button" data-line="软件" aria-pressed="false">软件</button>
@@ -41,11 +41,14 @@
     </tbody>
   </table></div>
   <div class="rules">
-    <div class="rule"><h3>版本口径</h3><p>V1（11-27）不上屏：灯板 11-09 报延期 1 个月，取消；V1 只交手机、PC 上位机、带假负载的转子和软件。V2 产品机：每面 192×216，30 Hz，605 片，2260 首次上屏在 V2。</p></div>
+    <div class="rule"><h3>版本口径</h3><p>V1（11-27）不上屏：灯板 11-09 报延期 1 个月，取消；V1 只交手机、PC 上位机、带假负载的转子和软件。V2 方案验证样机：每面 192×216，30 Hz，605 片，2260 首次上屏在 V2。</p></div>
     <div class="rule"><h3>达标只认真机</h3><p>仿真过、进桥过都不算上屏过。子任务未达标时，步骤不能标达标。</p></div>
     <div class="rule"><h3>写能力，不写组件</h3><p>子任务写「断线恢复」「转速门控」这样的能力，具体位流和寄存器留在研发文档。</p></div>
     <div class="rule"><h3>每项有依据</h3><p>现状都能回到实测记录或决策记录；查不到的标「未盘点」，不估。</p></div>
   </div>
+  <h3 class="cgoal-h">IPD 阶段：我们在哪</h3>
+  <p class="accnote">按 IPD 走：概念 → 计划 → 开发 → 验证 → 发布，每段末有技术评审（TR）和决策评审（DCP）。V0 做完原理验证；V1、V2 都还在计划阶段的方案验证，12-16 的 V2 是方案验证样机，过 TR3 和 PDCP 之后才进入 EVT、DVT、PVT 的产品开发。后面各节写的「交付」都指方案验证的交付，不是产品发布。</p>
+  <div id="ipd"></div>
   <h3 class="cgoal-h">版本验收目标</h3>
   <div class="cgoals"></div>
   <p class="accnote">11-09 已对齐：V1 加 PC 上位机（多语言放 V2），V2 互联网交功能；V1 灯板延期 1 个月取消，V1 不上屏，显示各项只看 V2，动平衡 V1 用假负载。标「建议」的是按 11-06 动平衡结果新提的标准；其余来自已有目标。G6.3 按 ISO 21940-11 算，带屏转子重量还没称。</p>
@@ -135,8 +138,8 @@
       <tr><td><b>好</b></td><td>≤0.58 mm</td><td>2′</td><td>258×290</td><td>810</td><td>32.7 Gbit/s</td><td>是 V2 的 2.4 倍，现有上行不够</td></tr>
       <tr><td><b>看不出像素</b></td><td>≤0.29 mm</td><td>1′</td><td>516×580</td><td>1,620</td><td>261.7 Gbit/s</td><td>是 V2 的 19 倍，不现实</td></tr>
       <tr class="gr"><td colspan="7">现有两版</td></tr>
-      <tr><td><b>V1 验证机</b></td><td>径向 0.94 / 切向 1.32 mm</td><td>3.2′ / 4.5′</td><td>160×180</td><td>357</td><td>—</td><td>径向过线，切向没过</td></tr>
-      <tr><td><b>V2 产品机</b></td><td>径向 0.78 / 切向 0.78 mm</td><td>2.7′ / 2.7′</td><td>192×216</td><td>605</td><td>13.5 Gbit/s</td><td>两个方向都过及格线，有 22% 余量</td></tr>
+      <tr><td><b>V1</b></td><td>径向 0.94 / 切向 1.32 mm</td><td>3.2′ / 4.5′</td><td>160×180</td><td>357</td><td>—</td><td>径向过线，切向没过</td></tr>
+      <tr><td><b>V2 样机</b></td><td>径向 0.78 / 切向 0.78 mm</td><td>2.7′ / 2.7′</td><td>192×216</td><td>605</td><td>13.5 Gbit/s</td><td>两个方向都过及格线，有 22% 余量</td></tr>
     </tbody>
   </table></div>
   <p class="hint">切向间距 = 2π × 75 mm ÷ 每圈片数。数据量按 36 bit/像素。</p>
@@ -149,7 +152,7 @@
 
 <section>
   <div class="sec-h"><span class="num">06</span><h2>版本迭代节奏</h2>
-    <p>V1 11-27 交付（不上屏），V2 12-16 交付。红色卡片是 V1 冲刺要动的，黄色卡片是 V2 冲刺要动的。下面的 V2 节点来自 10-27 的倒排甘特图，当时按 12-15 验收倒排，关键路径浮动约 0；之后核心板和桥板方案都变过，这些节点要重排。</p></div>
+    <p>V1 11-27、V2 12-16 两轮方案验证（IPD 计划阶段），分别对应 TR2、TR3。红色卡片是 V1 冲刺要动的，黄色卡片是 V2 冲刺要动的。下面的 V2 节点来自 10-27 的倒排甘特图，当时按 12-15 验收倒排，关键路径浮动约 0；之后核心板和桥板方案都变过，这些节点要重排。</p></div>
   <div class="cgoals"></div>
   <div class="cadence" id="cadence"></div>
 </section>
@@ -188,7 +191,7 @@
     <div class="cd"><h3>3. 互联网推送到什么程度</h3><p>11-09 已定：V2 12-16 交首版功能，含远程控制、内容下发、账号绑定解绑；实时推流放后面。</p></div>
     <div class="cd"><h3>4. −20° 仰角要不要全看到</h3><p>按 V2 方案下沿会被挡。全看到要改底板或抬高屏，高度和重心都受影响。（默认：先按允许轻微遮挡，等结构评估。）</p></div>
     <div class="cd"><h3>5. V1 灯板</h3><p>11-09 已定：灯板制作问题延期 1 个月，V1 不做灯板、不上屏；上屏、画质、几何全部并入 V2。代价是 2260 第一次上屏推到 12-04 回板之后。</p></div>
-    <div class="cd"><h3>6. 12-16 V2 交付还成立吗</h3><p>10-27 的排期要 11-16 下单。现在 V2 桥板和底板还没走线，灯板缺接插件和板框，结构接口也没冻结。（默认：按 12-16 交付，中间节点标为要重排。）</p></div>
+    <div class="cd"><h3>6. 12-16 V2 方案验证（TR3）还成立吗</h3><p>10-27 的排期要 11-16 下单。现在 V2 桥板和底板还没走线，灯板缺接插件和板框，结构接口也没冻结。（默认：按 12-16 交付，中间节点标为要重排。）</p></div>
     <div class="cd"><h3>7. 客户是谁</h3><p>展厅、零售和开发者的开箱流程和内容需求不一样。（默认：按桌面展示写。）</p></div>
     <div class="cd"><h3>8. 手机传内容和互动玩法做不做</h3><p>手机传内容待评估，游戏已暂停。（默认：都不进 V1。）</p></div>
     <div class="cd"><h3>9. 桥板和灯板的接口</h3><p>2 个 120P 座沿下边并排是当前方案，结构和灯板都要照它走。（默认：按 11-05 交付包。）</p></div>

@@ -546,10 +546,21 @@ table.todo{min-width:860px}
 .gres{margin-bottom:2px}.gres .tag{margin-right:3px}
 @media print{.gantt{min-width:0;font-size:9.5px}.gbar,.glane{break-inside:avoid}}
 @media print{.cgoal-h,.hoh{break-after:avoid}}
+.ipdph{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:4px 0 12px}
+.ipdp{border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.45;background:var(--surface)}
+.ipdp p{margin:2px 0 6px;color:var(--ink-2)}
+.ipdn{font-weight:700;font-size:15px;display:flex;gap:6px;align-items:center}
+.ipdn span{font-size:11px;font-weight:600;color:var(--surface);background:var(--pc);border-radius:99px;padding:0 7px}
+.ipdp.now{border:2px solid var(--pc);background:var(--pc-s)}
+.ipdg{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px}
+.ipdg b{font-family:var(--font-mono);font-size:11px;border:1px solid var(--ink-2);border-radius:4px;padding:0 4px}
+.ipdv{font-size:11.5px;font-weight:600}
+.acc.ipdt td:first-child{width:7%;font-family:var(--font-mono)}
+@media screen and (max-width:760px){.ipdph{grid-template-columns:1fr}}
 </style></head><body>
 <div class="wrap">
 <header>
-  <div class="eyebrow">业务架构 · 第一版 · 2026-11-05 · V1 验证机 + V2 产品机</div>
+  <div class="eyebrow">业务架构 · 第一版 · 2026-11-05 · V1、V2 均在 IPD 计划阶段（方案验证）</div>
   <h1>aibrain 业务架构 v1</h1>
   <p class="lead">aibrain 是旋转体积 3D 显示器：两面 LED 屏背靠背高速旋转，在空中叠出能四周观看的立体画面。这份架构从用户使用产品的完整经历出发，把每一步要做到位的能力和差距列出来。目的只有一个：找出要做的事。</p>
   <p class="v8n">状态只认真硬件实测：V0 过了不算 V1 过。软件和仿真已就绪、等真硬件的，一律标「待上板」。产品价值按三条写：1 m 清晰、裸眼 3D、自动播放与推流；分辨率和帧率从 1 m 观看距离倒算。</p>
@@ -563,8 +574,8 @@ table.todo{min-width:860px}
   <button type="button" data-mode="work" aria-pressed="false">开发任务</button>
   <span class="mb-l sep">版本</span>
   <button type="button" data-prod="all" aria-pressed="true">全部</button>
-  <button type="button" data-prod="v1" aria-pressed="false">V1 验证机</button>
-  <button type="button" data-prod="v2" aria-pressed="false">V2 产品机</button>
+  <button type="button" data-prod="v1" aria-pressed="false">V1 方案验证</button>
+  <button type="button" data-prod="v2" aria-pressed="false">V2 方案验证</button>
   <span class="mb-l sep">负责线</span>
   <button type="button" data-line="all" aria-pressed="true">全部</button>
   <button type="button" data-line="软件" aria-pressed="false">软件</button>
@@ -590,11 +601,14 @@ table.todo{min-width:860px}
     </tbody>
   </table></div>
   <div class="rules">
-    <div class="rule"><h3>版本口径</h3><p>V1（11-27）不上屏：灯板 11-09 报延期 1 个月，取消；V1 只交手机、PC 上位机、带假负载的转子和软件。V2 产品机：每面 192×216，30 Hz，605 片，2260 首次上屏在 V2。</p></div>
+    <div class="rule"><h3>版本口径</h3><p>V1（11-27）不上屏：灯板 11-09 报延期 1 个月，取消；V1 只交手机、PC 上位机、带假负载的转子和软件。V2 方案验证样机：每面 192×216，30 Hz，605 片，2260 首次上屏在 V2。</p></div>
     <div class="rule"><h3>达标只认真机</h3><p>仿真过、进桥过都不算上屏过。子任务未达标时，步骤不能标达标。</p></div>
     <div class="rule"><h3>写能力，不写组件</h3><p>子任务写「断线恢复」「转速门控」这样的能力，具体位流和寄存器留在研发文档。</p></div>
     <div class="rule"><h3>每项有依据</h3><p>现状都能回到实测记录或决策记录；查不到的标「未盘点」，不估。</p></div>
   </div>
+  <h3 class="cgoal-h">IPD 阶段：我们在哪</h3>
+  <p class="accnote">按 IPD 走：概念 → 计划 → 开发 → 验证 → 发布，每段末有技术评审（TR）和决策评审（DCP）。V0 做完原理验证；V1、V2 都还在计划阶段的方案验证，12-16 的 V2 是方案验证样机，过 TR3 和 PDCP 之后才进入 EVT、DVT、PVT 的产品开发。后面各节写的「交付」都指方案验证的交付，不是产品发布。</p>
+  <div id="ipd"></div>
   <h3 class="cgoal-h">版本验收目标</h3>
   <div class="cgoals"></div>
   <p class="accnote">11-09 已对齐：V1 加 PC 上位机（多语言放 V2），V2 互联网交功能；V1 灯板延期 1 个月取消，V1 不上屏，显示各项只看 V2，动平衡 V1 用假负载。标「建议」的是按 11-06 动平衡结果新提的标准；其余来自已有目标。G6.3 按 ISO 21940-11 算，带屏转子重量还没称。</p>
@@ -684,8 +698,8 @@ table.todo{min-width:860px}
       <tr><td><b>好</b></td><td>≤0.58 mm</td><td>2′</td><td>258×290</td><td>810</td><td>32.7 Gbit/s</td><td>是 V2 的 2.4 倍，现有上行不够</td></tr>
       <tr><td><b>看不出像素</b></td><td>≤0.29 mm</td><td>1′</td><td>516×580</td><td>1,620</td><td>261.7 Gbit/s</td><td>是 V2 的 19 倍，不现实</td></tr>
       <tr class="gr"><td colspan="7">现有两版</td></tr>
-      <tr><td><b>V1 验证机</b></td><td>径向 0.94 / 切向 1.32 mm</td><td>3.2′ / 4.5′</td><td>160×180</td><td>357</td><td>—</td><td>径向过线，切向没过</td></tr>
-      <tr><td><b>V2 产品机</b></td><td>径向 0.78 / 切向 0.78 mm</td><td>2.7′ / 2.7′</td><td>192×216</td><td>605</td><td>13.5 Gbit/s</td><td>两个方向都过及格线，有 22% 余量</td></tr>
+      <tr><td><b>V1</b></td><td>径向 0.94 / 切向 1.32 mm</td><td>3.2′ / 4.5′</td><td>160×180</td><td>357</td><td>—</td><td>径向过线，切向没过</td></tr>
+      <tr><td><b>V2 样机</b></td><td>径向 0.78 / 切向 0.78 mm</td><td>2.7′ / 2.7′</td><td>192×216</td><td>605</td><td>13.5 Gbit/s</td><td>两个方向都过及格线，有 22% 余量</td></tr>
     </tbody>
   </table></div>
   <p class="hint">切向间距 = 2π × 75 mm ÷ 每圈片数。数据量按 36 bit/像素。</p>
@@ -698,7 +712,7 @@ table.todo{min-width:860px}
 
 <section>
   <div class="sec-h"><span class="num">06</span><h2>版本迭代节奏</h2>
-    <p>V1 11-27 交付（不上屏），V2 12-16 交付。红色卡片是 V1 冲刺要动的，黄色卡片是 V2 冲刺要动的。下面的 V2 节点来自 10-27 的倒排甘特图，当时按 12-15 验收倒排，关键路径浮动约 0；之后核心板和桥板方案都变过，这些节点要重排。</p></div>
+    <p>V1 11-27、V2 12-16 两轮方案验证（IPD 计划阶段），分别对应 TR2、TR3。红色卡片是 V1 冲刺要动的，黄色卡片是 V2 冲刺要动的。下面的 V2 节点来自 10-27 的倒排甘特图，当时按 12-15 验收倒排，关键路径浮动约 0；之后核心板和桥板方案都变过，这些节点要重排。</p></div>
   <div class="cgoals"></div>
   <div class="cadence" id="cadence"></div>
 </section>
@@ -737,7 +751,7 @@ table.todo{min-width:860px}
     <div class="cd"><h3>3. 互联网推送到什么程度</h3><p>11-09 已定：V2 12-16 交首版功能，含远程控制、内容下发、账号绑定解绑；实时推流放后面。</p></div>
     <div class="cd"><h3>4. −20° 仰角要不要全看到</h3><p>按 V2 方案下沿会被挡。全看到要改底板或抬高屏，高度和重心都受影响。（默认：先按允许轻微遮挡，等结构评估。）</p></div>
     <div class="cd"><h3>5. V1 灯板</h3><p>11-09 已定：灯板制作问题延期 1 个月，V1 不做灯板、不上屏；上屏、画质、几何全部并入 V2。代价是 2260 第一次上屏推到 12-04 回板之后。</p></div>
-    <div class="cd"><h3>6. 12-16 V2 交付还成立吗</h3><p>10-27 的排期要 11-16 下单。现在 V2 桥板和底板还没走线，灯板缺接插件和板框，结构接口也没冻结。（默认：按 12-16 交付，中间节点标为要重排。）</p></div>
+    <div class="cd"><h3>6. 12-16 V2 方案验证（TR3）还成立吗</h3><p>10-27 的排期要 11-16 下单。现在 V2 桥板和底板还没走线，灯板缺接插件和板框，结构接口也没冻结。（默认：按 12-16 交付，中间节点标为要重排。）</p></div>
     <div class="cd"><h3>7. 客户是谁</h3><p>展厅、零售和开发者的开箱流程和内容需求不一样。（默认：按桌面展示写。）</p></div>
     <div class="cd"><h3>8. 手机传内容和互动玩法做不做</h3><p>手机传内容待评估，游戏已暂停。（默认：都不进 V1。）</p></div>
     <div class="cd"><h3>9. 桥板和灯板的接口</h3><p>2 个 120P 座沿下边并排是当前方案，结构和灯板都要照它走。（默认：按 11-05 交付包。）</p></div>
@@ -1312,7 +1326,7 @@ const RESULTS = [
 // 甘特图：起点 11-09（第 0 天）到 12-16（第 37 天）
 const GSTART = '2026-11-09', GDAYS = 38;
 const GWEEKS = [['W1','11-09','11-15'],['W2','11-16','11-22'],['W3','11-23','11-29'],['W4','11-30','12-06'],['W5','12-07','12-13'],['W6','12-14','12-16']];
-const GMS = [['11-20','V2 下单','原定 11-16'],['11-27','V1 交付','不上屏'],['12-02','结构假负载过门',''],['12-04','V2 回板','2260 首次上屏'],['12-16','V2 交付','']];
+const GMS = [['11-13','TR1 需求评审','建议'],['11-20','V2 下单','原定 11-16'],['11-27','V1 方案验证 · TR2','不上屏'],['12-02','结构假负载过门',''],['12-04','V2 回板','2260 首次上屏'],['12-16','V2 方案验证 · TR3','之后 PDCP']];
 // 泳道：[线, 名称, 谁, 支撑, 段[]]；段：[起, 止, 当周交付物, 结果[]]
 const GLANES = [
   [STR,'形态与整机','结构工程师','S14',[
@@ -1358,6 +1372,29 @@ const GLANES = [
     ['11-30','12-06','H8 手机远程控制；H9 账号绑定',['R10']],
     ['12-07','12-13','H10 PC 上位机 V2、多语言；H11 接入资料',['R10']],
     ['12-14','12-16','H12 V2 验收报告',['R12']]]]
+];
+
+// ===== IPD 阶段（11-09 加）=====
+const IPD_PH = [
+  {k:'c', n:'概念', d:'做什么、给谁、值不值得做', g:['TR1','CDCP'], v:'V0 原理验证（已完成）'},
+  {k:'p', n:'计划', d:'规格和总体方案定下来，验证方案走得通', g:['TR2','TR3','PDCP'], v:'V1、V2 方案验证（当前）', now:1},
+  {k:'d', n:'开发', d:'产品化设计，工程样机', g:['TR4','TR4A'], v:'EVT 工程样机'},
+  {k:'v', n:'验证', d:'设计验证、生产验证', g:['TR5','TR6','ADCP'], v:'DVT 设计样机 · PVT 小批量'},
+  {k:'l', n:'发布', d:'量产上市', g:['GA'], v:'MP 量产'}
+];
+// [关口, 评什么, 我们拿什么去评, 对应版本, 日期, 状态]
+const IPD_G = [
+  ['TR1','需求评审：产品价值、卖点、目标用户和场景','业务架构 ①② 层、产品价值三条、市场评估报告','V0','11-13（建议）','材料有，未正式评审'],
+  ['CDCP','概念决策：立项，进入计划阶段','TR1 结论；粗略成本和上市时间','—','随 TR1','未做'],
+  ['TR2','规格评审：需求分解成可测的规格','按 1 米倒算的指标、版本验收目标表、配网与推流工况表','V1','11-27','材料有；V1 结果补实测'],
+  ['TR3','总体方案评审：关键技术都在样机上验证过','L1/L2 技术架构；V2 方案验证样机实测：2260 上屏、双面 30 Hz、带屏 900 rpm 配平、整机形态、24 小时长跑；BOM 成本','V2','12-16','进行中'],
+  ['PDCP','计划决策：批准开发计划、预算和团队','TR3 结论；EVT/DVT/PVT 排期；团队组建（支撑能力 = 招聘要求）；目标成本','—','12 月下旬（建议）','未做'],
+  ['TR4','EVT 评审：产品化电路板和结构手板，功能全通','EVT 样机功能测试报告','EVT','PDCP 后排','—'],
+  ['TR4A','EVT 问题收敛，准入 DVT','问题清单关闭率；DVT 改板和开模清单','EVT','PDCP 后排','—'],
+  ['TR5','DVT 评审：设计定型，可靠性和认证预测试过','可靠性、认证预测试、ID 定稿、模具 T1','DVT','PDCP 后排','—'],
+  ['TR6','PVT 评审：产线能稳定造出来','小批量良率、产线烧录和出厂测试工具','PVT','PDCP 后排','—'],
+  ['ADCP','可获得性决策：可以量产上市','TR6 结论；供应和交付准备','—','PDCP 后排','—'],
+  ['GA','量产发布','—','MP','PDCP 后排','—']
 ];
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -1602,7 +1639,7 @@ const GROUPS = [
   {k:'audit', n:'先盘点', d:'有实现或有要求，没核过：先摸清现状，才知道差多少。', sts:['unk']}
 ];
 const ordered = arr => arr.slice().sort((a, b) => STEP_ORDER.indexOf(a.step) - STEP_ORDER.indexOf(b.step) || bySev(a, b));
-const goalsHtml = GOALS.map(g => `<div class="cgoal${g.cls ? ' ' + g.cls : ''}"><div class="cgd"><span>${esc(g.v)} 验收交付</span><b>${esc(g.date)}</b></div><ul>${g.goals.map(x => `<li>${esc(x)}</li>`).join('')}<li><b>${esc(g.add)}</b></li></ul></div>`).join('');
+const goalsHtml = GOALS.map(g => `<div class="cgoal${g.cls ? ' ' + g.cls : ''}"><div class="cgd"><span>${esc(g.v)} 方案验证</span><b>${esc(g.date)}</b></div><ul>${g.goals.map(x => `<li>${esc(x)}</li>`).join('')}<li><b>${esc(g.add)}</b></li></ul></div>`).join('');
 $('accept').innerHTML = `<table class="acc"><thead><tr><th>验收项</th><th>V1 · 11-27</th><th>V2 · 12-16</th><th>现状（截至 11-06）</th></tr></thead><tbody>${ACCEPT.map(G => `<tr class="accg"><td colspan="4">${esc(G.g)}</td></tr>` + G.rows.map(([a, b, c, d, s]) => `<tr><td>${esc(a)}${s ? '<span class="acct">建议</span>' : ''}</td><td>${b}</td><td>${c}</td><td class="accn">${esc(d)}</td></tr>`).join('')).join('')}</tbody></table>`;
 $('handoff').innerHTML = `<div class="hoscope">${HANDOFF.scope.map(([a, b]) => `<div class="cd"><h3>${esc(a)}</h3><p>${esc(b)}</p></div>`).join('')}</div>`
   + `<h4 class="hoh">V1、V2 要求</h4><div class="tw"><table class="acc"><thead><tr><th>模块</th><th>V1 · 11-27</th><th>V2 · 12-16</th><th>现状（截至 11-06）</th></tr></thead><tbody>${HANDOFF.req.map(([a, b, c, d]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td><td>${esc(c)}</td><td class="accn">${esc(d)}</td></tr>`).join('')}</tbody></table></div>`
@@ -1672,6 +1709,11 @@ document.querySelectorAll('#board > .lyr').forEach((l, i) => {
   RESULTS.forEach(r => used.has(r.id) || console.error('结果没有任务', r.id));
   $('wk').innerHTML = h;
   $('wk-res').innerHTML = `<table class="acc wkres"><thead><tr><th>结果</th><th>V1 · 11-27</th><th>V2 · 12-16</th></tr></thead><tbody>${RESULTS.filter(r => r.v === 'V1').map((r, i) => { const q = RESULTS.filter(x => x.v === 'V2')[i]; const cell = x => x ? `${rTag(x.id)}<b>${esc(x.n)}</b><div class="accn">${esc(x.ok)}</div>` : ''; return `<tr><td>${i + 1}</td><td>${cell(r)}</td><td>${cell(q)}</td></tr>`; }).join('')}</tbody></table>`;
+})();
+// ===== IPD =====
+(() => {
+  $('ipd').innerHTML = `<div class="ipdph">${IPD_PH.map(p => `<div class="ipdp${p.now ? ' now' : ''}"><div class="ipdn">${esc(p.n)}${p.now ? '<span>当前</span>' : ''}</div><p>${esc(p.d)}</p><div class="ipdg">${p.g.map(g => `<b>${g}</b>`).join('')}</div><div class="ipdv">${esc(p.v)}</div></div>`).join('')}</div>`
+    + `<div class="tw"><table class="acc ipdt"><thead><tr><th>关口</th><th>评什么</th><th>我们拿什么去评</th><th>版本</th><th>日期</th><th>状态</th></tr></thead><tbody>${IPD_G.map(([g, a, b, v, d, s]) => `<tr><td>${g}</td><td>${esc(a)}</td><td>${esc(b)}</td><td>${esc(v)}</td><td>${esc(d)}</td><td class="accn">${esc(s)}</td></tr>`).join('')}</tbody></table></div>`;
 })();
 
 </script>

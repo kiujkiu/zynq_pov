@@ -240,7 +240,7 @@ const GROUPS = [
   {k:'audit', n:'先盘点', d:'有实现或有要求，没核过：先摸清现状，才知道差多少。', sts:['unk']}
 ];
 const ordered = arr => arr.slice().sort((a, b) => STEP_ORDER.indexOf(a.step) - STEP_ORDER.indexOf(b.step) || bySev(a, b));
-const goalsHtml = GOALS.map(g => `<div class="cgoal${g.cls ? ' ' + g.cls : ''}"><div class="cgd"><span>${esc(g.v)} 验收交付</span><b>${esc(g.date)}</b></div><ul>${g.goals.map(x => `<li>${esc(x)}</li>`).join('')}<li><b>${esc(g.add)}</b></li></ul></div>`).join('');
+const goalsHtml = GOALS.map(g => `<div class="cgoal${g.cls ? ' ' + g.cls : ''}"><div class="cgd"><span>${esc(g.v)} 方案验证</span><b>${esc(g.date)}</b></div><ul>${g.goals.map(x => `<li>${esc(x)}</li>`).join('')}<li><b>${esc(g.add)}</b></li></ul></div>`).join('');
 $('accept').innerHTML = `<table class="acc"><thead><tr><th>验收项</th><th>V1 · 11-27</th><th>V2 · 12-16</th><th>现状（截至 11-06）</th></tr></thead><tbody>${ACCEPT.map(G => `<tr class="accg"><td colspan="4">${esc(G.g)}</td></tr>` + G.rows.map(([a, b, c, d, s]) => `<tr><td>${esc(a)}${s ? '<span class="acct">建议</span>' : ''}</td><td>${b}</td><td>${c}</td><td class="accn">${esc(d)}</td></tr>`).join('')).join('')}</tbody></table>`;
 $('handoff').innerHTML = `<div class="hoscope">${HANDOFF.scope.map(([a, b]) => `<div class="cd"><h3>${esc(a)}</h3><p>${esc(b)}</p></div>`).join('')}</div>`
   + `<h4 class="hoh">V1、V2 要求</h4><div class="tw"><table class="acc"><thead><tr><th>模块</th><th>V1 · 11-27</th><th>V2 · 12-16</th><th>现状（截至 11-06）</th></tr></thead><tbody>${HANDOFF.req.map(([a, b, c, d]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td><td>${esc(c)}</td><td class="accn">${esc(d)}</td></tr>`).join('')}</tbody></table></div>`
@@ -310,4 +310,9 @@ document.querySelectorAll('#board > .lyr').forEach((l, i) => {
   RESULTS.forEach(r => used.has(r.id) || console.error('结果没有任务', r.id));
   $('wk').innerHTML = h;
   $('wk-res').innerHTML = `<table class="acc wkres"><thead><tr><th>结果</th><th>V1 · 11-27</th><th>V2 · 12-16</th></tr></thead><tbody>${RESULTS.filter(r => r.v === 'V1').map((r, i) => { const q = RESULTS.filter(x => x.v === 'V2')[i]; const cell = x => x ? `${rTag(x.id)}<b>${esc(x.n)}</b><div class="accn">${esc(x.ok)}</div>` : ''; return `<tr><td>${i + 1}</td><td>${cell(r)}</td><td>${cell(q)}</td></tr>`; }).join('')}</tbody></table>`;
+})();
+// ===== IPD =====
+(() => {
+  $('ipd').innerHTML = `<div class="ipdph">${IPD_PH.map(p => `<div class="ipdp${p.now ? ' now' : ''}"><div class="ipdn">${esc(p.n)}${p.now ? '<span>当前</span>' : ''}</div><p>${esc(p.d)}</p><div class="ipdg">${p.g.map(g => `<b>${g}</b>`).join('')}</div><div class="ipdv">${esc(p.v)}</div></div>`).join('')}</div>`
+    + `<div class="tw"><table class="acc ipdt"><thead><tr><th>关口</th><th>评什么</th><th>我们拿什么去评</th><th>版本</th><th>日期</th><th>状态</th></tr></thead><tbody>${IPD_G.map(([g, a, b, v, d, s]) => `<tr><td>${g}</td><td>${esc(a)}</td><td>${esc(b)}</td><td>${esc(v)}</td><td>${esc(d)}</td><td class="accn">${esc(s)}</td></tr>`).join('')}</tbody></table></div>`;
 })();

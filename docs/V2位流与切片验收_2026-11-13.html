@@ -1,0 +1,61 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>V2 位流与切片验收</title>
+<style>@page{size:A4;margin:14mm}body{font-family:"Microsoft YaHei",sans-serif;font-size:10.5pt;color:#222;line-height:1.5}
+h1{font-size:17pt;margin:0 0 4px}h2{font-size:13pt;border-bottom:2px solid #1f4e79;padding-bottom:2px;margin-top:16px;color:#1f4e79}
+table{border-collapse:collapse;width:100%;margin:6px 0;font-size:9.5pt}td,th{border:1px solid #999;padding:3px 6px;text-align:left}th{background:#e8eef5}
+.ok{color:#0a7a2f;font-weight:bold}.note{background:#fff6e0;border-left:4px solid #e0a000;padding:4px 8px;margin:6px 0}small{color:#666}</style></head><body>
+<h1>V2 位流与切片验收</h1><small>2026-11-13 · [D196] · 结果 R7 提前收口 · 只做整理与补跑, 未改 RTL · 全部为综合/仿真结果, <b>未上板</b></small>
+
+<h2>验收项 (a) V2 桥位流 · 综合: 192×216、30 Hz 位流能生成, 有资源占用报告</h2>
+<table><tr><th>验收标准</th><td>V2 主控位流 + 桥位流 (两面) 能综合/布局布线出 .bin/.fs, 资源占用与时序报告齐全, 时序无负余量</td></tr>
+<tr><th>结论</th><td class="ok">达成 (综合、布局布线、位流均已生成, 时序全部 ≥ 0)</td></tr>
+<tr><th>配置</th><td>上行 1.0G × 16 lane + 校验 + 转发时钟, 双面 (A/B), 192×216 网格 24 链, 605 片 @ 15 rps = 30 Hz 档; 提交 task/d183-v2ul1g e38eea49 (已含在主线 task/d190-merge)</td></tr></table>
+<p><b>V2 主控 (DR1M90GEG484, pov_slice_ul_top)</b> 位流 pov_m90_pure_ul1000_p2_b12_x16_sb_dev_pe_ab_io25.bin, md5 676864f8</p>
+<table><tr><th>资源</th><th>用量</th><th>占比</th><th>资源</th><th>用量</th><th>占比</th></tr>
+<tr><td>LUT6</td><td>17046 / 52480</td><td>32.5%</td><td>Slice</td><td>23397 / 52480</td><td>44.6%</td></tr>
+<tr><td>寄存器</td><td>26381 (slice 26345 / 104960)</td><td>25.1%</td><td>ERAM (BSRAM)</td><td>196 / 280</td><td>70.0%</td></tr>
+<tr><td>DSP</td><td>7 / 240</td><td>2.9%</td><td>PLL</td><td>3 / 8</td><td>37.5%</td></tr>
+<tr><td>IO (信号)</td><td>59 / 201</td><td>29.4%</td><td>全局时钟 gclk</td><td>3 / 32</td><td>9.4%</td></tr></table>
+<table><tr><th>时钟域</th><th>约束</th><th>Fmax</th><th>备注</th></tr>
+<tr><td>hclk (切片/DDR 取片)</td><td>150 MHz</td><td>150.0 MHz</td><td>setup 余量 0.000 ns (按零余量判据过, 含 0.3 ns 过约束), hold +0.008 ns</td></tr>
+<tr><td>ul_pclk (面 A 上行)</td><td>250 MHz</td><td>250.4 MHz</td><td>1.0G 线速</td></tr>
+<tr><td>ul_pclk_b (面 B 上行)</td><td>250 MHz</td><td>250.4 MHz</td><td></td></tr></table>
+<p>全局: SWNS 0.000 / STNS 0 / HWNS +0.008 / HTNS 0, 周期检查余量 2.000 ns, 无违例端点 (30847 个端点)。</p>
+
+<p><b>V2 桥 (GW5A-25 UG324S, 面 A p2w / 面 B p2wb)</b> 位流 bridge.fs, md5 31efe5f6 / ba1ae276</p>
+<table><tr><th>资源</th><th>面 A</th><th>面 B</th><th>总量 (占比)</th></tr>
+<tr><td>Logic (LUT+ALU)</td><td>12400</td><td>12399</td><td>/ 23040 (54%)</td></tr>
+<tr><td>Register</td><td>15026</td><td>15026</td><td>/ 23736 (64%)</td></tr>
+<tr><td>CLS</td><td>10593</td><td>10617</td><td>/ 11520 (92% / 93%, 布局紧但已布通)</td></tr>
+<tr><td>BSRAM</td><td>41</td><td>41</td><td>/ 56 (74%)</td></tr>
+<tr><td>I/O</td><td>199</td><td>199</td><td>/ 239 (84%)</td></tr>
+<tr><td>IOLOGIC</td><td>90</td><td>90</td><td>/ 232 (39%)</td></tr>
+<tr><td>PLL (PLLA)</td><td>2</td><td>2</td><td>/ 6 (34%)</td></tr>
+<tr><td>DSP</td><td colspan="2">桥内未使用</td><td></td></tr></table>
+<table><tr><th>时序 (ns)</th><th>面 A</th><th>面 B</th></tr>
+<tr><td>setup 最差</td><td>+0.955</td><td>+1.298</td></tr><tr><td>hold 最差</td><td>+0.185</td><td>+0.181</td></tr>
+<tr><td>recovery / removal</td><td>+3.921 / +0.166</td><td>+4.108 / +0.323</td></tr>
+<tr><td>Fmax: dclk (约束 166.67) / pclk (约束 125)</td><td>198.2 / 185.8 MHz</td><td>212.7 / 182.7 MHz</td></tr>
+<tr><td>TNS</td><td>0</td><td>0</td></tr></table>
+<div class="note"><b>余量说明</b>: 桥 setup 余量 ≥ 0.95 ns、Fmax 比约束高 ≥ 46% (pclk) / ≥ 19% (dclk); 主控 hclk 是零余量档 (靠过约束 0.3 ns 换来的, 属生产判据, 非时序违例)。CLS 占用 92–93% 是桥的主要资源压力点。</div>
+<p><b>未上板</b>: 桥位流的引脚为评估引脚, 未在真板用过; 主控位流 V1 核心板 (本机 02) 与 V2 核心板脚序不同, V2 上板待 V2 回板 (12-04)。</p>
+
+<h2>验收项 (b) V2 切片 · 仿真: 192×216、605 片, 30 Hz 逐像素 0 错</h2>
+<table><tr><th>验收标准</th><td>V2 默认档 (1.0G × 16, 605 片, 15 rps = 30 Hz), 板端切片 → 主控双面 → 两个桥 → 2×24×2260 全链路 RTL 仿真, 两面逐像素 0 错、0 丢片</td></tr>
+<tr><th>结论</th><td class="ok">达成: 在主线 task/d190-merge (7d67db6a, voxslice 1.9.5) 上重跑 VERIFY_D183, PASS 19 / FAIL 0 (2026-11-13)</td></tr></table>
+<table><tr><th>仿真</th><th>内容 / 转速</th><th>窗口</th><th>逐像素 (面 A / 面 B)</th><th>上行逐组</th><th>丢片</th><th>上行占用 / 余量</th></tr>
+<tr><td>T1</td><td>hashcyl 15.0 rps (30 Hz)</td><td>8 片, 含片号回绕 600..2</td><td>7 片 290304 像素 0 错 / 0 错</td><td>62208 组 0 错 ×2</td><td>0</td><td>86.0% / 14.0%</td></tr>
+<tr><td>T2</td><td>walking 15.0 rps</td><td>8 片 297..304 (半圈换面)</td><td>0 错 / 0 错</td><td>0 错</td><td>0</td><td>86.0% / 14.0%</td></tr>
+<tr><td>T3</td><td>bonsai 15.0 rps</td><td>8 片, 回绕</td><td>0 错 / 0 错</td><td>0 错</td><td>0</td><td>86.0% / 14.0%</td></tr>
+<tr><td>T5</td><td>walking 15.0 rps</td><td>20 片 594..8 长窗</td><td>19 片 787968 像素 0 错 / 0 错</td><td>155520 组 0 错 ×2</td><td>0</td><td>86.0% / 14.0%</td></tr>
+<tr><td>T4</td><td>walking 16.0 rps (605 档上限)</td><td>8 片, 回绕</td><td>0 错 / 0 错</td><td>0 错</td><td>0</td><td>91.8% / 8.2%</td></tr>
+<tr><td>N1</td><td>反例: 两面互换</td><td>-</td><td>两面均判 FAIL (判据有效)</td><td>-</td><td>-</td><td>-</td></tr></table>
+<p>另 K1–K3 通过: 余量表 (30 Hz 余 14.0% ≥ 10%)、编译默认 = 1.0G × 16 双面、voxslice 档表默认 605:16.0。桥侧: 0 跳帧、CRC/格式/相位错 0、分发占用峰值 170 / 512。</p>
+<table><tr><th>30 Hz 余量 (每面)</th><th>占用</th><th>余量</th></tr>
+<tr><td>上行 1 片 94.80 µs / 片周期 110.19 µs</td><td>86.0%</td><td class="ok">14.0%</td></tr>
+<tr><td>2260 帧长</td><td>84.9%</td><td>15.1%</td></tr><tr><td>DDR 硬预算</td><td>84.9%</td><td>15.1% (最慢片 88.9%, 回板重测)</td></tr></table>
+<div class="note"><b>范围说明</b>: RTL 全链路仿真是在每个关键窗口 (8 / 20 片, 含回绕、半圈换面/换网格) 逐像素比对, 不是整圈 605 片一次跑完 (单次仿真约 20–35 分钟); 整圈靠公式与窗口外推。内容为 hashcyl / walking / bonsai 三种真实 192×216 网格。光电触发、转速抖动、真硬件均未覆盖。</div>
+
+<h2>未上板说明</h2>
+<p>以上全部是综合 + 仿真, <b>没有上板</b>: V2 灯板/桥板/核心板 12-04 回板前无硬件; 位流在真硬件上的 1.0G×16 链路误码、DDR 实测最慢片、2260 实际点亮, 均待回板验证。</p>
+<small>来源: _work/d183 (位流/报告 _work/d183/out, 主控报告 d183_build/td_pov/build_*/fpga_prj_Runs/phy_1), 重跑 _work/d196 分支 task/d196-v2acc (基于 task/d190-merge), 记录 d196_run.log。</small>
+</body></html>

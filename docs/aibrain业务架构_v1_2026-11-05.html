@@ -1401,7 +1401,7 @@ const IPD_BACK = [
   ['认证','03-08','04-30','SRRC 无线型号核准、CCC/安规、EMC 正式送测','SRRC 约 6–8 周；没证不能卖'],
   ['PVT 备料','03-01','04-09','短交期件下单、1000 套 PCB/SMT、包材；产线工装、烧录、出厂测试工具就绪','工装要在 DVT 时试用过'],
   ['PVT 小批','04-13','04-23','1000 台试产、良率统计 → TR6（04-23）、ADCP（04-30）','用 T2 模具件'],
-  ['上市','05','—','GA 量产发布','原定 04-17 早于 PVT，需改到 5 月']
+  ['上市','05-17','—','GA 量产发布','11-16 由 04-17 改到 05-17；已写入 IPD']
 ];
 const IPD_G = [
   ['TR1','需求评审：产品价值、卖点、目标用户和场景','业务架构 ①② 层、产品价值三条、市场评估报告','V0','11-20（与 V2 下单同天）','材料有，未正式评审'],
@@ -1414,7 +1414,7 @@ const IPD_G = [
   ['TR5','DVT 评审：设计定型，可靠性和认证预测试过','可靠性、认证预测试、ID 定稿、模具 T1','DVT','03-26','—'],
   ['TR6','PVT 评审：产线能稳定造出来','小批量良率、产线烧录和出厂测试工具','PVT','04-23（04-13 起 1000 台小批）','—'],
   ['ADCP','可获得性决策：可以量产上市','TR6 结论；供应和交付准备','—','04-30','—'],
-  ['GA','量产发布','—','MP','5 月（原定 04-17 在 PVT 之前，需改）','—']
+  ['GA','量产发布','—','MP','05-17（11-16 由 04-17 改）','—']
 ];
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -1734,7 +1734,7 @@ document.querySelectorAll('#board > .lyr').forEach((l, i) => {
 (() => {
   $('ipd').innerHTML = `<div class="ipdph">${IPD_PH.map(p => `<div class="ipdp${p.now ? ' now' : ''}"><div class="ipdn">${esc(p.n)}${p.now ? '<span>当前</span>' : ''}</div><p>${esc(p.d)}</p><div class="ipdg">${p.g.map(g => `<b>${g}</b>`).join('')}</div><div class="ipdv">${esc(p.v)}</div></div>`).join('')}</div>`
     + `<div class="tw"><table class="acc ipdt"><thead><tr><th>关口</th><th>评什么</th><th>我们拿什么去评</th><th>版本</th><th>日期</th><th>状态</th></tr></thead><tbody>${IPD_G.map(([g, a, b, v, d, s]) => `<tr><td>${g}</td><td>${esc(a)}</td><td>${esc(b)}</td><td>${esc(v)}</td><td>${esc(d)}</td><td class="accn">${esc(s)}</td></tr>`).join('')}</tbody></table></div>`
-    + `<h3 class="cgoal-h">量产倒排：04-13 起 1000 台小批试产</h3><p class="accnote">从 PVT 往回推，按行业常规时长初排（EVT/DVT 各约 4 周、开模到 T1 约 5–6 周、长交期件 8–12 周、春节停工约 3 周），待对照公司其他项目校准。</p>`
+    + `<h3 class="cgoal-h">量产倒排：04-13 起 1000 台小批试产</h3><p class="accnote">从 PVT 往回推，按行业常规时长排（EVT/DVT 各约 4 周、开模到 T1 约 5–6 周、长交期件 8–12 周、春节停工约 3 周）；11-16 已写入 IPD 项目总计划（关口、样机轮次、关键节点）。</p>`
     + `<div class="tw"><table class="acc ipdt"><thead><tr><th>阶段</th><th>起</th><th>止</th><th>做什么</th><th>卡点 / 前提</th></tr></thead><tbody>${IPD_BACK.map(([n, a, b, w, r]) => `<tr><td>${esc(n)}</td><td>${a}</td><td>${b}</td><td>${esc(w)}</td><td class="accn">${esc(r)}</td></tr>`).join('')}</tbody></table></div>`;
 })();
 

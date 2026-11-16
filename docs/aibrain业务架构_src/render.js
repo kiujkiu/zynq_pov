@@ -315,6 +315,6 @@ document.querySelectorAll('#board > .lyr').forEach((l, i) => {
 (() => {
   $('ipd').innerHTML = `<div class="ipdph">${IPD_PH.map(p => `<div class="ipdp${p.now ? ' now' : ''}"><div class="ipdn">${esc(p.n)}${p.now ? '<span>当前</span>' : ''}</div><p>${esc(p.d)}</p><div class="ipdg">${p.g.map(g => `<b>${g}</b>`).join('')}</div><div class="ipdv">${esc(p.v)}</div></div>`).join('')}</div>`
     + `<div class="tw"><table class="acc ipdt"><thead><tr><th>关口</th><th>评什么</th><th>我们拿什么去评</th><th>版本</th><th>日期</th><th>状态</th></tr></thead><tbody>${IPD_G.map(([g, a, b, v, d, s]) => `<tr><td>${g}</td><td>${esc(a)}</td><td>${esc(b)}</td><td>${esc(v)}</td><td>${esc(d)}</td><td class="accn">${esc(s)}</td></tr>`).join('')}</tbody></table></div>`
-    + `<h3 class="cgoal-h">量产倒排：04-13 起 1000 台小批试产</h3><p class="accnote">从 PVT 往回推，按行业常规时长初排（EVT/DVT 各约 4 周、开模到 T1 约 5–6 周、长交期件 8–12 周、春节停工约 3 周），待对照公司其他项目校准。</p>`
+    + `<h3 class="cgoal-h">量产倒排：04-13 起 1000 台小批试产</h3><p class="accnote">从 PVT 往回推，按行业常规时长排（EVT/DVT 各约 4 周、开模到 T1 约 5–6 周、长交期件 8–12 周、春节停工约 3 周）；11-16 已写入 IPD 项目总计划（关口、样机轮次、关键节点）。</p>`
     + `<div class="tw"><table class="acc ipdt"><thead><tr><th>阶段</th><th>起</th><th>止</th><th>做什么</th><th>卡点 / 前提</th></tr></thead><tbody>${IPD_BACK.map(([n, a, b, w, r]) => `<tr><td>${esc(n)}</td><td>${a}</td><td>${b}</td><td>${esc(w)}</td><td class="accn">${esc(r)}</td></tr>`).join('')}</tbody></table></div>`;
 })();
